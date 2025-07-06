@@ -1,0 +1,52 @@
+{
+  "name": "project-manager-web",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/project-manager-web/src",
+  "projectType": "application",
+  "tags": [],
+  "// targets": "to see all targets run: nx show project project-manager-web --web",
+  "targets": {
+    "build": {
+      "executor": "@nx/next:build",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "outputPath": "dist/apps/project-manager-web"
+      },
+      "configurations": {
+        "development": {
+          "outputPath": "apps/project-manager-web"
+        },
+        "production": {}
+      }
+    },
+    "serve": {
+      "executor": "@nx/next:server",
+      "defaultConfiguration": "development",
+      "options": {
+        "buildTarget": "project-manager-web:build",
+        "dev": true
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "project-manager-web:build:development",
+          "dev": true
+        },
+        "production": {
+          "buildTarget": "project-manager-web:build:production",
+          "dev": false
+        }
+      }
+    },
+    "export": {
+      "executor": "@nx/next:export",
+      "options": {
+        "buildTarget": "project-manager-web:build:production"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"]
+    }
+  }
+}

@@ -7,6 +7,7 @@ import { Task } from '../projects/entities/task.entity';
 import { Technology } from '../projects/entities/technology.entity';
 import { CloudService } from '../projects/entities/cloud-service.entity';
 import { UsefulLink } from '../projects/entities/useful-link.entity';
+import { File } from '../files/entities/file.entity';
 
 export const databaseConfig: TypeOrmModuleOptions = {
   type: 'postgres',
@@ -23,7 +24,8 @@ export const databaseConfig: TypeOrmModuleOptions = {
     Task,
     Technology,
     CloudService,
-    UsefulLink
+    UsefulLink,
+    File
   ],
   synchronize: true, // Crear tablas automáticamente en desarrollo
   logging: process.env.NODE_ENV === 'development',

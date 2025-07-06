@@ -17,8 +17,8 @@ fi
 
 # Valores por defecto si no están en .env
 DATABASE_NAME=${DATABASE_NAME:-project_management_db}
-DATABASE_USERNAME=${DATABASE_USERNAME:-postgres}
-DATABASE_PASSWORD=${DATABASE_PASSWORD:-postgres}
+DATABASE_USERNAME=${DATABASE_USERNAME:-user_project}
+DATABASE_PASSWORD=${DATABASE_PASSWORD:-password_project}
 
 echo "🔍 Verificando tablas en la base de datos..."
 echo "📊 Configuración:"

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Project, ProjectStatus } from './entities/project.entity';
 import { Technology } from './entities/technology.entity';
 import { TeamMember } from './entities/team-member.entity';
@@ -352,7 +352,7 @@ export class ProjectsService {
 
     // Procesar tecnologías si se proporcionan
     if (technologyIds && technologyIds.length > 0) {
-      const technologies = await this.technologyRepository.findByIds(technologyIds);
+      const technologies = await this.technologyRepository.findBy({ id: In(technologyIds) });
       savedProject.technologies = technologies;
       await this.projectRepository.save(savedProject);
     }

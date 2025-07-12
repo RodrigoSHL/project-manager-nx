@@ -72,4 +72,9 @@ export class ProjectService {
     });
     return this.handleResponse(response);
   }
+
+  static async getAllTechnologies(): Promise<any[]> {
+    const response = await fetch(`${API_BASE_URL}/projects/technologies`);
+    return this.handleResponse<any[]>(response);
+  }
 } 

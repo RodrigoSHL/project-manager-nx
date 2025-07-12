@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -33,17 +34,26 @@ import {
   Loader2,
 } from "lucide-react"
 import { useProjects } from "@/hooks/useProjects"
-import { ProjectStatus } from "@/types/project"
+import { ProjectStatus, Project } from "@/types/project"
+import { EditProjectDialog } from "./edit-project-dialog"
 
 
 export function ProjectDashboard() {
-  const { projects, currentProject, setCurrentProject, loading, error } = useProjects()
+  const { projects, currentProject, setCurrentProject, loading, error, updateProject } = useProjects()
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
 
   // Manejar cambio de proyecto activo
   const handleProjectChange = (projectId: string) => {
     const project = projects.find(p => p.id === projectId)
     if (project) {
       setCurrentProject(project)
+    }
+  }
+
+  // Manejar edición del proyecto
+  const handleEditProject = async (updatedProject: Partial<Project>) => {
+    if (currentProject) {
+      await updateProject(currentProject.id, updatedProject)
     }
   }
 
@@ -124,7 +134,7 @@ export function ProjectDashboard() {
                           <FileText className="mr-2 h-4 w-4" />
                           Exportar
                         </Button>
-                        <Button size="sm">
+                        <Button size="sm" onClick={() => setEditDialogOpen(true)}>
                           <Target className="mr-2 h-4 w-4" />
                           Editar
                         </Button>
@@ -525,6 +535,14 @@ export function ProjectDashboard() {
           </div>
         </SidebarInset>
       </SidebarProvider>
+
+      {/* Modal de edición */}
+      <EditProjectDialog
+        project={currentProject}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSave={handleEditProject}
+      />
     </ThemeProvider>
   )
 }

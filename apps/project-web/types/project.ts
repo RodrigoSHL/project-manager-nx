@@ -81,6 +81,7 @@ export interface UsefulLink {
   id: string;
   title: string;
   url: string;
+  type: string;
   description?: string;
   category: string;
   createdAt: Date;

@@ -35,6 +35,11 @@ import {
   Edit3,
   Phone,
   AlertTriangle,
+  Palette,
+  Activity,
+  Rocket,
+  TestTube,
+  Globe,
 } from "lucide-react"
 import { useProjects } from "@/hooks/useProjects"
 import { ProjectStatus, Project } from "@/types/project"
@@ -42,6 +47,7 @@ import { EditProjectDialog } from "./edit-project-dialog"
 import { EditRepositoriesDialog } from "./edit-repositories-dialog"
 import { EditTeamMembersDialog } from "./edit-team-members-dialog"
 import { EditTasksDialog } from "./edit-tasks-dialog"
+import { EditUsefulLinksDialog } from "./edit-useful-links-dialog"
 
 
 export function ProjectDashboard() {
@@ -50,6 +56,7 @@ export function ProjectDashboard() {
   const [editRepositoriesDialogOpen, setEditRepositoriesDialogOpen] = useState(false)
   const [editTeamMembersDialogOpen, setEditTeamMembersDialogOpen] = useState(false)
   const [editTasksDialogOpen, setEditTasksDialogOpen] = useState(false)
+  const [editUsefulLinksDialogOpen, setEditUsefulLinksDialogOpen] = useState(false)
 
   // Manejar cambio de proyecto activo
   const handleProjectChange = (projectId: string) => {
@@ -83,6 +90,11 @@ export function ProjectDashboard() {
 
   // Manejar edición de tareas
   const handleEditTasks = async (updatedProject: Project) => {
+    // No necesitamos hacer nada aquí ya que el modal maneja la actualización directamente
+  }
+
+  // Manejar edición de enlaces útiles
+  const handleEditUsefulLinks = async (updatedProject: Project) => {
     // No necesitamos hacer nada aquí ya que el modal maneja la actualización directamente
   }
 
@@ -137,6 +149,22 @@ export function ProjectDashboard() {
     }
     const priorityInfo = priorityMap[priority] || { label: priority, variant: 'secondary' }
     return <Badge variant={priorityInfo.variant as any} className="text-xs">{priorityInfo.label}</Badge>
+  }
+
+  const getLinkIcon = (type: string) => {
+    const iconMap: Record<string, { icon: any; color: string }> = {
+      'documentation': { icon: FileText, color: 'text-blue-600' },
+      'design': { icon: Palette, color: 'text-purple-600' },
+      'monitoring': { icon: Activity, color: 'text-green-600' },
+      'communication': { icon: MessageSquare, color: 'text-yellow-600' },
+      'repository': { icon: Github, color: 'text-gray-600' },
+      'deployment': { icon: Rocket, color: 'text-orange-600' },
+      'testing': { icon: TestTube, color: 'text-red-600' },
+      'other': { icon: Globe, color: 'text-gray-600' }
+    }
+    const iconInfo = iconMap[type] || { icon: Globe, color: 'text-gray-600' }
+    const IconComponent = iconInfo.icon
+    return <IconComponent className={`h-4 w-4 ${iconInfo.color}`} />
   }
 
   return (
@@ -573,40 +601,44 @@ export function ProjectDashboard() {
                   {/* Enlaces Útiles */}
                   <Card>
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Link className="h-5 w-5" />
-                        Enlaces Útiles
-                      </CardTitle>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="flex items-center gap-2">
+                          <Link className="h-5 w-5" />
+                          Enlaces Útiles
+                        </CardTitle>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setEditUsefulLinksDialogOpen(true)}
+                        >
+                          <Edit3 className="mr-2 h-4 w-4" />
+                          Editar
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      <Button variant="ghost" className="w-full justify-start" asChild>
-                        <a href="#" className="flex items-center gap-3">
-                          <Figma className="h-4 w-4 text-purple-600" />
-                          Diseños en Figma
-                          <ExternalLink className="h-3 w-3 ml-auto" />
-                        </a>
-                      </Button>
-                      <Button variant="ghost" className="w-full justify-start" asChild>
-                        <a href="#" className="flex items-center gap-3">
-                          <FileText className="h-4 w-4 text-blue-600" />
-                          Confluence - Wiki del Proyecto
-                          <ExternalLink className="h-3 w-3 ml-auto" />
-                        </a>
-                      </Button>
-                      <Button variant="ghost" className="w-full justify-start" asChild>
-                        <a href="#" className="flex items-center gap-3">
-                          <MessageSquare className="h-4 w-4 text-green-600" />
-                          Canal de Soporte - Slack
-                          <ExternalLink className="h-3 w-3 ml-auto" />
-                        </a>
-                      </Button>
-                      <Button variant="ghost" className="w-full justify-start" asChild>
-                        <a href="#" className="flex items-center gap-3">
-                          <Database className="h-4 w-4 text-orange-600" />
-                          Monitoreo - Grafana
-                          <ExternalLink className="h-3 w-3 ml-auto" />
-                        </a>
-                      </Button>
+                      {currentProject.usefulLinks && currentProject.usefulLinks.length > 0 ? (
+                        currentProject.usefulLinks.map((link) => (
+                          <Button key={link.id} variant="ghost" className="w-full justify-start" asChild>
+                            <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3">
+                              {getLinkIcon(link.type)}
+                              <div className="flex-1 text-left">
+                                <div className="font-medium">{link.title}</div>
+                                {link.description && (
+                                  <div className="text-xs text-gray-500 truncate">{link.description}</div>
+                                )}
+                              </div>
+                              <ExternalLink className="h-3 w-3 ml-auto flex-shrink-0" />
+                            </a>
+                          </Button>
+                        ))
+                      ) : (
+                        <div className="text-center py-6 text-gray-500">
+                          <Link className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                          <p className="text-sm">No hay enlaces útiles configurados</p>
+                          <p className="text-xs">Haz clic en &quot;Editar&quot; para agregar enlaces al proyecto</p>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </div>
@@ -648,6 +680,15 @@ export function ProjectDashboard() {
         open={editTasksDialogOpen}
         onOpenChange={setEditTasksDialogOpen}
         onSave={handleEditTasks}
+        onProjectUpdate={handleProjectUpdate}
+      />
+
+      {/* Modal de edición de enlaces útiles */}
+      <EditUsefulLinksDialog
+        project={currentProject}
+        open={editUsefulLinksDialogOpen}
+        onOpenChange={setEditUsefulLinksDialogOpen}
+        onSave={handleEditUsefulLinks}
         onProjectUpdate={handleProjectUpdate}
       />
     </ThemeProvider>

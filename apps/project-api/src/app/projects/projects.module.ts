@@ -10,6 +10,7 @@ import { Task } from './entities/task.entity';
 import { Technology } from './entities/technology.entity';
 import { CloudService } from './entities/cloud-service.entity';
 import { UsefulLink } from './entities/useful-link.entity';
+import { File } from '../files/entities/file.entity';
 
 @Module({
   imports: [
@@ -21,7 +22,8 @@ import { UsefulLink } from './entities/useful-link.entity';
       Task,
       Technology,
       CloudService,
-      UsefulLink
+      UsefulLink,
+      File
     ])
   ],
   controllers: [ProjectsController],

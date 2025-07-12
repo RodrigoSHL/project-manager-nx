@@ -9,6 +9,7 @@ import { Environment } from './entities/environment.entity';
 import { Repository as ProjectRepository } from './entities/repository.entity';
 import { CloudService } from './entities/cloud-service.entity';
 import { UsefulLink } from './entities/useful-link.entity';
+import { File } from '../files/entities/file.entity';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto, GranularUpdateProjectDto } from './dto/update-project.dto';
 import {
@@ -41,6 +42,8 @@ export class ProjectsService {
     private readonly cloudServiceRepository: Repository<CloudService>,
     @InjectRepository(UsefulLink)
     private readonly usefulLinkRepository: Repository<UsefulLink>,
+    @InjectRepository(File)
+    private readonly fileRepository: Repository<File>,
   ) {}
 
   async create(createProjectDto: CreateProjectDto): Promise<Project> {
@@ -65,7 +68,7 @@ export class ProjectsService {
   }
 
   async findAll(): Promise<Project[]> {
-    return await this.projectRepository.find({
+    const projects = await this.projectRepository.find({
       relations: [
         'repositories',
         'environments',
@@ -79,6 +82,18 @@ export class ProjectsService {
         createdAt: 'DESC'
       }
     });
+
+    // Agregar archivos a cada proyecto
+    for (const project of projects) {
+      const files = await this.fileRepository.find({
+        where: { projectId: project.id },
+        select: ['id', 'filename', 'mimetype', 'size', 'type', 'description', 'uploadedAt', 'projectId'],
+        order: { uploadedAt: 'DESC' }
+      });
+      (project as any).files = files;
+    }
+
+    return projects;
   }
 
   async findOne(id: string): Promise<Project> {
@@ -98,6 +113,14 @@ export class ProjectsService {
     if (!project) {
       throw new NotFoundException(`Proyecto con ID ${id} no encontrado`);
     }
+
+    // Agregar archivos al proyecto
+    const files = await this.fileRepository.find({
+      where: { projectId: project.id },
+      select: ['id', 'filename', 'mimetype', 'size', 'type', 'description', 'uploadedAt', 'projectId'],
+      order: { uploadedAt: 'DESC' }
+    });
+    (project as any).files = files;
 
     return project;
   }

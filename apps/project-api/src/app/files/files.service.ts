@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { File } from './entities/file.entity';
+import { File, FileType } from './entities/file.entity';
 import { UploadFileDto } from './dto/upload-file.dto';
 
 @Injectable()
@@ -12,7 +12,7 @@ export class FilesService {
   ) {}
 
   async uploadFile(uploadFileDto: UploadFileDto): Promise<File> {
-    const { file, userId, projectId, requestId } = uploadFileDto;
+    const { file, userId, projectId, requestId, type, description } = uploadFileDto;
 
     // Validar que al menos uno de los IDs esté presente
     if (!userId && !projectId && !requestId) {
@@ -30,6 +30,8 @@ export class FilesService {
       mimetype: file.mimetype,
       size: file.size,
       fileData: file.buffer,
+      type: type || FileType.OTHER,
+      description,
       userId,
       projectId,
       requestId,
@@ -38,7 +40,7 @@ export class FilesService {
     return await this.fileRepository.save(fileEntity);
   }
 
-  async uploadMultipleFiles(files: any[], userId?: string, projectId?: string, requestId?: string): Promise<File[]> {
+  async uploadMultipleFiles(files: any[], userId?: string, projectId?: string, requestId?: string, type?: FileType, description?: string): Promise<File[]> {
     // Validar que al menos uno de los IDs esté presente
     if (!userId && !projectId && !requestId) {
       throw new BadRequestException('Al menos uno de los campos userId, projectId o requestId debe estar presente');
@@ -62,6 +64,8 @@ export class FilesService {
         mimetype: file.mimetype,
         size: file.size,
         fileData: file.buffer,
+        type: type || FileType.OTHER,
+        description,
         userId,
         projectId,
         requestId,
@@ -88,7 +92,7 @@ export class FilesService {
   async getFilesByUserId(userId: string): Promise<File[]> {
     return await this.fileRepository.find({
       where: { userId },
-      select: ['id', 'filename', 'mimetype', 'size', 'uploadedAt', 'userId', 'projectId', 'requestId'],
+      select: ['id', 'filename', 'mimetype', 'size', 'type', 'description', 'uploadedAt', 'userId', 'projectId', 'requestId'],
       order: { uploadedAt: 'DESC' },
     });
   }
@@ -96,7 +100,7 @@ export class FilesService {
   async getFilesByProjectId(projectId: string): Promise<File[]> {
     return await this.fileRepository.find({
       where: { projectId },
-      select: ['id', 'filename', 'mimetype', 'size', 'uploadedAt', 'userId', 'projectId', 'requestId'],
+      select: ['id', 'filename', 'mimetype', 'size', 'type', 'description', 'uploadedAt', 'userId', 'projectId', 'requestId'],
       order: { uploadedAt: 'DESC' },
     });
   }
@@ -104,7 +108,7 @@ export class FilesService {
   async getFilesByRequestId(requestId: string): Promise<File[]> {
     return await this.fileRepository.find({
       where: { requestId },
-      select: ['id', 'filename', 'mimetype', 'size', 'uploadedAt', 'userId', 'projectId', 'requestId'],
+      select: ['id', 'filename', 'mimetype', 'size', 'type', 'description', 'uploadedAt', 'userId', 'projectId', 'requestId'],
       order: { uploadedAt: 'DESC' },
     });
   }
@@ -120,7 +124,7 @@ export class FilesService {
   async getFileInfo(id: string): Promise<File> {
     const file = await this.fileRepository.findOne({
       where: { id },
-      select: ['id', 'filename', 'mimetype', 'size', 'uploadedAt', 'userId', 'projectId', 'requestId'],
+      select: ['id', 'filename', 'mimetype', 'size', 'type', 'description', 'uploadedAt', 'userId', 'projectId', 'requestId'],
     });
 
     if (!file) {

@@ -1,4 +1,5 @@
-import { IsString, IsOptional, IsUUID, IsNotEmpty, ValidateIf } from 'class-validator';
+import { IsString, IsOptional, IsUUID, IsNotEmpty, ValidateIf, IsEnum } from 'class-validator';
+import { FileType } from '../entities/file.entity';
 
 export class UploadFileDto {
   file: any; // Express.Multer.File
@@ -14,6 +15,14 @@ export class UploadFileDto {
   @IsOptional()
   @IsUUID()
   requestId?: string;
+
+  @IsOptional()
+  @IsEnum(FileType)
+  type?: FileType;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
 }
 
 export class UploadFileValidationDto {

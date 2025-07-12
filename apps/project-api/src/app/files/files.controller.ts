@@ -25,7 +25,7 @@ export class FilesController {
   @UseInterceptors(FileInterceptor('file'))
   async uploadFile(
     @UploadedFile() file: any,
-    @Body() body: { userId?: string; projectId?: string; requestId?: string },
+    @Body() body: { userId?: string; projectId?: string; requestId?: string; type?: string; description?: string },
   ) {
     if (!file) {
       throw new BadRequestException('No se proporcionó ningún archivo');
@@ -36,6 +36,8 @@ export class FilesController {
       userId: body.userId,
       projectId: body.projectId,
       requestId: body.requestId,
+      type: body.type as any,
+      description: body.description,
     };
 
     const uploadedFile = await this.filesService.uploadFile(uploadFileDto);
@@ -46,6 +48,8 @@ export class FilesController {
       filename: uploadedFile.filename,
       mimetype: uploadedFile.mimetype,
       size: uploadedFile.size,
+      type: uploadedFile.type,
+      description: uploadedFile.description,
       uploadedAt: uploadedFile.uploadedAt,
       userId: uploadedFile.userId,
       projectId: uploadedFile.projectId,
@@ -57,7 +61,7 @@ export class FilesController {
   @UseInterceptors(FilesInterceptor('files', 10)) // Máximo 10 archivos
   async uploadMultipleFiles(
     @UploadedFiles() files: any[],
-    @Body() body: { userId?: string; projectId?: string; requestId?: string },
+    @Body() body: { userId?: string; projectId?: string; requestId?: string; type?: string; description?: string },
   ) {
     if (!files || files.length === 0) {
       throw new BadRequestException('No se proporcionaron archivos');
@@ -68,6 +72,8 @@ export class FilesController {
       body.userId,
       body.projectId,
       body.requestId,
+      body.type as any,
+      body.description,
     );
     
     // Retornar solo la información de los archivos, no los datos binarios
@@ -76,6 +82,8 @@ export class FilesController {
       filename: file.filename,
       mimetype: file.mimetype,
       size: file.size,
+      type: file.type,
+      description: file.description,
       uploadedAt: file.uploadedAt,
       userId: file.userId,
       projectId: file.projectId,

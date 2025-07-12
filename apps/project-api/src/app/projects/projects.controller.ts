@@ -51,6 +51,11 @@ export class ProjectsController {
     return this.projectsService.findByBusinessUnit(businessUnit);
   }
 
+  @Get('technologies')
+  findAllTechnologies() {
+    return this.projectsService.findAllTechnologies();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.projectsService.findOne(id);

@@ -396,6 +396,15 @@ export class ProjectsService {
     });
   }
 
+  async findAllTechnologies(): Promise<Technology[]> {
+    return await this.technologyRepository.find({
+      where: { isActive: true },
+      order: {
+        name: 'ASC'
+      }
+    });
+  }
+
   async getProjectStats(): Promise<any> {
     const totalProjects = await this.projectRepository.count();
     const projectsByStatus = await this.projectRepository

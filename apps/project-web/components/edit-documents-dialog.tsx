@@ -152,7 +152,7 @@ export function EditDocumentsDialog({
       if (onProjectUpdate) {
         const updatedProject = {
           ...project,
-          files: [...project.files, ...uploadedFiles]
+          files: [...(project.files || []), ...uploadedFiles]
         }
         onProjectUpdate(updatedProject)
       }
@@ -195,7 +195,7 @@ export function EditDocumentsDialog({
       if (onProjectUpdate && project) {
         const updatedProject = {
           ...project,
-          files: project.files.filter(f => f.id !== fileId)
+          files: (project.files || []).filter(f => f.id !== fileId)
         }
         onProjectUpdate(updatedProject)
       }

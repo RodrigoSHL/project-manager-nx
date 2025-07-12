@@ -142,7 +142,7 @@ export interface Project {
   technologies: Technology[];
   cloudServices: CloudService[];
   usefulLinks: UsefulLink[];
-  files: ProjectFile[];
+  files?: ProjectFile[];
 }
 
 export interface ProjectStats {

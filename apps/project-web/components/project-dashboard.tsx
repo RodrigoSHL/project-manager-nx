@@ -38,12 +38,14 @@ import { useProjects } from "@/hooks/useProjects"
 import { ProjectStatus, Project } from "@/types/project"
 import { EditProjectDialog } from "./edit-project-dialog"
 import { EditRepositoriesDialog } from "./edit-repositories-dialog"
+import { EditTeamMembersDialog } from "./edit-team-members-dialog"
 
 
 export function ProjectDashboard() {
   const { projects, currentProject, setCurrentProject, loading, error, updateProject, updateProjectInList } = useProjects()
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [editRepositoriesDialogOpen, setEditRepositoriesDialogOpen] = useState(false)
+  const [editTeamMembersDialogOpen, setEditTeamMembersDialogOpen] = useState(false)
 
   // Manejar cambio de proyecto activo
   const handleProjectChange = (projectId: string) => {
@@ -68,6 +70,11 @@ export function ProjectDashboard() {
   // Actualizar proyecto directamente en el estado
   const handleProjectUpdate = (updatedProject: Project) => {
     updateProjectInList(updatedProject)
+  }
+
+  // Manejar edición de miembros del equipo
+  const handleEditTeamMembers = async (updatedProject: Project) => {
+    // No necesitamos hacer nada aquí ya que el modal maneja la actualización directamente
   }
 
   const getStatusBadge = (status: string) => {
@@ -403,10 +410,20 @@ export function ProjectDashboard() {
                 {/* Equipo Responsable */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5" />
-                      Equipo Responsable
-                    </CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2">
+                        <Users className="h-5 w-5" />
+                        Equipo Responsable
+                      </CardTitle>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setEditTeamMembersDialogOpen(true)}
+                      >
+                        <Edit3 className="mr-2 h-4 w-4" />
+                        Editar
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <Table>
@@ -573,6 +590,15 @@ export function ProjectDashboard() {
         open={editRepositoriesDialogOpen}
         onOpenChange={setEditRepositoriesDialogOpen}
         onSave={handleEditRepositories}
+        onProjectUpdate={handleProjectUpdate}
+      />
+
+      {/* Modal de edición de miembros del equipo */}
+      <EditTeamMembersDialog
+        project={currentProject}
+        open={editTeamMembersDialogOpen}
+        onOpenChange={setEditTeamMembersDialogOpen}
+        onSave={handleEditTeamMembers}
         onProjectUpdate={handleProjectUpdate}
       />
     </ThemeProvider>

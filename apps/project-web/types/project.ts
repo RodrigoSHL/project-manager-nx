@@ -40,6 +40,7 @@ export interface TeamMember {
   name: string;
   email: string;
   role: string;
+  phone?: string;
   avatar?: string;
   createdAt: Date;
   updatedAt: Date;

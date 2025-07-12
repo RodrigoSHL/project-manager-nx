@@ -89,6 +89,33 @@ export interface UsefulLink {
   updatedAt: Date;
 }
 
+export enum FileType {
+  MANUAL = 'manual',
+  DIAGRAM = 'diagram',
+  FLOW = 'flow',
+  DOCUMENTATION = 'documentation',
+  ARCHITECTURE = 'architecture',
+  API_DOCS = 'api_docs',
+  USER_GUIDE = 'user_guide',
+  TECHNICAL_SPEC = 'technical_spec',
+  REQUIREMENTS = 'requirements',
+  DESIGN = 'design',
+  TEST_PLAN = 'test_plan',
+  DEPLOYMENT_GUIDE = 'deployment_guide',
+  OTHER = 'other'
+}
+
+export interface ProjectFile {
+  id: string;
+  filename: string;
+  mimetype: string;
+  size: number;
+  type: FileType;
+  description?: string;
+  uploadedAt: Date;
+  projectId: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -115,6 +142,7 @@ export interface Project {
   technologies: Technology[];
   cloudServices: CloudService[];
   usefulLinks: UsefulLink[];
+  files: ProjectFile[];
 }
 
 export interface ProjectStats {

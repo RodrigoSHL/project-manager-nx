@@ -44,13 +44,15 @@ import {
   Code,
 } from "lucide-react"
 import { useProjects } from "@/hooks/useProjects"
-import { ProjectStatus, Project } from "@/types/project"
+import { ProjectStatus, Project, FileType } from "@/types/project"
+import { FileService } from "@/services/fileService"
 import { EditProjectDialog } from "./edit-project-dialog"
 import { EditRepositoriesDialog } from "./edit-repositories-dialog"
 import { EditTeamMembersDialog } from "./edit-team-members-dialog"
 import { EditTasksDialog } from "./edit-tasks-dialog"
 import { EditUsefulLinksDialog } from "./edit-useful-links-dialog"
 import { EditEnvironmentsDialog } from "./edit-environments-dialog"
+import { EditDocumentsDialog } from "./edit-documents-dialog"
 
 
 export function ProjectDashboard() {
@@ -61,6 +63,7 @@ export function ProjectDashboard() {
   const [editTasksDialogOpen, setEditTasksDialogOpen] = useState(false)
   const [editUsefulLinksDialogOpen, setEditUsefulLinksDialogOpen] = useState(false)
   const [editEnvironmentsDialogOpen, setEditEnvironmentsDialogOpen] = useState(false)
+  const [editDocumentsDialogOpen, setEditDocumentsDialogOpen] = useState(false)
 
   // Manejar cambio de proyecto activo
   const handleProjectChange = (projectId: string) => {
@@ -104,6 +107,11 @@ export function ProjectDashboard() {
 
   // Manejar edición de entornos
   const handleEditEnvironments = async (updatedProject: Project) => {
+    // No necesitamos hacer nada aquí ya que el modal maneja la actualización directamente
+  }
+
+  // Manejar edición de documentos
+  const handleEditDocuments = async (updatedProject: Project) => {
     // No necesitamos hacer nada aquí ya que el modal maneja la actualización directamente
   }
 
@@ -197,6 +205,26 @@ export function ProjectDashboard() {
       'production': 'Producción'
     }
     return labelMap[type] || type
+  }
+
+  const getDocumentTypeBadge = (type: FileType) => {
+    const typeMap: Record<FileType, { label: string; color: string }> = {
+      [FileType.MANUAL]: { label: 'Manual', color: 'bg-blue-100 text-blue-800' },
+      [FileType.DIAGRAM]: { label: 'Diagrama', color: 'bg-purple-100 text-purple-800' },
+      [FileType.FLOW]: { label: 'Flujo', color: 'bg-green-100 text-green-800' },
+      [FileType.DOCUMENTATION]: { label: 'Doc', color: 'bg-gray-100 text-gray-800' },
+      [FileType.ARCHITECTURE]: { label: 'Arq', color: 'bg-orange-100 text-orange-800' },
+      [FileType.API_DOCS]: { label: 'API', color: 'bg-indigo-100 text-indigo-800' },
+      [FileType.USER_GUIDE]: { label: 'Guía', color: 'bg-pink-100 text-pink-800' },
+      [FileType.TECHNICAL_SPEC]: { label: 'Spec', color: 'bg-teal-100 text-teal-800' },
+      [FileType.REQUIREMENTS]: { label: 'Req', color: 'bg-red-100 text-red-800' },
+      [FileType.DESIGN]: { label: 'Diseño', color: 'bg-yellow-100 text-yellow-800' },
+      [FileType.TEST_PLAN]: { label: 'Test', color: 'bg-cyan-100 text-cyan-800' },
+      [FileType.DEPLOYMENT_GUIDE]: { label: 'Deploy', color: 'bg-emerald-100 text-emerald-800' },
+      [FileType.OTHER]: { label: 'Otro', color: 'bg-gray-100 text-gray-800' }
+    }
+    const typeInfo = typeMap[type] || { label: type, color: 'bg-gray-100 text-gray-800' }
+    return <Badge className={typeInfo.color}>{typeInfo.label}</Badge>
   }
 
   return (
@@ -491,33 +519,59 @@ export function ProjectDashboard() {
                   {/* Documentación */}
                   <Card>
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <FileText className="h-5 w-5" />
-                        Documentación
-                      </CardTitle>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="flex items-center gap-2">
+                          <FileText className="h-5 w-5" />
+                          Documentación
+                        </CardTitle>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setEditDocumentsDialogOpen(true)}
+                        >
+                          <Edit3 className="mr-2 h-4 w-4" />
+                          Editar
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      <Button variant="ghost" className="w-full justify-start" asChild>
-                        <a href="#" className="flex items-center gap-3">
-                          <BookOpen className="h-4 w-4" />
-                          Manual de Despliegue
-                          <ExternalLink className="h-3 w-3 ml-auto" />
-                        </a>
-                      </Button>
-                      <Button variant="ghost" className="w-full justify-start" asChild>
-                        <a href="#" className="flex items-center gap-3">
-                          <Users className="h-4 w-4" />
-                          Guía de Onboarding
-                          <ExternalLink className="h-3 w-3 ml-auto" />
-                        </a>
-                      </Button>
-                      <Button variant="ghost" className="w-full justify-start" asChild>
-                        <a href="#" className="flex items-center gap-3">
-                          <FileText className="h-4 w-4" />
-                          Documentación Técnica
-                          <ExternalLink className="h-3 w-3 ml-auto" />
-                        </a>
-                      </Button>
+                      {currentProject.files && currentProject.files.length > 0 ? (
+                        currentProject.files.slice(0, 5).map((file) => (
+                          <Button key={file.id} variant="ghost" className="w-full justify-start" asChild>
+                            <a 
+                              href={`/api/files/${file.id}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="flex items-center gap-3"
+                            >
+                              <span className="text-lg">{FileService.getFileIcon(file.mimetype)}</span>
+                              <div className="flex-1 text-left">
+                                <div className="font-medium">{file.filename}</div>
+                                {file.description && (
+                                  <div className="text-xs text-gray-500 truncate">{file.description}</div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {getDocumentTypeBadge(file.type)}
+                                <ExternalLink className="h-3 w-3" />
+                              </div>
+                            </a>
+                          </Button>
+                        ))
+                      ) : (
+                        <div className="text-center py-6 text-gray-500">
+                          <FileText className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                          <p className="text-sm">No hay documentos en el proyecto</p>
+                          <p className="text-xs">Haz clic en &quot;Editar&quot; para agregar documentos</p>
+                        </div>
+                      )}
+                      {currentProject.files && currentProject.files.length > 5 && (
+                        <div className="text-center pt-2">
+                          <p className="text-xs text-gray-500">
+                            Y {currentProject.files.length - 5} documentos más...
+                          </p>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </div>
@@ -751,6 +805,15 @@ export function ProjectDashboard() {
         open={editEnvironmentsDialogOpen}
         onOpenChange={setEditEnvironmentsDialogOpen}
         onSave={handleEditEnvironments}
+        onProjectUpdate={handleProjectUpdate}
+      />
+
+      {/* Modal de edición de documentos */}
+      <EditDocumentsDialog
+        project={currentProject}
+        open={editDocumentsDialogOpen}
+        onOpenChange={setEditDocumentsDialogOpen}
+        onSave={handleEditDocuments}
         onProjectUpdate={handleProjectUpdate}
       />
     </ThemeProvider>

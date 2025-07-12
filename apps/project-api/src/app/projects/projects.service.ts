@@ -10,7 +10,7 @@ import { Repository as ProjectRepository } from './entities/repository.entity';
 import { CloudService } from './entities/cloud-service.entity';
 import { UsefulLink } from './entities/useful-link.entity';
 import { CreateProjectDto } from './dto/create-project.dto';
-import { UpdateProjectDto } from './dto/update-project.dto';
+import { UpdateProjectDto, GranularUpdateProjectDto } from './dto/update-project.dto';
 import {
   technologiesSeed,
   projectSeed,
@@ -105,7 +105,7 @@ export class ProjectsService {
   async update(id: string, updateProjectDto: UpdateProjectDto): Promise<Project> {
     const project = await this.findOne(id);
     
-    // Actualizar solo los campos básicos del proyecto
+    // Extraer los campos de relaciones y los campos básicos del proyecto
     const { 
       repositories, 
       environments, 
@@ -117,9 +117,248 @@ export class ProjectsService {
       ...projectData 
     } = updateProjectDto;
     
+    // Actualizar campos básicos del proyecto
     Object.assign(project, projectData);
     
-    return await this.projectRepository.save(project);
+    // Guardar el proyecto primero
+    const savedProject = await this.projectRepository.save(project);
+
+    // Procesar repositorios si se proporcionan
+    if (repositories && repositories.length > 0) {
+      // Eliminar repositorios existentes
+      await this.projectRepositoryEntity.delete({ projectId: id });
+      // Crear nuevos repositorios
+      for (const repo of repositories) {
+        const newRepo = Object.assign(this.projectRepositoryEntity.create(), repo);
+        newRepo.projectId = id;
+        await this.projectRepositoryEntity.save(newRepo);
+      }
+    }
+
+    // Procesar entornos si se proporcionan
+    if (environments && environments.length > 0) {
+      // Eliminar entornos existentes
+      await this.environmentRepository.delete({ projectId: id });
+      // Crear nuevos entornos
+      for (const env of environments) {
+        const newEnv = Object.assign(this.environmentRepository.create(), env);
+        newEnv.projectId = id;
+        await this.environmentRepository.save(newEnv);
+      }
+    }
+
+    // Procesar miembros del equipo si se proporcionan
+    if (teamMembers && teamMembers.length > 0) {
+      // Eliminar miembros existentes
+      await this.teamMemberRepository.delete({ projectId: id });
+      // Crear nuevos miembros
+      for (const member of teamMembers) {
+        const newMember = Object.assign(this.teamMemberRepository.create(), member);
+        newMember.projectId = id;
+        await this.teamMemberRepository.save(newMember);
+      }
+    }
+
+    // Procesar tareas si se proporcionan
+    if (tasks && tasks.length > 0) {
+      // Eliminar tareas existentes
+      await this.taskRepository.delete({ projectId: id });
+      // Crear nuevas tareas
+      for (const task of tasks) {
+        const newTask = Object.assign(this.taskRepository.create(), task);
+        newTask.projectId = id;
+        await this.taskRepository.save(newTask);
+      }
+    }
+
+    // Procesar servicios cloud si se proporcionan
+    if (cloudServices && cloudServices.length > 0) {
+      // Eliminar servicios existentes
+      await this.cloudServiceRepository.delete({ projectId: id });
+      // Crear nuevos servicios
+      for (const service of cloudServices) {
+        const newService = Object.assign(this.cloudServiceRepository.create(), service);
+        newService.projectId = id;
+        await this.cloudServiceRepository.save(newService);
+      }
+    }
+
+    // Procesar enlaces útiles si se proporcionan
+    if (usefulLinks && usefulLinks.length > 0) {
+      // Eliminar enlaces existentes
+      await this.usefulLinkRepository.delete({ projectId: id });
+      // Crear nuevos enlaces
+      for (const link of usefulLinks) {
+        const newLink = Object.assign(this.usefulLinkRepository.create(), link);
+        newLink.projectId = id;
+        await this.usefulLinkRepository.save(newLink);
+      }
+    }
+
+    // Procesar tecnologías si se proporcionan
+    if (technologyIds && technologyIds.length > 0) {
+      const technologies = await this.technologyRepository.findByIds(technologyIds);
+      savedProject.technologies = technologies;
+      await this.projectRepository.save(savedProject);
+    }
+    
+    // Retornar el proyecto actualizado con todas las relaciones
+    return await this.findOne(id);
+  }
+
+  async granularUpdate(id: string, granularUpdateDto: GranularUpdateProjectDto): Promise<Project> {
+    const project = await this.findOne(id);
+    
+    // Actualizar campos básicos del proyecto
+    const { 
+      repositories, 
+      environments, 
+      teamMembers, 
+      tasks, 
+      technologyIds, 
+      cloudServices, 
+      usefulLinks, 
+      ...projectData 
+    } = granularUpdateDto;
+    
+    Object.assign(project, projectData);
+    const savedProject = await this.projectRepository.save(project);
+
+    // Procesar repositorios de forma granular
+    if (repositories) {
+      if (repositories.add && repositories.add.length > 0) {
+        for (const repo of repositories.add) {
+          const newRepo = Object.assign(this.projectRepositoryEntity.create(), repo);
+          newRepo.projectId = id;
+          await this.projectRepositoryEntity.save(newRepo);
+        }
+      }
+      
+      if (repositories.update && repositories.update.length > 0) {
+        for (const update of repositories.update) {
+          await this.projectRepositoryEntity.update(update.id, update as any);
+        }
+      }
+      
+      if (repositories.delete && repositories.delete.length > 0) {
+        await this.projectRepositoryEntity.delete(repositories.delete);
+      }
+    }
+
+    // Procesar entornos de forma granular
+    if (environments) {
+      if (environments.add && environments.add.length > 0) {
+        for (const env of environments.add) {
+          const newEnv = Object.assign(this.environmentRepository.create(), env);
+          newEnv.projectId = id;
+          await this.environmentRepository.save(newEnv);
+        }
+      }
+      
+      if (environments.update && environments.update.length > 0) {
+        for (const update of environments.update) {
+          await this.environmentRepository.update(update.id, update as any);
+        }
+      }
+      
+      if (environments.delete && environments.delete.length > 0) {
+        await this.environmentRepository.delete(environments.delete);
+      }
+    }
+
+    // Procesar miembros del equipo de forma granular
+    if (teamMembers) {
+      if (teamMembers.add && teamMembers.add.length > 0) {
+        for (const member of teamMembers.add) {
+          const newMember = Object.assign(this.teamMemberRepository.create(), member);
+          newMember.projectId = id;
+          await this.teamMemberRepository.save(newMember);
+        }
+      }
+      
+      if (teamMembers.update && teamMembers.update.length > 0) {
+        for (const update of teamMembers.update) {
+          await this.teamMemberRepository.update(update.id, update as any);
+        }
+      }
+      
+      if (teamMembers.delete && teamMembers.delete.length > 0) {
+        await this.teamMemberRepository.delete(teamMembers.delete);
+      }
+    }
+
+    // Procesar tareas de forma granular
+    if (tasks) {
+      if (tasks.add && tasks.add.length > 0) {
+        for (const task of tasks.add) {
+          const newTask = Object.assign(this.taskRepository.create(), task);
+          newTask.projectId = id;
+          await this.taskRepository.save(newTask);
+        }
+      }
+      
+      if (tasks.update && tasks.update.length > 0) {
+        for (const update of tasks.update) {
+          await this.taskRepository.update(update.id, update as any);
+        }
+      }
+      
+      if (tasks.delete && tasks.delete.length > 0) {
+        await this.taskRepository.delete(tasks.delete);
+      }
+    }
+
+    // Procesar servicios cloud de forma granular
+    if (cloudServices) {
+      if (cloudServices.add && cloudServices.add.length > 0) {
+        for (const service of cloudServices.add) {
+          const newService = Object.assign(this.cloudServiceRepository.create(), service);
+          newService.projectId = id;
+          await this.cloudServiceRepository.save(newService);
+        }
+      }
+      
+      if (cloudServices.update && cloudServices.update.length > 0) {
+        for (const update of cloudServices.update) {
+          await this.cloudServiceRepository.update(update.id, update as any);
+        }
+      }
+      
+      if (cloudServices.delete && cloudServices.delete.length > 0) {
+        await this.cloudServiceRepository.delete(cloudServices.delete);
+      }
+    }
+
+    // Procesar enlaces útiles de forma granular
+    if (usefulLinks) {
+      if (usefulLinks.add && usefulLinks.add.length > 0) {
+        for (const link of usefulLinks.add) {
+          const newLink = Object.assign(this.usefulLinkRepository.create(), link);
+          newLink.projectId = id;
+          await this.usefulLinkRepository.save(newLink);
+        }
+      }
+      
+      if (usefulLinks.update && usefulLinks.update.length > 0) {
+        for (const update of usefulLinks.update) {
+          await this.usefulLinkRepository.update(update.id, update as any);
+        }
+      }
+      
+      if (usefulLinks.delete && usefulLinks.delete.length > 0) {
+        await this.usefulLinkRepository.delete(usefulLinks.delete);
+      }
+    }
+
+    // Procesar tecnologías si se proporcionan
+    if (technologyIds && technologyIds.length > 0) {
+      const technologies = await this.technologyRepository.findByIds(technologyIds);
+      savedProject.technologies = technologies;
+      await this.projectRepository.save(savedProject);
+    }
+    
+    // Retornar el proyecto actualizado con todas las relaciones
+    return await this.findOne(id);
   }
 
   async remove(id: string): Promise<void> {

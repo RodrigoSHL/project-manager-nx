@@ -33,6 +33,7 @@ import {
   Zap,
   Loader2,
   Edit3,
+  Phone,
 } from "lucide-react"
 import { useProjects } from "@/hooks/useProjects"
 import { ProjectStatus, Project } from "@/types/project"
@@ -103,6 +104,20 @@ export function ProjectDashboard() {
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
+  }
+
+  const getRoleBadge = (role: string) => {
+    const roleMap: Record<string, string> = {
+      'tech_lead': 'Tech Lead',
+      'developer': 'Developer',
+      'devops': 'DevOps',
+      'product_owner': 'Product Owner',
+      'scrum_master': 'Scrum Master',
+      'qa': 'QA',
+      'designer': 'Designer',
+      'architect': 'Architect'
+    }
+    return roleMap[role] || role
   }
 
   return (
@@ -426,62 +441,50 @@ export function ProjectDashboard() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Rol</TableHead>
-                          <TableHead>Nombre</TableHead>
-                          <TableHead>Contacto</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell>
-                            <Badge variant="default">Tech Lead</Badge>
-                          </TableCell>
-                          <TableCell className="font-medium">Ana García</TableCell>
-                          <TableCell>
-                            <a
-                              href="mailto:ana.garcia@empresa.com"
-                              className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
-                            >
-                              <Mail className="h-4 w-4" />
-                              ana.garcia@empresa.com
-                            </a>
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>
-                            <Badge variant="secondary">DevOps</Badge>
-                          </TableCell>
-                          <TableCell className="font-medium">Carlos Ruiz</TableCell>
-                          <TableCell>
-                            <a
-                              href="mailto:carlos.ruiz@empresa.com"
-                              className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
-                            >
-                              <Mail className="h-4 w-4" />
-                              carlos.ruiz@empresa.com
-                            </a>
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>
-                            <Badge variant="outline">Product Owner</Badge>
-                          </TableCell>
-                          <TableCell className="font-medium">María López</TableCell>
-                          <TableCell>
-                            <a
-                              href="mailto:maria.lopez@empresa.com"
-                              className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
-                            >
-                              <Mail className="h-4 w-4" />
-                              maria.lopez@empresa.com
-                            </a>
-                          </TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
+                    {currentProject.teamMembers && currentProject.teamMembers.length > 0 ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Rol</TableHead>
+                            <TableHead>Nombre</TableHead>
+                            <TableHead>Contacto</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {currentProject.teamMembers.map((member) => (
+                            <TableRow key={member.id}>
+                              <TableCell>
+                                <Badge variant="default">{getRoleBadge(member.role)}</Badge>
+                              </TableCell>
+                              <TableCell className="font-medium">{member.name}</TableCell>
+                              <TableCell>
+                                <div className="space-y-1">
+                                  <a
+                                    href={`mailto:${member.email}`}
+                                    className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
+                                  >
+                                    <Mail className="h-4 w-4" />
+                                    {member.email}
+                                  </a>
+                                  {member.phone && (
+                                    <div className="flex items-center gap-2 text-gray-600">
+                                      <Phone className="h-3 w-3" />
+                                      <span className="text-sm">{member.phone}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <Users className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                        <p>No hay miembros del equipo configurados</p>
+                        <p className="text-sm">Haz clic en &quot;Editar&quot; para agregar miembros al equipo</p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 

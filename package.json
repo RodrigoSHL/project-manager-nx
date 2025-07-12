@@ -2,7 +2,15 @@
   "name": "@project-manager-nx/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "test": "nx run-many --target=test --all",
+    "test:api": "nx test project-api",
+    "test:api:watch": "nx test project-api --watch",
+    "test:web": "nx test project-web",
+    "test:web:watch": "nx test project-web --watch",
+    "test:coverage": "nx run-many --target=test --all --coverage",
+    "test:api:coverage": "nx test project-api --coverage"
+  },
   "private": true,
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",

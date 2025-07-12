@@ -40,6 +40,8 @@ import {
   Rocket,
   TestTube,
   Globe,
+  Home,
+  Code,
 } from "lucide-react"
 import { useProjects } from "@/hooks/useProjects"
 import { ProjectStatus, Project } from "@/types/project"
@@ -48,6 +50,7 @@ import { EditRepositoriesDialog } from "./edit-repositories-dialog"
 import { EditTeamMembersDialog } from "./edit-team-members-dialog"
 import { EditTasksDialog } from "./edit-tasks-dialog"
 import { EditUsefulLinksDialog } from "./edit-useful-links-dialog"
+import { EditEnvironmentsDialog } from "./edit-environments-dialog"
 
 
 export function ProjectDashboard() {
@@ -57,6 +60,7 @@ export function ProjectDashboard() {
   const [editTeamMembersDialogOpen, setEditTeamMembersDialogOpen] = useState(false)
   const [editTasksDialogOpen, setEditTasksDialogOpen] = useState(false)
   const [editUsefulLinksDialogOpen, setEditUsefulLinksDialogOpen] = useState(false)
+  const [editEnvironmentsDialogOpen, setEditEnvironmentsDialogOpen] = useState(false)
 
   // Manejar cambio de proyecto activo
   const handleProjectChange = (projectId: string) => {
@@ -95,6 +99,11 @@ export function ProjectDashboard() {
 
   // Manejar edición de enlaces útiles
   const handleEditUsefulLinks = async (updatedProject: Project) => {
+    // No necesitamos hacer nada aquí ya que el modal maneja la actualización directamente
+  }
+
+  // Manejar edición de entornos
+  const handleEditEnvironments = async (updatedProject: Project) => {
     // No necesitamos hacer nada aquí ya que el modal maneja la actualización directamente
   }
 
@@ -165,6 +174,29 @@ export function ProjectDashboard() {
     const iconInfo = iconMap[type] || { icon: Globe, color: 'text-gray-600' }
     const IconComponent = iconInfo.icon
     return <IconComponent className={`h-4 w-4 ${iconInfo.color}`} />
+  }
+
+  const getEnvironmentTypeIcon = (type: string) => {
+    const iconMap: Record<string, any> = {
+      'local': Home,
+      'development': Code,
+      'testing': TestTube,
+      'staging': Database,
+      'production': Rocket
+    }
+    const IconComponent = iconMap[type] || Globe
+    return <IconComponent className="h-4 w-4 text-gray-600" />
+  }
+
+  const getEnvironmentTypeLabel = (type: string) => {
+    const labelMap: Record<string, string> = {
+      'local': 'Local',
+      'development': 'Desarrollo',
+      'testing': 'Testing',
+      'staging': 'Staging',
+      'production': 'Producción'
+    }
+    return labelMap[type] || type
   }
 
   return (
@@ -355,44 +387,65 @@ export function ProjectDashboard() {
                 {/* Entornos y URLs */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <ExternalLink className="h-5 w-5" />
-                      Entornos y URLs
-                    </CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2">
+                        <Server className="h-5 w-5" />
+                        Entornos y URLs
+                      </CardTitle>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setEditEnvironmentsDialogOpen(true)}
+                      >
+                        <Edit3 className="mr-2 h-4 w-4" />
+                        Editar
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Entorno</TableHead>
-                          <TableHead>URL</TableHead>
-                          <TableHead>Observaciones</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell>
-                            <Badge variant="outline">Local</Badge>
-                          </TableCell>
-                          <TableCell className="font-mono text-sm">localhost:3000</TableCell>
-                          <TableCell className="text-sm text-gray-600">Desarrollo local</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>
-                            <Badge variant="secondary">Staging</Badge>
-                          </TableCell>
-                          <TableCell className="font-mono text-sm">staging.empresa.com</TableCell>
-                          <TableCell className="text-sm text-gray-600">Pruebas y QA</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>
-                            <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Producción</Badge>
-                          </TableCell>
-                          <TableCell className="font-mono text-sm">app.empresa.com</TableCell>
-                          <TableCell className="text-sm text-gray-600">Entorno productivo</TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
+                    {currentProject.environments && currentProject.environments.length > 0 ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Entorno</TableHead>
+                            <TableHead>URL</TableHead>
+                            <TableHead>Descripción</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {currentProject.environments.map((environment) => (
+                            <TableRow key={environment.id}>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  {getEnvironmentTypeIcon(environment.type)}
+                                  <Badge variant="outline">{getEnvironmentTypeLabel(environment.type)}</Badge>
+                                </div>
+                              </TableCell>
+                              <TableCell className="font-mono text-sm">
+                                <a 
+                                  href={environment.url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800 hover:underline"
+                                >
+                                  {environment.url}
+                                  <ExternalLink className="inline h-3 w-3 ml-1" />
+                                </a>
+                              </TableCell>
+                              <TableCell className="text-sm text-gray-600">
+                                {environment.description || '-'}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <Server className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                        <p>No hay entornos configurados</p>
+                        <p className="text-sm">Haz clic en &quot;Editar&quot; para agregar entornos al proyecto</p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -689,6 +742,15 @@ export function ProjectDashboard() {
         open={editUsefulLinksDialogOpen}
         onOpenChange={setEditUsefulLinksDialogOpen}
         onSave={handleEditUsefulLinks}
+        onProjectUpdate={handleProjectUpdate}
+      />
+
+      {/* Modal de edición de entornos */}
+      <EditEnvironmentsDialog
+        project={currentProject}
+        open={editEnvironmentsDialogOpen}
+        onOpenChange={setEditEnvironmentsDialogOpen}
+        onSave={handleEditEnvironments}
         onProjectUpdate={handleProjectUpdate}
       />
     </ThemeProvider>

@@ -31,6 +31,7 @@ export interface Environment {
   name: string;
   url: string;
   type: string;
+  description?: string;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -34,12 +34,14 @@ import {
   Loader2,
   Edit3,
   Phone,
+  AlertTriangle,
 } from "lucide-react"
 import { useProjects } from "@/hooks/useProjects"
 import { ProjectStatus, Project } from "@/types/project"
 import { EditProjectDialog } from "./edit-project-dialog"
 import { EditRepositoriesDialog } from "./edit-repositories-dialog"
 import { EditTeamMembersDialog } from "./edit-team-members-dialog"
+import { EditTasksDialog } from "./edit-tasks-dialog"
 
 
 export function ProjectDashboard() {
@@ -47,6 +49,7 @@ export function ProjectDashboard() {
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [editRepositoriesDialogOpen, setEditRepositoriesDialogOpen] = useState(false)
   const [editTeamMembersDialogOpen, setEditTeamMembersDialogOpen] = useState(false)
+  const [editTasksDialogOpen, setEditTasksDialogOpen] = useState(false)
 
   // Manejar cambio de proyecto activo
   const handleProjectChange = (projectId: string) => {
@@ -75,6 +78,11 @@ export function ProjectDashboard() {
 
   // Manejar edición de miembros del equipo
   const handleEditTeamMembers = async (updatedProject: Project) => {
+    // No necesitamos hacer nada aquí ya que el modal maneja la actualización directamente
+  }
+
+  // Manejar edición de tareas
+  const handleEditTasks = async (updatedProject: Project) => {
     // No necesitamos hacer nada aquí ya que el modal maneja la actualización directamente
   }
 
@@ -118,6 +126,17 @@ export function ProjectDashboard() {
       'architect': 'Architect'
     }
     return roleMap[role] || role
+  }
+
+  const getPriorityBadge = (priority: string) => {
+    const priorityMap: Record<string, { label: string; variant: string }> = {
+      'low': { label: 'Baja', variant: 'outline' },
+      'medium': { label: 'Media', variant: 'secondary' },
+      'high': { label: 'Alta', variant: 'default' },
+      'critical': { label: 'Crítica', variant: 'destructive' }
+    }
+    const priorityInfo = priorityMap[priority] || { label: priority, variant: 'secondary' }
+    return <Badge variant={priorityInfo.variant as any} className="text-xs">{priorityInfo.label}</Badge>
   }
 
   return (
@@ -492,44 +511,62 @@ export function ProjectDashboard() {
                   {/* Roadmap y Tareas */}
                   <Card>
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Calendar className="h-5 w-5" />
-                        Roadmap y Tareas
-                      </CardTitle>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="flex items-center gap-2">
+                          <Calendar className="h-5 w-5" />
+                          Roadmap y Tareas
+                        </CardTitle>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setEditTasksDialogOpen(true)}
+                        >
+                          <Edit3 className="mr-2 h-4 w-4" />
+                          Editar
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg">
-                          <AlertCircle className="h-4 w-4 text-red-600" />
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">Migración a AWS EKS</p>
-                            <p className="text-xs text-gray-600">Fecha límite: 15 Mar 2024</p>
-                          </div>
-                          <Badge variant="destructive" className="text-xs">
-                            Alta
-                          </Badge>
+                      {currentProject.tasks && currentProject.tasks.length > 0 ? (
+                        <div className="space-y-3">
+                          {currentProject.tasks.map((task) => (
+                            <div key={task.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                              <div className="flex items-center gap-3 flex-1">
+                                {task.status === 'done' ? (
+                                  <CheckCircle className="h-4 w-4 text-green-600" />
+                                ) : task.status === 'in_progress' ? (
+                                  <Clock className="h-4 w-4 text-blue-600" />
+                                ) : task.status === 'review' ? (
+                                  <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                                ) : (
+                                  <AlertCircle className="h-4 w-4 text-gray-600" />
+                                )}
+                                <div className="flex-1">
+                                  <p className="font-medium text-sm">{task.title}</p>
+                                  {task.description && (
+                                    <p className="text-xs text-gray-600 mt-1 line-clamp-1">{task.description}</p>
+                                  )}
+                                  {task.dueDate && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      Fecha límite: {new Date(task.dueDate).toLocaleDateString('es-ES')}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {getPriorityBadge(task.priority)}
+                                {getStatusBadge(task.status)}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg">
-                          <Clock className="h-4 w-4 text-yellow-600" />
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">Implementar autenticación 2FA</p>
-                            <p className="text-xs text-gray-600">Fecha límite: 30 Mar 2024</p>
-                          </div>
-                          <Badge variant="secondary" className="text-xs">
-                            Media
-                          </Badge>
+                      ) : (
+                        <div className="text-center py-6 text-gray-500">
+                          <Calendar className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                          <p className="text-sm">No hay tareas configuradas</p>
+                          <p className="text-xs">Haz clic en &quot;Editar&quot; para agregar tareas al proyecto</p>
                         </div>
-                        <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">Optimización de consultas DB</p>
-                            <p className="text-xs text-gray-600">Fecha límite: 10 Abr 2024</p>
-                          </div>
-                          <Badge variant="outline" className="text-xs">
-                            Baja
-                          </Badge>
-                        </div>
-                      </div>
+                      )}
                     </CardContent>
                   </Card>
 
@@ -602,6 +639,15 @@ export function ProjectDashboard() {
         open={editTeamMembersDialogOpen}
         onOpenChange={setEditTeamMembersDialogOpen}
         onSave={handleEditTeamMembers}
+        onProjectUpdate={handleProjectUpdate}
+      />
+
+      {/* Modal de edición de tareas */}
+      <EditTasksDialog
+        project={currentProject}
+        open={editTasksDialogOpen}
+        onOpenChange={setEditTasksDialogOpen}
+        onSave={handleEditTasks}
         onProjectUpdate={handleProjectUpdate}
       />
     </ThemeProvider>

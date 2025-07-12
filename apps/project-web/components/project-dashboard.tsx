@@ -539,7 +539,7 @@ export function ProjectDashboard() {
                         currentProject.files.slice(0, 5).map((file) => (
                           <Button key={file.id} variant="ghost" className="w-full justify-start" asChild>
                             <a 
-                              href={`/api/files/${file.id}`} 
+                              href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'}/files/${file.id}`} 
                               target="_blank" 
                               rel="noopener noreferrer" 
                               className="flex items-center gap-3"

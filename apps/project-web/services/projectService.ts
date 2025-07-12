@@ -77,4 +77,15 @@ export class ProjectService {
     const response = await fetch(`${API_BASE_URL}/projects/technologies`);
     return this.handleResponse<any[]>(response);
   }
+
+  static async granularUpdateProject(id: string, updateData: any): Promise<Project> {
+    const response = await fetch(`${API_BASE_URL}/projects/${id}/granular`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updateData),
+    });
+    return this.handleResponse<Project>(response);
+  }
 } 

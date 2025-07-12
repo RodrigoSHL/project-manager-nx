@@ -132,6 +132,14 @@ export function useProjects() {
     loadStats();
   }, [loadProjects, loadStats]);
 
+  // Actualizar proyecto en la lista
+  const updateProjectInList = useCallback((updatedProject: Project) => {
+    setProjects(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p))
+    if (currentProject?.id === updatedProject.id) {
+      setCurrentProject(updatedProject)
+    }
+  }, [currentProject]);
+
   return {
     projects,
     currentProject,
@@ -143,6 +151,7 @@ export function useProjects() {
     loadProject,
     createProject,
     updateProject,
+    updateProjectInList,
     deleteProject,
     runSeed,
   };

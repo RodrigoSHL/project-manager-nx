@@ -21,6 +21,7 @@ export interface Repository {
   url: string;
   type: string;
   branch: string;
+  description?: string;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -32,15 +32,18 @@ import {
   Target,
   Zap,
   Loader2,
+  Edit3,
 } from "lucide-react"
 import { useProjects } from "@/hooks/useProjects"
 import { ProjectStatus, Project } from "@/types/project"
 import { EditProjectDialog } from "./edit-project-dialog"
+import { EditRepositoriesDialog } from "./edit-repositories-dialog"
 
 
 export function ProjectDashboard() {
-  const { projects, currentProject, setCurrentProject, loading, error, updateProject } = useProjects()
+  const { projects, currentProject, setCurrentProject, loading, error, updateProject, updateProjectInList } = useProjects()
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editRepositoriesDialogOpen, setEditRepositoriesDialogOpen] = useState(false)
 
   // Manejar cambio de proyecto activo
   const handleProjectChange = (projectId: string) => {
@@ -55,6 +58,16 @@ export function ProjectDashboard() {
     if (currentProject) {
       await updateProject(currentProject.id, updatedProject)
     }
+  }
+
+  // Manejar edición de repositorios
+  const handleEditRepositories = async (updatedProject: Project) => {
+    // No necesitamos hacer nada aquí ya que el modal maneja la actualización directamente
+  }
+
+  // Actualizar proyecto directamente en el estado
+  const handleProjectUpdate = (updatedProject: Project) => {
+    updateProjectInList(updatedProject)
   }
 
   const getStatusBadge = (status: string) => {
@@ -186,10 +199,20 @@ export function ProjectDashboard() {
                   {/* Repositorios */}
                   <Card>
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Github className="h-5 w-5" />
-                        Repositorios ({currentProject.repositories.length})
-                      </CardTitle>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="flex items-center gap-2">
+                          <Github className="h-5 w-5" />
+                          Repositorios ({currentProject.repositories.length})
+                        </CardTitle>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setEditRepositoriesDialogOpen(true)}
+                        >
+                          <Edit3 className="mr-2 h-4 w-4" />
+                          Editar
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       {currentProject.repositories.length > 0 ? (
@@ -542,6 +565,15 @@ export function ProjectDashboard() {
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         onSave={handleEditProject}
+      />
+
+      {/* Modal de edición de repositorios */}
+      <EditRepositoriesDialog
+        project={currentProject}
+        open={editRepositoriesDialogOpen}
+        onOpenChange={setEditRepositoriesDialogOpen}
+        onSave={handleEditRepositories}
+        onProjectUpdate={handleProjectUpdate}
       />
     </ThemeProvider>
   )

@@ -96,7 +96,7 @@ export function ArchitectureViewerDialog({
 
         <div className="flex flex-col lg:flex-row gap-4 min-h-0 flex-1">
           {/* Panel principal con la imagen */}
-          <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-[0_0_70%] flex flex-col min-h-0">
             {/* Controles de navegación */}
             {architectureFiles.length > 1 && (
               <div className="flex items-center justify-between mb-4">
@@ -166,9 +166,9 @@ export function ArchitectureViewerDialog({
 
           {/* Panel lateral con lista de archivos */}
           {architectureFiles.length > 1 && (
-            <div className="w-full lg:w-80 lg:border-l lg:border-gray-200 lg:pl-4 flex-shrink-0 border-t border-gray-200 pt-4 lg:pt-0">
+            <div className="flex-[0_0_30%] flex flex-col min-h-0">
               <h3 className="font-medium mb-3">Todos los diagramas</h3>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto gap-2 flex flex-col">
                 {architectureFiles.map((file, index) => (
                   <Card
                     key={file.id}

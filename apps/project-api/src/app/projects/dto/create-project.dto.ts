@@ -69,13 +69,24 @@ export class CreateCloudServiceDto {
   @IsEnum(['aws', 'azure', 'gcp', 'digital_ocean', 'heroku', 'vercel', 'netlify'])
   provider: string;
 
-  @IsOptional()
   @IsString()
-  serviceType?: string;
+  serviceType: string;
 
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsString()
+  endpoint?: string;
+
+  @IsOptional()
+  @IsString()
+  region?: string;
+
+  @IsOptional()
+  @IsString()
+  configuration?: string;
 }
 
 export class CreateUsefulLinkDto {

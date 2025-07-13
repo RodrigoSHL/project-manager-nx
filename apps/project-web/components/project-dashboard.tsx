@@ -42,6 +42,7 @@ import {
   Globe,
   Home,
   Code,
+  Image,
 } from "lucide-react"
 import { useProjects } from "@/hooks/useProjects"
 import { ProjectStatus, Project, FileType } from "@/types/project"
@@ -53,6 +54,8 @@ import { EditTasksDialog } from "./edit-tasks-dialog"
 import { EditUsefulLinksDialog } from "./edit-useful-links-dialog"
 import { EditEnvironmentsDialog } from "./edit-environments-dialog"
 import { EditDocumentsDialog } from "./edit-documents-dialog"
+import { EditCloudServicesDialog } from "./edit-cloud-services-dialog"
+import { ArchitectureDiagramDialog } from "./architecture-diagram-dialog"
 
 
 export function ProjectDashboard() {
@@ -64,6 +67,8 @@ export function ProjectDashboard() {
   const [editUsefulLinksDialogOpen, setEditUsefulLinksDialogOpen] = useState(false)
   const [editEnvironmentsDialogOpen, setEditEnvironmentsDialogOpen] = useState(false)
   const [editDocumentsDialogOpen, setEditDocumentsDialogOpen] = useState(false)
+  const [editCloudServicesDialogOpen, setEditCloudServicesDialogOpen] = useState(false)
+  const [architectureDiagramDialogOpen, setArchitectureDiagramDialogOpen] = useState(false)
 
   // Manejar cambio de proyecto activo
   const handleProjectChange = (projectId: string) => {
@@ -112,6 +117,11 @@ export function ProjectDashboard() {
 
   // Manejar edición de documentos
   const handleEditDocuments = async (updatedProject: Project) => {
+    // No necesitamos hacer nada aquí ya que el modal maneja la actualización directamente
+  }
+
+  // Manejar edición de servicios cloud
+  const handleEditCloudServices = async (updatedProject: Project) => {
     // No necesitamos hacer nada aquí ya que el modal maneja la actualización directamente
   }
 
@@ -205,6 +215,53 @@ export function ProjectDashboard() {
       'production': 'Producción'
     }
     return labelMap[type] || type
+  }
+
+  const getCloudProviderIcon = (provider: string) => {
+    const iconMap: Record<string, any> = {
+      'aws': Cloud,
+      'azure': Cloud,
+      'gcp': Cloud,
+      'digital_ocean': Cloud,
+      'heroku': Cloud,
+      'vercel': Cloud,
+      'netlify': Cloud
+    }
+    const IconComponent = iconMap[provider] || Cloud
+    return <IconComponent className="h-4 w-4 text-gray-600" />
+  }
+
+  const getCloudProviderLabel = (provider: string) => {
+    const labelMap: Record<string, string> = {
+      'aws': 'AWS',
+      'azure': 'Azure',
+      'gcp': 'Google Cloud',
+      'digital_ocean': 'Digital Ocean',
+      'heroku': 'Heroku',
+      'vercel': 'Vercel',
+      'netlify': 'Netlify'
+    }
+    return labelMap[provider] || provider
+  }
+
+  const getCloudServiceTypeIcon = (type: string) => {
+    const iconMap: Record<string, any> = {
+      'Compute': Server,
+      'Storage': Database,
+      'Database': Database,
+      'Networking': Globe,
+      'Security': Shield,
+      'Monitoring': Activity,
+      'Analytics': Activity,
+      'AI/ML': Zap,
+      'CDN': Globe,
+      'Load Balancer': Server,
+      'Container': Server,
+      'Serverless': Zap,
+      'Other': Cloud
+    }
+    const IconComponent = iconMap[type] || Cloud
+    return <IconComponent className="h-4 w-4 text-gray-600" />
   }
 
   const getDocumentTypeBadge = (type: FileType) => {
@@ -379,33 +436,66 @@ export function ProjectDashboard() {
                   {/* Infraestructura */}
                   <Card>
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Server className="h-5 w-5" />
-                        Infraestructura
-                      </CardTitle>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="flex items-center gap-2">
+                          <Server className="h-5 w-5" />
+                          Infraestructura
+                        </CardTitle>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setEditCloudServicesDialogOpen(true)}
+                        >
+                          <Edit3 className="mr-2 h-4 w-4" />
+                          Editar
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
-                        <div className="text-center text-gray-500">
-                          <Cloud className="h-8 w-8 mx-auto mb-2" />
-                          <p className="text-sm">Diagrama de Arquitectura</p>
-                        </div>
+                      <div 
+                        className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors"
+                        onClick={() => setArchitectureDiagramDialogOpen(true)}
+                      >
+                        {currentProject.architectureDiagram ? (
+                          <div className="text-center text-gray-600">
+                            <Image className="h-8 w-8 mx-auto mb-2" />
+                            <p className="text-sm font-medium">Diagrama de Arquitectura</p>
+                            <p className="text-xs text-gray-500">Haz clic para gestionar</p>
+                          </div>
+                        ) : (
+                          <div className="text-center text-gray-500">
+                            <Cloud className="h-8 w-8 mx-auto mb-2" />
+                            <p className="text-sm">Diagrama de Arquitectura</p>
+                            <p className="text-xs">Haz clic para subir</p>
+                          </div>
+                        )}
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-500">Servicios Cloud</label>
                         <div className="mt-2 space-y-2">
-                          <div className="flex items-center gap-2 text-sm">
-                            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                            AWS EKS - Orquestación de contenedores
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                            AWS S3 - Almacenamiento de archivos
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            AWS RDS - Base de datos PostgreSQL
-                          </div>
+                          {currentProject.cloudServices && currentProject.cloudServices.length > 0 ? (
+                            currentProject.cloudServices.map((service) => (
+                              <div key={service.id} className="flex items-center gap-2 text-sm">
+                                <div className={`w-2 h-2 rounded-full ${service.isActive ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                                <div className="flex items-center gap-2">
+                                  {getCloudProviderIcon(service.provider)}
+                                  <span className="font-medium">{service.name}</span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {getCloudProviderLabel(service.provider)}
+                                  </Badge>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {service.serviceType}
+                                  </Badge>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-center py-4 text-gray-500">
+                              <Cloud className="h-6 w-6 mx-auto mb-2 text-gray-400" />
+                              <p className="text-sm">No hay servicios cloud configurados</p>
+                              <p className="text-xs">Haz clic en &quot;Editar&quot; para agregar servicios</p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </CardContent>
@@ -816,6 +906,26 @@ export function ProjectDashboard() {
         onSave={handleEditDocuments}
         onProjectUpdate={handleProjectUpdate}
       />
+
+      {/* Modal de edición de servicios cloud */}
+      {currentProject && (
+        <EditCloudServicesDialog
+          project={currentProject}
+          open={editCloudServicesDialogOpen}
+          onOpenChange={setEditCloudServicesDialogOpen}
+          onProjectUpdate={handleProjectUpdate}
+        />
+      )}
+
+      {/* Modal de diagrama de arquitectura */}
+      {currentProject && (
+        <ArchitectureDiagramDialog
+          project={currentProject}
+          open={architectureDiagramDialogOpen}
+          onOpenChange={setArchitectureDiagramDialogOpen}
+          onProjectUpdate={handleProjectUpdate}
+        />
+      )}
     </ThemeProvider>
   )
 }

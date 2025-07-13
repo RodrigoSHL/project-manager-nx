@@ -72,10 +72,15 @@ export interface CloudService {
   id: string;
   name: string;
   provider: string;
-  service: string;
-  region: string;
-  createdAt: Date;
-  updatedAt: Date;
+  serviceType: string;
+  description?: string;
+  endpoint?: string;
+  region?: string;
+  isActive: boolean;
+  configuration?: string;
+  projectId: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface UsefulLink {

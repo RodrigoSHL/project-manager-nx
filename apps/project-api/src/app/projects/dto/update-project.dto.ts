@@ -84,6 +84,18 @@ export class UpdateCloudServiceDto {
 
   @IsOptional()
   description?: string;
+
+  @IsOptional()
+  endpoint?: string;
+
+  @IsOptional()
+  region?: string;
+
+  @IsOptional()
+  isActive?: boolean;
+
+  @IsOptional()
+  configuration?: string;
 }
 
 export class UpdateUsefulLinkDto {

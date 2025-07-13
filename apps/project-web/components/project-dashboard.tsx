@@ -56,6 +56,7 @@ import { EditEnvironmentsDialog } from "./edit-environments-dialog"
 import { EditDocumentsDialog } from "./edit-documents-dialog"
 import { EditCloudServicesDialog } from "./edit-cloud-services-dialog"
 import { ArchitectureDiagramDialog } from "./architecture-diagram-dialog"
+import { ArchitectureViewerDialog } from "./architecture-viewer-dialog"
 
 
 export function ProjectDashboard() {
@@ -69,6 +70,7 @@ export function ProjectDashboard() {
   const [editDocumentsDialogOpen, setEditDocumentsDialogOpen] = useState(false)
   const [editCloudServicesDialogOpen, setEditCloudServicesDialogOpen] = useState(false)
   const [architectureDiagramDialogOpen, setArchitectureDiagramDialogOpen] = useState(false)
+  const [architectureViewerDialogOpen, setArchitectureViewerDialogOpen] = useState(false)
 
   // Manejar cambio de proyecto activo
   const handleProjectChange = (projectId: string) => {
@@ -264,6 +266,44 @@ export function ProjectDashboard() {
     return <IconComponent className="h-4 w-4 text-gray-600" />
   }
 
+  // Función para obtener el diagrama de arquitectura más reciente
+  const getLatestArchitectureDiagram = () => {
+    if (!currentProject?.files || currentProject.files.length === 0) {
+      return null
+    }
+
+    const architectureFiles = currentProject.files.filter(
+      file => file.type === 'architecture'
+    )
+
+    if (architectureFiles.length === 0) {
+      return null
+    }
+
+    // Ordenar por fecha de subida (más reciente primero) y tomar el primero
+    return architectureFiles.sort((a, b) => 
+      new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+    )[0]
+  }
+
+  // Función para obtener el icono del archivo
+  const getFileIcon = (mimetype: string) => {
+    if (mimetype.startsWith('image/')) return '🖼️'
+    if (mimetype.includes('pdf')) return '📄'
+    if (mimetype.includes('svg')) return '🎨'
+    return '📎'
+  }
+
+  // Función para manejar el clic en el diagrama
+  const handleArchitectureClick = () => {
+    const latestDiagram = getLatestArchitectureDiagram()
+    if (latestDiagram) {
+      setArchitectureViewerDialogOpen(true)
+    } else {
+      setArchitectureDiagramDialogOpen(true)
+    }
+  }
+
   const getDocumentTypeBadge = (type: FileType) => {
     const typeMap: Record<FileType, { label: string; color: string }> = {
       [FileType.MANUAL]: { label: 'Manual', color: 'bg-blue-100 text-blue-800' },
@@ -453,22 +493,53 @@ export function ProjectDashboard() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div 
-                        className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors"
-                        onClick={() => setArchitectureDiagramDialogOpen(true)}
+                        className="aspect-video bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors overflow-hidden"
+                        onClick={handleArchitectureClick}
                       >
-                        {currentProject.architectureDiagram ? (
-                          <div className="text-center text-gray-600">
-                            <Image className="h-8 w-8 mx-auto mb-2" />
-                            <p className="text-sm font-medium">Diagrama de Arquitectura</p>
-                            <p className="text-xs text-gray-500">Haz clic para gestionar</p>
-                          </div>
-                        ) : (
-                          <div className="text-center text-gray-500">
-                            <Cloud className="h-8 w-8 mx-auto mb-2" />
-                            <p className="text-sm">Diagrama de Arquitectura</p>
-                            <p className="text-xs">Haz clic para subir</p>
-                          </div>
-                        )}
+                        {(() => {
+                          const latestDiagram = getLatestArchitectureDiagram()
+                          if (latestDiagram) {
+                            return (
+                              <div className="h-full relative">
+                                {latestDiagram.mimetype.startsWith('image/') ? (
+                                  <img
+                                    src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'}/files/${latestDiagram.id}`}
+                                    alt="Diagrama de Arquitectura"
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      // Si la imagen falla, mostrar el icono
+                                      e.currentTarget.style.display = 'none'
+                                      e.currentTarget.nextElementSibling?.classList.remove('hidden')
+                                    }}
+                                  />
+                                ) : null}
+                                <div className={`absolute inset-0 flex items-center justify-center ${latestDiagram.mimetype.startsWith('image/') ? 'hidden' : ''}`}>
+                                  <div className="text-center text-gray-600">
+                                    <div className="text-3xl mb-2">{getFileIcon(latestDiagram.mimetype)}</div>
+                                    <p className="text-sm font-medium">Diagrama de Arquitectura</p>
+                                  </div>
+                                </div>
+                                {/* Overlay con información */}
+                                <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2">
+                                  <p className="text-xs truncate">{latestDiagram.filename}</p>
+                                  <p className="text-xs opacity-75">
+                                    {new Date(latestDiagram.uploadedAt).toLocaleDateString('es-ES')}
+                                  </p>
+                                </div>
+                              </div>
+                            )
+                          } else {
+                            return (
+                              <div className="h-full flex items-center justify-center">
+                                <div className="text-center text-gray-500">
+                                  <Cloud className="h-8 w-8 mx-auto mb-2" />
+                                  <p className="text-sm">Diagrama de Arquitectura</p>
+                                  <p className="text-xs">Haz clic para subir</p>
+                                </div>
+                              </div>
+                            )
+                          }
+                        })()}
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-500">Servicios Cloud</label>
@@ -924,6 +995,15 @@ export function ProjectDashboard() {
           open={architectureDiagramDialogOpen}
           onOpenChange={setArchitectureDiagramDialogOpen}
           onProjectUpdate={handleProjectUpdate}
+        />
+      )}
+
+      {/* Modal de visualización de diagrama de arquitectura */}
+      {currentProject && (
+        <ArchitectureViewerDialog
+          project={currentProject}
+          open={architectureViewerDialogOpen}
+          onOpenChange={setArchitectureViewerDialogOpen}
         />
       )}
     </ThemeProvider>

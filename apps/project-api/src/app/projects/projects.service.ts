@@ -219,9 +219,14 @@ export class ProjectsService {
     }
 
     // Procesar tecnologías si se proporcionan
-    if (technologyIds && technologyIds.length > 0) {
-      const technologies = await this.technologyRepository.findByIds(technologyIds);
-      savedProject.technologies = technologies;
+    if (technologyIds !== undefined) {
+      if (technologyIds.length > 0) {
+        const technologies = await this.technologyRepository.findBy({ id: In(technologyIds) });
+        savedProject.technologies = technologies;
+      } else {
+        // Si se envía un array vacío, eliminar todas las tecnologías
+        savedProject.technologies = [];
+      }
       await this.projectRepository.save(savedProject);
     }
     
@@ -374,9 +379,14 @@ export class ProjectsService {
     }
 
     // Procesar tecnologías si se proporcionan
-    if (technologyIds && technologyIds.length > 0) {
-      const technologies = await this.technologyRepository.findBy({ id: In(technologyIds) });
-      savedProject.technologies = technologies;
+    if (technologyIds !== undefined) {
+      if (technologyIds.length > 0) {
+        const technologies = await this.technologyRepository.findBy({ id: In(technologyIds) });
+        savedProject.technologies = technologies;
+      } else {
+        // Si se envía un array vacío, eliminar todas las tecnologías
+        savedProject.technologies = [];
+      }
       await this.projectRepository.save(savedProject);
     }
     

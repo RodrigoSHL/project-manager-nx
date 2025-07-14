@@ -57,6 +57,21 @@ export class FileService {
     return await response.json()
   }
 
+  static async uploadMultipleFilesWithIndividualTypes(
+    filesWithData: Array<{
+      file: File
+      type: FileType
+      description?: string
+    }>, 
+    projectId: string
+  ): Promise<ProjectFile[]> {
+    const uploadPromises = filesWithData.map(({ file, type, description }) =>
+      this.uploadFile(file, projectId, type, description)
+    )
+
+    return Promise.all(uploadPromises)
+  }
+
   static async getFilesByProjectId(projectId: string): Promise<ProjectFile[]> {
     const response = await fetch(`${API_BASE_URL}/files/project/${projectId}`)
 

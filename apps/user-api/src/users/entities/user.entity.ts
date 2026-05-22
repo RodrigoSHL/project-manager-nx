@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
-@Entity('jira_users')
+@Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;

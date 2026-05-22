@@ -1,6 +1,6 @@
 import { Project, ProjectStats } from '@/types/project';
 
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api';
 
 export class ProjectService {
   private static async handleResponse<T>(response: Response): Promise<T> {

@@ -26,7 +26,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { projects, workspaces } from '@/lib/mock-data'
+import { workspaces } from '@/lib/mock-data'
+import type { ApiProject } from '@/types/project'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 const navigation = [
@@ -39,6 +40,11 @@ const navigation = [
   { name: 'Configuración', icon: Settings, href: '#settings' },
 ]
 
+const PROJECT_COLORS = [
+  '#6366f1', '#0ea5e9', '#10b981', '#f59e0b',
+  '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6',
+]
+
 interface AppSidebarProps {
   collapsed: boolean
   onToggle: () => void
@@ -46,6 +52,8 @@ interface AppSidebarProps {
   onViewChange: (view: string) => void
   currentProject: string
   onProjectChange: (projectId: string) => void
+  projects?: ApiProject[]
+  loadingProjects?: boolean
 }
 
 export function AppSidebar({ 
@@ -54,10 +62,11 @@ export function AppSidebar({
   activeView, 
   onViewChange,
   currentProject,
-  onProjectChange
+  onProjectChange,
+  projects = [],
+  loadingProjects = false,
 }: AppSidebarProps) {
   const currentWorkspace = workspaces[0]
-  const project = projects.find(p => p.id === currentProject) || projects[0]
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -143,7 +152,13 @@ export function AppSidebar({
               </Button>
             </div>
             <div className="space-y-0.5">
-              {projects.filter(p => p.workspaceId === currentWorkspace.id).map((proj) => (
+              {loadingProjects && (
+                <p className="text-xs text-sidebar-foreground/40 px-2 py-1">Cargando...</p>
+              )}
+              {!loadingProjects && projects.length === 0 && (
+                <p className="text-xs text-sidebar-foreground/40 px-2 py-1">Sin proyectos</p>
+              )}
+              {projects.map((proj, index) => (
                 <Button
                   key={proj.id}
                   variant="ghost"
@@ -157,9 +172,9 @@ export function AppSidebar({
                 >
                   <div 
                     className="w-2.5 h-2.5 rounded-sm mr-2 shrink-0" 
-                    style={{ backgroundColor: proj.color }}
+                    style={{ backgroundColor: PROJECT_COLORS[index % PROJECT_COLORS.length] }}
                   />
-                  <span className="truncate">{proj.name}</span>
+                  <span className="truncate">{proj.shortName ?? proj.name}</span>
                 </Button>
               ))}
             </div>

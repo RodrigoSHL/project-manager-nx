@@ -22,17 +22,20 @@ import {
   tickets as allTickets, 
   sprints, 
   users,
-  projects,
   Ticket,
   TicketStatus
 } from '@/lib/mock-data'
+import { getProjects } from '@/services/projectService'
+import type { ApiProject } from '@/types/project'
 
 export default function ProjectManagement() {
   const isMobile = useIsMobile()
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = React.useState(false)
   const [activeView, setActiveView] = React.useState('sprint')
-  const [currentProject, setCurrentProject] = React.useState('p1')
+  const [currentProject, setCurrentProject] = React.useState('')
+  const [apiProjects, setApiProjects] = React.useState<ApiProject[]>([])
+  const [loadingProjects, setLoadingProjects] = React.useState(true)
   const [selectedTicket, setSelectedTicket] = React.useState<Ticket | null>(null)
   const [ticketDetailOpen, setTicketDetailOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState('')
@@ -41,6 +44,16 @@ export default function ProjectManagement() {
     status: 'all',
     priority: 'all',
   })
+
+  React.useEffect(() => {
+    getProjects()
+      .then((data) => {
+        setApiProjects(data)
+        if (data.length > 0) setCurrentProject(data[0].id)
+      })
+      .catch(console.error)
+      .finally(() => setLoadingProjects(false))
+  }, [])
 
   const activeSprint = sprints.find(s => s.projectId === currentProject && s.isActive)
 
@@ -397,6 +410,8 @@ export default function ProjectManagement() {
           onViewChange={setActiveView}
           currentProject={currentProject}
           onProjectChange={setCurrentProject}
+          projects={apiProjects}
+          loadingProjects={loadingProjects}
         />
       )}
 

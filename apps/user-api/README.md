@@ -24,19 +24,22 @@ npx nx g @nx/nest:app \
   --no-interactive
 ```
 
-### Problema con `@nx/nest:resource`
+### Generador de recursos `@nx/nest:resource`
 
-El generador `@nx/nest:resource` también estaba roto en este workspace.  
-La solución fue usar el CLI de Nest directamente **desde dentro de la app**:
+A diferencia de `@nx/nest:app`, el generador de recursos **sí acepta argumento posicional** y ese argumento es el **path completo**, no solo el nombre.
 
 ```bash
-cd apps/user-api
-nest g resource users --no-spec
-# → Seleccionar: REST API + Yes (CRUD)
+# ❌ Esto pone los archivos en src/ sin subcarpeta:
+npx nx g @nx/nest:resource apps/user-api/src/workspaces --unitTestRunner=none --no-interactive
+
+# ✅ Comando correcto — el nombre va dos veces (carpeta + nombre de archivo):
+npx nx g @nx/nest:resource apps/user-api/src/<module>/<module> --unitTestRunner=none --no-interactive
+
+# Ejemplo real:
+npx nx g @nx/nest:resource apps/user-api/src/workspaces/workspaces --unitTestRunner=none --no-interactive
 ```
 
-> Nota: Aunque se pasa `--no-spec`, el generador igualmente creó archivos `.spec.ts`.  
-> Se eliminaron manualmente.
+> Esto genera: `src/workspaces/workspaces.module.ts`, `workspaces.controller.ts`, `workspaces.service.ts`, `dto/`, `entities/`
 
 ---
 
@@ -51,15 +54,24 @@ apps/user-api/src/
 │   ├── app.service.ts
 │   └── config/
 │       └── database.config.ts
-└── users/
-    ├── users.module.ts
-    ├── users.controller.ts
-    ├── users.service.ts
+├── users/
+│   ├── users.module.ts
+│   ├── users.controller.ts
+│   ├── users.service.ts
+│   ├── entities/
+│   │   └── user.entity.ts
+│   └── dto/
+│       ├── create-user.dto.ts
+│       └── update-user.dto.ts
+└── workspaces/
+    ├── workspaces.module.ts
+    ├── workspaces.controller.ts
+    ├── workspaces.service.ts
     ├── entities/
-    │   └── user.entity.ts
+    │   └── workspace.entity.ts
     └── dto/
-        ├── create-user.dto.ts
-        └── update-user.dto.ts
+        ├── create-workspace.dto.ts
+        └── update-workspace.dto.ts
 ```
 
 ---
@@ -100,12 +112,12 @@ TypeOrmModule.forRoot({
 
 ## 4. Entidad (`user.entity.ts`)
 
-Tabla: `jira_users`
+Tabla: `users`
 
 ```typescript
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
-@Entity('jira_users')
+@Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -353,26 +365,76 @@ npx nx run-many --all --target=serve --parallel=20
 
 ## 12. Prueba rápida con curl
 
+### Users
+
 ```bash
-# Crear usuario
 curl -X POST http://localhost:3002/api/users \
   -H "Content-Type: application/json" \
   -d '{"email":"jane@example.com","name":"Jane Doe"}'
 
-# Listar todos
 curl http://localhost:3002/api/users
-
-# Buscar por UUID
 curl http://localhost:3002/api/users/<uuid>
 
-# Actualizar
 curl -X PATCH http://localhost:3002/api/users/<uuid> \
   -H "Content-Type: application/json" \
   -d '{"name":"Jane Smith"}'
 
-# Eliminar
 curl -X DELETE http://localhost:3002/api/users/<uuid>
 ```
+
+### Workspaces
+
+```bash
+curl -X POST http://localhost:3002/api/workspaces \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Acme Corp","slug":"acme-corp","description":"Main workspace"}'
+
+curl http://localhost:3002/api/workspaces
+curl http://localhost:3002/api/workspaces/<uuid>
+curl http://localhost:3002/api/workspaces/slug/acme-corp
+
+curl -X PATCH http://localhost:3002/api/workspaces/<uuid> \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Acme Corporation"}'
+
+curl -X DELETE http://localhost:3002/api/workspaces/<uuid>
+```
+
+---
+
+---
+
+## 13. WorkspacesModule
+
+Generado con:
+```bash
+npx nx g @nx/nest:resource apps/user-api/src/workspaces/workspaces --unitTestRunner=none --no-interactive
+```
+
+**Tabla:** `workspaces` en `user_management_db`
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| `id` | uuid PK | auto-generado |
+| `name` | varchar 255 | nombre del workspace |
+| `slug` | varchar 100 UNIQUE | solo minúsculas, números y guiones |
+| `description` | text nullable | — |
+| `createdAt` / `updatedAt` | timestamp | auto |
+
+**Endpoints:**
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `POST` | `/api/workspaces` | Crear (valida slug único + formato) |
+| `GET` | `/api/workspaces` | Listar todos |
+| `GET` | `/api/workspaces/:id` | Buscar por UUID |
+| `GET` | `/api/workspaces/slug/:slug` | Buscar por slug |
+| `PATCH` | `/api/workspaces/:id` | Actualizar |
+| `DELETE` | `/api/workspaces/:id` | Eliminar |
+
+**Validaciones del slug** (`create-workspace.dto.ts`):
+- Solo `a-z`, `0-9` y `-` (regex `/^[a-z0-9-]+$/`)
+- Unicidad verificada en el service → `ConflictException` si ya existe
 
 ---
 
@@ -380,8 +442,8 @@ curl -X DELETE http://localhost:3002/api/users/<uuid>
 
 | Problema | Causa | Solución |
 |---|---|---|
-| `nx g @nx/nest:app user-api` falla | NX no acepta positional args | Usar `--name=user-api` explícito |
-| `nx g @nx/nest:resource` falla | Bug del generador en este workspace | `cd apps/user-api && nest g resource users --no-spec` |
-| Se generan archivos `.spec.ts` igual | `--no-spec` ignorado por el generador | Eliminar manualmente |
+| `nx g @nx/nest:app user-api` falla | `@nx/nest:app` no acepta positional args | Usar `--name=user-api` explícito |
+| `nx g @nx/nest:resource apps/user-api/src/workspaces` pone archivos en `src/` | El path define la ubicación Y el nombre — sin subcarpeta si se da solo el directorio | Repetir el nombre: `src/workspaces/workspaces` |
 | `findOne(+id)` rompe con UUIDs | El generador asume IDs numéricos | Cambiar a `id: string` y eliminar el `+` |
 | `dotenv` no carga variables | `process.cwd()` apunta a la raíz del monorepo | `path.resolve(process.cwd(), '../../.env')` — relativo desde donde se ejecuta NX |
+| Slug duplicado en workspace | No hay constraint a nivel código | `ConflictException` en el service antes del `save` |

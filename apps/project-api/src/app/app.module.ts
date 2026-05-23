@@ -5,12 +5,14 @@ import { AppService } from './app.service';
 import { ProjectsModule } from './projects/projects.module';
 import { FilesModule } from './files/files.module';
 import { databaseConfig } from './config/database.config';
+import { SprintsModule } from './sprints/sprints.module';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot(databaseConfig),
     ProjectsModule,
-    FilesModule
+    FilesModule,
+    SprintsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

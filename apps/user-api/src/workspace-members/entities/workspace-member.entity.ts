@@ -9,6 +9,7 @@ import {
   Unique,
 } from 'typeorm';
 import { Workspace } from '../../workspaces/entities/workspace.entity';
+import { User } from '../../users/entities/user.entity';
 
 export enum WorkspaceRole {
   OWNER = 'owner',
@@ -40,4 +41,8 @@ export class WorkspaceMember {
   @ManyToOne(() => Workspace, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'workspaceId' })
   workspace: Workspace;
+
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'userId' })
+  user: User;
 }

@@ -6,6 +6,7 @@ import { ProjectsModule } from './projects/projects.module';
 import { FilesModule } from './files/files.module';
 import { databaseConfig } from './config/database.config';
 import { SprintsModule } from './sprints/sprints.module';
+import { LabelsModule } from './labels/labels.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { SprintsModule } from './sprints/sprints.module';
     ProjectsModule,
     FilesModule,
     SprintsModule,
+    LabelsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

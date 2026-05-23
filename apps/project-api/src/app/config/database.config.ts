@@ -9,6 +9,7 @@ import { CloudService } from '../projects/entities/cloud-service.entity';
 import { UsefulLink } from '../projects/entities/useful-link.entity';
 import { File } from '../files/entities/file.entity';
 import { Sprint } from '../sprints/entities/sprint.entity';
+import { Label } from '../labels/entities/label.entity';
 
 export const databaseConfig: TypeOrmModuleOptions = {
   type: 'postgres',
@@ -28,6 +29,7 @@ export const databaseConfig: TypeOrmModuleOptions = {
     UsefulLink,
     File,
     Sprint,
+    Label,
   ],
   synchronize: true, // Crear tablas automáticamente en desarrollo
   logging: process.env.NODE_ENV === 'development',

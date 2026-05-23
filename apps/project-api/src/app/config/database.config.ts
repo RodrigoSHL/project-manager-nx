@@ -10,6 +10,7 @@ import { UsefulLink } from '../projects/entities/useful-link.entity';
 import { File } from '../files/entities/file.entity';
 import { Sprint } from '../sprints/entities/sprint.entity';
 import { Label } from '../labels/entities/label.entity';
+import { Ticket } from '../tickets/entities/ticket.entity';
 
 export const databaseConfig: TypeOrmModuleOptions = {
   type: 'postgres',
@@ -30,6 +31,7 @@ export const databaseConfig: TypeOrmModuleOptions = {
     File,
     Sprint,
     Label,
+    Ticket,
   ],
   synchronize: true, // Crear tablas automáticamente en desarrollo
   logging: process.env.NODE_ENV === 'development',

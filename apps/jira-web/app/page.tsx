@@ -311,11 +311,11 @@ export default function ProjectManagement() {
         <div className="space-y-4">
           <div>
             <label className="text-sm text-muted-foreground">Nombre</label>
-            <p className="font-medium">{projects.find(p => p.id === currentProject)?.name}</p>
+            <p className="font-medium">{apiProjects.find(p => p.id === currentProject)?.name}</p>
           </div>
           <div>
             <label className="text-sm text-muted-foreground">Clave</label>
-            <p className="font-medium">{projects.find(p => p.id === currentProject)?.key}</p>
+            <p className="font-medium">{apiProjects.find(p => p.id === currentProject)?.key}</p>
           </div>
         </div>
       </Card>

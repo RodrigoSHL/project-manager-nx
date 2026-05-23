@@ -16,12 +16,14 @@ export class WorkspaceMembersService {
     const existing = await this.membersRepo.findOneBy({ workspaceId, userId: dto.userId });
     if (existing) throw new ConflictException('User is already a member of this workspace');
     const member = this.membersRepo.create({ workspaceId, ...dto });
-    return this.membersRepo.save(member);
+    const saved = await this.membersRepo.save(member);
+    return this.membersRepo.findOne({ where: { id: saved.id }, relations: ['user'] });
   }
 
   findByWorkspace(workspaceId: string): Promise<WorkspaceMember[]> {
     return this.membersRepo.find({
       where: { workspaceId },
+      relations: ['user'],
       order: { joinedAt: 'ASC' },
     });
   }

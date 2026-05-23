@@ -5,11 +5,12 @@ import * as https from 'https';
 import { URL } from 'url';
 
 // Agregar nuevos servicios aquí:
-// '/api/users'         → process.env.USER_API_URL         || 'http://localhost:3002'
 // '/api/notifications' → process.env.NOTIFICATION_API_URL || 'http://localhost:3003'
 const SERVICE_ROUTES: { prefix: string; targetEnvVar: string; defaultUrl: string }[] = [
   { prefix: '/api/projects', targetEnvVar: 'PROJECT_API_URL', defaultUrl: 'http://localhost:3000' },
   { prefix: '/api/files',    targetEnvVar: 'PROJECT_API_URL', defaultUrl: 'http://localhost:3000' },
+  { prefix: '/api/users',       targetEnvVar: 'USER_API_URL', defaultUrl: 'http://localhost:3002' },
+  { prefix: '/api/workspaces',  targetEnvVar: 'USER_API_URL', defaultUrl: 'http://localhost:3002' },
 ];
 
 @Injectable()
@@ -57,6 +58,15 @@ export class ProxyMiddleware implements NestMiddleware {
       }
     });
 
-    req.pipe(proxyReq);
+    // NestJS body-parser already consumed the stream — write the parsed body manually
+    if (req.body && Object.keys(req.body).length > 0) {
+      const bodyData = JSON.stringify(req.body);
+      proxyReq.setHeader('Content-Type', 'application/json');
+      proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+      proxyReq.write(bodyData);
+      proxyReq.end();
+    } else {
+      req.pipe(proxyReq);
+    }
   }
 }

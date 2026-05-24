@@ -9,7 +9,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "./app-sidebar"
 import { TopNavbar } from "./top-navbar"
-import { ThemeProvider } from "./theme-provider"
 import {
   Github,
   ExternalLink,
@@ -59,7 +58,7 @@ import { ArchitectureDiagramDialog } from "./architecture-diagram-dialog"
 import { ArchitectureViewerDialog } from "./architecture-viewer-dialog"
 
 
-export function ProjectDashboard() {
+export function ProjectDashboard({ projectId }: { projectId?: string }) {
   const { projects, currentProject, setCurrentProject, loading, error, updateProject, updateProjectInList } = useProjects()
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [editRepositoriesDialogOpen, setEditRepositoriesDialogOpen] = useState(false)
@@ -72,7 +71,14 @@ export function ProjectDashboard() {
   const [architectureDiagramDialogOpen, setArchitectureDiagramDialogOpen] = useState(false)
   const [architectureViewerDialogOpen, setArchitectureViewerDialogOpen] = useState(false)
 
-  // Manejar cambio de proyecto activo
+  // Seleccionar el proyecto de la URL cuando los proyectos estén cargados
+  React.useEffect(() => {
+    if (!projectId || loading) return
+    const found = projects.find(p => p.id === projectId)
+    if (found) setCurrentProject(found)
+  }, [projectId, projects, loading])
+
+  // Manejar cambio de proyecto activo (por compatibilidad)
   const handleProjectChange = (projectId: string) => {
     const project = projects.find(p => p.id === projectId)
     if (project) {
@@ -325,9 +331,9 @@ export function ProjectDashboard() {
   }
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <SidebarProvider>
-        <AppSidebar activeProject={currentProject?.id} onProjectChange={handleProjectChange} />
+    <>
+    <SidebarProvider>
+        <AppSidebar />
         <SidebarInset>
           {/* Top Navigation Bar */}
           <TopNavbar />
@@ -1005,7 +1011,7 @@ export function ProjectDashboard() {
           open={architectureViewerDialogOpen}
           onOpenChange={setArchitectureViewerDialogOpen}
         />
-      )}
-    </ThemeProvider>
+      )}      
+    </>
   )
 }

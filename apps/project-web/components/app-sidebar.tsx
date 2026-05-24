@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter, usePathname } from "next/navigation"
 import {
   Search,
   Plus,
@@ -97,12 +98,11 @@ const getStatusColor = (status: ProjectStatus) => {
   }
 }
 
-interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
-  activeProject?: string
-  onProjectChange?: (projectId: string) => void
-}
+interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {}
 
-export function AppSidebar({ activeProject, onProjectChange, ...props }: AppSidebarProps) {
+export function AppSidebar({ ...props }: AppSidebarProps) {
+  const router = useRouter()
+  const pathname = usePathname()
   const [searchQuery, setSearchQuery] = React.useState("")
   const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false)
   const { projects, loading, error } = useProjects()
@@ -222,8 +222,8 @@ export function AppSidebar({ activeProject, onProjectChange, ...props }: AppSide
                 <SidebarMenu>
                   {filteredActiveProjects.map((project) => (
                     <SidebarMenuItem key={project.id}>
-                      <SidebarMenuButton asChild isActive={activeProject === project.id} className="group/project">
-                        <button onClick={() => onProjectChange?.(project.id)} className="w-full py-6">
+                      <SidebarMenuButton asChild isActive={pathname === `/projects/${project.id}`} className="group/project">
+                        <button onClick={() => router.push(`/projects/${project.id}`)} className="w-full py-6">
                           <div className="flex items-center gap-2 min-w-0 flex-1">
                             {getStatusIcon(project.status)}
                             <div className="min-w-0 flex-1">
@@ -272,9 +272,9 @@ export function AppSidebar({ activeProject, onProjectChange, ...props }: AppSide
                 <SidebarMenu>
                   {filteredArchivedProjects.map((project) => (
                     <SidebarMenuItem key={project.id}>
-                      <SidebarMenuButton asChild isActive={activeProject === project.id}>
+                      <SidebarMenuButton asChild isActive={pathname === `/projects/${project.id}`}>
                         <button
-                          onClick={() => onProjectChange?.(project.id)}
+                          onClick={() => router.push(`/projects/${project.id}`)}
                           className="w-full opacity-75 hover:opacity-100"
                         >
                           <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -305,9 +305,7 @@ export function AppSidebar({ activeProject, onProjectChange, ...props }: AppSide
               open={isCreateDialogOpen}
               onOpenChange={setIsCreateDialogOpen}
               onProjectCreated={(project) => {
-                // Aquí se puede manejar la creación del proyecto
-                console.log("Nuevo proyecto creado:", project)
-                onProjectChange?.(project.id)
+                router.push(`/projects/${project.id}`)
               }}
             >
               <Button variant="outline" className="w-full justify-start bg-transparent" size="sm">

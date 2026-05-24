@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -11,10 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Select,
   SelectContent,
@@ -22,18 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { 
-  Users, 
-  Mail, 
-  Phone, 
-  Plus, 
-  Trash2, 
-  Edit3,
-  Save,
-  X
-} from "lucide-react"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Users, Plus, Trash2, Loader2, UserCheck } from "lucide-react"
 import { TeamMember, Project } from "@/types/project"
 import { ProjectService } from "@/services/projectService"
+import { WorkspaceService, type WorkspaceMember } from "@/services/userService"
+import { useWorkspace } from "@/contexts/workspace-context"
 
 interface EditTeamMembersDialogProps {
   project: Project | null
@@ -41,13 +32,6 @@ interface EditTeamMembersDialogProps {
   onOpenChange: (open: boolean) => void
   onSave: (project: Project) => void
   onProjectUpdate?: (updatedProject: Project) => void
-}
-
-interface TeamMemberFormData {
-  name: string
-  email: string
-  role: string
-  phone: string
 }
 
 const TEAM_ROLES = [
@@ -58,326 +42,231 @@ const TEAM_ROLES = [
   { value: 'scrum_master', label: 'Scrum Master' },
   { value: 'qa', label: 'QA' },
   { value: 'designer', label: 'Designer' },
-  { value: 'architect', label: 'Architect' }
+  { value: 'architect', label: 'Architect' },
 ]
+
+function getInitials(name: string) {
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+}
 
 export function EditTeamMembersDialog({
   project,
   open,
   onOpenChange,
   onSave,
-  onProjectUpdate
+  onProjectUpdate,
 }: EditTeamMembersDialogProps) {
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
-  const [editingMember, setEditingMember] = useState<string | null>(null)
-  const [formData, setFormData] = useState<TeamMemberFormData>({
-    name: '',
-    email: '',
-    role: '',
-    phone: ''
-  })
-  const [loading, setLoading] = useState(false)
+  const { selectedWorkspace } = useWorkspace()
 
-  // Inicializar miembros del equipo cuando se abre el modal
+  const [teamMembers, setTeamMembers] = React.useState<TeamMember[]>([])
+  const [wsMembers, setWsMembers] = React.useState<WorkspaceMember[]>([])
+  const [wsLoading, setWsLoading] = React.useState(false)
+
+  const [selectedUserId, setSelectedUserId] = React.useState("")
+  const [selectedRole, setSelectedRole] = React.useState("")
+  const [saving, setSaving] = React.useState(false)
+
   React.useEffect(() => {
-    if (open && project) {
-      setTeamMembers([...project.teamMembers])
-    }
-  }, [open, project])
+    if (!open || !project) return
+    setTeamMembers([...project.teamMembers])
+    setSelectedUserId("")
+    setSelectedRole("")
 
-  const handleAddTeamMember = () => {
-    if (!formData.name || !formData.email || !formData.role) return
+    if (selectedWorkspace) {
+      setWsLoading(true)
+      WorkspaceService.getMembers(selectedWorkspace.id)
+        .then(setWsMembers)
+        .catch(console.error)
+        .finally(() => setWsLoading(false))
+    }
+  }, [open, project, selectedWorkspace])
+
+  // Miembros del workspace que aún no están en el proyecto
+  const availableWsMembers = wsMembers.filter(
+    wm => !teamMembers.some(tm => tm.userId === wm.userId)
+  )
+
+  const handleAdd = () => {
+    const wm = wsMembers.find(m => m.userId === selectedUserId)
+    if (!wm || !wm.user || !selectedRole) return
 
     const newMember: TeamMember = {
-      id: `temp-${Date.now()}`, // ID temporal para el frontend
-      name: formData.name,
-      email: formData.email,
-      role: formData.role,
-      phone: formData.phone || undefined,
-      avatar: undefined,
+      id: `temp-${Date.now()}`,
+      userId: wm.userId,
+      name: wm.user.name,
+      email: wm.user.email,
+      role: selectedRole,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     }
 
-    setTeamMembers([...teamMembers, newMember])
-    setFormData({
-      name: '',
-      email: '',
-      role: '',
-      phone: ''
-    })
+    setTeamMembers(prev => [...prev, newMember])
+    setSelectedUserId("")
+    setSelectedRole("")
   }
 
-  const handleEditTeamMember = (member: TeamMember) => {
-    setEditingMember(member.id)
-    setFormData({
-      name: member.name,
-      email: member.email,
-      role: member.role,
-      phone: member.phone || ''
-    })
-  }
-
-  const handleUpdateTeamMember = () => {
-    if (!editingMember || !formData.name || !formData.email || !formData.role) return
-
-    setTeamMembers(members => 
-      members.map(member => 
-        member.id === editingMember 
-          ? { 
-              ...member, 
-              name: formData.name,
-              email: formData.email,
-              role: formData.role,
-              phone: formData.phone || undefined,
-              updatedAt: new Date()
-            }
-          : member
-      )
-    )
-
-    setEditingMember(null)
-    setFormData({
-      name: '',
-      email: '',
-      role: '',
-      phone: ''
-    })
-  }
-
-  const handleDeleteTeamMember = (memberId: string) => {
-    setTeamMembers(members => members.filter(member => member.id !== memberId))
+  const handleRemove = (memberId: string) => {
+    setTeamMembers(prev => prev.filter(m => m.id !== memberId))
   }
 
   const handleSave = async () => {
     if (!project) return
-
-    setLoading(true)
+    setSaving(true)
     try {
-      // Preparar datos para la actualización granular
       const updateData = {
         teamMembers: {
           add: teamMembers
-            .filter(member => member.id.startsWith('temp-'))
-            .map(member => ({
-              name: member.name,
-              email: member.email,
-              role: member.role,
-              phone: member.phone
-            })), // Solo propiedades válidas para nuevos miembros
+            .filter(m => m.id.startsWith('temp-'))
+            .map(m => ({ userId: m.userId ?? undefined, name: m.name, email: m.email, role: m.role })),
           update: teamMembers
-            .filter(member => !member.id.startsWith('temp-'))
-            .map(member => ({
-              id: member.id,
-              name: member.name,
-              email: member.email,
-              role: member.role,
-              phone: member.phone
-            })), // Solo propiedades válidas para miembros existentes
+            .filter(m => !m.id.startsWith('temp-'))
+            .map(m => ({ id: m.id, userId: m.userId ?? undefined, name: m.name, email: m.email, role: m.role })),
           delete: project.teamMembers
-            .filter(originalMember => !teamMembers.find(member => member.id === originalMember.id))
-            .map(member => member.id) // IDs de miembros eliminados
-        }
+            .filter(orig => !teamMembers.find(m => m.id === orig.id))
+            .map(m => m.id),
+        },
       }
 
       const updatedProject = await ProjectService.granularUpdateProject(project.id, updateData)
-      
-      // Actualizar el estado local directamente sin usar el hook updateProject
-      if (onProjectUpdate) {
-        onProjectUpdate(updatedProject)
-      }
-      
+      onProjectUpdate?.(updatedProject)
       onSave(updatedProject)
       onOpenChange(false)
     } catch (error) {
       console.error('Error al guardar miembros del equipo:', error)
-      alert('Error al guardar los miembros del equipo. Por favor, intenta de nuevo.')
+      alert('Error al guardar. Intenta de nuevo.')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
-  }
-
-  const handleCancel = () => {
-    setEditingMember(null)
-    setFormData({
-      name: '',
-      email: '',
-      role: '',
-      phone: ''
-    })
-    if (project) {
-      setTeamMembers([...project.teamMembers])
-    }
-  }
-
-  const getRoleBadge = (role: string) => {
-    const roleInfo = TEAM_ROLES.find(r => r.value === role)
-    return roleInfo ? roleInfo.label : role
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Gestionar Miembros del Equipo
+            Miembros del equipo
           </DialogTitle>
           <DialogDescription>
-            Agrega, edita o elimina miembros del equipo del proyecto {project?.name}
+            Asigna miembros del workspace{" "}
+            <span className="font-medium">{selectedWorkspace?.name}</span> al proyecto{" "}
+            <span className="font-medium">{project?.name}</span>.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-8">
-          {/* Formulario para agregar/editar miembro */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">
-                {editingMember ? 'Editar Miembro del Equipo' : 'Agregar Nuevo Miembro'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nombre Completo *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Juan Pérez"
-                />
+        <div className="space-y-5 py-2">
+          {/* Agregar miembro desde workspace */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Añadir desde el workspace</Label>
+
+            {wsLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Cargando miembros...
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="juan.perez@empresa.com"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="role">Rol en el Proyecto *</Label>
-                <Select
-                  value={formData.role}
-                  onValueChange={(value) => setFormData({ ...formData, role: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un rol" />
+            ) : availableWsMembers.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-2">
+                {wsMembers.length === 0
+                  ? "No hay miembros en el workspace."
+                  : "Todos los miembros del workspace ya están en el proyecto."}
+              </p>
+            ) : (
+              <div className="flex gap-2 min-w-0">
+                <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                  <SelectTrigger className="flex-1 min-w-0 overflow-hidden">
+                    <SelectValue placeholder="Selecciona un miembro..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {TEAM_ROLES.map((role) => (
-                      <SelectItem key={role.value} value={role.value}>
-                        {role.label}
+                    {availableWsMembers.map(wm => (
+                      <SelectItem key={wm.userId} value={wm.userId} textValue={wm.user?.name ?? wm.userId}>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-medium">{wm.user?.name}</span>
+                          {wm.user?.email && (
+                            <span className="text-sm text-muted-foreground">{wm.user.email}</span>
+                          )}
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Teléfono</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="+34 600 123 456"
-                />
-              </div>
-              <div className="flex gap-2">
-                {editingMember ? (
-                  <>
-                    <Button onClick={handleUpdateTeamMember} disabled={!formData.name || !formData.email || !formData.role}>
-                      <Save className="mr-2 h-4 w-4" />
-                      Actualizar
-                    </Button>
-                    <Button variant="outline" onClick={handleCancel}>
-                      <X className="mr-2 h-4 w-4" />
-                      Cancelar
-                    </Button>
-                  </>
-                ) : (
-                  <Button onClick={handleAddTeamMember} disabled={!formData.name || !formData.email || !formData.role}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Agregar Miembro
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Lista de miembros del equipo */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">
-                Miembros del Equipo ({teamMembers.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {teamMembers.length > 0 ? (
-                teamMembers.map((member) => (
-                  <div key={member.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Users className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-base">{member.name}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Mail className="h-3 w-3 text-gray-500" />
-                          <p className="text-sm text-gray-500 truncate">{member.email}</p>
-                        </div>
-                        {member.phone && (
-                          <div className="flex items-center gap-2 mt-1">
-                            <Phone className="h-3 w-3 text-gray-500" />
-                            <p className="text-xs text-gray-400">{member.phone}</p>
-                          </div>
-                        )}
-                      </div>
+                <Select value={selectedRole} onValueChange={setSelectedRole}>
+                  <SelectTrigger className="w-36">
+                    <SelectValue placeholder="Rol..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TEAM_ROLES.map(r => (
+                      <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  size="icon"
+                  onClick={handleAdd}
+                  disabled={!selectedUserId || !selectedRole}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Lista de miembros en el proyecto */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">
+              En el proyecto ({teamMembers.length})
+            </Label>
+
+            {teamMembers.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground border rounded-lg">
+                <UserCheck className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                <p className="text-sm">Sin miembros asignados</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                {teamMembers.map(member => (
+                  <div
+                    key={member.id}
+                    className="flex items-center gap-3 p-2.5 rounded-lg border bg-card"
+                  >
+                    <Avatar className="h-8 w-8 shrink-0">
+                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                        {getInitials(member.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{member.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{member.email}</p>
                     </div>
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                      <Badge variant="outline" className="text-xs">
-                        {getRoleBadge(member.role)}
-                      </Badge>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditTeamMember(member)}
-                        disabled={editingMember === member.id}
-                        className="hover:bg-blue-50"
-                      >
-                        <Edit3 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteTeamMember(member.id)}
-                        className="text-red-600 hover:text-red-800 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <Badge variant="secondary" className="text-xs shrink-0">
+                      {TEAM_ROLES.find(r => r.value === member.role)?.label ?? member.role}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
+                      onClick={() => handleRemove(member.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <Users className="h-12 w-12 mx-auto mb-3 text-gray-400" />
-                  <p>No hay miembros del equipo configurados</p>
-                  <p className="text-sm">Agrega tu primer miembro usando el formulario de arriba</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={loading}>
-            {loading ? 'Guardando...' : 'Guardar Cambios'}
+          <Button onClick={handleSave} disabled={saving}>
+            {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+            Guardar
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   )
-} 
+}

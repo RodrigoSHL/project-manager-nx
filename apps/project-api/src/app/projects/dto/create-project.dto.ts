@@ -31,6 +31,10 @@ export class CreateEnvironmentDto {
 }
 
 export class CreateTeamMemberDto {
+  @IsOptional()
+  @IsUUID()
+  userId?: string;
+
   @IsString()
   name: string;
 

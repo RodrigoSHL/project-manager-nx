@@ -98,7 +98,7 @@ const getStatusColor = (status: ProjectStatus) => {
   }
 }
 
-interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {}
+type AppSidebarProps = React.ComponentProps<typeof Sidebar>
 
 export function AppSidebar({ ...props }: AppSidebarProps) {
   const router = useRouter()

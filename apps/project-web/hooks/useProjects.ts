@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Project, ProjectStats } from '@/types/project';
 import { ProjectService } from '@/services/projectService';
+import { useWorkspace } from '@/contexts/workspace-context';
 
 export function useProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -10,25 +11,35 @@ export function useProjects() {
   const [stats, setStats] = useState<ProjectStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { selectedWorkspace, loading: workspaceLoading } = useWorkspace();
 
-  // Cargar todos los proyectos
+  // Cargar proyectos filtrados por workspace
+  // IMPORTANTE: currentProject NO debe estar en las dependencias para evitar
+  // re-fetches infinitos cuando se auto-selecciona el primer proyecto.
   const loadProjects = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const projectsData = await ProjectService.getAllProjects();
+      const projectsData = selectedWorkspace
+        ? await ProjectService.getProjectsByWorkspace(selectedWorkspace.id)
+        : await ProjectService.getAllProjects();
       setProjects(projectsData);
       
-      // Si no hay proyecto seleccionado y hay proyectos disponibles, seleccionar el primero
-      if (!currentProject && projectsData.length > 0) {
-        setCurrentProject(projectsData[0]);
-      }
+      // Usamos actualización funcional para no depender de currentProject en el closure
+      setCurrentProject(prev => {
+        if (!prev) return projectsData[0] ?? null;
+        // Si el proyecto actual no pertenece al nuevo workspace, resetear
+        if (selectedWorkspace && prev.workspaceId !== selectedWorkspace.id) {
+          return projectsData[0] ?? null;
+        }
+        return prev;
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar proyectos');
     } finally {
       setLoading(false);
     }
-  }, [currentProject]);
+  }, [selectedWorkspace]); // solo depende del workspace, no de currentProject
 
   // Cargar estadísticas
   const loadStats = useCallback(async () => {
@@ -126,11 +137,13 @@ export function useProjects() {
     }
   }, [loadProjects]);
 
-  // Cargar datos iniciales
+  // Cargar datos iniciales — esperar a que el workspace context haya terminado de cargar
+  // para evitar un fetch con selectedWorkspace=null seguido de otro con el workspace real.
   useEffect(() => {
+    if (workspaceLoading) return;
     loadProjects();
     loadStats();
-  }, [loadProjects, loadStats]);
+  }, [loadProjects, loadStats, workspaceLoading]);
 
   // Actualizar proyecto en la lista
   const updateProjectInList = useCallback((updatedProject: Project) => {

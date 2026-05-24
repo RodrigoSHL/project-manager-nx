@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Building2, Users, Trash2, ChevronRight, Copy, Check, Loader2, UserPlus, Crown, Shield, Eye, User as UserIcon } from "lucide-react"
+import { Plus, Building2, Users, Trash2, ChevronRight, Copy, Check, Loader2, UserPlus, Crown, Shield, Eye, User as UserIcon, FolderOpen, Link2, Unlink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,6 +12,8 @@ import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { WorkspaceService, UserService, type Workspace, type WorkspaceMember, type User } from "@/services/userService"
+import { ProjectService } from "@/services/projectService"
+import { type Project } from "@/types/project"
 
 const roleConfig = {
   owner:  { label: "Owner",  icon: Crown,  color: "text-amber-600 bg-amber-50 border-amber-200" },
@@ -60,19 +62,32 @@ export function WorkspacesTab() {
   const [addingMember, setAddingMember] = React.useState(false)
   const [addMemberError, setAddMemberError] = React.useState("")
 
+  // Projects in workspace
+  const [wsProjects, setWsProjects] = React.useState<Project[]>([])
+  const [wsProjectsLoading, setWsProjectsLoading] = React.useState(false)
+  const [allProjects, setAllProjects] = React.useState<Project[]>([])
+  const [linkProjectOpen, setLinkProjectOpen] = React.useState(false)
+  const [linkProjectId, setLinkProjectId] = React.useState("")
+  const [linkingProject, setLinkingProject] = React.useState(false)
+
   React.useEffect(() => {
     WorkspaceService.getAll()
       .then(setWorkspaces)
       .finally(() => setLoading(false))
     UserService.getAll().then(setAllUsers)
+    ProjectService.getAllProjects().then(setAllProjects)
   }, [])
 
   const loadMembers = async (ws: Workspace) => {
     setSelectedWs(ws)
     setMembersLoading(true)
+    setWsProjectsLoading(true)
     WorkspaceService.getMembers(ws.id)
       .then(setMembers)
       .finally(() => setMembersLoading(false))
+    ProjectService.getProjectsByWorkspace(ws.id)
+      .then(setWsProjects)
+      .finally(() => setWsProjectsLoading(false))
   }
 
   // Auto-generate slug from name
@@ -119,6 +134,28 @@ export function WorkspacesTab() {
     await WorkspaceService.removeMember(selectedWs.id, userId)
     setMembers(prev => prev.filter(m => m.userId !== userId))
   }
+
+  const handleLinkProject = async () => {
+    if (!selectedWs || !linkProjectId) return
+    setLinkingProject(true)
+    try {
+      const updated = await ProjectService.updateProject(linkProjectId, { workspaceId: selectedWs.id } as Parameters<typeof ProjectService.updateProject>[1])
+      setWsProjects(prev => [...prev, updated])
+      setAllProjects(prev => prev.map(p => p.id === updated.id ? updated : p))
+      setLinkProjectOpen(false)
+      setLinkProjectId("")
+    } finally {
+      setLinkingProject(false)
+    }
+  }
+
+  const handleUnlinkProject = async (projectId: string) => {
+    await ProjectService.updateProject(projectId, { workspaceId: undefined } as Parameters<typeof ProjectService.updateProject>[1])
+    setWsProjects(prev => prev.filter(p => p.id !== projectId))
+    setAllProjects(prev => prev.map(p => p.id === projectId ? { ...p, workspaceId: undefined } : p))
+  }
+
+  const unlinkableProjects = allProjects.filter(p => !wsProjects.some(wp => wp.id === p.id))
 
   const availableUsers = allUsers.filter(u => !members.some(m => m.userId === u.id))
 
@@ -279,6 +316,59 @@ export function WorkspacesTab() {
                 </div>
               )}
             </div>
+
+            <Separator />
+
+            {/* Proyectos */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-semibold text-sm">Proyectos</h3>
+                  <p className="text-xs text-muted-foreground">{wsProjects.length} proyecto{wsProjects.length !== 1 ? "s" : ""} vinculado{wsProjects.length !== 1 ? "s" : ""}</p>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => { setLinkProjectId(""); setLinkProjectOpen(true) }}>
+                  <Link2 className="h-3.5 w-3.5 mr-1" /> Vincular proyecto
+                </Button>
+              </div>
+
+              {wsProjectsLoading ? (
+                <div className="flex items-center justify-center h-24">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : wsProjects.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 border border-dashed rounded-xl text-center">
+                  <FolderOpen className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                  <p className="text-sm text-muted-foreground">Sin proyectos vinculados</p>
+                  <Button size="sm" variant="outline" className="mt-3" onClick={() => setLinkProjectOpen(true)}>
+                    <Link2 className="h-3.5 w-3.5 mr-1" /> Vincular el primero
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {wsProjects.map(p => (
+                    <div key={p.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors group">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary font-bold text-xs shrink-0">
+                        {p.key ?? p.name[0].toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">{p.name}</div>
+                        <div className="text-xs text-muted-foreground">{p.status} · {p.businessUnit}</div>
+                      </div>
+                      {p.key && (
+                        <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded shrink-0">{p.key}</span>
+                      )}
+                      <button
+                        onClick={() => handleUnlinkProject(p.id)}
+                        className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-1 rounded"
+                        title="Desvincular proyecto"
+                      >
+                        <Unlink className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -369,6 +459,50 @@ export function WorkspacesTab() {
             <Button onClick={handleAddMember} disabled={addingMember || !selectedUserId}>
               {addingMember ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Añadir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Vincular proyecto */}
+      <Dialog open={linkProjectOpen} onOpenChange={setLinkProjectOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Vincular proyecto</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Selecciona un proyecto para vincularlo a <span className="font-medium text-foreground">{selectedWs?.name}</span>.
+            </p>
+            <div className="space-y-1.5">
+              <Label>Proyecto</Label>
+              <Select value={linkProjectId} onValueChange={setLinkProjectId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un proyecto..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {unlinkableProjects.map(p => (
+                    <SelectItem key={p.id} value={p.id}>
+                      <div className="flex items-center gap-2">
+                        {p.key && <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{p.key}</span>}
+                        <span>{p.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                  {unlinkableProjects.length === 0 && (
+                    <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+                      Todos los proyectos ya están vinculados
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLinkProjectOpen(false)}>Cancelar</Button>
+            <Button onClick={handleLinkProject} disabled={linkingProject || !linkProjectId}>
+              {linkingProject ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Link2 className="h-4 w-4 mr-2" />}
+              Vincular
             </Button>
           </DialogFooter>
         </DialogContent>

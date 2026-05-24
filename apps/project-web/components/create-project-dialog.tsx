@@ -22,11 +22,18 @@ import { Badge } from "@/components/ui/badge"
 import { X, Plus, Loader2 } from "lucide-react"
 import { useProjects } from "@/hooks/useProjects"
 import { ProjectStatus, ProjectPriority } from "@/types/project"
+import { useWorkspace } from "@/contexts/workspace-context"
 
 const formSchema = z.object({
   name: z.string().min(2, {
     message: "El nombre debe tener al menos 2 caracteres.",
   }),
+  key: z.string()
+    .min(2, { message: "La clave debe tener al menos 2 caracteres." })
+    .max(10, { message: "La clave debe tener máximo 10 caracteres." })
+    .regex(/^[A-Z0-9]+$/, { message: "Solo letras mayúsculas y números." })
+    .optional()
+    .or(z.literal("")),
   shortName: z.string().min(2, {
     message: "El nombre corto debe tener al menos 2 caracteres.",
   }).max(100, {
@@ -142,6 +149,7 @@ interface CreateProjectDialogProps {
 
 export function CreateProjectDialog({ children, open, onOpenChange, onProjectCreated }: CreateProjectDialogProps) {
   const { createProject } = useProjects()
+  const { selectedWorkspace } = useWorkspace()
   const [isLoading, setIsLoading] = React.useState(false)
   const [selectedTechnologies, setSelectedTechnologies] = React.useState<string[]>([])
   const [techInput, setTechInput] = React.useState("")
@@ -150,6 +158,7 @@ export function CreateProjectDialog({ children, open, onOpenChange, onProjectCre
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
+      key: "",
       shortName: "",
       businessUnit: "",
       description: "",
@@ -198,6 +207,8 @@ export function CreateProjectDialog({ children, open, onOpenChange, onProjectCre
       // Preparar datos del proyecto según el DTO de la API
       const projectData = {
         name: values.name,
+        key: values.key?.toUpperCase() || undefined,
+        workspaceId: selectedWorkspace?.id || undefined,
         shortName: values.shortName,
         businessUnit: values.businessUnit,
         description: values.description,
@@ -284,6 +295,25 @@ export function CreateProjectDialog({ children, open, onOpenChange, onProjectCre
             <div className="grid gap-6 md:grid-cols-2">
               <FormField
                 control={form.control}
+                name="key"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Clave del Proyecto <span className="text-muted-foreground font-normal">(ej: PAG, IDP)</span></FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="PAG"
+                        className="h-12 uppercase"
+                        {...field}
+                        onChange={e => field.onChange(e.target.value.toUpperCase())}
+                      />
+                    </FormControl>
+                    <FormDescription>Se usará como prefijo de tickets: PAG-1, PAG-2...</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
                 name="shortName"
                 render={({ field }) => (
                   <FormItem>
@@ -295,6 +325,8 @@ export function CreateProjectDialog({ children, open, onOpenChange, onProjectCre
                   </FormItem>
                 )}
               />
+            </div>
+            <div className="grid gap-6 md:grid-cols-2">
               <FormField
                 control={form.control}
                 name="businessUnit"

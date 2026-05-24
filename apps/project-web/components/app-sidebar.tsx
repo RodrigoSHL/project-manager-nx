@@ -16,6 +16,8 @@ import {
   BarChart3,
   Calendar,
   FileText,
+  ChevronDown,
+  Building2,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -36,8 +38,10 @@ import {
 } from "@/components/ui/sidebar"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Badge } from "@/components/ui/badge"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { CreateProjectDialog } from "./create-project-dialog"
 import { useProjects } from "@/hooks/useProjects"
+import { useWorkspace } from "@/contexts/workspace-context"
 import { ProjectStatus } from "@/types/project"
 
 const navigationItems = [
@@ -102,6 +106,7 @@ export function AppSidebar({ activeProject, onProjectChange, ...props }: AppSide
   const [searchQuery, setSearchQuery] = React.useState("")
   const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false)
   const { projects, loading, error } = useProjects()
+  const { workspaces, selectedWorkspace, setSelectedWorkspace } = useWorkspace()
 
   // Separar proyectos activos y archivados
   const activeProjects = projects.filter(project => 
@@ -122,15 +127,47 @@ export function AppSidebar({ activeProject, onProjectChange, ...props }: AppSide
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Folder className="h-4 w-4" />
-          </div>
-          <div className="grid flex-1 text-left text-sm leading-tight">
-            <span className="truncate font-semibold">ProjectHub</span>
-            <span className="truncate text-xs text-muted-foreground">Gestión de Proyectos</span>
-          </div>
-        </div>
+        {/* Workspace selector */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-2 px-2 py-2 w-full rounded-md hover:bg-sidebar-accent transition-colors group-data-[collapsible=icon]:justify-center">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shrink-0">
+                <Building2 className="h-4 w-4" />
+              </div>
+              <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+                <span className="truncate font-semibold">
+                  {selectedWorkspace?.name ?? "Sin workspace"}
+                </span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {selectedWorkspace ? `/${selectedWorkspace.slug}` : "Selecciona un workspace"}
+                </span>
+              </div>
+              <ChevronDown className="h-4 w-4 text-muted-foreground group-data-[collapsible=icon]:hidden shrink-0" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-60">
+            {workspaces.map(ws => (
+              <DropdownMenuItem
+                key={ws.id}
+                onClick={() => setSelectedWorkspace(ws)}
+                className={cn("flex flex-col items-start gap-0", selectedWorkspace?.id === ws.id && "bg-accent")}
+              >
+                <span className="font-medium">{ws.name}</span>
+                <span className="text-xs text-muted-foreground">/{ws.slug}</span>
+              </DropdownMenuItem>
+            ))}
+            {workspaces.length === 0 && (
+              <DropdownMenuItem disabled>No hay workspaces</DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <a href="/settings" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Gestionar workspaces
+              </a>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {/* Barra de búsqueda */}
         <div className="px-2 py-2 group-data-[collapsible=icon]:hidden">

@@ -15,6 +15,11 @@ export class ProjectService {
     return this.handleResponse<Project[]>(response);
   }
 
+  static async getProjectsByWorkspace(workspaceId: string): Promise<Project[]> {
+    const response = await fetch(`${API_BASE_URL}/projects?workspaceId=${encodeURIComponent(workspaceId)}`);
+    return this.handleResponse<Project[]>(response);
+  }
+
   static async getProjectById(id: string): Promise<Project> {
     const response = await fetch(`${API_BASE_URL}/projects/${id}`);
     return this.handleResponse<Project>(response);

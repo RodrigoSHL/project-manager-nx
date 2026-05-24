@@ -67,8 +67,9 @@ export class ProjectsService {
     return savedProject;
   }
 
-  async findAll(): Promise<Project[]> {
+  async findAll(workspaceId?: string): Promise<Project[]> {
     const projects = await this.projectRepository.find({
+      where: workspaceId ? { workspaceId } : {},
       relations: [
         'repositories',
         'environments',

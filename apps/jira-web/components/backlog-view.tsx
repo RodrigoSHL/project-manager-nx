@@ -7,16 +7,18 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { TicketCard } from '@/components/ticket-card'
-import { Ticket, sprints, statusConfig } from '@/lib/mock-data'
+import { statusConfig } from '@/lib/mock-data'
+import type { ApiTicket, ApiSprint } from '@/types/project'
 
 interface BacklogViewProps {
-  tickets: Ticket[]
+  tickets: ApiTicket[]
+  sprints: ApiSprint[]
   currentProject: string
-  onTicketClick: (ticket: Ticket) => void
+  onTicketClick: (ticket: ApiTicket) => void
   onCreateTicket: () => void
 }
 
-export function BacklogView({ tickets, currentProject, onTicketClick, onCreateTicket }: BacklogViewProps) {
+export function BacklogView({ tickets, sprints, currentProject, onTicketClick, onCreateTicket }: BacklogViewProps) {
   const [expandedSections, setExpandedSections] = React.useState<Record<string, boolean>>({
     sprint: true,
     backlog: true,

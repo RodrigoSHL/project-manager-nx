@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { ThemeProvider } from '@/components/theme-provider'
+import { WorkspaceProvider } from '@/contexts/workspace-context'
 import './globals.css'
 
 const inter = Inter({ 
@@ -55,7 +56,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <WorkspaceProvider>
+            {children}
+          </WorkspaceProvider>
         </ThemeProvider>
         <Analytics />
       </body>

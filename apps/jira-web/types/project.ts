@@ -1,6 +1,9 @@
 export interface ApiProject {
   id: string
   name: string
+  key: string | null
+  color: string | null
+  workspaceId: string | null
   shortName: string | null
   businessUnit: string
   description: string
@@ -11,4 +14,40 @@ export interface ApiProject {
   endDate: string | null
   createdAt: string
   updatedAt: string
+}
+
+export interface ApiSprint {
+  id: string
+  projectId: string
+  name: string
+  goal: string | null
+  startDate: string | null
+  endDate: string | null
+  isActive: boolean
+  createdAt: string
+}
+
+export interface ApiLabel {
+  id: string
+  name: string
+  color: string | null
+}
+
+export interface ApiTicket {
+  id: string
+  key: string
+  projectId: string
+  sprintId: string | null
+  title: string
+  description: string | null
+  status: 'backlog' | 'todo' | 'in_progress' | 'in_review' | 'done' | 'cancelled'
+  priority: 'lowest' | 'low' | 'medium' | 'high' | 'urgent'
+  type: 'story' | 'bug' | 'task' | 'epic' | 'subtask'
+  assigneeId: string | null
+  reporterId: string | null
+  storyPoints: number | null
+  dueDate: string | null
+  createdAt: string
+  updatedAt: string
+  labels: ApiLabel[]
 }

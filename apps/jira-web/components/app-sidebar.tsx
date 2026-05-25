@@ -26,7 +26,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { workspaces } from '@/lib/mock-data'
+import { useWorkspace } from '@/contexts/workspace-context'
 import type { ApiProject } from '@/types/project'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
@@ -66,7 +66,7 @@ export function AppSidebar({
   projects = [],
   loadingProjects = false,
 }: AppSidebarProps) {
-  const currentWorkspace = workspaces[0]
+  const { workspaces, selectedWorkspace, setSelectedWorkspace } = useWorkspace()
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -116,17 +116,17 @@ export function AppSidebar({
                   <div className="flex items-center gap-2 truncate">
                     <Avatar className="h-5 w-5 rounded">
                       <AvatarFallback className="rounded text-[10px] bg-primary/10 text-primary">
-                        {currentWorkspace.name.charAt(0)}
+                        {selectedWorkspace?.name.charAt(0) ?? '?'}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="truncate">{currentWorkspace.name}</span>
+                    <span className="truncate">{selectedWorkspace?.name ?? 'Sin workspace'}</span>
                   </div>
                   <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56">
                 {workspaces.map((ws) => (
-                  <DropdownMenuItem key={ws.id}>
+                  <DropdownMenuItem key={ws.id} onClick={() => setSelectedWorkspace(ws)}>
                     <Avatar className="h-5 w-5 rounded mr-2">
                       <AvatarFallback className="rounded text-[10px]">
                         {ws.name.charAt(0)}
@@ -172,7 +172,7 @@ export function AppSidebar({
                 >
                   <div 
                     className="w-2.5 h-2.5 rounded-sm mr-2 shrink-0" 
-                    style={{ backgroundColor: PROJECT_COLORS[index % PROJECT_COLORS.length] }}
+                    style={{ backgroundColor: proj.color ?? PROJECT_COLORS[index % PROJECT_COLORS.length] }}
                   />
                   <span className="truncate">{proj.shortName ?? proj.name}</span>
                 </Button>

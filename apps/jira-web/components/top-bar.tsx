@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { projects, users, sprints } from '@/lib/mock-data'
+import type { ApiProject, ApiSprint } from '@/types/project'
 
 interface TopBarProps {
   onMenuClick: () => void
@@ -33,6 +33,8 @@ interface TopBarProps {
   onCreateTicket: () => void
   searchQuery: string
   onSearchChange: (query: string) => void
+  projects?: ApiProject[]
+  activeSprint?: ApiSprint | null
   filters: {
     assignee: string
     status: string
@@ -50,13 +52,14 @@ export function TopBar({
   searchQuery,
   onSearchChange,
   filters,
-  onFilterChange
+  onFilterChange,
+  projects = [],
+  activeSprint = null,
 }: TopBarProps) {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = React.useState(false)
   const project = projects.find(p => p.id === currentProject)
-  const activeSprint = sprints.find(s => s.projectId === currentProject && s.isActive)
-  const currentUser = users[0]
+  const currentUser = { name: 'Usuario', email: '', avatar: '' }
 
   React.useEffect(() => {
     setMounted(true)
@@ -92,7 +95,7 @@ export function TopBar({
                   <div className="flex items-center gap-2">
                     <div 
                       className="w-2.5 h-2.5 rounded-sm" 
-                      style={{ backgroundColor: proj.color }}
+                      style={{ backgroundColor: proj.color ?? '#6b7280' }}
                     />
                     {proj.name}
                   </div>
@@ -133,17 +136,6 @@ export function TopBar({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
-              {users.map((user) => (
-                <SelectItem key={user.id} value={user.id}>
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-4 w-4">
-                      <AvatarImage src={user.avatar} />
-                      <AvatarFallback className="text-[8px]">{user.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    {user.name.split(' ')[0]}
-                  </div>
-                </SelectItem>
-              ))}
             </SelectContent>
           </Select>
 

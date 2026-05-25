@@ -7,3 +7,9 @@ export async function getProjects(): Promise<ApiProject[]> {
   if (!res.ok) throw new Error(`Error fetching projects: ${res.status}`)
   return res.json()
 }
+
+export async function getProjectsByWorkspace(workspaceId: string): Promise<ApiProject[]> {
+  const res = await fetch(`${API_BASE_URL}/projects?workspaceId=${encodeURIComponent(workspaceId)}`, { cache: 'no-store' })
+  if (!res.ok) throw new Error(`Error fetching projects: ${res.status}`)
+  return res.json()
+}

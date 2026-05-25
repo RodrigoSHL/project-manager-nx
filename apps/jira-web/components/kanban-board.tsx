@@ -6,26 +6,28 @@ import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { TicketCard } from '@/components/ticket-card'
-import { Ticket, TicketStatus, statusConfig } from '@/lib/mock-data'
+import { statusConfig } from '@/lib/mock-data'
+import type { ApiTicket } from '@/types/project'
 
 interface KanbanBoardProps {
-  tickets: Ticket[]
-  onTicketClick: (ticket: Ticket) => void
-  onCreateTicket: (status: TicketStatus) => void
+  tickets: ApiTicket[]
+  onTicketClick: (ticket: ApiTicket) => void
+  onCreateTicket: (status: ApiTicket['status']) => void
+  onStatusChange?: (ticketId: string, status: ApiTicket['status']) => void
 }
 
-const columns: TicketStatus[] = ['todo', 'in_progress', 'in_review', 'done']
+const columns: ApiTicket['status'][] = ['todo', 'in_progress', 'in_review', 'done']
 
-export function KanbanBoard({ tickets, onTicketClick, onCreateTicket }: KanbanBoardProps) {
-  const [draggedTicket, setDraggedTicket] = React.useState<Ticket | null>(null)
-  const [dragOverColumn, setDragOverColumn] = React.useState<TicketStatus | null>(null)
+export function KanbanBoard({ tickets, onTicketClick, onCreateTicket, onStatusChange }: KanbanBoardProps) {
+  const [draggedTicket, setDraggedTicket] = React.useState<ApiTicket | null>(null)
+  const [dragOverColumn, setDragOverColumn] = React.useState<ApiTicket['status'] | null>(null)
 
-  const handleDragStart = (e: React.DragEvent, ticket: Ticket) => {
+  const handleDragStart = (e: React.DragEvent, ticket: ApiTicket) => {
     setDraggedTicket(ticket)
     e.dataTransfer.effectAllowed = 'move'
   }
 
-  const handleDragOver = (e: React.DragEvent, status: TicketStatus) => {
+  const handleDragOver = (e: React.DragEvent, status: ApiTicket['status']) => {
     e.preventDefault()
     setDragOverColumn(status)
   }
@@ -34,12 +36,13 @@ export function KanbanBoard({ tickets, onTicketClick, onCreateTicket }: KanbanBo
     setDragOverColumn(null)
   }
 
-  const handleDrop = (e: React.DragEvent, status: TicketStatus) => {
+  const handleDrop = (e: React.DragEvent, status: ApiTicket['status']) => {
     e.preventDefault()
     setDragOverColumn(null)
+    if (draggedTicket && draggedTicket.status !== status) {
+      onStatusChange?.(draggedTicket.id, status)
+    }
     setDraggedTicket(null)
-    // In a real app, this would update the ticket status
-    console.log(`[v0] Moved ticket to ${status}`)
   }
 
   const handleDragEnd = () => {

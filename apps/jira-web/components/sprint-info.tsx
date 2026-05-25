@@ -1,20 +1,23 @@
 'use client'
 
 import * as React from 'react'
-import { Calendar, Target, TrendingUp, CheckCircle2, Clock, Users } from 'lucide-react'
+import { Calendar, Target, TrendingUp, CheckCircle2, Clock, Users, Pencil } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Ticket, Sprint, users } from '@/lib/mock-data'
+import type { ApiTicket, ApiSprint } from '@/types/project'
 
 interface SprintInfoProps {
-  sprint: Sprint
-  tickets: Ticket[]
+  sprint: ApiSprint
+  tickets: ApiTicket[]
+  onEdit?: () => void
 }
 
-export function SprintInfo({ sprint, tickets }: SprintInfoProps) {
+export function SprintInfo({ sprint, tickets, onEdit }: SprintInfoProps) {
   const totalTickets = tickets.length
   const doneTickets = tickets.filter(t => t.status === 'done').length
   const inProgressTickets = tickets.filter(t => t.status === 'in_progress' || t.status === 'in_review').length
@@ -35,9 +38,7 @@ export function SprintInfo({ sprint, tickets }: SprintInfoProps) {
   const remainingDays = Math.max(0, totalDays - elapsedDays)
   const timeProgress = Math.min(100, (elapsedDays / totalDays) * 100)
 
-  const assignees = [...new Set(tickets.map(t => t.assigneeId).filter(Boolean))]
-    .map(id => users.find(u => u.id === id))
-    .filter(Boolean)
+  const assigneeCount = new Set(tickets.map(t => t.assigneeId).filter(Boolean)).size
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('es-ES', { 
@@ -57,6 +58,11 @@ export function SprintInfo({ sprint, tickets }: SprintInfoProps) {
               <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
               Activo
             </Badge>
+            {onEdit && (
+              <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto" onClick={onEdit}>
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            )}
           </div>
           
           <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
@@ -133,21 +139,8 @@ export function SprintInfo({ sprint, tickets }: SprintInfoProps) {
               <Users className="h-4 w-4" />
               Equipo
             </div>
-            <div className="flex items-center -space-x-2">
-              {assignees.slice(0, 5).map((user, i) => user && (
-                <Avatar key={i} className="h-8 w-8 border-2 border-background">
-                  <AvatarImage src={user.avatar} />
-                  <AvatarFallback className="text-xs">{user.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-              ))}
-              {assignees.length > 5 && (
-                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium border-2 border-background">
-                  +{assignees.length - 5}
-                </div>
-              )}
-            </div>
             <div className="text-xs text-muted-foreground">
-              {assignees.length} miembros activos
+              {assigneeCount} miembros activos
             </div>
           </div>
         </div>

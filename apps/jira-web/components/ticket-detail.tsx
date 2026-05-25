@@ -60,18 +60,20 @@ import {
   priorityConfig, 
   typeConfig 
 } from '@/lib/mock-data'
+import type { ApiTicket } from '@/types/project'
 
 interface TicketDetailProps {
-  ticket: Ticket | null
+  ticket: ApiTicket | null
   open: boolean
   onClose: () => void
 }
 
-const typeIcons: Record<TicketType, React.ElementType> = {
+const typeIcons: Record<string, React.ElementType> = {
   task: CheckSquare,
   bug: Bug,
   story: BookOpen,
   epic: Layers,
+  subtask: CheckSquare,
 }
 
 export function TicketDetail({ ticket, open, onClose }: TicketDetailProps) {
@@ -82,13 +84,13 @@ export function TicketDetail({ ticket, open, onClose }: TicketDetailProps) {
   if (!ticket) return null
 
   const assignee = ticket.assigneeId ? users.find(u => u.id === ticket.assigneeId) : null
-  const reporter = users.find(u => u.id === ticket.reporterId)
-  const watchers = ticket.watcherIds.map(id => users.find(u => u.id === id)).filter(Boolean)
+  const reporter = null
+  const watchers: unknown[] = []
   const ticketComments = allComments.filter(c => c.ticketId === ticket.id)
-  const TypeIcon = typeIcons[ticket.type]
-  const status = statusConfig[ticket.status]
-  const priority = priorityConfig[ticket.priority]
-  const type = typeConfig[ticket.type]
+  const TypeIcon = typeIcons[ticket.type] ?? CheckSquare
+  const status = statusConfig[ticket.status as keyof typeof statusConfig] ?? { label: ticket.status, color: 'text-muted-foreground', bgColor: 'bg-muted' }
+  const priority = priorityConfig[ticket.priority as keyof typeof priorityConfig] ?? { label: ticket.priority, color: 'text-muted-foreground', icon: '○' }
+  const type = typeConfig[ticket.type as keyof typeof typeConfig] ?? { label: ticket.type, color: 'text-muted-foreground', bgColor: 'bg-muted' }
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('es-ES', { 
@@ -305,8 +307,8 @@ export function TicketDetail({ ticket, open, onClose }: TicketDetailProps) {
               </label>
               <div className="flex items-center gap-2 flex-wrap">
                 {ticket.labels.map((label) => (
-                  <Badge key={label} variant="secondary" className="text-xs">
-                    {label}
+                  <Badge key={label.id} variant="secondary" className="text-xs">
+                    {label.name}
                   </Badge>
                 ))}
                 <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground">
@@ -317,7 +319,7 @@ export function TicketDetail({ ticket, open, onClose }: TicketDetailProps) {
             </div>
 
             {/* Subtasks */}
-            {ticket.subtasks.length > 0 && (
+            {false && (
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">

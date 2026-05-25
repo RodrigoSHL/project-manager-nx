@@ -16,9 +16,10 @@ import {
   typeConfig,
   comments
 } from '@/lib/mock-data'
+import type { ApiTicket } from '@/types/project'
 
 interface TicketCardProps {
-  ticket: Ticket
+  ticket: ApiTicket
   onClick: () => void
   variant?: 'board' | 'list'
   isDragging?: boolean
@@ -33,9 +34,9 @@ const typeIcons: Record<TicketType, React.ElementType> = {
 
 export function TicketCard({ ticket, onClick, variant = 'board', isDragging = false }: TicketCardProps) {
   const assignee = ticket.assigneeId ? users.find(u => u.id === ticket.assigneeId) : null
-  const TypeIcon = typeIcons[ticket.type]
-  const priority = priorityConfig[ticket.priority]
-  const type = typeConfig[ticket.type]
+  const TypeIcon = typeIcons[ticket.type] ?? CheckSquare
+  const priority = priorityConfig[ticket.priority as keyof typeof priorityConfig] ?? { label: ticket.priority, color: 'text-muted-foreground', icon: '○' }
+  const type = typeConfig[ticket.type as keyof typeof typeConfig] ?? { label: ticket.type, color: 'text-muted-foreground', bgColor: 'bg-muted' }
   const ticketComments = comments.filter(c => c.ticketId === ticket.id)
 
   if (variant === 'list') {
@@ -77,8 +78,8 @@ export function TicketCard({ ticket, onClick, variant = 'board', isDragging = fa
           {/* Labels */}
           <div className="hidden lg:flex items-center gap-1.5">
             {ticket.labels.slice(0, 2).map((label) => (
-              <Badge key={label} variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
-                {label}
+              <Badge key={label.id} variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
+                {label.name}
               </Badge>
             ))}
             {ticket.labels.length > 2 && (
@@ -165,8 +166,8 @@ export function TicketCard({ ticket, onClick, variant = 'board', isDragging = fa
         {ticket.labels.length > 0 && (
           <div className="flex items-center gap-1.5 mb-3 flex-wrap">
             {ticket.labels.slice(0, 3).map((label) => (
-              <Badge key={label} variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
-                {label}
+              <Badge key={label.id} variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
+                {label.name}
               </Badge>
             ))}
           </div>
@@ -184,19 +185,6 @@ export function TicketCard({ ticket, onClick, variant = 'board', isDragging = fa
                   </Badge>
                 </TooltipTrigger>
                 <TooltipContent>Story Points</TooltipContent>
-              </Tooltip>
-            )}
-
-            {/* Subtasks */}
-            {ticket.subtasks.length > 0 && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <CheckSquare className="h-3 w-3" />
-                    {ticket.subtasks.filter(s => s.completed).length}/{ticket.subtasks.length}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>Subtareas completadas</TooltipContent>
               </Tooltip>
             )}
 

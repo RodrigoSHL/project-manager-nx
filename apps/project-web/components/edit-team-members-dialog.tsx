@@ -171,15 +171,15 @@ export function EditTeamMembersDialog({
                   : "Todos los miembros del workspace ya están en el proyecto."}
               </p>
             ) : (
-              <div className="flex gap-2 min-w-0">
+              <div className="flex gap-2">
                 <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                  <SelectTrigger className="flex-1 min-w-0 overflow-hidden">
+                  <SelectTrigger className="flex-1 !h-14">
                     <SelectValue placeholder="Selecciona un miembro..." />
                   </SelectTrigger>
                   <SelectContent>
                     {availableWsMembers.map(wm => (
                       <SelectItem key={wm.userId} value={wm.userId} textValue={wm.user?.name ?? wm.userId}>
-                        <div className="flex flex-col gap-0.5">
+                        <div className="flex flex-col items-start">
                           <span className="font-medium">{wm.user?.name}</span>
                           {wm.user?.email && (
                             <span className="text-sm text-muted-foreground">{wm.user.email}</span>
@@ -191,7 +191,7 @@ export function EditTeamMembersDialog({
                 </Select>
 
                 <Select value={selectedRole} onValueChange={setSelectedRole}>
-                  <SelectTrigger className="w-36">
+                  <SelectTrigger className="w-36 !h-14">
                     <SelectValue placeholder="Rol..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -203,6 +203,7 @@ export function EditTeamMembersDialog({
 
                 <Button
                   size="icon"
+                  className="h-14 w-14 shrink-0"
                   onClick={handleAdd}
                   disabled={!selectedUserId || !selectedRole}
                 >

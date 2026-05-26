@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { getProjectsByWorkspace } from '@/services/projectService'
+import { getProjectsByWorkspace, getProjectTeamMembers } from '@/services/projectService'
 import { getSprintsByProject, activateSprint, deleteSprint } from '@/services/sprintService'
 import { getTicketsByProject, updateTicket } from '@/services/ticketService'
 import { Button } from '@/components/ui/button'
@@ -26,7 +26,7 @@ import { CreateSprintDialog } from '@/components/create-sprint-dialog'
 import { EditSprintDialog } from '@/components/edit-sprint-dialog'
 import { CreateTicketDialog } from '@/components/create-ticket-dialog'
 import { useWorkspace } from '@/contexts/workspace-context'
-import type { ApiProject, ApiSprint, ApiTicket } from '@/types/project'
+import type { ApiProject, ApiSprint, ApiTicket, ApiTeamMember } from '@/types/project'
 
 export default function ProjectManagement() {
   const isMobile = useIsMobile()
@@ -39,6 +39,7 @@ export default function ProjectManagement() {
   const [loadingProjects, setLoadingProjects] = React.useState(true)
   const [sprints, setSprints] = React.useState<ApiSprint[]>([])
   const [tickets, setTickets] = React.useState<ApiTicket[]>([])
+  const [teamMembers, setTeamMembers] = React.useState<ApiTeamMember[]>([])
   const [selectedTicket, setSelectedTicket] = React.useState<ApiTicket | null>(null)
   const [createSprintOpen, setCreateSprintOpen] = React.useState(false)
   const [editingSprint, setEditingSprint] = React.useState<ApiSprint | null>(null)
@@ -73,12 +74,15 @@ export default function ProjectManagement() {
     if (!currentProject) return
     setSprints([])
     setTickets([])
+    setTeamMembers([])
     Promise.all([
       getSprintsByProject(currentProject),
       getTicketsByProject(currentProject),
-    ]).then(([sprintsData, ticketsData]) => {
+      getProjectTeamMembers(currentProject),
+    ]).then(([sprintsData, ticketsData, membersData]) => {
       setSprints(sprintsData)
       setTickets(ticketsData)
+      setTeamMembers(membersData)
     }).catch(console.error)
   }, [currentProject])
 
@@ -110,6 +114,11 @@ export default function ProjectManagement() {
 
   const handleTicketCreated = (ticket: ApiTicket) => {
     setTickets(prev => [ticket, ...prev])
+  }
+
+  const handleTicketUpdated = (ticket: ApiTicket) => {
+    setTickets(prev => prev.map(t => t.id === ticket.id ? ticket : t))
+    setSelectedTicket(ticket)
   }
 
   const handleStatusChange = async (ticketId: string, status: ApiTicket['status']) => {
@@ -669,6 +678,9 @@ export default function ProjectManagement() {
       <TicketDetail
         ticket={selectedTicket}
         open={ticketDetailOpen}
+        projectId={currentProject}
+        teamMembers={teamMembers}
+        onUpdated={handleTicketUpdated}
         onClose={() => {
           setTicketDetailOpen(false)
           setSelectedTicket(null)

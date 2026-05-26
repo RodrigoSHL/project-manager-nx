@@ -1,15 +1,13 @@
 'use client'
 
 import * as React from 'react'
-import { 
-  X, 
-  Bug, 
-  BookOpen, 
-  CheckSquare, 
-  Layers, 
-  User, 
-  Users, 
-  Tag, 
+import {
+  X,
+  Bug,
+  BookOpen,
+  CheckSquare,
+  Layers,
+  User,
   Calendar,
   Clock,
   MessageSquare,
@@ -18,10 +16,7 @@ import {
   Link,
   Share2,
   Trash2,
-  Edit3,
-  Eye,
-  CheckCircle2,
-  Circle
+  Loader2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -51,91 +46,182 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { 
-  Ticket, 
-  TicketType,
-  users, 
-  comments as allComments,
-  statusConfig, 
-  priorityConfig, 
-  typeConfig 
-} from '@/lib/mock-data'
-import type { ApiTicket } from '@/types/project'
+import { typeConfig } from '@/lib/mock-data'
+import type { ApiTicket, ApiTeamMember } from '@/types/project'
+import { updateTicket } from '@/services/ticketService'
+
+// ── Config ───────────────────────────────────────────────────────────────────
+
+const STATUS_OPTIONS: { value: ApiTicket['status']; label: string; dot: string }[] = [
+  { value: 'backlog',     label: 'Backlog',     dot: 'bg-muted-foreground' },
+  { value: 'todo',        label: 'To Do',       dot: 'bg-foreground' },
+  { value: 'in_progress', label: 'In Progress', dot: 'bg-primary' },
+  { value: 'in_review',   label: 'In Review',   dot: 'bg-yellow-500' },
+  { value: 'done',        label: 'Done',        dot: 'bg-green-500' },
+  { value: 'cancelled',   label: 'Cancelled',   dot: 'bg-destructive' },
+]
+
+const PRIORITY_OPTIONS: { value: ApiTicket['priority']; label: string; color: string; icon: string }[] = [
+  { value: 'lowest', label: 'Lowest', color: 'text-muted-foreground', icon: '⬇' },
+  { value: 'low',    label: 'Low',    color: 'text-muted-foreground', icon: '▽' },
+  { value: 'medium', label: 'Medium', color: 'text-yellow-500',       icon: '◆' },
+  { value: 'high',   label: 'High',   color: 'text-orange-500',       icon: '▲' },
+  { value: 'urgent', label: 'Urgent', color: 'text-destructive',      icon: '⬆' },
+]
+
+const STORY_POINTS = [1, 2, 3, 5, 8, 13, 21]
+
+const typeIcons: Record<string, React.ElementType> = {
+  task:    CheckSquare,
+  bug:     Bug,
+  story:   BookOpen,
+  epic:    Layers,
+  subtask: CheckSquare,
+}
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface LocalComment {
+  id: string
+  content: string
+  createdAt: string
+}
 
 interface TicketDetailProps {
   ticket: ApiTicket | null
   open: boolean
   onClose: () => void
+  projectId: string
+  teamMembers?: ApiTeamMember[]
+  onUpdated: (ticket: ApiTicket) => void
 }
 
-const typeIcons: Record<string, React.ElementType> = {
-  task: CheckSquare,
-  bug: Bug,
-  story: BookOpen,
-  epic: Layers,
-  subtask: CheckSquare,
-}
+// ── Component ─────────────────────────────────────────────────────────────────
 
-export function TicketDetail({ ticket, open, onClose }: TicketDetailProps) {
-  const [newComment, setNewComment] = React.useState('')
+export function TicketDetail({
+  ticket,
+  open,
+  onClose,
+  projectId,
+  teamMembers = [],
+  onUpdated,
+}: TicketDetailProps) {
+  const [saving, setSaving] = React.useState(false)
+
+  const [title, setTitle] = React.useState('')
   const [isEditingTitle, setIsEditingTitle] = React.useState(false)
-  const [editedTitle, setEditedTitle] = React.useState('')
+
+  const [description, setDescription] = React.useState('')
+  const [isEditingDescription, setIsEditingDescription] = React.useState(false)
+
+  const [localLabels, setLocalLabels] = React.useState<ApiTicket['labels']>([])
+  const [labelInput, setLabelInput] = React.useState('')
+  const [showLabelInput, setShowLabelInput] = React.useState(false)
+
+  const [newComment, setNewComment] = React.useState('')
+  const [comments, setComments] = React.useState<LocalComment[]>([])
+
+  React.useEffect(() => {
+    if (!ticket) return
+    setTitle(ticket.title)
+    setDescription(ticket.description ?? '')
+    setLocalLabels(ticket.labels ?? [])
+    setComments([])
+    setIsEditingTitle(false)
+    setIsEditingDescription(false)
+    setNewComment('')
+    setLabelInput('')
+    setShowLabelInput(false)
+  }, [ticket?.id])
 
   if (!ticket) return null
 
-  const assignee = ticket.assigneeId ? users.find(u => u.id === ticket.assigneeId) : null
-  const reporter = null
-  const watchers: unknown[] = []
-  const ticketComments = allComments.filter(c => c.ticketId === ticket.id)
   const TypeIcon = typeIcons[ticket.type] ?? CheckSquare
-  const status = statusConfig[ticket.status as keyof typeof statusConfig] ?? { label: ticket.status, color: 'text-muted-foreground', bgColor: 'bg-muted' }
-  const priority = priorityConfig[ticket.priority as keyof typeof priorityConfig] ?? { label: ticket.priority, color: 'text-muted-foreground', icon: '○' }
-  const type = typeConfig[ticket.type as keyof typeof typeConfig] ?? { label: ticket.type, color: 'text-muted-foreground', bgColor: 'bg-muted' }
+  const type = typeConfig[ticket.type as keyof typeof typeConfig] ?? {
+    label: ticket.type,
+    color: 'text-muted-foreground',
+    bgColor: 'bg-muted',
+  }
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('es-ES', { 
-      year: 'numeric',
-      month: 'short', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+  const formatDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString('es-ES', {
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
     })
+
+  // ── API helpers ────────────────────────────────────────────────────────────
+
+  const patch = async (data: Parameters<typeof updateTicket>[2]) => {
+    setSaving(true)
+    try {
+      const updated = await updateTicket(projectId, ticket.id, data)
+      onUpdated(updated)
+    } catch (err) {
+      console.error('Error saving ticket', err)
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const formatRelativeTime = (dateStr: string) => {
-    const date = new Date(dateStr)
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-    const diffDays = Math.floor(diffHours / 24)
-
-    if (diffDays > 0) return `hace ${diffDays}d`
-    if (diffHours > 0) return `hace ${diffHours}h`
-    return 'hace un momento'
+  const saveTitle = () => {
+    setIsEditingTitle(false)
+    const trimmed = title.trim()
+    if (trimmed && trimmed !== ticket.title) patch({ title: trimmed })
   }
+
+  const saveDescription = () => {
+    setIsEditingDescription(false)
+    const trimmed = description.trim() || undefined
+    if (trimmed !== (ticket.description ?? undefined)) patch({ description: trimmed })
+  }
+
+  // ── Label helpers ──────────────────────────────────────────────────────────
+
+  const addLabel = () => {
+    const name = labelInput.trim()
+    if (!name) { setShowLabelInput(false); return }
+    if (!localLabels.find(l => l.name.toLowerCase() === name.toLowerCase())) {
+      setLocalLabels(prev => [...prev, { id: Date.now().toString(), name, color: null }])
+    }
+    setLabelInput('')
+    setShowLabelInput(false)
+  }
+
+  const removeLabel = (id: string) => setLocalLabels(prev => prev.filter(l => l.id !== id))
+
+  // ── Comment helpers ────────────────────────────────────────────────────────
+
+  const addComment = () => {
+    if (!newComment.trim()) return
+    setComments(prev => [
+      ...prev,
+      { id: Date.now().toString(), content: newComment.trim(), createdAt: new Date().toISOString() },
+    ])
+    setNewComment('')
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <Sheet open={open} onOpenChange={onClose}>
       <SheetContent className="w-full sm:max-w-2xl p-0 flex flex-col">
-        {/* Header */}
-        <SheetHeader className="px-6 py-4 border-b shrink-0">
+
+        {/* Header — pr-14 leaves space for Radix's built-in close button */}
+        <SheetHeader className="px-6 py-4 border-b shrink-0 pr-14">
           <SheetTitle className="sr-only">{ticket.title}</SheetTitle>
+
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={cn("p-1.5 rounded-md", type.bgColor)}>
-                <TypeIcon className={cn("h-4 w-4", type.color)} />
+              <div className={cn('p-1.5 rounded-md', type.bgColor)}>
+                <TypeIcon className={cn('h-4 w-4', type.color)} />
               </div>
               <span className="text-sm font-mono text-muted-foreground">{ticket.key}</span>
+              {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
             </div>
+
             <div className="flex items-center gap-1">
               <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Eye className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
                 <Share2 className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Link className="h-4 w-4" />
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -144,10 +230,6 @@ export function TicketDetail({ ticket, open, onClose }: TicketDetailProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem>
-                    <Edit3 className="h-4 w-4 mr-2" />
-                    Editar
-                  </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Link className="h-4 w-4 mr-2" />
                     Copiar enlace
@@ -159,62 +241,54 @@ export function TicketDetail({ ticket, open, onClose }: TicketDetailProps) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
-                <X className="h-4 w-4" />
-              </Button>
             </div>
           </div>
         </SheetHeader>
 
         <ScrollArea className="flex-1">
           <div className="px-6 py-4">
-            {/* Title */}
+
+            {/* ── Title ─────────────────────────────────────────────────────── */}
             <div className="mb-6">
               {isEditingTitle ? (
                 <Input
-                  value={editedTitle || ticket.title}
-                  onChange={(e) => setEditedTitle(e.target.value)}
-                  onBlur={() => setIsEditingTitle(false)}
-                  onKeyDown={(e) => e.key === 'Enter' && setIsEditingTitle(false)}
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  onBlur={saveTitle}
+                  onKeyDown={e => { if (e.key === 'Enter') saveTitle() }}
                   className="text-xl font-semibold border-0 px-0 focus-visible:ring-0"
                   autoFocus
                 />
               ) : (
-                <h2 
+                <h2
                   className="text-xl font-semibold cursor-text hover:bg-accent/50 rounded px-1 -mx-1 py-0.5 transition-colors"
-                  onClick={() => {
-                    setEditedTitle(ticket.title)
-                    setIsEditingTitle(true)
-                  }}
+                  onClick={() => setIsEditingTitle(true)}
                 >
-                  {ticket.title}
+                  {title || ticket.title}
                 </h2>
               )}
             </div>
 
-            {/* Meta Grid */}
+            {/* ── Meta grid ─────────────────────────────────────────────────── */}
             <div className="grid grid-cols-2 gap-4 mb-6">
-              {/* Status */}
+
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Estado
                 </label>
-                <Select defaultValue={ticket.status}>
+                <Select
+                  value={ticket.status}
+                  onValueChange={v => patch({ status: v as ApiTicket['status'] })}
+                >
                   <SelectTrigger className="w-full h-9">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(statusConfig).map(([key, config]) => (
-                      <SelectItem key={key} value={key}>
+                    {STATUS_OPTIONS.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>
                         <div className="flex items-center gap-2">
-                          <div className={cn("w-2 h-2 rounded-full",
-                            key === 'backlog' && "bg-muted-foreground",
-                            key === 'todo' && "bg-foreground",
-                            key === 'in_progress' && "bg-primary",
-                            key === 'in_review' && "bg-warning",
-                            key === 'done' && "bg-success"
-                          )} />
-                          {config.label}
+                          <div className={cn('w-2 h-2 rounded-full', opt.dot)} />
+                          {opt.label}
                         </div>
                       </SelectItem>
                     ))}
@@ -222,21 +296,23 @@ export function TicketDetail({ ticket, open, onClose }: TicketDetailProps) {
                 </Select>
               </div>
 
-              {/* Priority */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Prioridad
                 </label>
-                <Select defaultValue={ticket.priority}>
+                <Select
+                  value={ticket.priority}
+                  onValueChange={v => patch({ priority: v as ApiTicket['priority'] })}
+                >
                   <SelectTrigger className="w-full h-9">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(priorityConfig).map(([key, config]) => (
-                      <SelectItem key={key} value={key}>
+                    {PRIORITY_OPTIONS.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>
                         <div className="flex items-center gap-2">
-                          <span className={config.color}>{config.icon}</span>
-                          {config.label}
+                          <span className={opt.color}>{opt.icon}</span>
+                          {opt.label}
                         </div>
                       </SelectItem>
                     ))}
@@ -244,25 +320,37 @@ export function TicketDetail({ ticket, open, onClose }: TicketDetailProps) {
                 </Select>
               </div>
 
-              {/* Assignee */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Asignado
                 </label>
-                <Select defaultValue={ticket.assigneeId || 'unassigned'}>
+                <Select
+                  value={ticket.assigneeId ?? 'unassigned'}
+                  onValueChange={v => patch({ assigneeId: v === 'unassigned' ? null : v })}
+                >
                   <SelectTrigger className="w-full h-9">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="unassigned">Sin asignar</SelectItem>
-                    {users.map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
+                    <SelectItem value="unassigned">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        Sin asignar
+                      </div>
+                    </SelectItem>
+                    {teamMembers.map(member => (
+                      <SelectItem key={member.id} value={member.id}>
                         <div className="flex items-center gap-2">
                           <Avatar className="h-5 w-5">
-                            <AvatarImage src={user.avatar} />
-                            <AvatarFallback className="text-[8px]">{user.name.charAt(0)}</AvatarFallback>
+                            <AvatarImage src={member.avatar} />
+                            <AvatarFallback className="text-[8px]">
+                              {member.name.charAt(0).toUpperCase()}
+                            </AvatarFallback>
                           </Avatar>
-                          {user.name}
+                          <span className="truncate">{member.name}</span>
+                          <span className="text-[10px] text-muted-foreground shrink-0 capitalize">
+                            {member.role.replace('_', ' ')}
+                          </span>
                         </div>
                       </SelectItem>
                     ))}
@@ -270,20 +358,22 @@ export function TicketDetail({ ticket, open, onClose }: TicketDetailProps) {
                 </Select>
               </div>
 
-              {/* Story Points */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Story Points
                 </label>
-                <Select defaultValue={ticket.storyPoints?.toString() || 'none'}>
+                <Select
+                  value={ticket.storyPoints?.toString() ?? 'none'}
+                  onValueChange={v => patch({ storyPoints: v === 'none' ? null : Number(v) })}
+                >
                   <SelectTrigger className="w-full h-9">
                     <SelectValue placeholder="Sin estimar" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Sin estimar</SelectItem>
-                    {[1, 2, 3, 5, 8, 13, 21].map((points) => (
-                      <SelectItem key={points} value={points.toString()}>
-                        {points} puntos
+                    {STORY_POINTS.map(pts => (
+                      <SelectItem key={pts} value={pts.toString()}>
+                        {pts} {pts === 1 ? 'punto' : 'puntos'}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -291,170 +381,154 @@ export function TicketDetail({ ticket, open, onClose }: TicketDetailProps) {
               </div>
             </div>
 
-            {/* Description */}
+            {/* ── Description ───────────────────────────────────────────────── */}
             <div className="mb-6">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">
                 Descripción
               </label>
-              <div className="p-3 rounded-lg bg-muted/50 min-h-[100px]">
-                <p className="text-sm leading-relaxed">{ticket.description}</p>
-              </div>
+              {isEditingDescription ? (
+                <Textarea
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  onBlur={saveDescription}
+                  className="min-h-30 resize-none"
+                  placeholder="Añade una descripción..."
+                  autoFocus
+                />
+              ) : (
+                <div
+                  className={cn(
+                    'p-3 rounded-lg bg-muted/50 min-h-20 cursor-text text-sm leading-relaxed',
+                    'hover:bg-muted/80 transition-colors',
+                    !description && 'text-muted-foreground italic',
+                  )}
+                  onClick={() => setIsEditingDescription(true)}
+                >
+                  {description || 'Haz clic para añadir descripción...'}
+                </div>
+              )}
             </div>
 
-            {/* Labels */}
+            {/* ── Labels ────────────────────────────────────────────────────── */}
             <div className="mb-6">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">
                 Etiquetas
               </label>
               <div className="flex items-center gap-2 flex-wrap">
-                {ticket.labels.map((label) => (
-                  <Badge key={label.id} variant="secondary" className="text-xs">
+                {localLabels.map(label => (
+                  <Badge key={label.id} variant="secondary" className="text-xs gap-1 pr-1">
                     {label.name}
+                    <button
+                      className="ml-0.5 rounded-full hover:bg-foreground/10 p-0.5 transition-colors"
+                      onClick={() => removeLabel(label.id)}
+                    >
+                      <X className="h-2.5 w-2.5" />
+                    </button>
                   </Badge>
                 ))}
-                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground">
-                  <Plus className="h-3 w-3 mr-1" />
-                  Añadir
-                </Button>
-              </div>
-            </div>
 
-            {/* Subtasks */}
-            {false && (
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Subtareas ({ticket.subtasks.filter(s => s.completed).length}/{ticket.subtasks.length})
-                  </label>
-                  <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
+                {showLabelInput ? (
+                  <Input
+                    className="h-6 w-28 text-xs px-2"
+                    placeholder="Etiqueta..."
+                    value={labelInput}
+                    onChange={e => setLabelInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') addLabel()
+                      if (e.key === 'Escape') { setShowLabelInput(false); setLabelInput('') }
+                    }}
+                    onBlur={addLabel}
+                    autoFocus
+                  />
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs text-muted-foreground"
+                    onClick={() => setShowLabelInput(true)}
+                  >
                     <Plus className="h-3 w-3 mr-1" />
                     Añadir
                   </Button>
-                </div>
-                <div className="space-y-2">
-                  {ticket.subtasks.map((subtask) => (
-                    <div 
-                      key={subtask.id}
-                      className={cn(
-                        "flex items-center gap-3 p-2 rounded-lg border transition-colors cursor-pointer",
-                        subtask.completed ? "bg-muted/30" : "hover:bg-muted/50"
-                      )}
-                    >
-                      {subtask.completed ? (
-                        <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
-                      ) : (
-                        <Circle className="h-4 w-4 text-muted-foreground shrink-0" />
-                      )}
-                      <span className={cn(
-                        "text-sm flex-1",
-                        subtask.completed && "text-muted-foreground line-through"
-                      )}>
-                        {subtask.title}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                )}
               </div>
-            )}
+            </div>
 
-            {/* Details */}
+            {/* ── Metadata ──────────────────────────────────────────────────── */}
             <div className="mb-6 space-y-3">
               <div className="flex items-center gap-3 text-sm">
-                <User className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="text-muted-foreground w-20">Reportado</span>
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-5 w-5">
-                    <AvatarImage src={reporter?.avatar} />
-                    <AvatarFallback className="text-[8px]">{reporter?.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <span>{reporter?.name}</span>
-                </div>
-              </div>
-
-              {watchers.length > 0 && (
-                <div className="flex items-center gap-3 text-sm">
-                  <Users className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-muted-foreground w-20">Watchers</span>
-                  <div className="flex items-center -space-x-1">
-                    {watchers.map((watcher, i) => watcher && (
-                      <Avatar key={i} className="h-5 w-5 border-2 border-background">
-                        <AvatarImage src={watcher.avatar} />
-                        <AvatarFallback className="text-[8px]">{watcher.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center gap-3 text-sm">
                 <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="text-muted-foreground w-20">Creado</span>
+                <span className="text-muted-foreground w-24">Creado</span>
                 <span>{formatDate(ticket.createdAt)}</span>
               </div>
-
               <div className="flex items-center gap-3 text-sm">
                 <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="text-muted-foreground w-20">Actualizado</span>
+                <span className="text-muted-foreground w-24">Actualizado</span>
                 <span>{formatDate(ticket.updatedAt)}</span>
               </div>
+              {ticket.dueDate && (
+                <div className="flex items-center gap-3 text-sm">
+                  <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="text-muted-foreground w-24">Vence</span>
+                  <span>{formatDate(ticket.dueDate)}</span>
+                </div>
+              )}
             </div>
 
             <Separator className="my-6" />
 
-            {/* Comments */}
+            {/* ── Comments ──────────────────────────────────────────────────── */}
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <MessageSquare className="h-4 w-4" />
-                <h3 className="text-sm font-semibold">Comentarios ({ticketComments.length})</h3>
+                <h3 className="text-sm font-semibold">Comentarios ({comments.length})</h3>
               </div>
 
-              {/* New Comment */}
               <div className="flex gap-3 mb-6">
                 <Avatar className="h-8 w-8 shrink-0">
-                  <AvatarImage src={users[0].avatar} />
-                  <AvatarFallback>{users[0].name.charAt(0)}</AvatarFallback>
+                  <AvatarFallback className="text-xs">Yo</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 space-y-2">
-                  <Textarea 
+                  <Textarea
                     placeholder="Escribe un comentario..."
                     value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    className="min-h-[80px] resize-none"
+                    onChange={e => setNewComment(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) addComment()
+                    }}
+                    className="min-h-20 resize-none"
                   />
-                  <div className="flex justify-end">
-                    <Button size="sm" disabled={!newComment.trim()}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-muted-foreground">⌘ + Enter para enviar</span>
+                    <Button size="sm" disabled={!newComment.trim()} onClick={addComment}>
                       Comentar
                     </Button>
                   </div>
                 </div>
               </div>
 
-              {/* Comments List */}
-              <div className="space-y-4">
-                {ticketComments.map((comment) => {
-                  const author = users.find(u => u.id === comment.userId)
-                  return (
+              {comments.length > 0 && (
+                <div className="space-y-4">
+                  {comments.map(comment => (
                     <div key={comment.id} className="flex gap-3">
                       <Avatar className="h-8 w-8 shrink-0">
-                        <AvatarImage src={author?.avatar} />
-                        <AvatarFallback>{author?.name.charAt(0)}</AvatarFallback>
+                        <AvatarFallback className="text-xs">Yo</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm font-medium">{author?.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatRelativeTime(comment.createdAt)}
-                          </span>
+                          <span className="text-sm font-medium">Yo</span>
+                          <span className="text-xs text-muted-foreground">hace un momento</span>
                         </div>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
+                        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
                           {comment.content}
                         </p>
                       </div>
                     </div>
-                  )
-                })}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
+
           </div>
         </ScrollArea>
       </SheetContent>

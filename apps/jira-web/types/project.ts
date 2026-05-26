@@ -33,6 +33,16 @@ export interface ApiLabel {
   color: string | null
 }
 
+export interface ApiTeamMember {
+  id: string
+  name: string
+  email: string
+  role: string
+  userId: string | null
+  avatar?: string
+  projectId: string
+}
+
 export interface ApiTicket {
   id: string
   key: string

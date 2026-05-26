@@ -1,13 +1,12 @@
 'use client'
 
 import * as React from 'react'
-import { ChevronDown, ChevronRight, Zap, Layers, Plus, Target, Calendar } from 'lucide-react'
+import { ChevronDown, ChevronRight, Zap, Layers, Plus, Target, Calendar, CheckSquare, Bug, BookOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { TicketCard } from '@/components/ticket-card'
-import { statusConfig } from '@/lib/mock-data'
+import { typeConfig } from '@/lib/mock-data'
 import type { ApiTicket, ApiSprint } from '@/types/project'
 
 interface BacklogViewProps {
@@ -46,6 +45,23 @@ export function BacklogView({ tickets, sprints, currentProject, onTicketClick, o
       month: 'short', 
       day: 'numeric' 
     })
+  }
+
+  const typeIcons: Record<string, React.ElementType> = {
+    task: CheckSquare,
+    bug: Bug,
+    story: BookOpen,
+    epic: Layers,
+    subtask: CheckSquare,
+  }
+
+  const getTypeUI = (type: string) => {
+    const Icon = typeIcons[type] ?? CheckSquare
+    const config = typeConfig[type as keyof typeof typeConfig] ?? {
+      color: 'text-muted-foreground',
+      bgColor: 'bg-muted',
+    }
+    return { Icon, config }
   }
 
   return (
@@ -109,7 +125,7 @@ export function BacklogView({ tickets, sprints, currentProject, onTicketClick, o
               variant="outline"
               size="sm"
               className="shrink-0 gap-1.5"
-              onClick={(e) => {
+              onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                 e.stopPropagation()
                 onCreateTicket(activeSprint?.id)
               }}
@@ -131,14 +147,49 @@ export function BacklogView({ tickets, sprints, currentProject, onTicketClick, o
           {expandedSections.sprint && (
             <div className="space-y-2 ml-10">
               {sprintTickets.length > 0 ? (
-                sprintTickets.map((ticket) => (
-                  <TicketCard
-                    key={ticket.id}
-                    ticket={ticket}
-                    onClick={() => onTicketClick(ticket)}
-                    variant="list"
-                  />
-                ))
+                sprintTickets.map((ticket) => {
+                  const { Icon, config } = getTypeUI(ticket.type)
+                  return (
+                    <div
+                      key={ticket.id}
+                      className="group flex items-center gap-3 px-4 py-2.5 rounded-lg border bg-card hover:border-primary/30 hover:bg-accent/30 transition-all duration-150 cursor-pointer"
+                      onClick={() => onTicketClick(ticket)}
+                    >
+                      {/* Type Icon */}
+                      <div className={cn('shrink-0 p-1.5 rounded-md', config.bgColor)}>
+                        <Icon className={cn('h-3.5 w-3.5', config.color)} />
+                      </div>
+
+                      {/* Key */}
+                      <span className="text-xs font-mono text-muted-foreground w-16 shrink-0">
+                        {ticket.key}
+                      </span>
+
+                      {/* Title */}
+                      <span className="flex-1 text-sm font-medium truncate">
+                        {ticket.title}
+                      </span>
+
+                      {/* Priority Badge */}
+                      <Badge 
+                        variant="outline" 
+                        className="text-[10px] font-semibold shrink-0"
+                      >
+                        {ticket.priority.charAt(0).toUpperCase()}
+                      </Badge>
+
+                      {/* Story Points */}
+                      {ticket.storyPoints && (
+                        <div className="h-5 w-5 flex items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-bold border border-primary/20 shrink-0">
+                          {ticket.storyPoints}
+                        </div>
+                      )}
+
+                      {/* Assignee Avatar */}
+                      <div className="h-5 w-5 rounded-full border-2 border-dashed border-muted-foreground/30 shrink-0" />
+                    </div>
+                  )
+                })
               ) : (
                 <div className="flex flex-col items-center justify-center py-8 px-4 text-center border rounded-xl border-dashed">
                   <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
@@ -209,7 +260,7 @@ export function BacklogView({ tickets, sprints, currentProject, onTicketClick, o
             variant="outline"
             size="sm"
             className="shrink-0 gap-1.5"
-            onClick={(e) => {
+            onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
               e.stopPropagation()
               onCreateTicket(null)
             }}
@@ -223,14 +274,49 @@ export function BacklogView({ tickets, sprints, currentProject, onTicketClick, o
         {expandedSections.backlog && (
           <div className="space-y-2 ml-10">
             {backlogTickets.length > 0 ? (
-              backlogTickets.map((ticket) => (
-                <TicketCard
-                  key={ticket.id}
-                  ticket={ticket}
-                  onClick={() => onTicketClick(ticket)}
-                  variant="list"
-                />
-              ))
+              backlogTickets.map((ticket) => {
+                  const { Icon, config } = getTypeUI(ticket.type)
+                  return (
+                  <div
+                    key={ticket.id}
+                    className="group flex items-center gap-3 px-4 py-2.5 rounded-lg border bg-card hover:border-primary/30 hover:bg-accent/30 transition-all duration-150 cursor-pointer"
+                    onClick={() => onTicketClick(ticket)}
+                  >
+                    {/* Type Icon */}
+                    <div className={cn('shrink-0 p-1.5 rounded-md', config.bgColor)}>
+                      <Icon className={cn('h-3.5 w-3.5', config.color)} />
+                    </div>
+
+                    {/* Key */}
+                    <span className="text-xs font-mono text-muted-foreground w-16 shrink-0">
+                      {ticket.key}
+                    </span>
+
+                    {/* Title */}
+                    <span className="flex-1 text-sm font-medium truncate">
+                      {ticket.title}
+                    </span>
+
+                    {/* Priority Badge */}
+                    <Badge 
+                      variant="outline" 
+                      className="text-[10px] font-semibold shrink-0"
+                    >
+                      {ticket.priority.charAt(0).toUpperCase()}
+                    </Badge>
+
+                    {/* Story Points */}
+                    {ticket.storyPoints && (
+                      <div className="h-5 w-5 flex items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-bold border border-primary/20 shrink-0">
+                        {ticket.storyPoints}
+                      </div>
+                    )}
+
+                    {/* Assignee Avatar */}
+                    <div className="h-5 w-5 rounded-full border-2 border-dashed border-muted-foreground/30 shrink-0" />
+                  </div>
+                  )
+                })
             ) : (
               <div className="flex flex-col items-center justify-center py-8 px-4 text-center border rounded-xl border-dashed">
                 <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">

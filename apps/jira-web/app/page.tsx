@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Layers, LayoutGrid, Zap, LayoutDashboard, Ticket as TicketIcon, BarChart3, Users, Settings, Plus, Calendar, Pencil, Trash2 } from 'lucide-react'
+import { Layers, LayoutGrid, Zap, LayoutDashboard, Ticket as TicketIcon, BarChart3, Users, Settings, Plus, Calendar, Pencil, Trash2, Bug, BookOpen, CheckSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { AppSidebar } from '@/components/app-sidebar'
@@ -271,24 +271,175 @@ export default function ProjectManagement() {
   }
 
   // All Tickets view
-  const AllTicketsView = () => (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight mb-1">Todos los tickets</h1>
-        <p className="text-muted-foreground">{filteredTickets.length} tickets en este proyecto</p>
+  const AllTicketsView = () => {
+    const totalPoints = filteredTickets.reduce((sum, t) => sum + (t.storyPoints ?? 0), 0)
+
+    const ticketStatusConfig: Record<string, { label: string; className: string }> = {
+      backlog: { label: 'Backlog', className: 'bg-muted text-muted-foreground' },
+      todo: { label: 'To Do', className: 'bg-secondary text-secondary-foreground' },
+      in_progress: { label: 'In Progress', className: 'bg-blue-500/20 text-blue-400' },
+      in_review: { label: 'In Review', className: 'bg-amber-500/20 text-amber-500' },
+      done: { label: 'Done', className: 'bg-emerald-500/20 text-emerald-400' },
+      cancelled: { label: 'Cancelled', className: 'bg-muted text-muted-foreground' },
+    }
+
+    const ticketPriorityConfig: Record<string, { label: string; className: string; icon: string }> = {
+      lowest: { label: 'Lowest', className: 'text-muted-foreground', icon: '▽' },
+      low: { label: 'Low', className: 'text-muted-foreground', icon: '▽' },
+      medium: { label: 'Medium', className: 'text-amber-400', icon: '◆' },
+      high: { label: 'High', className: 'text-orange-400', icon: '▲' },
+      urgent: { label: 'Urgent', className: 'text-destructive', icon: '⬆' },
+    }
+
+    const ticketTypeConfig: Record<string, { label: string; Icon: React.ElementType; className: string; bgClassName: string }> = {
+      task: { label: 'Task', Icon: CheckSquare, className: 'text-primary', bgClassName: 'bg-primary/10' },
+      bug: { label: 'Bug', Icon: Bug, className: 'text-destructive', bgClassName: 'bg-destructive/10' },
+      story: { label: 'Story', Icon: BookOpen, className: 'text-emerald-400', bgClassName: 'bg-emerald-400/10' },
+      epic: { label: 'Epic', Icon: Layers, className: 'text-purple-400', bgClassName: 'bg-purple-400/10' },
+      subtask: { label: 'Subtask', Icon: CheckSquare, className: 'text-muted-foreground', bgClassName: 'bg-muted' },
+    }
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight mb-1">Todos los tickets</h1>
+            <p className="text-muted-foreground">{filteredTickets.length} tickets en este proyecto</p>
+          </div>
+          {totalPoints > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Total Story Points:</span>
+              <Badge variant="secondary" className="text-sm font-semibold px-3 py-1">{totalPoints} pts</Badge>
+            </div>
+          )}
+        </div>
+
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/40">
+                  <th className="w-10 px-3 py-3">
+                    <input type="checkbox" className="rounded border-border accent-primary" />
+                  </th>
+                  <th className="w-12 px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Tipo</th>
+                  <th className="w-28 px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Clave</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Título</th>
+                  <th className="w-32 px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Estado</th>
+                  <th className="w-28 px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Prioridad</th>
+                  <th className="w-20 px-3 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Puntos</th>
+                  <th className="w-24 px-3 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Info</th>
+                  <th className="w-36 px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Asignado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filteredTickets.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="p-8 text-center text-muted-foreground">
+                      No hay tickets para mostrar
+                    </td>
+                  </tr>
+                ) : filteredTickets.map(ticket => {
+                  const assignee = teamMembers.find(m => m.id === ticket.assigneeId || m.userId === ticket.assigneeId)
+                  const statusCfg = ticketStatusConfig[ticket.status] ?? { label: ticket.status, className: 'bg-muted text-muted-foreground' }
+                  const priorityCfg = ticketPriorityConfig[ticket.priority] ?? { label: ticket.priority, className: 'text-muted-foreground', icon: '○' }
+                  const typeCfg = ticketTypeConfig[ticket.type] ?? ticketTypeConfig['task']
+                  const TypeIcon = typeCfg.Icon
+
+                  return (
+                    <tr
+                      key={ticket.id}
+                      className="hover:bg-accent/30 cursor-pointer transition-colors"
+                      onClick={() => handleTicketClick(ticket)}
+                    >
+                      <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                        <input type="checkbox" className="rounded border-border accent-primary" />
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className={cn('w-7 h-7 rounded flex items-center justify-center', typeCfg.bgClassName)} title={typeCfg.label}>
+                          <TypeIcon className={cn('h-4 w-4', typeCfg.className)} />
+                        </div>
+                      </td>
+                      <td className="px-3 py-3">
+                        <span className="text-xs font-mono text-muted-foreground whitespace-nowrap">{ticket.key}</span>
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-medium truncate max-w-xs">{ticket.title}</span>
+                          {ticket.labels && ticket.labels.length > 0 && (
+                            <div className="flex items-center gap-1 shrink-0">
+                              {ticket.labels.slice(0, 2).map((label: any) => (
+                                <Badge key={label.id} variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
+                                  {label.name}
+                                </Badge>
+                              ))}
+                              {ticket.labels.length > 2 && (
+                                <span className="text-xs text-muted-foreground">+{ticket.labels.length - 2}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-3 py-3">
+                        <span className={cn('inline-flex items-center px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap', statusCfg.className)}>
+                          {statusCfg.label}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3">
+                        <span className={cn('flex items-center gap-1 text-xs font-medium whitespace-nowrap', priorityCfg.className)}>
+                          <span className="text-base leading-none">{priorityCfg.icon}</span>
+                          {priorityCfg.label}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        {ticket.storyPoints ? (
+                          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-border text-xs font-medium">
+                            {ticket.storyPoints}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="flex items-center justify-center">
+                          <div className="w-6 h-6 rounded-full border border-dashed border-border/50" />
+                        </div>
+                      </td>
+                      <td className="px-3 py-3">
+                        {assignee ? (
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6 shrink-0">
+                              <AvatarImage src={assignee.avatar} alt={assignee.name} />
+                              <AvatarFallback className="text-[10px]">
+                                {assignee.name.split(' ').map(n => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-xs text-muted-foreground truncate max-w-[80px]">{assignee.name.split(' ')[0]}</span>
+                          </div>
+                        ) : (
+                          <div className="w-6 h-6 rounded-full border-2 border-dashed border-border" />
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-border bg-muted/20">
+                  <td colSpan={6} className="px-3 py-2.5 text-xs text-muted-foreground">
+                    {filteredTickets.length} tickets en total
+                  </td>
+                  <td colSpan={3} className="px-3 py-2.5 text-xs text-muted-foreground text-right">
+                    Story Points: {totalPoints}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </Card>
       </div>
-      <div className="space-y-2">
-        {filteredTickets.map(ticket => (
-          <TicketCard
-            key={ticket.id}
-            ticket={ticket}
-            onClick={() => handleTicketClick(ticket)}
-            variant="list"
-          />
-        ))}
-      </div>
-    </div>
-  )
+    )
+  }
 
   // Reports view
   const ReportsView = () => (

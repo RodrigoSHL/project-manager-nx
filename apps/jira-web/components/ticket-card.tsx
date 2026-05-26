@@ -44,82 +44,82 @@ export function TicketCard({ ticket, onClick, variant = 'board', isDragging = fa
       <TooltipProvider>
         <Card
           className={cn(
-            "group flex items-center gap-4 p-3 cursor-pointer transition-all duration-200",
-            "hover:shadow-md hover:border-primary/20 hover:bg-accent/30",
-            isDragging && "shadow-lg ring-2 ring-primary/20 rotate-1"
+            "group flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-all duration-200 border-l-2",
+            "hover:shadow-md hover:border-primary/40 hover:bg-accent/40",
+            "border-l-muted-foreground/20 hover:border-l-primary",
+            isDragging && "shadow-lg ring-2 ring-primary/20"
           )}
           onClick={onClick}
         >
           {/* Drag Handle */}
           <div className="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing">
-            <GripVertical className="h-4 w-4 text-muted-foreground" />
+            <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
 
           {/* Type Icon */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className={cn("p-1.5 rounded", type.bgColor)}>
-                <TypeIcon className={cn("h-3.5 w-3.5", type.color)} />
+              <div className={cn("p-1 rounded-md shrink-0", type.bgColor)}>
+                <TypeIcon className={cn("h-3 w-3", type.color)} />
               </div>
             </TooltipTrigger>
             <TooltipContent>{type.label}</TooltipContent>
           </Tooltip>
 
           {/* Key */}
-          <span className="text-xs font-mono text-muted-foreground w-20 shrink-0">
+          <span className="text-xs font-mono text-muted-foreground w-16 shrink-0 bg-muted/40 px-1.5 py-0.5 rounded">
             {ticket.key}
           </span>
 
           {/* Title */}
-          <span className="flex-1 text-sm font-medium truncate">
+          <span className="flex-1 text-sm font-medium truncate min-w-0">
             {ticket.title}
           </span>
 
-          {/* Labels */}
-          <div className="hidden lg:flex items-center gap-1.5">
-            {ticket.labels.slice(0, 2).map((label) => (
-              <Badge key={label.id} variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
-                {label.name}
+          {/* Priority Badge */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge 
+                variant="outline" 
+                className={cn(
+                  "h-5 px-1.5 text-[10px] font-semibold shrink-0 border",
+                  priority.label === 'Urgent' && "bg-destructive/10 text-destructive border-destructive/30",
+                  priority.label === 'High' && "bg-orange-500/10 text-orange-600 border-orange-500/30",
+                  priority.label === 'Medium' && "bg-amber-500/10 text-amber-600 border-amber-500/30",
+                  priority.label === 'Low' && "bg-muted text-muted-foreground border-muted"
+                )}
+              >
+                {priority.icon}
               </Badge>
-            ))}
-            {ticket.labels.length > 2 && (
-              <span className="text-xs text-muted-foreground">+{ticket.labels.length - 2}</span>
-            )}
-          </div>
+            </TooltipTrigger>
+            <TooltipContent>{priority.label}</TooltipContent>
+          </Tooltip>
 
           {/* Story Points */}
           {ticket.storyPoints && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Badge variant="outline" className="h-5 w-5 p-0 justify-center text-[10px] font-medium rounded-full">
+                <div className="h-5 w-5 flex items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-bold border border-primary/20 shrink-0">
                   {ticket.storyPoints}
-                </Badge>
+                </div>
               </TooltipTrigger>
               <TooltipContent>Story Points</TooltipContent>
             </Tooltip>
           )}
 
-          {/* Priority */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className={cn("text-sm", priority.color)}>{priority.icon}</span>
-            </TooltipTrigger>
-            <TooltipContent>{priority.label}</TooltipContent>
-          </Tooltip>
-
           {/* Assignee */}
           {assignee ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Avatar className="h-6 w-6">
+                <Avatar className="h-5 w-5 shrink-0 ring-1 ring-border">
                   <AvatarImage src={assignee.avatar} alt={assignee.name} />
-                  <AvatarFallback className="text-[10px]">{assignee.name.charAt(0)}</AvatarFallback>
+                  <AvatarFallback className="text-[9px] font-bold">{assignee.name.charAt(0)}</AvatarFallback>
                 </Avatar>
               </TooltipTrigger>
               <TooltipContent>{assignee.name}</TooltipContent>
             </Tooltip>
           ) : (
-            <div className="h-6 w-6 rounded-full border-2 border-dashed border-muted-foreground/30" />
+            <div className="h-5 w-5 rounded-full border-2 border-dashed border-muted-foreground/30 shrink-0" />
           )}
         </Card>
       </TooltipProvider>

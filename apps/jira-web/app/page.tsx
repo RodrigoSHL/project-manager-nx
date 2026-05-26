@@ -45,6 +45,7 @@ export default function ProjectManagement() {
   const [editingSprint, setEditingSprint] = React.useState<ApiSprint | null>(null)
   const [createTicketOpen, setCreateTicketOpen] = React.useState(false)
   const [createTicketInitialStatus, setCreateTicketInitialStatus] = React.useState<ApiTicket['status']>('todo')
+  const [createTicketInitialSprintId, setCreateTicketInitialSprintId] = React.useState<string | null | undefined>(undefined)
   const [ticketDetailOpen, setTicketDetailOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState('')
   const [filters, setFilters] = React.useState({
@@ -107,8 +108,9 @@ export default function ProjectManagement() {
     setTicketDetailOpen(true)
   }
 
-  const handleCreateTicket = (status?: ApiTicket['status']) => {
+  const handleCreateTicket = (status?: ApiTicket['status'], sprintId?: string | null) => {
     setCreateTicketInitialStatus(status ?? 'todo')
+    setCreateTicketInitialSprintId(sprintId)
     setCreateTicketOpen(true)
   }
 
@@ -394,7 +396,7 @@ export default function ProjectManagement() {
               sprints={sprints}
               currentProject={currentProject}
               onTicketClick={handleTicketClick}
-              onCreateTicket={() => handleCreateTicket()}
+              onCreateTicket={(sprintId) => handleCreateTicket(undefined, sprintId)}
             />
           </div>
         )
@@ -708,6 +710,7 @@ export default function ProjectManagement() {
         projectId={currentProject}
         sprints={sprints}
         initialStatus={createTicketInitialStatus}
+        initialSprintId={createTicketInitialSprintId}
         onCreated={handleTicketCreated}
       />
     </div>

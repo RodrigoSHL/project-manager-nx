@@ -15,7 +15,7 @@ interface BacklogViewProps {
   sprints: ApiSprint[]
   currentProject: string
   onTicketClick: (ticket: ApiTicket) => void
-  onCreateTicket: () => void
+  onCreateTicket: (sprintId?: string | null) => void
 }
 
 export function BacklogView({ tickets, sprints, currentProject, onTicketClick, onCreateTicket }: BacklogViewProps) {
@@ -25,8 +25,8 @@ export function BacklogView({ tickets, sprints, currentProject, onTicketClick, o
   })
 
   const activeSprint = sprints.find(s => s.projectId === currentProject && s.isActive)
-  const sprintTickets = tickets.filter(t => t.sprintId === activeSprint?.id)
-  const backlogTickets = tickets.filter(t => !t.sprintId)
+  const sprintTickets = tickets.filter(t => t.sprintId === activeSprint?.id && t.status !== 'backlog')
+  const backlogTickets = tickets.filter(t => !t.sprintId || t.status === 'backlog')
 
   const sprintProgress = sprintTickets.length > 0
     ? (sprintTickets.filter(t => t.status === 'done').length / sprintTickets.length) * 100
@@ -111,7 +111,7 @@ export function BacklogView({ tickets, sprints, currentProject, onTicketClick, o
               className="shrink-0 gap-1.5"
               onClick={(e) => {
                 e.stopPropagation()
-                onCreateTicket()
+                onCreateTicket(activeSprint?.id)
               }}
             >
               <Plus className="h-3.5 w-3.5" />
@@ -145,7 +145,7 @@ export function BacklogView({ tickets, sprints, currentProject, onTicketClick, o
                     <Plus className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <p className="text-sm text-muted-foreground mb-2">No hay tickets en este sprint</p>
-                  <Button variant="outline" size="sm" onClick={onCreateTicket}>
+                  <Button variant="outline" size="sm" onClick={() => onCreateTicket(activeSprint?.id)}>
                     Crear ticket
                   </Button>
                 </div>
@@ -211,7 +211,7 @@ export function BacklogView({ tickets, sprints, currentProject, onTicketClick, o
             className="shrink-0 gap-1.5"
             onClick={(e) => {
               e.stopPropagation()
-              onCreateTicket()
+              onCreateTicket(null)
             }}
           >
             <Plus className="h-3.5 w-3.5" />
@@ -237,7 +237,7 @@ export function BacklogView({ tickets, sprints, currentProject, onTicketClick, o
                   <Plus className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <p className="text-sm text-muted-foreground mb-2">El backlog está vacío</p>
-                <Button variant="outline" size="sm" onClick={onCreateTicket}>
+                <Button variant="outline" size="sm" onClick={() => onCreateTicket(null)}>
                   Crear ticket
                 </Button>
               </div>

@@ -23,6 +23,10 @@ export class TeamMember {
   @Column({ type: 'varchar', length: 255 })
   email: string;
 
+  // Referencia al usuario real en user-api (opcional para compatibilidad con datos existentes)
+  @Column({ type: 'uuid', nullable: true })
+  userId: string | null;
+
   @Column({
     type: 'enum',
     enum: TeamRole

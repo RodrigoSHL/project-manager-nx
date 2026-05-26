@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter, usePathname } from "next/navigation"
 import {
   Search,
   Plus,
@@ -16,6 +17,8 @@ import {
   BarChart3,
   Calendar,
   FileText,
+  ChevronDown,
+  Building2,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -36,8 +39,10 @@ import {
 } from "@/components/ui/sidebar"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Badge } from "@/components/ui/badge"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { CreateProjectDialog } from "./create-project-dialog"
 import { useProjects } from "@/hooks/useProjects"
+import { useWorkspace } from "@/contexts/workspace-context"
 import { ProjectStatus } from "@/types/project"
 
 const navigationItems = [
@@ -93,15 +98,15 @@ const getStatusColor = (status: ProjectStatus) => {
   }
 }
 
-interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
-  activeProject?: string
-  onProjectChange?: (projectId: string) => void
-}
+type AppSidebarProps = React.ComponentProps<typeof Sidebar>
 
-export function AppSidebar({ activeProject, onProjectChange, ...props }: AppSidebarProps) {
+export function AppSidebar({ ...props }: AppSidebarProps) {
+  const router = useRouter()
+  const pathname = usePathname()
   const [searchQuery, setSearchQuery] = React.useState("")
   const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false)
   const { projects, loading, error } = useProjects()
+  const { workspaces, selectedWorkspace, setSelectedWorkspace } = useWorkspace()
 
   // Separar proyectos activos y archivados
   const activeProjects = projects.filter(project => 
@@ -122,15 +127,47 @@ export function AppSidebar({ activeProject, onProjectChange, ...props }: AppSide
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Folder className="h-4 w-4" />
-          </div>
-          <div className="grid flex-1 text-left text-sm leading-tight">
-            <span className="truncate font-semibold">ProjectHub</span>
-            <span className="truncate text-xs text-muted-foreground">Gestión de Proyectos</span>
-          </div>
-        </div>
+        {/* Workspace selector */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-2 px-2 py-2 w-full rounded-md hover:bg-sidebar-accent transition-colors group-data-[collapsible=icon]:justify-center">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shrink-0">
+                <Building2 className="h-4 w-4" />
+              </div>
+              <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+                <span className="truncate font-semibold">
+                  {selectedWorkspace?.name ?? "Sin workspace"}
+                </span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {selectedWorkspace ? `/${selectedWorkspace.slug}` : "Selecciona un workspace"}
+                </span>
+              </div>
+              <ChevronDown className="h-4 w-4 text-muted-foreground group-data-[collapsible=icon]:hidden shrink-0" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-60">
+            {workspaces.map(ws => (
+              <DropdownMenuItem
+                key={ws.id}
+                onClick={() => setSelectedWorkspace(ws)}
+                className={cn("flex flex-col items-start gap-0", selectedWorkspace?.id === ws.id && "bg-accent")}
+              >
+                <span className="font-medium">{ws.name}</span>
+                <span className="text-xs text-muted-foreground">/{ws.slug}</span>
+              </DropdownMenuItem>
+            ))}
+            {workspaces.length === 0 && (
+              <DropdownMenuItem disabled>No hay workspaces</DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <a href="/settings" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Gestionar workspaces
+              </a>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {/* Barra de búsqueda */}
         <div className="px-2 py-2 group-data-[collapsible=icon]:hidden">
@@ -185,8 +222,8 @@ export function AppSidebar({ activeProject, onProjectChange, ...props }: AppSide
                 <SidebarMenu>
                   {filteredActiveProjects.map((project) => (
                     <SidebarMenuItem key={project.id}>
-                      <SidebarMenuButton asChild isActive={activeProject === project.id} className="group/project">
-                        <button onClick={() => onProjectChange?.(project.id)} className="w-full py-6">
+                      <SidebarMenuButton asChild isActive={pathname === `/projects/${project.id}`} className="group/project">
+                        <button onClick={() => router.push(`/projects/${project.id}`)} className="w-full py-6">
                           <div className="flex items-center gap-2 min-w-0 flex-1">
                             {getStatusIcon(project.status)}
                             <div className="min-w-0 flex-1">
@@ -235,9 +272,9 @@ export function AppSidebar({ activeProject, onProjectChange, ...props }: AppSide
                 <SidebarMenu>
                   {filteredArchivedProjects.map((project) => (
                     <SidebarMenuItem key={project.id}>
-                      <SidebarMenuButton asChild isActive={activeProject === project.id}>
+                      <SidebarMenuButton asChild isActive={pathname === `/projects/${project.id}`}>
                         <button
-                          onClick={() => onProjectChange?.(project.id)}
+                          onClick={() => router.push(`/projects/${project.id}`)}
                           className="w-full opacity-75 hover:opacity-100"
                         >
                           <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -268,9 +305,7 @@ export function AppSidebar({ activeProject, onProjectChange, ...props }: AppSide
               open={isCreateDialogOpen}
               onOpenChange={setIsCreateDialogOpen}
               onProjectCreated={(project) => {
-                // Aquí se puede manejar la creación del proyecto
-                console.log("Nuevo proyecto creado:", project)
-                onProjectChange?.(project.id)
+                router.push(`/projects/${project.id}`)
               }}
             >
               <Button variant="outline" className="w-full justify-start bg-transparent" size="sm">
@@ -281,7 +316,7 @@ export function AppSidebar({ activeProject, onProjectChange, ...props }: AppSide
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
-              <a href="#" className="flex items-center gap-2">
+              <a href="/settings" className="flex items-center gap-2">
                 <Settings className="h-4 w-4" />
                 <span>Configuración</span>
               </a>

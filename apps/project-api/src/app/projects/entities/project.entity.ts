@@ -82,6 +82,15 @@ export class Project {
   @Column({ type: 'varchar', length: 100, nullable: true })
   shortName: string;
 
+  @Column({ type: 'uuid', nullable: true })
+  workspaceId: string;
+
+  @Column({ type: 'varchar', length: 10, nullable: true, unique: true })
+  key: string;
+
+  @Column({ type: 'varchar', length: 7, nullable: true })
+  color: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

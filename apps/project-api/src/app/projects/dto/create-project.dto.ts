@@ -31,6 +31,10 @@ export class CreateEnvironmentDto {
 }
 
 export class CreateTeamMemberDto {
+  @IsOptional()
+  @IsUUID()
+  userId?: string;
+
   @IsString()
   name: string;
 
@@ -107,6 +111,18 @@ export class CreateUsefulLinkDto {
 export class CreateProjectDto {
   @IsString()
   name: string;
+
+  @IsOptional()
+  @IsUUID()
+  workspaceId?: string;
+
+  @IsOptional()
+  @IsString()
+  key?: string;
+
+  @IsOptional()
+  @IsString()
+  color?: string;
 
   @IsString()
   businessUnit: string;

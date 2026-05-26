@@ -26,6 +26,10 @@ export class UpdateTeamMemberDto {
   id: string;
 
   @IsOptional()
+  @IsUUID()
+  userId?: string;
+
+  @IsOptional()
   name?: string;
 
   @IsOptional()

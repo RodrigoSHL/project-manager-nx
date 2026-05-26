@@ -26,8 +26,8 @@ export class ProjectsController {
   }
 
   @Get()
-  findAll() {
-    return this.projectsService.findAll();
+  findAll(@Query('workspaceId') workspaceId?: string) {
+    return this.projectsService.findAll(workspaceId);
   }
 
   @Get('stats')

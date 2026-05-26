@@ -38,6 +38,7 @@ export interface Environment {
 
 export interface TeamMember {
   id: string;
+  userId?: string | null;
   name: string;
   email: string;
   role: string;
@@ -129,6 +130,9 @@ export interface Project {
   description: string;
   status: ProjectStatus;
   priority: ProjectPriority;
+  workspaceId?: string;
+  key?: string;
+  color?: string;
   version?: string;
   startDate?: Date;
   endDate?: Date;

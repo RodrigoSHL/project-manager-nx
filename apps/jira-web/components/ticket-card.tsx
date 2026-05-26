@@ -163,7 +163,7 @@ export function TicketCard({ ticket, onClick, variant = 'board', isDragging = fa
         </h4>
 
         {/* Labels */}
-        {ticket.labels.length > 0 && (
+        {(ticket.labels?.length ?? 0) > 0 && (
           <div className="flex items-center gap-1.5 mb-3 flex-wrap">
             {ticket.labels.slice(0, 3).map((label) => (
               <Badge key={label.id} variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">

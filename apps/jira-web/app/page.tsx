@@ -24,6 +24,7 @@ import { getTicketsByProject, updateTicket } from '@/services/ticketService'
 import { Button } from '@/components/ui/button'
 import { CreateSprintDialog } from '@/components/create-sprint-dialog'
 import { EditSprintDialog } from '@/components/edit-sprint-dialog'
+import { CreateTicketDialog } from '@/components/create-ticket-dialog'
 import { useWorkspace } from '@/contexts/workspace-context'
 import type { ApiProject, ApiSprint, ApiTicket } from '@/types/project'
 
@@ -41,6 +42,8 @@ export default function ProjectManagement() {
   const [selectedTicket, setSelectedTicket] = React.useState<ApiTicket | null>(null)
   const [createSprintOpen, setCreateSprintOpen] = React.useState(false)
   const [editingSprint, setEditingSprint] = React.useState<ApiSprint | null>(null)
+  const [createTicketOpen, setCreateTicketOpen] = React.useState(false)
+  const [createTicketInitialStatus, setCreateTicketInitialStatus] = React.useState<ApiTicket['status']>('todo')
   const [ticketDetailOpen, setTicketDetailOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState('')
   const [filters, setFilters] = React.useState({
@@ -101,8 +104,12 @@ export default function ProjectManagement() {
   }
 
   const handleCreateTicket = (status?: ApiTicket['status']) => {
-    // TODO: open create ticket modal
-    console.log('[jira-web] Create ticket', status)
+    setCreateTicketInitialStatus(status ?? 'todo')
+    setCreateTicketOpen(true)
+  }
+
+  const handleTicketCreated = (ticket: ApiTicket) => {
+    setTickets(prev => [ticket, ...prev])
   }
 
   const handleStatusChange = async (ticketId: string, status: ApiTicket['status']) => {
@@ -681,6 +688,15 @@ export default function ProjectManagement() {
         sprint={editingSprint!}
         projectId={currentProject}
         onUpdated={handleSprintUpdated}
+      />
+
+      <CreateTicketDialog
+        open={createTicketOpen}
+        onOpenChange={setCreateTicketOpen}
+        projectId={currentProject}
+        sprints={sprints}
+        initialStatus={createTicketInitialStatus}
+        onCreated={handleTicketCreated}
       />
     </div>
   )

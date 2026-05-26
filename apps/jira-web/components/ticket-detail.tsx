@@ -119,6 +119,7 @@ export function TicketDetail({ ticket, open, onClose }: TicketDetailProps) {
       <SheetContent className="w-full sm:max-w-2xl p-0 flex flex-col">
         {/* Header */}
         <SheetHeader className="px-6 py-4 border-b shrink-0">
+          <SheetTitle className="sr-only">{ticket.title}</SheetTitle>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className={cn("p-1.5 rounded-md", type.bgColor)}>

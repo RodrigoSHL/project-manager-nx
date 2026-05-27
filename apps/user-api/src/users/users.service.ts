@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -12,9 +13,25 @@ export class UsersService {
     private readonly usersRepo: Repository<User>,
   ) {}
 
-  create(dto: CreateUserDto): Promise<User> {
-    const user = this.usersRepo.create(dto);
-    return this.usersRepo.save(user);
+  private normalizeEmail(email: string): string {
+    return email.trim().toLowerCase();
+  }
+
+  async create(dto: CreateUserDto): Promise<User> {
+    const normalizedEmail = this.normalizeEmail(dto.email);
+    const existingUser = await this.usersRepo.findOneBy({ email: normalizedEmail });
+    if (existingUser) {
+      throw new ConflictException('Email is already registered');
+    }
+
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const user = this.usersRepo.create({
+      ...dto,
+      email: normalizedEmail,
+      password: hashedPassword,
+    });
+    const savedUser = await this.usersRepo.save(user);
+    return this.findOne(savedUser.id);
   }
 
   findAll(): Promise<User[]> {
@@ -29,7 +46,18 @@ export class UsersService {
 
   async update(id: string, dto: UpdateUserDto): Promise<User> {
     await this.findOne(id);
-    await this.usersRepo.update(id, dto);
+
+    const updatePayload: Partial<User> = { ...dto };
+
+    if (dto.email) {
+      updatePayload.email = this.normalizeEmail(dto.email);
+    }
+
+    if (dto.password) {
+      updatePayload.password = await bcrypt.hash(dto.password, 10);
+    }
+
+    await this.usersRepo.update(id, updatePayload);
     return this.findOne(id);
   }
 

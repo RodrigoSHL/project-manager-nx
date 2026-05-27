@@ -9,6 +9,7 @@ import { URL } from 'url';
 const SERVICE_ROUTES: { prefix: string; targetEnvVar: string; defaultUrl: string }[] = [
   { prefix: '/api/projects', targetEnvVar: 'PROJECT_API_URL', defaultUrl: 'http://localhost:3000' },
   { prefix: '/api/files',    targetEnvVar: 'PROJECT_API_URL', defaultUrl: 'http://localhost:3000' },
+  { prefix: '/api/auth',        targetEnvVar: 'USER_API_URL', defaultUrl: 'http://localhost:3002' },
   { prefix: '/api/users',       targetEnvVar: 'USER_API_URL', defaultUrl: 'http://localhost:3002' },
   { prefix: '/api/workspaces',  targetEnvVar: 'USER_API_URL', defaultUrl: 'http://localhost:3002' },
 ];

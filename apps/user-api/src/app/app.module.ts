@@ -9,6 +9,7 @@ import { WorkspacesModule } from '../workspaces/workspaces.module';
 import { Workspace } from '../workspaces/entities/workspace.entity';
 import { WorkspaceMembersModule } from '../workspace-members/workspace-members.module';
 import { WorkspaceMember } from '../workspace-members/entities/workspace-member.entity';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { WorkspaceMember } from '../workspace-members/entities/workspace-member.
       entities: [User, Workspace, WorkspaceMember],
     }),
     UsersModule,
+    AuthModule,
     WorkspacesModule,
     WorkspaceMembersModule,
   ],

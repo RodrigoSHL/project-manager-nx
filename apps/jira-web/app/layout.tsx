@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { ThemeProvider } from '@/components/theme-provider'
 import { WorkspaceProvider } from '@/contexts/workspace-context'
+import { AuthProvider } from '@/contexts/auth-context'
 import './globals.css'
 
 const inter = Inter({ 
@@ -56,9 +57,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <WorkspaceProvider>
-            {children}
-          </WorkspaceProvider>
+          <AuthProvider>
+            <WorkspaceProvider>
+              {children}
+            </WorkspaceProvider>
+          </AuthProvider>
         </ThemeProvider>
         <Analytics />
       </body>

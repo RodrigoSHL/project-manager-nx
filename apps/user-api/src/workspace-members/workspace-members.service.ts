@@ -28,6 +28,12 @@ export class WorkspaceMembersService {
     });
   }
 
+  async getMemberRole(workspaceId: string, userId: string): Promise<{ role: string }> {
+    const member = await this.membersRepo.findOneBy({ workspaceId, userId });
+    if (!member) throw new NotFoundException('Member not found in this workspace');
+    return { role: member.role };
+  }
+
   async updateRole(workspaceId: string, userId: string, dto: UpdateWorkspaceMemberDto): Promise<WorkspaceMember> {
     const member = await this.membersRepo.findOneBy({ workspaceId, userId });
     if (!member) throw new NotFoundException('Member not found in this workspace');

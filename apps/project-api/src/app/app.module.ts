@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ProjectsModule } from './projects/projects.module';
@@ -10,6 +11,7 @@ import { LabelsModule } from './labels/labels.module';
 import { TicketsModule } from './tickets/tickets.module';
 import { CommentsModule } from './comments/comments.module';
 import { SubtasksModule } from './subtasks/subtasks.module';
+import { InternalAuthGuard } from './guards/internal-auth.guard';
 
 @Module({
   imports: [
@@ -23,6 +25,10 @@ import { SubtasksModule } from './subtasks/subtasks.module';
     SubtasksModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // Global guard: every endpoint requires X-User-Id (injected by BFF)
+    { provide: APP_GUARD, useClass: InternalAuthGuard },
+  ],
 })
 export class AppModule {}

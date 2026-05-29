@@ -20,6 +20,14 @@ export class WorkspaceMembersController {
     return this.workspaceMembersService.findByWorkspace(workspaceId);
   }
 
+  @Get(':userId/role')
+  getMemberRole(
+    @Param('workspaceId') workspaceId: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.workspaceMembersService.getMemberRole(workspaceId, userId);
+  }
+
   @Patch(':userId/role')
   updateRole(
     @Param('workspaceId') workspaceId: string,

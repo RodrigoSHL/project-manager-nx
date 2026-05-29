@@ -10,12 +10,13 @@ import { Workspace } from '../workspaces/entities/workspace.entity';
 import { WorkspaceMembersModule } from '../workspace-members/workspace-members.module';
 import { WorkspaceMember } from '../workspace-members/entities/workspace-member.entity';
 import { AuthModule } from '../auth/auth.module';
+import { RefreshToken } from '../auth/entities/refresh-token.entity';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       ...databaseConfig,
-      entities: [User, Workspace, WorkspaceMember],
+      entities: [User, Workspace, WorkspaceMember, RefreshToken],
     }),
     UsersModule,
     AuthModule,

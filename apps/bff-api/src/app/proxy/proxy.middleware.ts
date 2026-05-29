@@ -9,7 +9,6 @@ import { URL } from 'url';
 const SERVICE_ROUTES: { prefix: string; targetEnvVar: string; defaultUrl: string }[] = [
   { prefix: '/api/projects', targetEnvVar: 'PROJECT_API_URL', defaultUrl: 'http://localhost:3000' },
   { prefix: '/api/files',    targetEnvVar: 'PROJECT_API_URL', defaultUrl: 'http://localhost:3000' },
-  { prefix: '/api/auth',        targetEnvVar: 'USER_API_URL', defaultUrl: 'http://localhost:3002' },
   { prefix: '/api/users',       targetEnvVar: 'USER_API_URL', defaultUrl: 'http://localhost:3002' },
   { prefix: '/api/workspaces',  targetEnvVar: 'USER_API_URL', defaultUrl: 'http://localhost:3002' },
 ];
@@ -37,12 +36,17 @@ export class ProxyMiddleware implements NestMiddleware {
     const isHttps = target.protocol === 'https:';
     const transport = isHttps ? https : http;
 
+    // Strip cookie header so backends never see raw tokens
+    // Must delete from the object — Node.js http module throws on undefined header values
+    const forwardedHeaders = { ...req.headers, host: target.host };
+    delete forwardedHeaders['cookie'];
+
     const options: http.RequestOptions = {
       hostname: target.hostname,
       port: target.port || (isHttps ? 443 : 80),
       path: path,
       method: req.method,
-      headers: { ...req.headers, host: target.host },
+      headers: forwardedHeaders,
     };
 
     this.logger.debug(`${req.method} ${path} → ${targetBaseUrl}${path}`);

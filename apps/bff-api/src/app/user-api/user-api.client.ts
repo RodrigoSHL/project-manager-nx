@@ -7,10 +7,16 @@ interface CreateUserRequest {
   avatarUrl?: string;
 }
 
+export enum UserRole {
+  USER = 'user',
+  ADMIN = 'admin',
+}
+
 export interface UserApiUser {
   id: string;
   email: string;
   name: string;
+  roles: UserRole[];
 }
 
 @Injectable()

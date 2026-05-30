@@ -27,8 +27,8 @@ async function bootstrap() {
   await app.listen(port);
 
   Logger.log(`🚀 BFF API running on: http://localhost:${port}`);
-  Logger.log(`🔀 User Proxying to: ${process.env.USER_API_URL || 'http://localhost:3001'}`);
-  Logger.log(`🔀 Project Proxying to: ${process.env.PROJECT_API_URL || 'http://localhost:3002'}`);
+  Logger.log(`👤 User API: ${process.env.USER_API_URL || 'http://localhost:3001'}`);
+  Logger.log(`📊 Project API: ${process.env.PROJECT_API_URL || 'http://localhost:3002'}`);
 }
 
 bootstrap();

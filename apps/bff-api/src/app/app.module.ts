@@ -1,11 +1,11 @@
-import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
-import { ProxyMiddleware } from './proxy/proxy.middleware';
+import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { ProjectApiModule } from './project-api/project-api.module';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, ProjectApiModule],
   controllers: [AppController],
   providers: [AppService],
 })

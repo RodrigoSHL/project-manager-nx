@@ -12,5 +12,10 @@ export class CreateUserDto {
 
   @IsString()
   @IsOptional()
+  @MaxLength(255)
+  password?: string;
+
+  @IsString()
+  @IsOptional()
   avatarUrl?: string;
 }

@@ -13,7 +13,7 @@ import * as dotenv from 'dotenv';
 import * as path from 'path';
 
 // Cargar .env desde la raíz del monorepo
-dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -37,7 +37,7 @@ async function bootstrap() {
   const globalPrefix = process.env.API_PREFIX || 'api';
   app.setGlobalPrefix(globalPrefix);
   
-  const port = process.env.API_PORT || process.env.PORT || 3000;
+  const port = process.env.API_PORT || process.env.PORT || 3002;
   await app.listen(port);
   
   Logger.log(

@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
@@ -12,9 +13,16 @@ export class UsersService {
     private readonly usersRepo: Repository<User>,
   ) {}
 
-  create(dto: CreateUserDto): Promise<User> {
-    const user = this.usersRepo.create(dto);
-    return this.usersRepo.save(user);
+  async create(dto: CreateUserDto): Promise<User> {
+    const { password, ...userData } = dto;
+    const user = this.usersRepo.create(userData);
+
+    if (password) {
+      user.passwordHash = await bcrypt.hash(password, 10);
+    }
+
+    const savedUser = await this.usersRepo.save(user);
+    return this.findOne(savedUser.id);
   }
 
   findAll(): Promise<User[]> {
@@ -29,12 +37,39 @@ export class UsersService {
 
   async update(id: string, dto: UpdateUserDto): Promise<User> {
     await this.findOne(id);
-    await this.usersRepo.update(id, dto);
+    const { password, ...userData } = dto;
+    const updateData: Partial<User> = { ...userData };
+
+    if (password) {
+      updateData.passwordHash = await bcrypt.hash(password, 10);
+    }
+
+    await this.usersRepo.update(id, updateData);
     return this.findOne(id);
   }
 
   async remove(id: string): Promise<void> {
     await this.findOne(id);
     await this.usersRepo.delete(id);
+  }
+
+  async validateCredentials(email: string, password: string): Promise<User> {
+    const user = await this.usersRepo
+      .createQueryBuilder('user')
+      .addSelect('user.passwordHash')
+      .where('user.email = :email', { email })
+      .getOne();
+
+    if (!user?.passwordHash) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const passwordMatches = await bcrypt.compare(password, user.passwordHash);
+    if (!passwordMatches) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    delete user.passwordHash;
+    return user;
   }
 }

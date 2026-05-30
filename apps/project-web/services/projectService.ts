@@ -1,6 +1,6 @@
 import { Project, ProjectStats } from '@/types/project';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api';
 
 export class ProjectService {
   private static async handleResponse<T>(response: Response): Promise<T> {
@@ -93,4 +93,4 @@ export class ProjectService {
     });
     return this.handleResponse<Project>(response);
   }
-} 
+}

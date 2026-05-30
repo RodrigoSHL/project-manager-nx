@@ -1,5 +1,5 @@
 import { Injectable, NestMiddleware, Logger } from '@nestjs/common';
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import * as http from 'http';
 import * as https from 'https';
 import { URL } from 'url';
@@ -7,10 +7,10 @@ import { URL } from 'url';
 // Agregar nuevos servicios aquí:
 // '/api/notifications' → process.env.NOTIFICATION_API_URL || 'http://localhost:3003'
 const SERVICE_ROUTES: { prefix: string; targetEnvVar: string; defaultUrl: string }[] = [
-  { prefix: '/api/projects', targetEnvVar: 'PROJECT_API_URL', defaultUrl: 'http://localhost:3000' },
-  { prefix: '/api/files',    targetEnvVar: 'PROJECT_API_URL', defaultUrl: 'http://localhost:3000' },
-  { prefix: '/api/users',       targetEnvVar: 'USER_API_URL', defaultUrl: 'http://localhost:3002' },
-  { prefix: '/api/workspaces',  targetEnvVar: 'USER_API_URL', defaultUrl: 'http://localhost:3002' },
+  { prefix: '/api/projects', targetEnvVar: 'PROJECT_API_URL', defaultUrl: 'http://localhost:3002' },
+  { prefix: '/api/files', targetEnvVar: 'PROJECT_API_URL', defaultUrl: 'http://localhost:3002' },
+  { prefix: '/api/users', targetEnvVar: 'USER_API_URL', defaultUrl: 'http://localhost:3001' },
+  { prefix: '/api/workspaces', targetEnvVar: 'USER_API_URL', defaultUrl: 'http://localhost:3001' },
 ];
 
 @Injectable()
@@ -23,8 +23,14 @@ export class ProxyMiddleware implements NestMiddleware {
     return process.env[route.targetEnvVar] || route.defaultUrl;
   }
 
-  use(req: Request, res: Response): void {
+  use(req: Request, res: Response, next: NextFunction): void {
     const path = req.originalUrl;
+
+    if (path.startsWith('/api/auth')) {
+      next();
+      return;
+    }
+
     const targetBaseUrl = this.resolveTarget(path);
 
     if (!targetBaseUrl) {

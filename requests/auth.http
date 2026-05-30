@@ -1,0 +1,72 @@
+@bffUrl = http://localhost:3000
+@userApiUrl = http://localhost:3001/api
+@password = Pass1234!
+
+### 1. Register through BFF
+# @name register
+POST {{bffUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "auth-test-{{$timestamp}}@example.com",
+  "name": "Auth Test User",
+  "password": "{{password}}"
+}
+
+### 2. Login: valid credentials
+# @name login
+POST {{bffUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{register.response.body.$.email}}",
+  "password": "{{password}}"
+}
+
+### 3. Profile: valid JWT
+GET {{bffUrl}}/api/auth/profile
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Profile: missing JWT should return 401
+GET {{bffUrl}}/api/auth/profile
+
+### Profile: invalid JWT should return 401
+GET {{bffUrl}}/api/auth/profile
+Authorization: Bearer invalid-token
+
+### Login: wrong password should return 401
+POST {{bffUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{register.response.body.$.email}}",
+  "password": "wrong-password"
+}
+
+### Login: unknown user should return 401
+POST {{bffUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "unknown@example.com",
+  "password": "{{password}}"
+}
+
+### Setup legacy/internal edge case: create a user without password directly in user-api
+# @name noPasswordUser
+POST {{userApiUrl}}/users
+Content-Type: application/json
+
+{
+  "email": "no-password-{{$timestamp}}@example.com",
+  "name": "No Password User"
+}
+
+### Login: user without password should return 401
+POST {{bffUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{noPasswordUser.response.body.$.email}}",
+  "password": "{{password}}"
+}

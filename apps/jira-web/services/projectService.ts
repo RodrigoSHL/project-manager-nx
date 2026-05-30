@@ -1,6 +1,6 @@
 import type { ApiProject, ApiTeamMember } from '@/types/project'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api'
 
 export async function getProjects(): Promise<ApiProject[]> {
   const res = await fetch(`${API_BASE_URL}/projects`, { cache: 'no-store' })

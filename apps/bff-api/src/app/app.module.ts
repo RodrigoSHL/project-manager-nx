@@ -9,8 +9,4 @@ import { AuthModule } from './auth/auth.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(ProxyMiddleware).forRoutes('*');
-  }
-}
+export class AppModule {}

@@ -26,4 +26,14 @@ export class AuthController {
   profile(@Request() req: ExpressRequestWithUser) {
     return req.user;
   }
+  @UseGuards(JwtAuthGuard)
+  @Get('private')
+  privateEndpoint() {
+    return { message: 'This is a private endpoint' };
+  }
+
+  @Get('public')
+  publicEndpoint() {
+    return { message: 'This is a public endpoint' };
+  }
 }

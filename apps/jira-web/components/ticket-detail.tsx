@@ -17,6 +17,7 @@ import {
   Share2,
   Trash2,
   Loader2,
+  LifeBuoy,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -69,6 +70,15 @@ const PRIORITY_OPTIONS: { value: ApiTicket['priority']; label: string; color: st
   { value: 'urgent', label: 'Urgent', color: 'text-destructive',      icon: '⬆' },
 ]
 
+const TYPE_OPTIONS: { value: ApiTicket['type']; label: string; Icon: React.ElementType }[] = [
+  { value: 'story', label: 'Historia', Icon: BookOpen },
+  { value: 'task', label: 'Tarea', Icon: CheckSquare },
+  { value: 'bug', label: 'Bug', Icon: Bug },
+  { value: 'support', label: 'Soporte', Icon: LifeBuoy },
+  { value: 'epic', label: 'Épica', Icon: Layers },
+  { value: 'subtask', label: 'Subtarea', Icon: CheckSquare },
+]
+
 const STORY_POINTS = [1, 2, 3, 5, 8, 13, 21]
 
 const typeIcons: Record<string, React.ElementType> = {
@@ -77,6 +87,7 @@ const typeIcons: Record<string, React.ElementType> = {
   story:   BookOpen,
   epic:    Layers,
   subtask: CheckSquare,
+  support: LifeBuoy,
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -212,9 +223,42 @@ export function TicketDetail({
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={cn('p-1.5 rounded-md', type.bgColor)}>
-                <TypeIcon className={cn('h-4 w-4', type.color)} />
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn('h-8 w-8 rounded-md p-0 hover:bg-accent', type.bgColor)}
+                    aria-label="Cambiar tipo de ticket"
+                    disabled={saving}
+                  >
+                    <TypeIcon className={cn('h-4 w-4', type.color)} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  {TYPE_OPTIONS.map(option => {
+                    const OptionIcon = option.Icon
+                    const optionType = typeConfig[option.value as keyof typeof typeConfig] ?? {
+                      color: 'text-muted-foreground',
+                      bgColor: 'bg-muted',
+                    }
+
+                    return (
+                      <DropdownMenuItem
+                        key={option.value}
+                        onClick={() => {
+                          if (option.value !== ticket.type) patch({ type: option.value })
+                        }}
+                      >
+                        <span className={cn('mr-2 flex h-5 w-5 items-center justify-center rounded', optionType.bgColor)}>
+                          <OptionIcon className={cn('h-3.5 w-3.5', optionType.color)} />
+                        </span>
+                        {option.label}
+                      </DropdownMenuItem>
+                    )
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
               <span className="text-sm font-mono text-muted-foreground">{ticket.key}</span>
               {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
             </div>

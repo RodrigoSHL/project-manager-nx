@@ -52,7 +52,7 @@ export interface ApiTicket {
   description: string | null
   status: 'backlog' | 'todo' | 'in_progress' | 'in_review' | 'done' | 'cancelled'
   priority: 'lowest' | 'low' | 'medium' | 'high' | 'urgent'
-  type: 'story' | 'bug' | 'task' | 'epic' | 'subtask'
+  type: 'story' | 'bug' | 'task' | 'epic' | 'subtask' | 'support'
   assigneeId: string | null
   reporterId: string | null
   storyPoints: number | null

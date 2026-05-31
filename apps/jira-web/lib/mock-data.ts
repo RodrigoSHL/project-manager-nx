@@ -1,6 +1,6 @@
 export type TicketStatus = 'backlog' | 'todo' | 'in_progress' | 'in_review' | 'done'
 export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent'
-export type TicketType = 'task' | 'bug' | 'story' | 'epic'
+export type TicketType = 'task' | 'bug' | 'story' | 'epic' | 'subtask' | 'support'
 
 export interface User {
   id: string
@@ -332,4 +332,6 @@ export const typeConfig: Record<TicketType, { label: string; color: string; bgCo
   bug: { label: 'Bug', color: 'text-destructive', bgColor: 'bg-destructive/10' },
   story: { label: 'Story', color: 'text-success', bgColor: 'bg-success/10' },
   epic: { label: 'Epic', color: 'text-chart-5', bgColor: 'bg-chart-5/10' },
+  subtask: { label: 'Subtask', color: 'text-muted-foreground', bgColor: 'bg-muted' },
+  support: { label: 'Soporte', color: 'text-sky-500', bgColor: 'bg-sky-500/10' },
 }

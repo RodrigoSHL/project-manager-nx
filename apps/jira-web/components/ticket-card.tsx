@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Bug, BookOpen, CheckSquare, Layers, GripVertical, MessageSquare } from 'lucide-react'
+import { Bug, BookOpen, CheckSquare, Layers, GripVertical, MessageSquare, LifeBuoy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -30,6 +30,8 @@ const typeIcons: Record<TicketType, React.ElementType> = {
   bug: Bug,
   story: BookOpen,
   epic: Layers,
+  subtask: CheckSquare,
+  support: LifeBuoy,
 }
 
 export function TicketCard({ ticket, onClick, variant = 'board', isDragging = false }: TicketCardProps) {

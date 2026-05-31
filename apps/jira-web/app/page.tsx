@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Layers, LayoutGrid, Zap, LayoutDashboard, Ticket as TicketIcon, BarChart3, Users, Settings, Plus, Calendar, Pencil, Trash2, Bug, BookOpen, CheckSquare } from 'lucide-react'
+import { Layers, LayoutGrid, Zap, LayoutDashboard, Ticket as TicketIcon, BarChart3, Users, Settings, Plus, Calendar, Pencil, Trash2, Bug, BookOpen, CheckSquare, LifeBuoy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { AppSidebar } from '@/components/app-sidebar'
@@ -297,6 +297,7 @@ export default function ProjectManagement() {
       story: { label: 'Story', Icon: BookOpen, className: 'text-emerald-400', bgClassName: 'bg-emerald-400/10' },
       epic: { label: 'Epic', Icon: Layers, className: 'text-purple-400', bgClassName: 'bg-purple-400/10' },
       subtask: { label: 'Subtask', Icon: CheckSquare, className: 'text-muted-foreground', bgClassName: 'bg-muted' },
+      support: { label: 'Soporte', Icon: LifeBuoy, className: 'text-sky-400', bgClassName: 'bg-sky-400/10' },
     }
 
     return (
@@ -452,7 +453,7 @@ export default function ProjectManagement() {
         <Card className="p-5">
           <h3 className="font-semibold mb-4">Distribución por tipo</h3>
           <div className="space-y-3">
-            {['story', 'task', 'bug'].map(type => {
+            {['story', 'task', 'bug', 'support'].map(type => {
               const count = filteredTickets.filter(t => t.type === type).length
               const percent = filteredTickets.length > 0 ? (count / filteredTickets.length) * 100 : 0
               return (

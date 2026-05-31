@@ -54,6 +54,7 @@ const TYPE_OPTIONS: { value: ApiTicket['type']; label: string; icon: string }[] 
   { value: 'story', label: 'Historia', icon: '📖' },
   { value: 'task', label: 'Tarea', icon: '✅' },
   { value: 'bug', label: 'Bug', icon: '🐛' },
+  { value: 'support', label: 'Soporte', icon: '🛟' },
   { value: 'epic', label: 'Épica', icon: '⚡' },
   { value: 'subtask', label: 'Subtarea', icon: '🔹' },
 ]

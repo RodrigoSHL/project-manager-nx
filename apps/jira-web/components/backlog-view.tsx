@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { ChevronDown, ChevronRight, Zap, Layers, Plus, Target, Calendar, CheckSquare, Bug, BookOpen } from 'lucide-react'
+import { ChevronDown, ChevronRight, Zap, Layers, Plus, Target, Calendar, CheckSquare, Bug, BookOpen, LifeBuoy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -53,6 +53,7 @@ export function BacklogView({ tickets, sprints, currentProject, onTicketClick, o
     story: BookOpen,
     epic: Layers,
     subtask: CheckSquare,
+    support: LifeBuoy,
   }
 
   const getTypeUI = (type: string) => {

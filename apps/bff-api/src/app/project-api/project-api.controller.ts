@@ -36,6 +36,92 @@ export class ProjectApiController {
     return this.projectApiClient.findAllTechnologies();
   }
 
+  @Post(':projectId/sprints')
+  createSprint(@Param('projectId') projectId: string, @Body() dto: Record<string, unknown>) {
+    return this.projectApiClient.forwardJsonRequest('POST', `/projects/${encodeURIComponent(projectId)}/sprints`, dto);
+  }
+
+  @Get(':projectId/sprints')
+  findSprints(@Param('projectId') projectId: string) {
+    return this.projectApiClient.forwardJsonRequest('GET', `/projects/${encodeURIComponent(projectId)}/sprints`);
+  }
+
+  @Get(':projectId/sprints/:sprintId')
+  findSprint(@Param('projectId') projectId: string, @Param('sprintId') sprintId: string) {
+    return this.projectApiClient.forwardJsonRequest(
+      'GET',
+      `/projects/${encodeURIComponent(projectId)}/sprints/${encodeURIComponent(sprintId)}`,
+    );
+  }
+
+  @Patch(':projectId/sprints/:sprintId')
+  updateSprint(
+    @Param('projectId') projectId: string,
+    @Param('sprintId') sprintId: string,
+    @Body() dto: Record<string, unknown>,
+  ) {
+    return this.projectApiClient.forwardJsonRequest(
+      'PATCH',
+      `/projects/${encodeURIComponent(projectId)}/sprints/${encodeURIComponent(sprintId)}`,
+      dto,
+    );
+  }
+
+  @Patch(':projectId/sprints/:sprintId/activate')
+  activateSprint(@Param('projectId') projectId: string, @Param('sprintId') sprintId: string) {
+    return this.projectApiClient.forwardJsonRequest(
+      'PATCH',
+      `/projects/${encodeURIComponent(projectId)}/sprints/${encodeURIComponent(sprintId)}/activate`,
+    );
+  }
+
+  @Delete(':projectId/sprints/:sprintId')
+  removeSprint(@Param('projectId') projectId: string, @Param('sprintId') sprintId: string) {
+    return this.projectApiClient.forwardJsonRequest(
+      'DELETE',
+      `/projects/${encodeURIComponent(projectId)}/sprints/${encodeURIComponent(sprintId)}`,
+    );
+  }
+
+  @Post(':projectId/tickets')
+  createTicket(@Param('projectId') projectId: string, @Body() dto: Record<string, unknown>) {
+    return this.projectApiClient.forwardJsonRequest('POST', `/projects/${encodeURIComponent(projectId)}/tickets`, dto);
+  }
+
+  @Get(':projectId/tickets')
+  findTickets(@Param('projectId') projectId: string) {
+    return this.projectApiClient.forwardJsonRequest('GET', `/projects/${encodeURIComponent(projectId)}/tickets`);
+  }
+
+  @Get(':projectId/tickets/:ticketId')
+  findTicket(@Param('projectId') projectId: string, @Param('ticketId') ticketId: string) {
+    return this.projectApiClient.forwardJsonRequest(
+      'GET',
+      `/projects/${encodeURIComponent(projectId)}/tickets/${encodeURIComponent(ticketId)}`,
+    );
+  }
+
+  @Patch(':projectId/tickets/:ticketId')
+  updateTicket(
+    @Param('projectId') projectId: string,
+    @Param('ticketId') ticketId: string,
+    @Body() dto: Record<string, unknown>,
+  ) {
+    return this.projectApiClient.forwardJsonRequest(
+      'PATCH',
+      `/projects/${encodeURIComponent(projectId)}/tickets/${encodeURIComponent(ticketId)}`,
+      dto,
+    );
+  }
+
+  @Delete(':projectId/tickets/:ticketId')
+  removeTicket(@Param('projectId') projectId: string, @Param('ticketId') ticketId: string) {
+    return this.projectApiClient.forwardJsonRequest(
+      'DELETE',
+      `/projects/${encodeURIComponent(projectId)}/tickets/${encodeURIComponent(ticketId)}`,
+    );
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.projectApiClient.findOne(id);

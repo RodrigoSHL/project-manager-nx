@@ -7,6 +7,8 @@ interface CreateUserRequest {
   avatarUrl?: string;
 }
 
+type JsonBody = Record<string, unknown>;
+
 export enum UserRole {
   USER = 'user',
   ADMIN = 'admin',
@@ -53,6 +55,90 @@ export class UserApiClient {
     }
 
     return response.json() as Promise<UserApiUser>;
+  }
+
+  async findAllUsers() {
+    return this.get('/users');
+  }
+
+  async findOneUser(id: string) {
+    return this.get(`/users/${encodeURIComponent(id)}`);
+  }
+
+  async createWorkspace(dto: JsonBody) {
+    return this.write('/workspaces', 'POST', dto);
+  }
+
+  async findAllWorkspaces() {
+    return this.get('/workspaces');
+  }
+
+  async findWorkspaceBySlug(slug: string) {
+    return this.get(`/workspaces/slug/${encodeURIComponent(slug)}`);
+  }
+
+  async findOneWorkspace(id: string) {
+    return this.get(`/workspaces/${encodeURIComponent(id)}`);
+  }
+
+  async updateWorkspace(id: string, dto: JsonBody) {
+    return this.write(`/workspaces/${encodeURIComponent(id)}`, 'PATCH', dto);
+  }
+
+  async removeWorkspace(id: string) {
+    return this.remove(`/workspaces/${encodeURIComponent(id)}`);
+  }
+
+  async addWorkspaceMember(workspaceId: string, dto: JsonBody) {
+    return this.write(`/workspaces/${encodeURIComponent(workspaceId)}/members`, 'POST', dto);
+  }
+
+  async findWorkspaceMembers(workspaceId: string) {
+    return this.get(`/workspaces/${encodeURIComponent(workspaceId)}/members`);
+  }
+
+  async updateWorkspaceMemberRole(workspaceId: string, userId: string, dto: JsonBody) {
+    return this.write(
+      `/workspaces/${encodeURIComponent(workspaceId)}/members/${encodeURIComponent(userId)}/role`,
+      'PATCH',
+      dto,
+    );
+  }
+
+  async removeWorkspaceMember(workspaceId: string, userId: string) {
+    return this.remove(`/workspaces/${encodeURIComponent(workspaceId)}/members/${encodeURIComponent(userId)}`);
+  }
+
+  private async get(path: string) {
+    const response = await this.fetchUserApi(path, { method: 'GET' });
+
+    if (!response.ok) {
+      throw new Error(`User API request failed with status ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  private async write(path: string, method: 'POST' | 'PATCH', body: JsonBody) {
+    const response = await this.fetchUserApi(path, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      throw new Error(`User API write failed with status ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  private async remove(path: string) {
+    const response = await this.fetchUserApi(path, { method: 'DELETE' });
+
+    if (!response.ok) {
+      throw new Error(`User API delete failed with status ${response.status}`);
+    }
   }
 
   private async fetchUserApi(path: string, init: RequestInit): Promise<Response> {

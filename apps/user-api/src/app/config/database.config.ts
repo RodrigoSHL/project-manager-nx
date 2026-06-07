@@ -8,6 +8,8 @@ export const databaseConfig: TypeOrmModuleOptions = {
   password: process.env.DATABASE_PASSWORD || 'postgres',
   database: process.env.USER_DATABASE_NAME || 'user_management_db',
   entities: [],
-  synchronize: true,
+  synchronize: process.env.TYPEORM_SYNCHRONIZE
+    ? process.env.TYPEORM_SYNCHRONIZE === 'true'
+    : process.env.NODE_ENV !== 'production',
   logging: process.env.NODE_ENV === 'development',
 };

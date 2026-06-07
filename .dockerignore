@@ -1,0 +1,17 @@
+.git
+.github
+.nx
+.vscode
+coverage
+dist
+node_modules
+tmp
+out-tsc
+.next
+**/.next
+**/tsconfig.tsbuildinfo
+out
+.env
+.DS_Store
+npm-debug.log
+yarn-error.log

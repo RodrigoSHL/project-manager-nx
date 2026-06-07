@@ -1,0 +1,23 @@
+{$PROJECT_WEB_HOST} {
+  encode gzip
+
+  handle /api/* {
+    reverse_proxy bff-api:3000
+  }
+
+  handle {
+    reverse_proxy project-web:3000
+  }
+}
+
+{$JIRA_WEB_HOST} {
+  encode gzip
+
+  handle /api/* {
+    reverse_proxy bff-api:3000
+  }
+
+  handle {
+    reverse_proxy jira-web:3000
+  }
+}

@@ -37,7 +37,9 @@ export const databaseConfig: TypeOrmModuleOptions = {
     Comment,
     Subtask,
   ],
-  synchronize: true, // Crear tablas automáticamente en desarrollo
+  synchronize: process.env.TYPEORM_SYNCHRONIZE
+    ? process.env.TYPEORM_SYNCHRONIZE === 'true'
+    : process.env.NODE_ENV !== 'production',
   logging: process.env.NODE_ENV === 'development',
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
 }; 

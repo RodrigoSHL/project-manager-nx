@@ -43,6 +43,21 @@ export interface ApiTeamMember {
   projectId: string
 }
 
+export interface ApiSupportDetail {
+  id: string
+  ticketId: string
+  clientContact: string | null
+  ufValue: number | null
+  isBillable: boolean
+  billedAt: string | null
+  invoiceRef: string | null
+  slaDeadline: string | null
+  resolvedAt: string | null
+  notes: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export interface ApiTicket {
   id: string
   key: string
@@ -60,4 +75,5 @@ export interface ApiTicket {
   createdAt: string
   updatedAt: string
   labels: ApiLabel[]
+  supportDetail?: ApiSupportDetail | null
 }

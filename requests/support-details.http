@@ -1,0 +1,89 @@
+@projectApiUrl = http://localhost:3002/api
+
+# ── 1. Preparar: crear un proyecto y ticket de tipo support ──────────────────
+
+### 1a. Crear proyecto (ajusta el projectId si ya tienes uno)
+# @name createProject
+POST {{projectApiUrl}}/projects
+Content-Type: application/json
+
+{
+  "name": "Cliente ABC",
+  "key": "ABC",
+  "businessUnit": "Soporte",
+  "description": "Proyecto en produccion con soporte activo",
+  "status": "production",
+  "priority": "high"
+}
+
+### 1b. Crear ticket de tipo support
+# @name createTicket
+POST {{projectApiUrl}}/projects/{{createProject.response.body.$.id}}/tickets
+Content-Type: application/json
+
+{
+  "title": "Error en módulo de facturación",
+  "description": "El cliente reporta que las facturas no se generan correctamente.",
+  "type": "support",
+  "priority": "urgent",
+  "status": "todo"
+}
+
+# ── 2. Verificar auto-creación del support detail ─────────────────────────────
+
+### 2. GET support-detail (debe existir con isBillable: true, resto null)
+GET {{projectApiUrl}}/projects/{{createProject.response.body.$.id}}/tickets/{{createTicket.response.body.$.id}}/support-detail
+
+# ── 3. Actualizar con información de cobro ────────────────────────────────────
+
+### 3. PATCH: completar datos de soporte y valorización
+PATCH {{projectApiUrl}}/projects/{{createProject.response.body.$.id}}/tickets/{{createTicket.response.body.$.id}}/support-detail
+Content-Type: application/json
+
+{
+  "clientContact": "Juan Pérez",
+  "ufValue": 2.5,
+  "isBillable": true,
+  "slaDeadline": "2026-07-01T18:00:00.000Z",
+  "notes": "Soporte urgente fuera de horario, se aplica tarifa especial"
+}
+
+### 4. GET para verificar actualización
+GET {{projectApiUrl}}/projects/{{createProject.response.body.$.id}}/tickets/{{createTicket.response.body.$.id}}/support-detail
+
+### 5. PATCH: marcar como cobrado
+PATCH {{projectApiUrl}}/projects/{{createProject.response.body.$.id}}/tickets/{{createTicket.response.body.$.id}}/support-detail
+Content-Type: application/json
+
+{
+  "billedAt": "2026-06-26",
+  "invoiceRef": "FAC-2026-0042",
+  "resolvedAt": "2026-06-26T15:30:00.000Z"
+}
+
+# ── 4. Casos de error ─────────────────────────────────────────────────────────
+
+### 6. Intentar crear support-detail en un ticket que NO es tipo support
+#    Primero crea un ticket normal y luego intenta hacer POST en su support-detail
+# @name createNormalTicket
+POST {{projectApiUrl}}/projects/{{createProject.response.body.$.id}}/tickets
+Content-Type: application/json
+
+{
+  "title": "Ticket de tarea normal",
+  "type": "task",
+  "priority": "medium",
+  "status": "todo"
+}
+
+### 7. Debe retornar 400 Bad Request (not of type 'support')
+POST {{projectApiUrl}}/projects/{{createProject.response.body.$.id}}/tickets/{{createNormalTicket.response.body.$.id}}/support-detail
+Content-Type: application/json
+
+{}
+
+### 8. Debe retornar 409 Conflict (ya existe support-detail para este ticket)
+POST {{projectApiUrl}}/projects/{{createProject.response.body.$.id}}/tickets/{{createTicket.response.body.$.id}}/support-detail
+Content-Type: application/json
+
+{}

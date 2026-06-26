@@ -10,6 +10,7 @@ import { LabelsModule } from './labels/labels.module';
 import { TicketsModule } from './tickets/tickets.module';
 import { CommentsModule } from './comments/comments.module';
 import { SubtasksModule } from './subtasks/subtasks.module';
+import { SupportDetailsModule } from './support-details/support-details.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { SubtasksModule } from './subtasks/subtasks.module';
     TicketsModule,
     CommentsModule,
     SubtasksModule,
+    SupportDetailsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -12,6 +12,7 @@ services:
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
       # Extra databases — the init script reads these to create them on first boot
       USER_DATABASE_NAME: ${USER_DATABASE_NAME:-user_management_db}
+      TRAVEL_DB_NAME: ${TRAVEL_DB_NAME:-travel_planner_db}
     ports:
       - "${DATABASE_PORT:-5432}:5432"
     volumes:

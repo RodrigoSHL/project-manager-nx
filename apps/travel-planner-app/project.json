@@ -1,0 +1,52 @@
+{
+  "name": "travel-planner-app",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/travel-planner-app",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "@nx/next:build",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "outputPath": "dist/apps/travel-planner-app"
+      },
+      "configurations": {
+        "development": {
+          "outputPath": "apps/travel-planner-app"
+        },
+        "production": {}
+      }
+    },
+    "serve": {
+      "executor": "@nx/next:server",
+      "defaultConfiguration": "development",
+      "options": {
+        "buildTarget": "travel-planner-app:build",
+        "dev": true,
+        "port": 4202
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "travel-planner-app:build:development",
+          "dev": true
+        },
+        "production": {
+          "buildTarget": "travel-planner-app:build:production",
+          "dev": false
+        }
+      }
+    },
+    "export": {
+      "executor": "@nx/next:export",
+      "options": {
+        "buildTarget": "travel-planner-app:build:production"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"]
+    }
+  },
+  "tags": []
+}

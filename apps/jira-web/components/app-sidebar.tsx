@@ -14,7 +14,9 @@ import {
   PanelLeftClose,
   PanelLeft,
   Folder,
-  Plus
+  Plus,
+  LifeBuoy,
+  ExternalLink,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -35,6 +37,7 @@ const navigation = [
   { name: 'Backlog', icon: Layers, href: '#backlog' },
   { name: 'Sprint actual', icon: Zap, href: '#sprint' },
   { name: 'Todos los tickets', icon: Ticket, href: '#tickets' },
+  { name: 'Soportes', icon: LifeBuoy, href: '#support' },
   { name: 'Reportes', icon: BarChart3, href: '#reports' },
   { name: 'Equipo', icon: Users, href: '#team' },
   { name: 'Configuración', icon: Settings, href: '#settings' },
@@ -226,6 +229,25 @@ export function AppSidebar({
             })}
           </nav>
         </ScrollArea>
+
+        {/* Portal cliente link */}
+        {!collapsed && (
+          <div className="px-3 py-3 border-t border-sidebar-border">
+            <a
+              href="/portal"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                'flex items-center gap-2 w-full h-9 px-2 rounded-md text-sm font-normal',
+                'text-sidebar-foreground/60 hover:text-sky-500 hover:bg-sidebar-accent transition-colors',
+              )}
+            >
+              <LifeBuoy className="h-4 w-4 shrink-0 text-sky-500/70" />
+              <span>Portal de soporte</span>
+              <ExternalLink className="h-3 w-3 ml-auto opacity-60" />
+            </a>
+          </div>
+        )}
 
         {/* Collapse Button (when collapsed) */}
         {collapsed && (

@@ -25,6 +25,8 @@ import { Button } from '@/components/ui/button'
 import { CreateSprintDialog } from '@/components/create-sprint-dialog'
 import { EditSprintDialog } from '@/components/edit-sprint-dialog'
 import { CreateTicketDialog } from '@/components/create-ticket-dialog'
+import { CreateSupportDialog } from '@/components/create-support-dialog'
+import { SupportView } from '@/components/support-view'
 import { useWorkspace } from '@/contexts/workspace-context'
 import type { ApiProject, ApiSprint, ApiTicket, ApiTeamMember } from '@/types/project'
 
@@ -47,6 +49,7 @@ export default function ProjectManagement() {
   const [createTicketInitialStatus, setCreateTicketInitialStatus] = React.useState<ApiTicket['status']>('todo')
   const [createTicketInitialSprintId, setCreateTicketInitialSprintId] = React.useState<string | null | undefined>(undefined)
   const [ticketDetailOpen, setTicketDetailOpen] = React.useState(false)
+  const [createSupportOpen, setCreateSupportOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState('')
   const [filters, setFilters] = React.useState({
     assignee: 'all',
@@ -768,6 +771,16 @@ export default function ProjectManagement() {
         )
       case 'tickets':
         return <AllTicketsView />
+      case 'support':
+        return (
+          <SupportView
+            tickets={tickets}
+            projectId={currentProject}
+            teamMembers={teamMembers}
+            onCreateSupport={() => setCreateSupportOpen(true)}
+            onTicketUpdated={handleTicketUpdated}
+          />
+        )
       case 'reports':
         return <ReportsView />
       case 'team':
@@ -863,6 +876,14 @@ export default function ProjectManagement() {
         sprints={sprints}
         initialStatus={createTicketInitialStatus}
         initialSprintId={createTicketInitialSprintId}
+        onCreated={handleTicketCreated}
+      />
+
+      <CreateSupportDialog
+        open={createSupportOpen}
+        onOpenChange={setCreateSupportOpen}
+        projectId={currentProject}
+        teamMembers={teamMembers}
         onCreated={handleTicketCreated}
       />
     </div>

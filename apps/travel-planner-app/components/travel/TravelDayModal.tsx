@@ -3,14 +3,14 @@
 import { useState, useEffect } from 'react'
 import { TravelDay } from '@/lib/types'
 import { CountrySelector } from './CountrySelector'
-import { X, Save } from 'lucide-react'
+import { X, Save, Loader2 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 interface Props {
   open: boolean
   onClose: () => void
-  onSave: (day: TravelDay) => void
+  onSave: (day: TravelDay) => Promise<{ ok: boolean; error?: string }>
   date: string
   travelDay?: TravelDay
 }
@@ -18,10 +18,13 @@ interface Props {
 export function TravelDayModal({ open, onClose, onSave, date, travelDay }: Props) {
   const [countries, setCountries] = useState<string[]>([])
   const [mainCity, setMainCity] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
     setCountries(travelDay?.countries ?? [])
     setMainCity(travelDay?.mainCity ?? '')
+    setSaveError(null)
   }, [travelDay, open])
 
   if (!open) return null
@@ -30,9 +33,16 @@ export function TravelDayModal({ open, onClose, onSave, date, travelDay }: Props
     ? format(parseISO(date), "EEEE d 'de' MMMM yyyy", { locale: es })
     : ''
 
-  function handleSave() {
-    onSave({ date, countries, mainCity: mainCity.trim() || undefined })
-    onClose()
+  async function handleSave() {
+    setSaving(true)
+    setSaveError(null)
+    const result = await onSave({ date, countries, mainCity: mainCity.trim() || undefined })
+    setSaving(false)
+    if (result?.ok) {
+      onClose()
+    } else {
+      setSaveError(result?.error ?? 'No se pudo guardar el día. Intentá de nuevo.')
+    }
   }
 
   return (
@@ -95,22 +105,31 @@ export function TravelDayModal({ open, onClose, onSave, date, travelDay }: Props
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg border border-border text-sm text-muted-foreground hover:bg-muted transition-colors"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
-          >
-            <Save className="w-4 h-4" />
-            Guardar
-          </button>
+        <div className="flex flex-col gap-2 px-6 py-4 border-t border-border">
+          {saveError && (
+            <p className="text-xs text-destructive text-center">{saveError}</p>
+          )}
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={saving}
+              className="px-4 py-2 rounded-lg border border-border text-sm text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-70"
+            >
+              {saving
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : <Save className="w-4 h-4" />}
+              {saving ? 'Guardando...' : 'Guardar'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

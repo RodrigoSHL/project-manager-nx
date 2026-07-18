@@ -1,4 +1,4 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException, HttpException } from '@nestjs/common';
 import { AuthenticatedUser } from '../auth/types/authenticated-user';
 
 type Body = Record<string, unknown>;
@@ -93,13 +93,19 @@ export class TravelApiClient {
 
   private async authedDelete(path: string, user: AuthenticatedUser) {
     const res = await this.fetch(path, { method: 'DELETE', headers: this.userHeaders(user) });
-    if (!res.ok) throw new Error(`Travel API DELETE ${path} failed: ${res.status}`);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ message: 'Upstream error' }));
+      throw new HttpException(body, res.status);
+    }
     return undefined;
   }
 
   private async send(path: string, init: RequestInit) {
     const res = await this.fetch(path, init);
-    if (!res.ok) throw new Error(`Travel API ${init.method} ${path} failed: ${res.status}`);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ message: 'Upstream error' }));
+      throw new HttpException(body, res.status);
+    }
     if (res.status === 204) return undefined;
     return res.json();
   }

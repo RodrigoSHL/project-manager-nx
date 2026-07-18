@@ -37,6 +37,7 @@ const EMPTY_FORM: Omit<Activity, 'id'> = {
 
 export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate, activity }: Props) {
   const [form, setForm] = useState<Omit<Activity, 'id'>>(EMPTY_FORM)
+  const [errors, setErrors] = useState<Partial<Record<keyof typeof EMPTY_FORM, string>>>({})
 
   useEffect(() => {
     if (activity) {
@@ -45,16 +46,41 @@ export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate
     } else {
       setForm({ ...EMPTY_FORM, date: initialDate ?? '' })
     }
+    setErrors({})
   }, [activity, initialDate, open])
 
   if (!open) return null
 
   const isTransit = form.type === 'flight' || form.type === 'train' || form.type === 'bus' || form.type === 'transfer'
 
+  function validate(): boolean {
+    const newErrors: Partial<Record<keyof typeof EMPTY_FORM, string>> = {}
+    const linkVal = form.link?.trim()
+    if (linkVal) {
+      try {
+        new URL(linkVal)
+      } catch {
+        newErrors.link = 'Ingresa una URL válida (ej: https://booking.com/…)'
+      }
+    }
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!validate()) return
+
+    // Strip empty optional fields to avoid API validation errors
+    const payload: Omit<Activity, 'id'> = {
+      ...form,
+      startTime: form.startTime?.trim() || undefined,
+      endTime: form.endTime?.trim() || undefined,
+      link: form.link?.trim() || undefined,
+    }
+
     const id = activity?.id ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
-    onSave({ id, ...form })
+    onSave({ id, ...payload })
     onClose()
   }
 
@@ -287,12 +313,23 @@ export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate
               <label htmlFor="link" className="text-sm font-medium text-foreground">Enlace (reserva, ticket, mapa…)</label>
               <input
                 id="link"
-                type="url"
+                type="text"
                 value={form.link ?? ''}
-                onChange={e => setField('link', e.target.value)}
+                onChange={e => {
+                  setField('link', e.target.value)
+                  if (errors.link) setErrors(prev => ({ ...prev, link: undefined }))
+                }}
                 placeholder="https://..."
-                className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
+                className={cn(
+                  'rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 transition-colors',
+                  errors.link
+                    ? 'border-destructive focus:ring-destructive/50'
+                    : 'border-input focus:ring-ring/50'
+                )}
               />
+              {errors.link && (
+                <p className="text-xs text-destructive">{errors.link}</p>
+              )}
             </div>
           </div>
 

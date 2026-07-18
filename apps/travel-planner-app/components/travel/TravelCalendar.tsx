@@ -17,7 +17,7 @@ import {
   startOfWeek, endOfWeek,
 } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Plus, RefreshCw, MapPin } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, MapPin } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const EMPTY_FILTERS: Filters = { country: '', type: '', status: '', priority: '' }
@@ -51,7 +51,7 @@ function navigate(date: Date, view: CalendarView, dir: 1 | -1): Date {
 export function TravelCalendar() {
   const store = useTravelStore()
   const [view, setView] = useState<CalendarView>('month')
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 8, 1)) // Sep 2025
+  const [currentDate, setCurrentDate] = useState(new Date())
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
   const [modalOpen, setModalOpen] = useState(false)
   const [editActivity, setEditActivity] = useState<Activity | null>(null)
@@ -94,7 +94,9 @@ export function TravelCalendar() {
   if (!store.loaded) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-muted-foreground text-sm">Cargando itinerario...</div>
+        <div className="text-muted-foreground text-sm">
+          {store.error ?? 'Cargando itinerario...'}
+        </div>
       </div>
     )
   }
@@ -115,14 +117,6 @@ export function TravelCalendar() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => store.resetToSampleData()}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
-              title="Restaurar datos de ejemplo"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Restaurar ejemplo</span>
-            </button>
             <button
               onClick={() => openNewActivity(format(currentDate, 'yyyy-MM-dd'))}
               className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"

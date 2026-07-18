@@ -1,11 +1,11 @@
 'use client'
 
 import { Activity, TravelDay, COUNTRIES } from '@/lib/types'
+import { getCountryTabBackground } from '@/lib/country-colors'
 import { ActivityTypeBadge } from './ActivityTypeBadge'
 import { cn } from '@/lib/utils'
 import { Plus, ArrowRight, Pencil, Flag } from 'lucide-react'
 import { format, isToday, parseISO } from 'date-fns'
-import { es } from 'date-fns/locale'
 
 interface Props {
   date: string
@@ -57,18 +57,16 @@ export function CalendarDay({
     >
       {/* Country strip */}
       {countries.length > 0 ? (
-        <div className={cn(
-          'group/strip flex items-center justify-between gap-1 px-2 py-1 text-xs font-medium rounded-t-lg',
-          countries.length > 1
-            ? 'bg-amber-50 text-amber-800 border-b border-amber-200'
-            : 'bg-sky-50 text-sky-800 border-b border-sky-200',
-        )}>
+        <div
+          className="group/strip flex items-center justify-between gap-1 px-2 py-1 text-xs font-medium text-slate-800 rounded-t-lg border-b border-black/10"
+          style={{ background: getCountryTabBackground(countries) }}
+        >
           {countries.length === 1 ? (
             <span className="truncate">{getCountryFlag(countries[0])} {countries[0]}</span>
           ) : (
             <span className="flex items-center gap-1 truncate">
               <span>{getCountryFlag(countries[0])}</span>
-              <ArrowRight className="w-3 h-3 text-amber-600 shrink-0" />
+              <ArrowRight className="w-3 h-3 text-slate-600 shrink-0" />
               <span>{getCountryFlag(countries[countries.length - 1])}</span>
             </span>
           )}

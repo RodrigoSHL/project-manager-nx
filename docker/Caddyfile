@@ -1,4 +1,4 @@
-{$PROJECT_WEB_HOST} {
+(project_web) {
   encode gzip
 
   handle /api/* {
@@ -10,7 +10,7 @@
   }
 }
 
-{$JIRA_WEB_HOST} {
+(jira_web) {
   encode gzip
 
   handle /api/* {
@@ -22,7 +22,7 @@
   }
 }
 
-{$TRAVEL_WEB_HOST} {
+(travel_web) {
   encode gzip
 
   handle /api/* {
@@ -32,4 +32,32 @@
   handle {
     reverse_proxy travel-planner-app:3000
   }
+}
+
+atomdev.cl, www.atomdev.cl {
+  redir https://projects.atomdev.cl{uri} permanent
+}
+
+projects.atomdev.cl {
+  import project_web
+}
+
+jira.atomdev.cl {
+  import jira_web
+}
+
+travel.atomdev.cl {
+  import travel_web
+}
+
+{$PROJECT_WEB_HOST} {
+  import project_web
+}
+
+{$JIRA_WEB_HOST} {
+  import jira_web
+}
+
+{$TRAVEL_WEB_HOST} {
+  import travel_web
 }

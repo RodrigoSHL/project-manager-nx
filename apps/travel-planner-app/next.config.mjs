@@ -10,11 +10,10 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:3000/api/:path*',
+        destination: `${process.env.INTERNAL_API_URL || 'http://bff-api:3000'}/api/:path*`,
       },
     ]
   },
 }
 
 export default nextConfig
-

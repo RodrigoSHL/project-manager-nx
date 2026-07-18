@@ -22,6 +22,12 @@ Jira web:
 http://localhost:8081
 ```
 
+Travel Planner:
+
+```text
+http://localhost:8082
+```
+
 BFF health:
 
 ```text
@@ -39,8 +45,8 @@ database initialization.
 Recommended first target:
 
 - Shape: `VM.Standard.A1.Flex`
-- OCPU: `4`
-- Memory: `24 GB`
+- OCPU: `2` for Always Free (`4` for a paid VM with more build headroom)
+- Memory: `12 GB` for Always Free (`24 GB` for the paid 4 OCPU option)
 - Boot/block volume: up to `200 GB`
 - OS: Ubuntu or Oracle Linux ARM64
 - Open ingress ports: `22`, `80`, `443`

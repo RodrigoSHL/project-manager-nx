@@ -21,3 +21,15 @@
     reverse_proxy jira-web:3000
   }
 }
+
+{$TRAVEL_WEB_HOST} {
+  encode gzip
+
+  handle /api/* {
+    reverse_proxy bff-api:3000
+  }
+
+  handle {
+    reverse_proxy travel-planner-app:3000
+  }
+}

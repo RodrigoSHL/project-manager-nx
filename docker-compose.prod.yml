@@ -86,7 +86,6 @@ services:
       BFF_PORT: 3000
       PROJECT_API_URL: http://project-api:3002/api
       USER_API_URL: http://user-api:3001/api
-      TRAVEL_MIGRATIONS_RUN: ${TRAVEL_MIGRATIONS_RUN:-false}
       TRAVEL_API_URL: http://travel-planner-api:3003/api
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
@@ -153,7 +152,8 @@ services:
       TRAVEL_DB_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD is required}
       USER_API_URL: http://user-api:3001/api
       DATABASE_SSL: ${DATABASE_SSL:-false}
-      TYPEORM_SYNCHRONIZE: ${TYPEORM_SYNCHRONIZE:-true}
+      TRAVEL_MIGRATIONS_RUN: "true"
+      TYPEORM_SYNCHRONIZE: "false"
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost,http://localhost:8081,http://localhost:8082}
     depends_on:
       postgres:

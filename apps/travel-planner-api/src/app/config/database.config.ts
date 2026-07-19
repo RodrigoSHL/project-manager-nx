@@ -7,6 +7,7 @@ import { Luggage } from '../luggage/entities/luggage.entity';
 import { TripLuggage } from '../luggage/entities/trip-luggage.entity';
 import { PackingItem } from '../luggage/entities/packing-item.entity';
 import { CreateLuggagePacking1784332800000 } from '../../migrations/1784332800000-CreateLuggagePacking';
+import { CreateTripMembers1784332700000 } from '../../migrations/1784332700000-CreateTripMembers';
 
 export const databaseConfig: TypeOrmModuleOptions = {
   type: 'postgres',
@@ -16,7 +17,10 @@ export const databaseConfig: TypeOrmModuleOptions = {
   password: process.env.TRAVEL_DB_PASSWORD || 'postgres',
   database: process.env.TRAVEL_DB_NAME || 'travel_planner_db',
   entities: [Trip, TripMember, Activity, TravelDay, Luggage, TripLuggage, PackingItem],
-  migrations: [CreateLuggagePacking1784332800000],
+  migrations: [
+    CreateTripMembers1784332700000,
+    CreateLuggagePacking1784332800000,
+  ],
   migrationsRun: process.env.TRAVEL_MIGRATIONS_RUN === 'true',
   synchronize: process.env.TYPEORM_SYNCHRONIZE
     ? process.env.TYPEORM_SYNCHRONIZE === 'true'

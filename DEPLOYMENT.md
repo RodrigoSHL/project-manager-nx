@@ -2,6 +2,10 @@
 
 This repo is prepared to deploy the Nx monorepo on a single VM with Docker Compose.
 
+For the complete workflow to add another frontend, API, BFF integration,
+database, subdomain, and OCI deployment, see
+[`docs/ADDING_APPLICATION_OCI.md`](docs/ADDING_APPLICATION_OCI.md).
+
 ## Local production smoke test
 
 ```sh

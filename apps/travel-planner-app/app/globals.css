@@ -77,5 +77,10 @@
   }
   body {
     @apply bg-background text-foreground font-sans;
+    min-width: 320px;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 22%, transparent);
   }
 }

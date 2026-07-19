@@ -1,71 +1,85 @@
-'use client'
+'use client';
 
-import { Activity, TravelDay, Filters, COUNTRIES } from '@/lib/types'
-import { ActivityCard } from './ActivityCard'
-import { cn } from '@/lib/utils'
-import { format, parseISO, compareAsc } from 'date-fns'
-import { es } from 'date-fns/locale'
-import { Plus, ArrowRight, MapPin } from 'lucide-react'
+import { Activity, TravelDay, Filters, COUNTRIES } from '@/lib/types';
+import { ActivityCard } from './ActivityCard';
+import { cn } from '@/lib/utils';
+import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { Plus, ArrowRight, MapPin } from 'lucide-react';
 
 interface Props {
-  activities: Activity[]
-  travelDays: TravelDay[]
-  filters: Filters
-  onAddActivity: (date: string) => void
-  onEditActivity: (activity: Activity) => void
-  onDeleteActivity: (id: string) => void
-  onDuplicateActivity: (id: string) => void
+  activities: Activity[];
+  travelDays: TravelDay[];
+  filters: Filters;
+  onAddActivity: (date: string) => void;
+  onEditActivity: (activity: Activity) => void;
+  onDeleteActivity: (id: string) => void;
+  onDuplicateActivity: (id: string) => void;
+  canEdit?: boolean;
 }
 
 function getCountryFlag(name: string) {
-  return COUNTRIES.find(c => c.name === name)?.flag ?? ''
+  return COUNTRIES.find((c) => c.name === name)?.flag ?? '';
 }
 
 function applyFilters(activities: Activity[], filters: Filters): Activity[] {
-  return activities.filter(a => {
-    if (filters.country && !a.countries.includes(filters.country)) return false
-    if (filters.type && a.type !== filters.type) return false
-    if (filters.status && a.status !== filters.status) return false
-    if (filters.priority && a.priority !== filters.priority) return false
-    return true
-  })
+  return activities.filter((a) => {
+    if (filters.country && !a.countries.includes(filters.country)) return false;
+    if (filters.type && a.type !== filters.type) return false;
+    if (filters.status && a.status !== filters.status) return false;
+    if (filters.priority && a.priority !== filters.priority) return false;
+    return true;
+  });
 }
 
-export function ItineraryList({ activities, travelDays, filters, onAddActivity, onEditActivity, onDeleteActivity, onDuplicateActivity }: Props) {
-  const filtered = applyFilters(activities, filters)
+export function ItineraryList({
+  activities,
+  travelDays,
+  filters,
+  onAddActivity,
+  onEditActivity,
+  onDeleteActivity,
+  onDuplicateActivity,
+  canEdit = true,
+}: Props) {
+  const filtered = applyFilters(activities, filters);
 
   // Group by date
   const byDate = filtered.reduce<Record<string, Activity[]>>((acc, a) => {
-    if (!acc[a.date]) acc[a.date] = []
-    acc[a.date].push(a)
-    return acc
-  }, {})
+    if (!acc[a.date]) acc[a.date] = [];
+    acc[a.date].push(a);
+    return acc;
+  }, {});
 
   // Merge with travelDays that have no activities so we still see empty trip days
-  travelDays.forEach(td => {
-    if (!byDate[td.date]) byDate[td.date] = []
-  })
+  travelDays.forEach((td) => {
+    if (!byDate[td.date]) byDate[td.date] = [];
+  });
 
-  const sortedDates = Object.keys(byDate).sort()
+  const sortedDates = Object.keys(byDate).sort();
 
   if (sortedDates.length === 0) {
     return (
       <div className="text-center py-20 text-muted-foreground">
         <p className="text-base">Sin actividades para mostrar</p>
-        <p className="text-sm mt-1">Ajusta los filtros o agrega nuevas actividades.</p>
+        <p className="text-sm mt-1">
+          Ajusta los filtros o agrega nuevas actividades.
+        </p>
       </div>
-    )
+    );
   }
 
   return (
     <div className="flex flex-col gap-8">
-      {sortedDates.map(dateStr => {
-        const travelDay = travelDays.find(d => d.date === dateStr)
+      {sortedDates.map((dateStr) => {
+        const travelDay = travelDays.find((d) => d.date === dateStr);
         const dateActivities = (byDate[dateStr] ?? []).sort((a, b) =>
           (a.startTime || '23:59').localeCompare(b.startTime || '23:59')
-        )
-        const countries = travelDay?.countries ?? [...new Set(dateActivities.flatMap(a => a.countries))]
-        const dateObj = parseISO(dateStr)
+        );
+        const countries = travelDay?.countries ?? [
+          ...new Set(dateActivities.flatMap((a) => a.countries)),
+        ];
+        const dateObj = parseISO(dateStr);
 
         return (
           <div key={dateStr} className="flex gap-4">
@@ -98,19 +112,28 @@ export function ItineraryList({ activities, travelDays, filters, onAddActivity, 
 
                 {/* Countries */}
                 {countries.length > 0 && (
-                  <div className={cn(
-                    'flex items-center gap-1.5 text-sm font-medium px-3 py-1 rounded-full',
-                    countries.length > 1
-                      ? 'bg-amber-100 text-amber-800'
-                      : 'bg-sky-100 text-sky-800',
-                  )}>
+                  <div
+                    className={cn(
+                      'flex items-center gap-1.5 text-sm font-medium px-3 py-1 rounded-full',
+                      countries.length > 1
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-sky-100 text-sky-800'
+                    )}
+                  >
                     {countries.length === 1 ? (
-                      <span>{getCountryFlag(countries[0])} {countries[0]}</span>
+                      <span>
+                        {getCountryFlag(countries[0])} {countries[0]}
+                      </span>
                     ) : (
                       <span className="flex items-center gap-1.5">
-                        <span>{getCountryFlag(countries[0])} {countries[0]}</span>
+                        <span>
+                          {getCountryFlag(countries[0])} {countries[0]}
+                        </span>
                         <ArrowRight className="w-3.5 h-3.5" />
-                        <span>{getCountryFlag(countries[countries.length - 1])} {countries[countries.length - 1]}</span>
+                        <span>
+                          {getCountryFlag(countries[countries.length - 1])}{' '}
+                          {countries[countries.length - 1]}
+                        </span>
                       </span>
                     )}
                   </div>
@@ -127,32 +150,37 @@ export function ItineraryList({ activities, travelDays, filters, onAddActivity, 
               {/* Activities */}
               {dateActivities.length > 0 ? (
                 <div className="flex flex-col gap-2">
-                  {dateActivities.map(a => (
+                  {dateActivities.map((a) => (
                     <ActivityCard
                       key={a.id}
                       activity={a}
                       onEdit={onEditActivity}
                       onDelete={onDeleteActivity}
                       onDuplicate={onDuplicateActivity}
+                      canEdit={canEdit}
                     />
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground italic">Sin actividades este día</p>
+                <p className="text-sm text-muted-foreground italic">
+                  Sin actividades este día
+                </p>
               )}
 
               {/* Add button */}
-              <button
-                onClick={() => onAddActivity(dateStr)}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors w-fit"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Agregar actividad
-              </button>
+              {canEdit && (
+                <button
+                  onClick={() => onAddActivity(dateStr)}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors w-fit"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Agregar actividad
+                </button>
+              )}
             </div>
           </div>
-        )
+        );
       })}
     </div>
-  )
+  );
 }

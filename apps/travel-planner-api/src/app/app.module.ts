@@ -6,6 +6,7 @@ import { databaseConfig } from './config/database.config';
 import { TripsModule } from './trips/trips.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { TravelDaysModule } from './travel-days/travel-days.module';
+import { LuggageModule } from './luggage/luggage.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { TravelDaysModule } from './travel-days/travel-days.module';
     TripsModule,
     ActivitiesModule,
     TravelDaysModule,
+    LuggageModule,
   ],
   controllers: [AppController],
   providers: [AppService],

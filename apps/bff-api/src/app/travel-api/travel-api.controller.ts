@@ -62,6 +62,90 @@ export class TravelApiController {
     return this.client.deleteTrip(tripId, req.user);
   }
 
+  // ── Trip luggage and packing ─────────────────────────────────────────────
+
+  @Get(':tripId/luggage')
+  listTripLuggage(@Request() req: ExpressRequestWithUser, @Param('tripId') tripId: string) {
+    return this.client.listTripLuggage(tripId, req.user);
+  }
+
+  @Post(':tripId/luggage')
+  addTripLuggage(
+    @Request() req: ExpressRequestWithUser,
+    @Param('tripId') tripId: string,
+    @Body() dto: Record<string, unknown>
+  ) {
+    return this.client.addTripLuggage(tripId, dto, req.user);
+  }
+
+  @Patch(':tripId/luggage/:id')
+  updateTripLuggage(
+    @Request() req: ExpressRequestWithUser,
+    @Param('tripId') tripId: string,
+    @Param('id') id: string,
+    @Body() dto: Record<string, unknown>
+  ) {
+    return this.client.updateTripLuggage(tripId, id, dto, req.user);
+  }
+
+  @Delete(':tripId/luggage/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  removeTripLuggage(
+    @Request() req: ExpressRequestWithUser,
+    @Param('tripId') tripId: string,
+    @Param('id') id: string
+  ) {
+    return this.client.removeTripLuggage(tripId, id, req.user);
+  }
+
+  @Get(':tripId/packing')
+  listPackingItems(@Request() req: ExpressRequestWithUser, @Param('tripId') tripId: string) {
+    return this.client.listPackingItems(tripId, req.user);
+  }
+
+  @Get(':tripId/packing/dashboard')
+  packingDashboard(@Request() req: ExpressRequestWithUser, @Param('tripId') tripId: string) {
+    return this.client.packingDashboard(tripId, req.user);
+  }
+
+  @Post(':tripId/packing/generate')
+  generatePackingList(
+    @Request() req: ExpressRequestWithUser,
+    @Param('tripId') tripId: string,
+    @Body() dto: Record<string, unknown>
+  ) {
+    return this.client.generatePackingList(tripId, dto, req.user);
+  }
+
+  @Post(':tripId/packing/items')
+  createPackingItem(
+    @Request() req: ExpressRequestWithUser,
+    @Param('tripId') tripId: string,
+    @Body() dto: Record<string, unknown>
+  ) {
+    return this.client.createPackingItem(tripId, dto, req.user);
+  }
+
+  @Patch(':tripId/packing/items/:id')
+  updatePackingItem(
+    @Request() req: ExpressRequestWithUser,
+    @Param('tripId') tripId: string,
+    @Param('id') id: string,
+    @Body() dto: Record<string, unknown>
+  ) {
+    return this.client.updatePackingItem(tripId, id, dto, req.user);
+  }
+
+  @Delete(':tripId/packing/items/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  removePackingItem(
+    @Request() req: ExpressRequestWithUser,
+    @Param('tripId') tripId: string,
+    @Param('id') id: string
+  ) {
+    return this.client.removePackingItem(tripId, id, req.user);
+  }
+
   // ── Sharing ───────────────────────────────────────────────────────────────
 
   @Get(':tripId/members')

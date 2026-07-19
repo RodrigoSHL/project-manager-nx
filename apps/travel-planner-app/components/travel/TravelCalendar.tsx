@@ -13,6 +13,7 @@ import { ActivityFormModal } from './ActivityFormModal';
 import { TravelDayModal } from './TravelDayModal';
 import { TripSummary } from './TripSummary';
 import { ShareTripModal } from './ShareTripModal';
+import { LuggageSection } from '../luggage/LuggageSection';
 import {
   addMonths,
   subMonths,
@@ -34,6 +35,7 @@ import {
   Eye,
   Loader2,
   LogOut,
+  Luggage,
   MapPin,
   Pencil,
   Plus,
@@ -84,6 +86,7 @@ function navigate(date: Date, view: CalendarView, dir: 1 | -1): Date {
 
 export function TravelCalendar() {
   const store = useTravelStore();
+  const [section, setSection] = useState<'itinerary' | 'luggage'>('itinerary');
   const [view, setView] = useState<CalendarView>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
@@ -277,7 +280,7 @@ export function TravelCalendar() {
                   <Share2 className="size-4" />
                   {isOwner ? 'Compartir' : 'Personas'}
                 </button>
-                {canEdit && (
+                {canEdit && section === 'itinerary' && (
                   <button
                     onClick={() =>
                       openNewActivity(format(currentDate, 'yyyy-MM-dd'))
@@ -294,11 +297,42 @@ export function TravelCalendar() {
           </div>
         </div>
 
-        {/* Trip summary */}
-        <TripSummary activities={store.activities} />
+        <nav className="grid grid-cols-2 gap-1 rounded-2xl border border-border bg-card p-1.5 shadow-sm" aria-label="Secciones del viaje">
+          <button
+            type="button"
+            onClick={() => setSection('itinerary')}
+            className={cn(
+              'flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-all',
+              section === 'itinerary'
+                ? 'bg-foreground text-background shadow-sm'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            )}
+          >
+            <CalendarDays className="size-4" />
+            Itinerario
+          </button>
+          <button
+            type="button"
+            onClick={() => setSection('luggage')}
+            className={cn(
+              'flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-all',
+              section === 'luggage'
+                ? 'bg-foreground text-background shadow-sm'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            )}
+          >
+            <Luggage className="size-4" />
+            Equipaje
+          </button>
+        </nav>
 
-        {/* Controls row */}
-        <div className="flex items-center justify-between gap-4 flex-wrap">
+        {section === 'itinerary' && (
+          <>
+            {/* Trip summary */}
+            <TripSummary activities={store.activities} />
+
+            {/* Controls row */}
+            <div className="flex items-center justify-between gap-4 flex-wrap">
           {/* Navigation */}
           {view !== 'itinerary' && (
             <div className="flex items-center gap-2">
@@ -330,15 +364,23 @@ export function TravelCalendar() {
           <div className={cn(view === 'itinerary' && 'ml-auto')}>
             <ViewSwitcher current={view} onChange={setView} />
           </div>
-        </div>
+            </div>
 
-        {/* Filters */}
-        <FiltersBar filters={filters} onChange={setFilters} />
+            {/* Filters */}
+            <FiltersBar filters={filters} onChange={setFilters} />
+          </>
+        )}
       </header>
 
       {/* Main content */}
       <main>
-        {view === 'month' && (
+        {section === 'luggage' ? (
+          <LuggageSection
+            trip={store.currentTrip}
+            currentUserId={store.currentUser?.userId ?? ''}
+            canEditTrip={canEdit}
+          />
+        ) : view === 'month' ? (
           <MonthView
             currentDate={currentDate}
             activities={filteredActivities}
@@ -349,8 +391,7 @@ export function TravelCalendar() {
             onEditTravelDay={openEditTravelDay}
             canEdit={canEdit}
           />
-        )}
-        {view === 'week' && (
+        ) : view === 'week' ? (
           <WeekView
             currentDate={currentDate}
             activities={filteredActivities}
@@ -361,8 +402,7 @@ export function TravelCalendar() {
             onDuplicateActivity={store.duplicateActivity}
             canEdit={canEdit}
           />
-        )}
-        {view === 'day' && (
+        ) : view === 'day' ? (
           <DayView
             currentDate={currentDate}
             activities={filteredActivities}
@@ -373,8 +413,7 @@ export function TravelCalendar() {
             onDuplicateActivity={store.duplicateActivity}
             canEdit={canEdit}
           />
-        )}
-        {view === 'itinerary' && (
+        ) : (
           <ItineraryList
             activities={filteredActivities}
             travelDays={store.travelDays}
@@ -389,23 +428,27 @@ export function TravelCalendar() {
       </main>
 
       {/* Activity Modal */}
-      <ActivityFormModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSave={handleSave}
-        onDelete={store.deleteActivity}
-        initialDate={modalDate}
-        activity={editActivity}
-      />
+      {section === 'itinerary' && (
+        <ActivityFormModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onSave={handleSave}
+          onDelete={store.deleteActivity}
+          initialDate={modalDate}
+          activity={editActivity}
+        />
+      )}
 
       {/* Travel Day Modal */}
-      <TravelDayModal
-        open={travelDayModalOpen}
-        onClose={() => setTravelDayModalOpen(false)}
-        onSave={store.upsertTravelDay}
-        date={travelDayModalDate}
-        travelDay={store.travelDays.find((d) => d.date === travelDayModalDate)}
-      />
+      {section === 'itinerary' && (
+        <TravelDayModal
+          open={travelDayModalOpen}
+          onClose={() => setTravelDayModalOpen(false)}
+          onSave={store.upsertTravelDay}
+          date={travelDayModalDate}
+          travelDay={store.travelDays.find((d) => d.date === travelDayModalDate)}
+        />
+      )}
 
       <ShareTripModal
         open={shareOpen}

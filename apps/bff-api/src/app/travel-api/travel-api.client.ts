@@ -33,6 +33,70 @@ export class TravelApiClient {
     return this.authedDelete(`/trips/${tripId}`, user);
   }
 
+  // ── Personal luggage ─────────────────────────────────────────────────────
+
+  listLuggage(user: AuthenticatedUser) {
+    return this.authedGet('/luggage', user);
+  }
+
+  createLuggage(dto: Body, user: AuthenticatedUser) {
+    return this.authedPost('/luggage', dto, user);
+  }
+
+  updateLuggage(id: string, dto: Body, user: AuthenticatedUser) {
+    return this.authedPatch(`/luggage/${id}`, dto, user);
+  }
+
+  duplicateLuggage(id: string, user: AuthenticatedUser) {
+    return this.authedPost(`/luggage/${id}/duplicate`, {}, user);
+  }
+
+  archiveLuggage(id: string, user: AuthenticatedUser) {
+    return this.authedPost(`/luggage/${id}/archive`, {}, user);
+  }
+
+  // ── Trip luggage and packing ─────────────────────────────────────────────
+
+  listTripLuggage(tripId: string, user: AuthenticatedUser) {
+    return this.authedGet(`/trips/${tripId}/luggage`, user);
+  }
+
+  addTripLuggage(tripId: string, dto: Body, user: AuthenticatedUser) {
+    return this.authedPost(`/trips/${tripId}/luggage`, dto, user);
+  }
+
+  updateTripLuggage(tripId: string, id: string, dto: Body, user: AuthenticatedUser) {
+    return this.authedPatch(`/trips/${tripId}/luggage/${id}`, dto, user);
+  }
+
+  removeTripLuggage(tripId: string, id: string, user: AuthenticatedUser) {
+    return this.authedDelete(`/trips/${tripId}/luggage/${id}`, user);
+  }
+
+  listPackingItems(tripId: string, user: AuthenticatedUser) {
+    return this.authedGet(`/trips/${tripId}/packing`, user);
+  }
+
+  packingDashboard(tripId: string, user: AuthenticatedUser) {
+    return this.authedGet(`/trips/${tripId}/packing/dashboard`, user);
+  }
+
+  generatePackingList(tripId: string, dto: Body, user: AuthenticatedUser) {
+    return this.authedPost(`/trips/${tripId}/packing/generate`, dto, user);
+  }
+
+  createPackingItem(tripId: string, dto: Body, user: AuthenticatedUser) {
+    return this.authedPost(`/trips/${tripId}/packing/items`, dto, user);
+  }
+
+  updatePackingItem(tripId: string, id: string, dto: Body, user: AuthenticatedUser) {
+    return this.authedPatch(`/trips/${tripId}/packing/items/${id}`, dto, user);
+  }
+
+  removePackingItem(tripId: string, id: string, user: AuthenticatedUser) {
+    return this.authedDelete(`/trips/${tripId}/packing/items/${id}`, user);
+  }
+
   // ── Sharing ───────────────────────────────────────────────────────────────
 
   listMembers(tripId: string, user: AuthenticatedUser) {

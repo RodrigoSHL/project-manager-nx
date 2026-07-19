@@ -33,6 +33,11 @@
           "buildTarget": "travel-planner-api:build:production"
         }
       }
+    },
+    "test": {
+      "options": {
+        "passWithNoTests": false
+      }
     }
   },
   "tags": []

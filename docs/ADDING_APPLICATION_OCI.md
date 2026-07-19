@@ -345,6 +345,45 @@ Buscar URLs antiguas en `.next/static`; el origen HTTP no debe aparecer.
 
 ## 11. Desplegar en Oracle
 
+### Script interactivo recomendado
+
+Para aplicaciones ya integradas en Compose, ejecutar desde la raíz del repo:
+
+```bash
+npm run deploy:oci
+```
+
+El script `scripts/deploy-oci.sh` guía la selección de servicios y automatiza:
+
+1. verificación de la clave SSH mediante fingerprint;
+2. validación local de Compose y build Docker opcional;
+3. preflight de la VM y simulación de `rsync`;
+4. backup completo de PostgreSQL, `.env.deploy`, Compose y Caddy;
+5. etiquetas de imágenes `rollback-<timestamp>`;
+6. sincronización sin secretos ni artefactos;
+7. build ARM64 remoto mientras los contenedores actuales siguen activos;
+8. reemplazo ordenado API → BFF → frontend → Caddy;
+9. health checks, revisión de bundle y smoke tests HTTPS.
+
+Para comprobar el alcance sin modificar producción:
+
+```bash
+npm run deploy:oci:dry-run
+```
+
+También admite uso explícito:
+
+```bash
+bash scripts/deploy-oci.sh --profile travel-full
+bash scripts/deploy-oci.sh --services travel-planner-api,bff-api,travel-planner-app
+ATOMDEV_SSH_KEY=/ruta/segura/oci.key bash scripts/deploy-oci.sh --dry-run
+```
+
+La clave puede estar temporalmente en la raíz si termina en `.key`; Git y Docker la
+ignoran. El script crea una copia temporal con permisos `0600`, valida su fingerprint
+y la elimina al terminar. Aun así, para almacenamiento permanente se recomienda
+guardarla fuera del repo, por ejemplo en `~/.ssh/`.
+
 ### Preflight
 
 En `/home/ubuntu/project-manager-nx` comprobar:

@@ -6,6 +6,15 @@ For the complete workflow to add another frontend, API, BFF integration,
 database, subdomain, and OCI deployment, see
 [`docs/ADDING_APPLICATION_OCI.md`](docs/ADDING_APPLICATION_OCI.md).
 
+For an existing application, use the guarded interactive deployment flow:
+
+```bash
+npm run deploy:oci
+```
+
+Run `npm run deploy:oci:dry-run` first to inspect the exact remote file changes
+without modifying production.
+
 ## Local production smoke test
 
 ```sh

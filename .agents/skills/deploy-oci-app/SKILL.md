@@ -19,6 +19,19 @@ Leer además los archivos vigentes que entren en alcance:
 
 No asumir que la documentación reemplaza el estado real del repositorio o de producción.
 
+Para desplegar servicios que ya están integrados en `docker-compose.prod.yml`,
+preferir el flujo automatizado del repo:
+
+```text
+npm run deploy:oci:dry-run
+npm run deploy:oci
+```
+
+El script `scripts/deploy-oci.sh` implementa preflight, backup, etiquetas de
+rollback, sincronización segura, build ARM64, despliegue ordenado y smoke tests.
+Inspeccionar sus resultados y no saltar sus guardas salvo que el usuario lo
+autorice explícitamente.
+
 ## Clasificar la solicitud
 
 Determinar si el usuario pide:

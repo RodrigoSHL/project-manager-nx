@@ -3,6 +3,8 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
+    "deploy:oci": "bash scripts/deploy-oci.sh",
+    "deploy:oci:dry-run": "bash scripts/deploy-oci.sh --dry-run",
     "test": "nx run-many --target=test --all",
     "test:api": "nx test project-api",
     "test:api:watch": "nx test project-api --watch",

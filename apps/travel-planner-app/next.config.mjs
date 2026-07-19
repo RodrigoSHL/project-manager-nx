@@ -7,10 +7,15 @@ const nextConfig = {
     unoptimized: true,
   },
   async rewrites() {
+    const internalApiUrl = process.env.INTERNAL_API_URL
+      || (process.env.NODE_ENV === 'production'
+        ? 'http://bff-api:3000'
+        : 'http://localhost:3000')
+
     return [
       {
         source: '/api/:path*',
-        destination: `${process.env.INTERNAL_API_URL || 'http://bff-api:3000'}/api/:path*`,
+        destination: `${internalApiUrl}/api/:path*`,
       },
     ]
   },

@@ -1,6 +1,8 @@
 import { getAuthHeaders } from '@/lib/auth'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api'
+// Keep browser requests same-origin. Next proxies /api to the BFF in local
+// development, while the production reverse proxy handles the same path.
+const API_BASE_URL = '/api'
 
 export interface Trip {
   id: string

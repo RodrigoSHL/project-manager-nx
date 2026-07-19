@@ -10,7 +10,7 @@ export class TravelDaysService {
   constructor(
     @InjectRepository(TravelDay)
     private readonly travelDaysRepository: Repository<TravelDay>,
-    private readonly tripsService: TripsService,
+    private readonly tripsService: TripsService
   ) {}
 
   async findAll(userId: string, tripId: string): Promise<TravelDay[]> {
@@ -21,8 +21,12 @@ export class TravelDaysService {
     });
   }
 
-  async upsert(userId: string, tripId: string, dto: UpsertTravelDayDto): Promise<TravelDay> {
-    await this.tripsService.findOne(userId, tripId);
+  async upsert(
+    userId: string,
+    tripId: string,
+    dto: UpsertTravelDayDto
+  ): Promise<TravelDay> {
+    await this.tripsService.assertCanEdit(userId, tripId);
     const existing = await this.travelDaysRepository.findOne({
       where: { tripId, date: dto.date },
     });
@@ -35,7 +39,7 @@ export class TravelDaysService {
   }
 
   async remove(userId: string, tripId: string, date: string): Promise<void> {
-    await this.tripsService.findOne(userId, tripId);
+    await this.tripsService.assertCanEdit(userId, tripId);
     await this.travelDaysRepository.delete({ tripId, date });
   }
 }

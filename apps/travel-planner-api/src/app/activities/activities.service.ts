@@ -15,12 +15,20 @@ export class ActivitiesService {
   constructor(
     @InjectRepository(Activity)
     private readonly activitiesRepository: Repository<Activity>,
-    private readonly tripsService: TripsService,
+    private readonly tripsService: TripsService
   ) {}
 
-  async create(userId: string, tripId: string, dto: CreateActivityDto): Promise<Activity> {
-    await this.tripsService.findOne(userId, tripId); // validates ownership
-    const activity = this.activitiesRepository.create({ ...dto, tripId, countries: dto.countries ?? [] });
+  async create(
+    userId: string,
+    tripId: string,
+    dto: CreateActivityDto
+  ): Promise<Activity> {
+    await this.tripsService.assertCanEdit(userId, tripId);
+    const activity = this.activitiesRepository.create({
+      ...dto,
+      tripId,
+      countries: dto.countries ?? [],
+    });
     return this.activitiesRepository.save(activity);
   }
 
@@ -34,19 +42,36 @@ export class ActivitiesService {
 
   async findOne(userId: string, tripId: string, id: string): Promise<Activity> {
     await this.tripsService.findOne(userId, tripId);
-    const activity = await this.activitiesRepository.findOne({ where: { id, tripId } });
+    const activity = await this.activitiesRepository.findOne({
+      where: { id, tripId },
+    });
     if (!activity) throw new NotFoundException(`Activity ${id} not found`);
     return activity;
   }
 
-  async update(userId: string, tripId: string, id: string, dto: UpdateActivityDto): Promise<Activity> {
-    const activity = await this.findOne(userId, tripId, id);
+  async update(
+    userId: string,
+    tripId: string,
+    id: string,
+    dto: UpdateActivityDto
+  ): Promise<Activity> {
+    await this.tripsService.assertCanEdit(userId, tripId);
+    const activity = await this.findActivity(tripId, id);
     Object.assign(activity, dto);
     return this.activitiesRepository.save(activity);
   }
 
   async remove(userId: string, tripId: string, id: string): Promise<void> {
-    const activity = await this.findOne(userId, tripId, id);
+    await this.tripsService.assertCanEdit(userId, tripId);
+    const activity = await this.findActivity(tripId, id);
     await this.activitiesRepository.remove(activity);
+  }
+
+  private async findActivity(tripId: string, id: string): Promise<Activity> {
+    const activity = await this.activitiesRepository.findOne({
+      where: { id, tripId },
+    });
+    if (!activity) throw new NotFoundException(`Activity ${id} not found`);
+    return activity;
   }
 }

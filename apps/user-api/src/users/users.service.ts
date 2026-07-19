@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -10,7 +14,7 @@ import { User } from './entities/user.entity';
 export class UsersService {
   constructor(
     @InjectRepository(User)
-    private readonly usersRepo: Repository<User>,
+    private readonly usersRepo: Repository<User>
   ) {}
 
   async create(dto: CreateUserDto): Promise<User> {
@@ -27,6 +31,19 @@ export class UsersService {
 
   findAll(): Promise<User[]> {
     return this.usersRepo.find({ order: { createdAt: 'DESC' } });
+  }
+
+  async findByEmail(email: string): Promise<User> {
+    const normalizedEmail = email?.trim().toLowerCase();
+    const user = normalizedEmail
+      ? await this.usersRepo
+          .createQueryBuilder('user')
+          .where('LOWER(user.email) = :email', { email: normalizedEmail })
+          .getOne()
+      : null;
+
+    if (!user) throw new NotFoundException('User not found');
+    return user;
   }
 
   async findOne(id: string): Promise<User> {

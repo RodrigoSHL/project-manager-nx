@@ -150,11 +150,14 @@ services:
       TRAVEL_DB_NAME: ${TRAVEL_DB_NAME:-travel_planner_db}
       TRAVEL_DB_USERNAME: ${DATABASE_USERNAME:-project_user}
       TRAVEL_DB_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD is required}
+      USER_API_URL: http://user-api:3001/api
       DATABASE_SSL: ${DATABASE_SSL:-false}
       TYPEORM_SYNCHRONIZE: ${TYPEORM_SYNCHRONIZE:-true}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost,http://localhost:8081,http://localhost:8082}
     depends_on:
       postgres:
+        condition: service_healthy
+      user-api:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3003/api', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]

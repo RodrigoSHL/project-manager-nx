@@ -1,4 +1,8 @@
-import { Injectable, ServiceUnavailableException, HttpException } from '@nestjs/common';
+import {
+  Injectable,
+  ServiceUnavailableException,
+  HttpException,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../auth/types/authenticated-user';
 
 type Body = Record<string, unknown>;
@@ -29,6 +33,29 @@ export class TravelApiClient {
     return this.authedDelete(`/trips/${tripId}`, user);
   }
 
+  // ── Sharing ───────────────────────────────────────────────────────────────
+
+  listMembers(tripId: string, user: AuthenticatedUser) {
+    return this.authedGet(`/trips/${tripId}/members`, user);
+  }
+
+  addMember(tripId: string, dto: Body, user: AuthenticatedUser) {
+    return this.authedPost(`/trips/${tripId}/members`, dto, user);
+  }
+
+  updateMember(
+    tripId: string,
+    userId: string,
+    dto: Body,
+    user: AuthenticatedUser
+  ) {
+    return this.authedPatch(`/trips/${tripId}/members/${userId}`, dto, user);
+  }
+
+  removeMember(tripId: string, userId: string, user: AuthenticatedUser) {
+    return this.authedDelete(`/trips/${tripId}/members/${userId}`, user);
+  }
+
   // ── Activities ────────────────────────────────────────────────────────────
 
   listActivities(tripId: string, user: AuthenticatedUser) {
@@ -39,8 +66,17 @@ export class TravelApiClient {
     return this.authedPost(`/trips/${tripId}/activities`, dto, user);
   }
 
-  updateActivity(tripId: string, activityId: string, dto: Body, user: AuthenticatedUser) {
-    return this.authedPatch(`/trips/${tripId}/activities/${activityId}`, dto, user);
+  updateActivity(
+    tripId: string,
+    activityId: string,
+    dto: Body,
+    user: AuthenticatedUser
+  ) {
+    return this.authedPatch(
+      `/trips/${tripId}/activities/${activityId}`,
+      dto,
+      user
+    );
   }
 
   deleteActivity(tripId: string, activityId: string, user: AuthenticatedUser) {
@@ -70,7 +106,10 @@ export class TravelApiClient {
   private async authedPost(path: string, body: Body, user: AuthenticatedUser) {
     return this.send(path, {
       method: 'POST',
-      headers: { ...this.userHeaders(user), 'Content-Type': 'application/json' },
+      headers: {
+        ...this.userHeaders(user),
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(body),
     });
   }
@@ -78,7 +117,10 @@ export class TravelApiClient {
   private async authedPatch(path: string, body: Body, user: AuthenticatedUser) {
     return this.send(path, {
       method: 'PATCH',
-      headers: { ...this.userHeaders(user), 'Content-Type': 'application/json' },
+      headers: {
+        ...this.userHeaders(user),
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(body),
     });
   }
@@ -86,15 +128,23 @@ export class TravelApiClient {
   private async authedPut(path: string, body: Body, user: AuthenticatedUser) {
     return this.send(path, {
       method: 'PUT',
-      headers: { ...this.userHeaders(user), 'Content-Type': 'application/json' },
+      headers: {
+        ...this.userHeaders(user),
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(body),
     });
   }
 
   private async authedDelete(path: string, user: AuthenticatedUser) {
-    const res = await this.fetch(path, { method: 'DELETE', headers: this.userHeaders(user) });
+    const res = await this.fetch(path, {
+      method: 'DELETE',
+      headers: this.userHeaders(user),
+    });
     if (!res.ok) {
-      const body = await res.json().catch(() => ({ message: 'Upstream error' }));
+      const body = await res
+        .json()
+        .catch(() => ({ message: 'Upstream error' }));
       throw new HttpException(body, res.status);
     }
     return undefined;
@@ -103,7 +153,9 @@ export class TravelApiClient {
   private async send(path: string, init: RequestInit) {
     const res = await this.fetch(path, init);
     if (!res.ok) {
-      const body = await res.json().catch(() => ({ message: 'Upstream error' }));
+      const body = await res
+        .json()
+        .catch(() => ({ message: 'Upstream error' }));
       throw new HttpException(body, res.status);
     }
     if (res.status === 204) return undefined;
@@ -114,7 +166,9 @@ export class TravelApiClient {
     try {
       return await globalThis.fetch(`${this.baseUrl}${path}`, init);
     } catch {
-      throw new ServiceUnavailableException('Travel Planner API is unavailable');
+      throw new ServiceUnavailableException(
+        'Travel Planner API is unavailable'
+      );
     }
   }
 
@@ -127,7 +181,9 @@ export class TravelApiClient {
   }
 
   private resolveBaseUrl(): string {
-    const url = (process.env.TRAVEL_API_URL || 'http://localhost:3003/api').replace(/\/$/, '');
+    const url = (
+      process.env.TRAVEL_API_URL || 'http://localhost:3003/api'
+    ).replace(/\/$/, '');
     return url.endsWith('/api') ? url : `${url}/api`;
   }
 }

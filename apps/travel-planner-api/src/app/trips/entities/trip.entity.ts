@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { Activity } from '../../activities/entities/activity.entity';
 import { TravelDay } from '../../travel-days/entities/travel-day.entity';
+import { TripMember } from './trip-member.entity';
 
 @Entity('trips')
 export class Trip {
@@ -37,6 +38,9 @@ export class Trip {
 
   @OneToMany(() => TravelDay, (day) => day.trip, { cascade: true })
   travelDays: TravelDay[];
+
+  @OneToMany(() => TripMember, (member) => member.trip, { cascade: true })
+  members: TripMember[];
 
   @CreateDateColumn()
   createdAt: Date;

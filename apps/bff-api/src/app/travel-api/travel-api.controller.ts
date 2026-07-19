@@ -29,12 +29,18 @@ export class TravelApiController {
   }
 
   @Post()
-  createTrip(@Request() req: ExpressRequestWithUser, @Body() dto: Record<string, unknown>) {
+  createTrip(
+    @Request() req: ExpressRequestWithUser,
+    @Body() dto: Record<string, unknown>
+  ) {
     return this.client.createTrip(dto, req.user);
   }
 
   @Get(':tripId')
-  getTrip(@Request() req: ExpressRequestWithUser, @Param('tripId') tripId: string) {
+  getTrip(
+    @Request() req: ExpressRequestWithUser,
+    @Param('tripId') tripId: string
+  ) {
     return this.client.getTrip(tripId, req.user);
   }
 
@@ -42,21 +48,66 @@ export class TravelApiController {
   updateTrip(
     @Request() req: ExpressRequestWithUser,
     @Param('tripId') tripId: string,
-    @Body() dto: Record<string, unknown>,
+    @Body() dto: Record<string, unknown>
   ) {
     return this.client.updateTrip(tripId, dto, req.user);
   }
 
   @Delete(':tripId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  deleteTrip(@Request() req: ExpressRequestWithUser, @Param('tripId') tripId: string) {
+  deleteTrip(
+    @Request() req: ExpressRequestWithUser,
+    @Param('tripId') tripId: string
+  ) {
     return this.client.deleteTrip(tripId, req.user);
+  }
+
+  // ── Sharing ───────────────────────────────────────────────────────────────
+
+  @Get(':tripId/members')
+  listMembers(
+    @Request() req: ExpressRequestWithUser,
+    @Param('tripId') tripId: string
+  ) {
+    return this.client.listMembers(tripId, req.user);
+  }
+
+  @Post(':tripId/members')
+  addMember(
+    @Request() req: ExpressRequestWithUser,
+    @Param('tripId') tripId: string,
+    @Body() dto: Record<string, unknown>
+  ) {
+    return this.client.addMember(tripId, dto, req.user);
+  }
+
+  @Patch(':tripId/members/:userId')
+  updateMember(
+    @Request() req: ExpressRequestWithUser,
+    @Param('tripId') tripId: string,
+    @Param('userId') userId: string,
+    @Body() dto: Record<string, unknown>
+  ) {
+    return this.client.updateMember(tripId, userId, dto, req.user);
+  }
+
+  @Delete(':tripId/members/:userId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  removeMember(
+    @Request() req: ExpressRequestWithUser,
+    @Param('tripId') tripId: string,
+    @Param('userId') userId: string
+  ) {
+    return this.client.removeMember(tripId, userId, req.user);
   }
 
   // ── Activities ────────────────────────────────────────────────────────────
 
   @Get(':tripId/activities')
-  listActivities(@Request() req: ExpressRequestWithUser, @Param('tripId') tripId: string) {
+  listActivities(
+    @Request() req: ExpressRequestWithUser,
+    @Param('tripId') tripId: string
+  ) {
     return this.client.listActivities(tripId, req.user);
   }
 
@@ -64,7 +115,7 @@ export class TravelApiController {
   createActivity(
     @Request() req: ExpressRequestWithUser,
     @Param('tripId') tripId: string,
-    @Body() dto: Record<string, unknown>,
+    @Body() dto: Record<string, unknown>
   ) {
     return this.client.createActivity(tripId, dto, req.user);
   }
@@ -74,7 +125,7 @@ export class TravelApiController {
     @Request() req: ExpressRequestWithUser,
     @Param('tripId') tripId: string,
     @Param('activityId') activityId: string,
-    @Body() dto: Record<string, unknown>,
+    @Body() dto: Record<string, unknown>
   ) {
     return this.client.updateActivity(tripId, activityId, dto, req.user);
   }
@@ -84,7 +135,7 @@ export class TravelApiController {
   deleteActivity(
     @Request() req: ExpressRequestWithUser,
     @Param('tripId') tripId: string,
-    @Param('activityId') activityId: string,
+    @Param('activityId') activityId: string
   ) {
     return this.client.deleteActivity(tripId, activityId, req.user);
   }
@@ -92,7 +143,10 @@ export class TravelApiController {
   // ── Travel Days ───────────────────────────────────────────────────────────
 
   @Get(':tripId/days')
-  listDays(@Request() req: ExpressRequestWithUser, @Param('tripId') tripId: string) {
+  listDays(
+    @Request() req: ExpressRequestWithUser,
+    @Param('tripId') tripId: string
+  ) {
     return this.client.listDays(tripId, req.user);
   }
 
@@ -101,7 +155,7 @@ export class TravelApiController {
     @Request() req: ExpressRequestWithUser,
     @Param('tripId') tripId: string,
     @Param('date') date: string,
-    @Body() dto: Record<string, unknown>,
+    @Body() dto: Record<string, unknown>
   ) {
     return this.client.upsertDay(tripId, date, dto, req.user);
   }
@@ -111,7 +165,7 @@ export class TravelApiController {
   deleteDay(
     @Request() req: ExpressRequestWithUser,
     @Param('tripId') tripId: string,
-    @Param('date') date: string,
+    @Param('date') date: string
   ) {
     return this.client.deleteDay(tripId, date, req.user);
   }

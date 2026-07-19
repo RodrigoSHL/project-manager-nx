@@ -2,6 +2,14 @@
 
 set -Eeo pipefail
 
+# Deployment commands must stream output directly. Some terminal or Git/Docker
+# configurations enable `less`, which captures the interactive terminal and
+# makes the deployment look stalled at an `(END)` screen.
+export PAGER=cat
+export GIT_PAGER=cat
+export SYSTEMD_PAGER=cat
+export LESS='-FRX'
+
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 COMPOSE_FILE="docker-compose.prod.yml"
 REMOTE_HOST="${ATOMDEV_SSH_HOST:-ubuntu@161.153.194.227}"

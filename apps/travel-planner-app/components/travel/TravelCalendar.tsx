@@ -14,6 +14,7 @@ import { TravelDayModal } from './TravelDayModal';
 import { TripSummary } from './TripSummary';
 import { ShareTripModal } from './ShareTripModal';
 import { LuggageSection } from '../luggage/LuggageSection';
+import { FinanceSection } from '../finance/FinanceSection';
 import {
   addMonths,
   subMonths,
@@ -36,6 +37,7 @@ import {
   Loader2,
   LogOut,
   Luggage,
+  WalletCards,
   MapPin,
   Pencil,
   Plus,
@@ -86,7 +88,7 @@ function navigate(date: Date, view: CalendarView, dir: 1 | -1): Date {
 
 export function TravelCalendar() {
   const store = useTravelStore();
-  const [section, setSection] = useState<'itinerary' | 'luggage'>('itinerary');
+  const [section, setSection] = useState<'itinerary' | 'finance' | 'luggage'>('itinerary');
   const [view, setView] = useState<CalendarView>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
@@ -297,7 +299,7 @@ export function TravelCalendar() {
           </div>
         </div>
 
-        <nav className="grid grid-cols-2 gap-1 rounded-2xl border border-border bg-card p-1.5 shadow-sm" aria-label="Secciones del viaje">
+        <nav className="grid grid-cols-3 gap-1 rounded-2xl border border-border bg-card p-1.5 shadow-sm" aria-label="Secciones del viaje">
           <button
             type="button"
             onClick={() => setSection('itinerary')}
@@ -310,6 +312,9 @@ export function TravelCalendar() {
           >
             <CalendarDays className="size-4" />
             Itinerario
+          </button>
+          <button type="button" onClick={() => setSection('finance')} className={cn('flex h-11 items-center justify-center gap-2 rounded-xl px-2 text-sm font-semibold transition-all',section === 'finance'?'bg-foreground text-background shadow-sm':'text-muted-foreground hover:bg-muted hover:text-foreground')}>
+            <WalletCards className="size-4"/><span className="hidden sm:inline">Finanzas</span><span className="sm:hidden">Gastos</span>
           </button>
           <button
             type="button"
@@ -374,7 +379,9 @@ export function TravelCalendar() {
 
       {/* Main content */}
       <main>
-        {section === 'luggage' ? (
+        {section === 'finance' && store.currentUser ? (
+          <FinanceSection trip={store.currentTrip} currentUser={store.currentUser} activities={store.activities} canEdit={canEdit} />
+        ) : section === 'luggage' ? (
           <LuggageSection
             trip={store.currentTrip}
             currentUserId={store.currentUser?.userId ?? ''}

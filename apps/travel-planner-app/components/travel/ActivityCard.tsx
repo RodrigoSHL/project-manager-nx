@@ -12,6 +12,7 @@ import {
   Pencil,
   ArrowRight,
   Flag,
+  WalletCards,
 } from 'lucide-react';
 
 interface Props {
@@ -160,6 +161,14 @@ export function ActivityCard({
               <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
                 {activity.description}
               </p>
+            )}
+
+            {activity.price && activity.priceCurrency && (
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
+                <WalletCards className="h-3.5 w-3.5 shrink-0" />
+                <span>{new Intl.NumberFormat('es-CL', { style: 'currency', currency: activity.priceCurrency }).format(Number(activity.price))}</span>
+                <span className="font-normal text-muted-foreground">· {activity.financialStatus === 'paid' ? 'pagado' : activity.financialStatus === 'partial' ? 'pago parcial' : activity.financialStatus === 'reserved' ? 'reservado' : 'estimado'}</span>
+              </div>
             )}
 
             {activity.link && (

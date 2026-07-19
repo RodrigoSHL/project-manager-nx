@@ -33,6 +33,14 @@ const EMPTY_FORM: Omit<Activity, 'id'> = {
   status: 'pending',
   priority: 'medium',
   link: '',
+  price: '',
+  priceCurrency: 'USD',
+  priceType: 'total',
+  financialStatus: 'estimated',
+  financialParticipantUserIds: [],
+  financialPayerUserId: '',
+  paidAt: '',
+  paymentReferenceUrl: '',
 }
 
 export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate, activity }: Props) {
@@ -41,7 +49,8 @@ export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate
 
   useEffect(() => {
     if (activity) {
-      const { id, ...rest } = activity
+      const rest = { ...activity }
+      delete (rest as Partial<Activity>).id
       setForm(rest)
     } else {
       setForm({ ...EMPTY_FORM, date: initialDate ?? '' })
@@ -77,6 +86,10 @@ export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate
       startTime: form.startTime?.trim() || undefined,
       endTime: form.endTime?.trim() || undefined,
       link: form.link?.trim() || undefined,
+      price: form.price?.trim() || undefined,
+      paidAt: form.paidAt?.trim() || undefined,
+      paymentReferenceUrl: form.paymentReferenceUrl?.trim() || undefined,
+      financialPayerUserId: form.financialPayerUserId?.trim() || undefined,
     }
 
     const id = activity?.id ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
@@ -306,6 +319,18 @@ export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate
                 placeholder="Notas o detalles adicionales..."
                 className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 resize-none"
               />
+            </div>
+
+            {/* Link */}
+            <div className="rounded-xl border border-border bg-muted/30 p-4">
+              <p className="mb-3 text-sm font-semibold">Información financiera</p>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div><label className="mb-1 block text-xs">Precio</label><input type="number" min="0" step="0.01" value={form.price ?? ''} onChange={e => setField('price', e.target.value)} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" /></div>
+                <div><label className="mb-1 block text-xs">Moneda</label><select value={form.priceCurrency ?? 'USD'} onChange={e => setField('priceCurrency', e.target.value)} className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm"><option>USD</option><option>EUR</option><option>CLP</option><option>GBP</option><option>CHF</option></select></div>
+                <div><label className="mb-1 block text-xs">Tipo</label><select value={form.priceType ?? 'total'} onChange={e => setField('priceType', e.target.value as 'total'|'per_person')} className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm"><option value="total">Total</option><option value="per_person">Por persona</option></select></div>
+                <div><label className="mb-1 block text-xs">Estado</label><select value={form.financialStatus ?? 'estimated'} onChange={e => setField('financialStatus', e.target.value as 'estimated'|'reserved'|'partial'|'paid')} className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm"><option value="estimated">Estimado</option><option value="reserved">Reservado</option><option value="partial">Pago parcial</option><option value="paid">Pagado</option></select></div>
+              </div>
+              <p className="mt-2 text-[11px] text-muted-foreground">El precio planificado no se contabiliza como gasto real hasta vincularlo desde Finanzas. Si ya existe un gasto vinculado, edítalo allí: cambiar este precio no lo modifica automáticamente.</p>
             </div>
 
             {/* Link */}

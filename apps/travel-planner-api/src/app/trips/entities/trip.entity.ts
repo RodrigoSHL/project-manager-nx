@@ -33,6 +33,9 @@ export class Trip {
   @Column({ nullable: true })
   coverImage: string;
 
+  @Column({ length: 3, default: 'USD' })
+  baseCurrency: string;
+
   @OneToMany(() => Activity, (activity) => activity.trip, { cascade: true })
   activities: Activity[];
 

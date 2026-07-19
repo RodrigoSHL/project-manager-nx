@@ -12,6 +12,7 @@ export interface Trip {
   startDate?: string;
   endDate?: string;
   coverImage?: string;
+  baseCurrency?: string;
   createdAt: string;
   updatedAt: string;
   members?: TripMember[];

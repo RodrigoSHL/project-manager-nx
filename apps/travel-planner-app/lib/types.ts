@@ -32,6 +32,14 @@ export interface Activity {
   status: ActivityStatus
   priority: ActivityPriority
   link?: string
+  price?: string
+  priceCurrency?: string
+  priceType?: 'per_person' | 'total'
+  financialStatus?: 'estimated' | 'reserved' | 'partial' | 'paid'
+  financialParticipantUserIds?: string[]
+  financialPayerUserId?: string
+  paidAt?: string
+  paymentReferenceUrl?: string
 }
 
 export interface TravelDay {

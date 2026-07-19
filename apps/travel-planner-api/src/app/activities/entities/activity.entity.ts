@@ -80,6 +80,30 @@ export class Activity {
   @Column({ nullable: true })
   link: string;
 
+  @Column({ type: 'bigint', nullable: true })
+  priceMinor: string | null;
+
+  @Column({ length: 3, nullable: true })
+  priceCurrency: string | null;
+
+  @Column({ nullable: true })
+  priceType: 'per_person' | 'total' | null;
+
+  @Column({ nullable: true })
+  financialStatus: 'estimated' | 'reserved' | 'partial' | 'paid' | null;
+
+  @Column('uuid', { array: true, default: [] })
+  financialParticipantUserIds: string[];
+
+  @Column('uuid', { nullable: true })
+  financialPayerUserId: string | null;
+
+  @Column({ type: 'date', nullable: true })
+  paidAt: string | null;
+
+  @Column({ nullable: true })
+  paymentReferenceUrl: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

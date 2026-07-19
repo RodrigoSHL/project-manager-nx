@@ -8,6 +8,12 @@ import { TripLuggage } from '../luggage/entities/trip-luggage.entity';
 import { PackingItem } from '../luggage/entities/packing-item.entity';
 import { CreateLuggagePacking1784332800000 } from '../../migrations/1784332800000-CreateLuggagePacking';
 import { CreateTripMembers1784332700000 } from '../../migrations/1784332700000-CreateTripMembers';
+import { Expense } from '../finance/entities/expense.entity';
+import { ExpenseSplit } from '../finance/entities/expense-split.entity';
+import { TripBudget } from '../finance/entities/trip-budget.entity';
+import { Settlement } from '../finance/entities/settlement.entity';
+import { ExchangeRate } from '../finance/entities/exchange-rate.entity';
+import { CreateTripFinance1784332900000 } from '../../migrations/1784332900000-CreateTripFinance';
 
 export const databaseConfig: TypeOrmModuleOptions = {
   type: 'postgres',
@@ -16,10 +22,11 @@ export const databaseConfig: TypeOrmModuleOptions = {
   username: process.env.TRAVEL_DB_USERNAME || 'postgres',
   password: process.env.TRAVEL_DB_PASSWORD || 'postgres',
   database: process.env.TRAVEL_DB_NAME || 'travel_planner_db',
-  entities: [Trip, TripMember, Activity, TravelDay, Luggage, TripLuggage, PackingItem],
+  entities: [Trip, TripMember, Activity, TravelDay, Luggage, TripLuggage, PackingItem, Expense, ExpenseSplit, TripBudget, Settlement, ExchangeRate],
   migrations: [
     CreateTripMembers1784332700000,
     CreateLuggagePacking1784332800000,
+    CreateTripFinance1784332900000,
   ],
   migrationsRun: process.env.TRAVEL_MIGRATIONS_RUN === 'true',
   synchronize: process.env.TYPEORM_SYNCHRONIZE

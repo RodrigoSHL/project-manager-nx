@@ -10,6 +10,7 @@ import {
   Post,
   Put,
   Request,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -223,6 +224,21 @@ export class TravelApiController {
   ) {
     return this.client.deleteActivity(tripId, activityId, req.user);
   }
+
+  // ── Finance ──────────────────────────────────────────────────────────────
+  @Get(':tripId/finance/budget') financeBudget(@Request() req:ExpressRequestWithUser,@Param('tripId') tripId:string){ return this.client.financeGet(tripId,'budget',req.user); }
+  @Put(':tripId/finance/budget') saveFinanceBudget(@Request() req:ExpressRequestWithUser,@Param('tripId') tripId:string,@Body() dto:Record<string,unknown>){ return this.client.financePut(tripId,'budget',dto,req.user); }
+  @Get(':tripId/finance/expenses') financeExpenses(@Request() req:ExpressRequestWithUser,@Param('tripId') tripId:string,@Query() query:Record<string,unknown>){ return this.client.financeGet(tripId,'expenses',req.user,query); }
+  @Post(':tripId/finance/expenses') createFinanceExpense(@Request() req:ExpressRequestWithUser,@Param('tripId') tripId:string,@Body() dto:Record<string,unknown>){ return this.client.financePost(tripId,'expenses',dto,req.user); }
+  @Patch(':tripId/finance/expenses/:id') updateFinanceExpense(@Request() req:ExpressRequestWithUser,@Param('tripId') tripId:string,@Param('id') id:string,@Body() dto:Record<string,unknown>){ return this.client.financePatch(tripId,`expenses/${id}`,dto,req.user); }
+  @Delete(':tripId/finance/expenses/:id') @HttpCode(HttpStatus.NO_CONTENT) deleteFinanceExpense(@Request() req:ExpressRequestWithUser,@Param('tripId') tripId:string,@Param('id') id:string){ return this.client.financeDelete(tripId,`expenses/${id}`,req.user); }
+  @Post(':tripId/finance/expenses/:id/duplicate') duplicateFinanceExpense(@Request() req:ExpressRequestWithUser,@Param('tripId') tripId:string,@Param('id') id:string){ return this.client.financePost(tripId,`expenses/${id}/duplicate`,{},req.user); }
+  @Get(':tripId/finance/summary') financeSummary(@Request() req:ExpressRequestWithUser,@Param('tripId') tripId:string){ return this.client.financeGet(tripId,'summary',req.user); }
+  @Get(':tripId/finance/balances') financeBalances(@Request() req:ExpressRequestWithUser,@Param('tripId') tripId:string){ return this.client.financeGet(tripId,'balances',req.user); }
+  @Post(':tripId/finance/settlements') createSettlement(@Request() req:ExpressRequestWithUser,@Param('tripId') tripId:string,@Body() dto:Record<string,unknown>){ return this.client.financePost(tripId,'settlements',dto,req.user); }
+  @Post(':tripId/finance/settlements/:id/void') voidSettlement(@Request() req:ExpressRequestWithUser,@Param('tripId') tripId:string,@Param('id') id:string){ return this.client.financePost(tripId,`settlements/${id}/void`,{},req.user); }
+  @Get(':tripId/finance/rates') financeRates(@Request() req:ExpressRequestWithUser,@Param('tripId') tripId:string){ return this.client.financeGet(tripId,'rates',req.user); }
+  @Post(':tripId/finance/rates') createFinanceRate(@Request() req:ExpressRequestWithUser,@Param('tripId') tripId:string,@Body() dto:Record<string,unknown>){ return this.client.financePost(tripId,'rates',dto,req.user); }
 
   // ── Travel Days ───────────────────────────────────────────────────────────
 

@@ -6,6 +6,8 @@ import {
   IsArray,
   IsUrl,
   Matches,
+  Length,
+  IsIn,
 } from 'class-validator';
 import { ActivityType, ActivityStatus, ActivityPriority } from '../entities/activity.entity';
 
@@ -70,4 +72,13 @@ export class CreateActivityDto {
   @IsOptional()
   @IsUrl()
   link?: string;
+
+  @IsOptional() @Matches(/^\d+(?:\.\d{1,3})?$/) price?: string;
+  @IsOptional() @Length(3, 3) priceCurrency?: string;
+  @IsOptional() @IsIn(['per_person', 'total']) priceType?: 'per_person' | 'total';
+  @IsOptional() @IsIn(['estimated', 'reserved', 'partial', 'paid']) financialStatus?: 'estimated' | 'reserved' | 'partial' | 'paid';
+  @IsOptional() @IsArray() @IsString({ each: true }) financialParticipantUserIds?: string[];
+  @IsOptional() @IsString() financialPayerUserId?: string;
+  @IsOptional() @IsDateString() paidAt?: string;
+  @IsOptional() @IsUrl() paymentReferenceUrl?: string;
 }

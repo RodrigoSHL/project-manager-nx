@@ -7,15 +7,27 @@ import {
 } from '@/lib/types'
 import { CountrySelector } from './CountrySelector'
 import { cn } from '@/lib/utils'
-import { X, Save, Trash2 } from 'lucide-react'
+import { EXPENSE_CATEGORIES, ExpenseCategory } from '@/lib/finance'
+import { X, Save, Trash2, WalletCards, Loader2 } from 'lucide-react'
+
+export interface ActivityExpenseDraft {
+  createExpense: boolean
+  category: ExpenseCategory
+  payerUserId: string
+  participantUserIds: string[]
+  exchangeRate?: string
+}
 
 interface Props {
   open: boolean
   onClose: () => void
-  onSave: (activity: Activity) => void
+  onSave: (activity: Activity, finance: ActivityExpenseDraft) => Promise<void>
   onDelete?: (id: string) => void
   initialDate?: string
   activity?: Activity | null
+  people: Array<{ id: string; label: string }>
+  currentUserId: string
+  baseCurrency: string
 }
 
 const EMPTY_FORM: Omit<Activity, 'id'> = {
@@ -43,9 +55,25 @@ const EMPTY_FORM: Omit<Activity, 'id'> = {
   paymentReferenceUrl: '',
 }
 
-export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate, activity }: Props) {
+function activityTypeCategory(type: ActivityType): ExpenseCategory {
+  if (['flight', 'train', 'bus', 'transfer'].includes(type)) return 'transport'
+  if (type === 'accommodation') return 'accommodation'
+  if (type === 'food') return 'food'
+  if (type === 'shopping') return 'shopping'
+  if (type === 'document') return 'documentation'
+  return type === 'sightseeing' ? 'activities' : 'other'
+}
+
+export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate, activity, people, currentUserId, baseCurrency }: Props) {
   const [form, setForm] = useState<Omit<Activity, 'id'>>(EMPTY_FORM)
   const [errors, setErrors] = useState<Partial<Record<keyof typeof EMPTY_FORM, string>>>({})
+  const [createExpense, setCreateExpense] = useState(false)
+  const [expenseCategory, setExpenseCategory] = useState<ExpenseCategory>('activities')
+  const [payerUserId, setPayerUserId] = useState(currentUserId)
+  const [participantUserIds, setParticipantUserIds] = useState<string[]>([])
+  const [exchangeRate, setExchangeRate] = useState('')
+  const [submitError, setSubmitError] = useState('')
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (activity) {
@@ -56,7 +84,13 @@ export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate
       setForm({ ...EMPTY_FORM, date: initialDate ?? '' })
     }
     setErrors({})
-  }, [activity, initialDate, open])
+    setCreateExpense(false)
+    setExpenseCategory(activityTypeCategory(activity?.type ?? 'sightseeing'))
+    setPayerUserId(activity?.financialPayerUserId ?? currentUserId)
+    setParticipantUserIds(activity?.financialParticipantUserIds?.length ? activity.financialParticipantUserIds : people.map(person => person.id))
+    setExchangeRate('')
+    setSubmitError('')
+  }, [activity, initialDate, open, currentUserId, people])
 
   if (!open) return null
 
@@ -72,11 +106,14 @@ export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate
         newErrors.link = 'Ingresa una URL válida (ej: https://booking.com/…)'
       }
     }
+    if (createExpense && !form.price) newErrors.price = 'Ingresa un precio para crear el gasto.'
+    if (createExpense && participantUserIds.length === 0) newErrors.price = 'Selecciona al menos un participante.'
+    if (createExpense && form.priceCurrency !== baseCurrency && !exchangeRate) newErrors.price = `Ingresa el tipo de cambio hacia ${baseCurrency}.`
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!validate()) return
 
@@ -90,15 +127,30 @@ export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate
       paidAt: form.paidAt?.trim() || undefined,
       paymentReferenceUrl: form.paymentReferenceUrl?.trim() || undefined,
       financialPayerUserId: form.financialPayerUserId?.trim() || undefined,
+      financialParticipantUserIds: createExpense ? participantUserIds : form.financialParticipantUserIds,
     }
 
+    if (createExpense) payload.financialPayerUserId = payerUserId
+
     const id = activity?.id ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
-    onSave({ id, ...payload })
-    onClose()
+    try {
+      setSaving(true)
+      setSubmitError('')
+      await onSave({ id, ...payload }, { createExpense, category: expenseCategory, payerUserId, participantUserIds, exchangeRate: exchangeRate || undefined })
+      onClose()
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'No se pudo guardar la actividad.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   function setField<K extends keyof typeof form>(key: K, value: typeof form[K]) {
     setForm(prev => ({ ...prev, [key]: value }))
+  }
+
+  function toggleParticipant(id: string) {
+    setParticipantUserIds(current => current.includes(id) ? current.filter(value => value !== id) : [...current, id])
   }
 
   return (
@@ -170,7 +222,7 @@ export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate
                 <select
                   id="type"
                   value={form.type}
-                  onChange={e => setField('type', e.target.value as ActivityType)}
+                  onChange={e => { const type = e.target.value as ActivityType; setField('type', type); setExpenseCategory(activityTypeCategory(type)) }}
                   className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/50"
                 >
                   {(Object.entries(ACTIVITY_TYPE_LABELS) as [ActivityType, string][]).map(([k, v]) => (
@@ -323,14 +375,22 @@ export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate
 
             {/* Link */}
             <div className="rounded-xl border border-border bg-muted/30 p-4">
-              <p className="mb-3 text-sm font-semibold">Información financiera</p>
+              <div className="mb-3 flex items-center justify-between gap-3"><p className="text-sm font-semibold">Información financiera</p><WalletCards className="size-4 text-primary" /></div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <div><label className="mb-1 block text-xs">Precio</label><input type="number" min="0" step="0.01" value={form.price ?? ''} onChange={e => setField('price', e.target.value)} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" /></div>
                 <div><label className="mb-1 block text-xs">Moneda</label><select value={form.priceCurrency ?? 'USD'} onChange={e => setField('priceCurrency', e.target.value)} className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm"><option>USD</option><option>EUR</option><option>CLP</option><option>GBP</option><option>CHF</option></select></div>
                 <div><label className="mb-1 block text-xs">Tipo</label><select value={form.priceType ?? 'total'} onChange={e => setField('priceType', e.target.value as 'total'|'per_person')} className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm"><option value="total">Total</option><option value="per_person">Por persona</option></select></div>
                 <div><label className="mb-1 block text-xs">Estado</label><select value={form.financialStatus ?? 'estimated'} onChange={e => setField('financialStatus', e.target.value as 'estimated'|'reserved'|'partial'|'paid')} className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm"><option value="estimated">Estimado</option><option value="reserved">Reservado</option><option value="partial">Pago parcial</option><option value="paid">Pagado</option></select></div>
               </div>
-              <p className="mt-2 text-[11px] text-muted-foreground">El precio planificado no se contabiliza como gasto real hasta vincularlo desde Finanzas. Si ya existe un gasto vinculado, edítalo allí: cambiar este precio no lo modifica automáticamente.</p>
+              <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border bg-background p-3"><input type="checkbox" checked={createExpense} onChange={event => setCreateExpense(event.target.checked)} className="mt-0.5 size-4 accent-primary"/><span><strong className="block text-sm">Agregar también a Finanzas</strong><span className="text-xs text-muted-foreground">Al guardar, se creará un gasto vinculado y no tendrás que ingresarlo nuevamente.</span></span></label>
+              {createExpense && <div className="mt-3 space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
+                <div className="grid gap-3 sm:grid-cols-2"><div><label className="mb-1 block text-xs font-semibold">Categoría del gasto</label><select value={expenseCategory} onChange={event => setExpenseCategory(event.target.value as ExpenseCategory)} className="w-full rounded-lg border bg-background px-2 py-2 text-sm">{Object.entries(EXPENSE_CATEGORIES).map(([key,value]) => <option key={key} value={key}>{value.icon} {value.label}</option>)}</select></div><div><label className="mb-1 block text-xs font-semibold">Quién paga</label><select value={payerUserId} onChange={event => setPayerUserId(event.target.value)} className="w-full rounded-lg border bg-background px-2 py-2 text-sm">{people.map(person => <option key={person.id} value={person.id}>{person.label}</option>)}</select></div></div>
+                <div><label className="mb-2 block text-xs font-semibold">Participantes incluidos</label><div className="flex flex-wrap gap-2">{people.map(person => <button type="button" key={person.id} onClick={() => toggleParticipant(person.id)} className={cn('rounded-full border px-3 py-1.5 text-xs font-semibold', participantUserIds.includes(person.id) ? 'border-primary bg-primary text-primary-foreground' : 'bg-background hover:bg-muted')}>{person.label}</button>)}</div></div>
+                {form.priceCurrency !== baseCurrency && <div><label className="mb-1 block text-xs font-semibold">1 {form.priceCurrency} equivale a cuántos {baseCurrency}</label><input type="number" min="0.000001" step="0.000001" value={exchangeRate} onChange={event => setExchangeRate(event.target.value)} className="w-full rounded-lg border bg-background px-3 py-2 text-sm" placeholder="Tipo de cambio manual"/></div>}
+                <p className="text-[11px] text-muted-foreground">{form.priceType === 'per_person' ? `El gasto total será el precio por persona multiplicado por ${participantUserIds.length || 0}.` : 'El monto se dividirá en partes iguales entre los participantes.'}</p>
+              </div>}
+              {!createExpense && <p className="mt-2 text-[11px] text-muted-foreground">El precio queda como planificación y no afecta balances. Puedes convertirlo en gasto más adelante desde Finanzas.</p>}
+              {errors.price && <p className="mt-2 text-xs text-destructive">{errors.price}</p>}
             </div>
 
             {/* Link */}
@@ -359,6 +419,7 @@ export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate
           </div>
 
           {/* Footer */}
+          {submitError && <p className="mx-6 mb-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">{submitError}</p>}
           <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3">
             <button
               type="button"
@@ -369,10 +430,11 @@ export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate
             </button>
             <button
               type="submit"
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+              disabled={saving}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60"
             >
-              <Save className="w-4 h-4" />
-              {activity ? 'Guardar cambios' : 'Crear actividad'}
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {createExpense ? 'Guardar actividad y gasto' : activity ? 'Guardar cambios' : 'Crear actividad'}
             </button>
           </div>
         </form>

@@ -120,8 +120,8 @@ export function useTravelStore() {
   );
 
   const addActivity = useCallback(
-    async (activity: Activity) => {
-      if (!tripId) return;
+    async (activity: Activity): Promise<Activity> => {
+      if (!tripId) throw new Error('No hay un viaje activo');
       // Optimistic
       setStore((prev) => {
         const newActivities = [...prev.activities, activity];
@@ -145,20 +145,23 @@ export function useTravelStore() {
             a.id === activity.id ? saved : a
           ),
         }));
+        return saved;
       } catch (err) {
         console.error('Error creando actividad:', err);
         setStore((prev) => ({
           ...prev,
           activities: prev.activities.filter((a) => a.id !== activity.id),
         }));
+        throw err;
       }
     },
     [tripId]
   );
 
   const updateActivity = useCallback(
-    async (updated: Activity) => {
-      if (!tripId) return;
+    async (updated: Activity): Promise<Activity> => {
+      if (!tripId) throw new Error('No hay un viaje activo');
+      const previous = store.activities.find((activity) => activity.id === updated.id);
       // Optimistic
       setStore((prev) => {
         const oldActivity = prev.activities.find((a) => a.id === updated.id);
@@ -181,12 +184,16 @@ export function useTravelStore() {
       });
       try {
         const { id, ...data } = updated;
-        await apiUpdateActivity(tripId, id, data);
+        const saved = await apiUpdateActivity(tripId, id, data);
+        setStore((prev) => ({ ...prev, activities: prev.activities.map((activity) => activity.id === id ? saved : activity) }));
+        return saved;
       } catch (err) {
         console.error('Error actualizando actividad:', err);
+        if (previous) setStore((prev) => ({ ...prev, activities: prev.activities.map((activity) => activity.id === previous.id ? previous : activity) }));
+        throw err;
       }
     },
-    [tripId]
+    [tripId, store.activities]
   );
 
   const deleteActivity = useCallback(

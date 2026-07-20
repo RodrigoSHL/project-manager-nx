@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTravelStore } from '@/lib/use-travel-store';
 import { Activity, CalendarView, Filters } from '@/lib/types';
 import { ViewSwitcher } from './ViewSwitcher';
@@ -9,7 +9,7 @@ import { MonthView } from './MonthView';
 import { WeekView } from './WeekView';
 import { DayView } from './DayView';
 import { ItineraryList } from './ItineraryList';
-import { ActivityFormModal } from './ActivityFormModal';
+import { ActivityExpenseDraft, ActivityFormModal } from './ActivityFormModal';
 import { TravelDayModal } from './TravelDayModal';
 import { TripSummary } from './TripSummary';
 import { ShareTripModal } from './ShareTripModal';
@@ -47,6 +47,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { clearToken } from '@/lib/auth';
+import { createExpense as createFinanceExpense } from '@/services/financeService';
+import { getUserProfile } from '@/services/tripService';
 
 const EMPTY_FILTERS: Filters = {
   country: '',
@@ -86,6 +88,16 @@ function navigate(date: Date, view: CalendarView, dir: 1 | -1): Date {
   return dir === 1 ? addDays(date, 1) : subDays(date, 1);
 }
 
+function multiplyDecimal(value: string, multiplier: number): string {
+  const [whole, fraction = ''] = value.split('.')
+  const scale = BigInt(10) ** BigInt(fraction.length)
+  const minor = BigInt(whole || '0') * scale + BigInt(fraction || '0')
+  const result = minor * BigInt(multiplier)
+  if (!fraction.length) return result.toString()
+  const padded = result.toString().padStart(fraction.length + 1, '0')
+  return `${padded.slice(0, -fraction.length)}.${padded.slice(-fraction.length)}`
+}
+
 export function TravelCalendar() {
   const store = useTravelStore();
   const [section, setSection] = useState<'itinerary' | 'finance' | 'luggage'>('itinerary');
@@ -98,6 +110,8 @@ export function TravelCalendar() {
   const [travelDayModalOpen, setTravelDayModalOpen] = useState(false);
   const [travelDayModalDate, setTravelDayModalDate] = useState<string>('');
   const [shareOpen, setShareOpen] = useState(false);
+  const [participantNames, setParticipantNames] = useState<Record<string, string>>({})
+  const pendingFinancialActivity = useRef<Activity | null>(null)
 
   const access = useMemo(() => {
     if (!store.currentTrip || !store.currentUser) return 'viewer' as const;
@@ -113,12 +127,40 @@ export function TravelCalendar() {
   const canEdit = access === 'owner' || access === 'editor';
   const isOwner = access === 'owner';
 
+  const participantIds = useMemo(() => store.currentTrip
+    ? [store.currentTrip.userId, ...(store.currentTrip.members ?? []).map(member => member.userId)]
+    : [], [store.currentTrip])
+
+  useEffect(() => {
+    let cancelled = false
+    const currentUserId = store.currentUser?.userId
+    const currentUserName = store.currentUser?.name
+    Promise.all(participantIds.map(async id => {
+      if (id === currentUserId && currentUserName) return [id, currentUserName] as const
+      try {
+        const profile = await getUserProfile(id)
+        return [id, profile.name || profile.email] as const
+      } catch {
+        return [id, id === store.currentTrip?.userId ? 'Propietario' : 'Participante'] as const
+      }
+    })).then(entries => {
+      if (!cancelled) setParticipantNames(Object.fromEntries(entries))
+    })
+    return () => { cancelled = true }
+  }, [participantIds, store.currentTrip?.userId, store.currentUser?.name, store.currentUser?.userId])
+
+  const financePeople = useMemo(() => participantIds.map(id => ({
+    id,
+    label: id === store.currentUser?.userId ? `${participantNames[id] ?? store.currentUser?.name ?? 'Tú'} (Tú)` : participantNames[id] ?? 'Cargando nombre…',
+  })), [participantIds, participantNames, store.currentUser?.name, store.currentUser?.userId])
+
   const filteredActivities = applyFilters(store.activities, filters);
 
   function openNewActivity(date: string) {
     if (!canEdit) return;
     setEditActivity(null);
     setModalDate(date);
+    pendingFinancialActivity.current = null
     setModalOpen(true);
   }
 
@@ -126,15 +168,43 @@ export function TravelCalendar() {
     if (!canEdit) return;
     setEditActivity(activity);
     setModalDate(activity.date);
+    pendingFinancialActivity.current = null
     setModalOpen(true);
   }
 
-  function handleSave(activity: Activity) {
-    if (editActivity) {
-      store.updateActivity(activity);
-    } else {
-      store.addActivity(activity);
-    }
+  async function handleSave(activity: Activity, finance: ActivityExpenseDraft) {
+    const pending = pendingFinancialActivity.current
+    const existingActivityId = editActivity?.id ?? pending?.id
+    const saved = existingActivityId
+      ? await store.updateActivity({ ...activity, id: existingActivityId })
+      : await store.addActivity(activity)
+    if (finance.createExpense) pendingFinancialActivity.current = saved
+    if (!finance.createExpense || !saved.price || !saved.priceCurrency || !store.tripId) return
+
+    const participantCount = finance.participantUserIds.length
+    const amount = saved.priceType === 'per_person' ? multiplyDecimal(saved.price, participantCount) : saved.price
+    const status = saved.financialStatus === 'paid' ? 'paid' : saved.financialStatus === 'partial' ? 'partial' : saved.financialStatus === 'reserved' ? 'pending' : 'estimated'
+    const time = saved.startTime || '12:00'
+
+    await createFinanceExpense(store.tripId, {
+      title: saved.title,
+      amount,
+      currency: saved.priceCurrency,
+      exchangeRate: saved.priceCurrency === (store.currentTrip?.baseCurrency ?? 'USD') ? '1' : finance.exchangeRate,
+      exchangeRateDate: new Date().toISOString().slice(0, 10),
+      exchangeRateSource: saved.priceCurrency === (store.currentTrip?.baseCurrency ?? 'USD') ? 'identity' : 'manual',
+      category: finance.category,
+      incurredAt: new Date(`${saved.date}T${time}:00`).toISOString(),
+      city: saved.city,
+      payerUserId: finance.payerUserId,
+      expenseType: participantCount === 1 ? 'individual' : 'shared',
+      splitMethod: 'equal',
+      splits: finance.participantUserIds.map(participantUserId => ({ participantUserId })),
+      activityId: saved.id,
+      status,
+      notes: `Creado desde la actividad “${saved.title}”.`,
+    })
+    pendingFinancialActivity.current = null
   }
 
   function handleSelectDay(date: string) {
@@ -438,11 +508,14 @@ export function TravelCalendar() {
       {section === 'itinerary' && (
         <ActivityFormModal
           open={modalOpen}
-          onClose={() => setModalOpen(false)}
+          onClose={() => { setModalOpen(false); pendingFinancialActivity.current = null }}
           onSave={handleSave}
           onDelete={store.deleteActivity}
           initialDate={modalDate}
           activity={editActivity}
+          people={financePeople}
+          currentUserId={store.currentUser?.userId ?? ''}
+          baseCurrency={store.currentTrip.baseCurrency ?? 'USD'}
         />
       )}
 

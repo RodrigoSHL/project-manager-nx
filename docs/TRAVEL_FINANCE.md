@@ -13,6 +13,10 @@ Planner API → PostgreSQL. No incorpora otro servicio ni una fuente externa obl
 - Los gastos usan borrado lógico. Las liquidaciones se anulan con usuario y fecha.
 - Una actividad admite costo planificado y como máximo un gasto real vinculado. La
   restricción única en `expenses.activityId` evita contabilizarla dos veces.
+- El formulario de actividad permite opcionalmente crear ese gasto al guardar. El
+  usuario elige categoría, pagador, participantes y tasa manual cuando la moneda es
+  distinta de la moneda base. Los precios por persona se multiplican por la cantidad
+  de participantes antes de registrar el gasto.
 - El propietario administra todos los gastos. Un editor crea gastos y modifica o
   elimina los que creó. Los viewers solo consultan. La API verifica que pagadores,
   participantes y actividades pertenezcan al viaje.

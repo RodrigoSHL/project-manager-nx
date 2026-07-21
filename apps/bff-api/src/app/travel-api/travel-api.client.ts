@@ -35,6 +35,11 @@ export class TravelApiClient {
     return this.authedDelete(`/trips/${tripId}`, user);
   }
 
+  travelerGet(path: string, user: AuthenticatedUser) { return this.authedGet(`/traveler-profile${path}`, user); }
+  travelerPost(path: string, dto: Body, user: AuthenticatedUser) { return this.authedPost(`/traveler-profile${path}`, dto, user); }
+  travelerPatch(path: string, dto: Body, user: AuthenticatedUser) { return this.authedPatch(`/traveler-profile${path}`, dto, user); }
+  travelerDelete(path: string, user: AuthenticatedUser) { return this.authedDelete(`/traveler-profile${path}`, user); }
+
   // ── Personal luggage ─────────────────────────────────────────────────────
 
   listLuggage(user: AuthenticatedUser) {

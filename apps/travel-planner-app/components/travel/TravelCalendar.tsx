@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useTravelStore } from '@/lib/use-travel-store';
 import { Activity, CalendarView, Filters } from '@/lib/types';
 import { ViewSwitcher } from './ViewSwitcher';
@@ -34,6 +35,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
+  FileBadge,
   Loader2,
   LogOut,
   Luggage,
@@ -370,7 +372,7 @@ export function TravelCalendar() {
           </div>
         </div>
 
-        <nav className="grid grid-cols-3 gap-1 rounded-2xl border border-border bg-card p-1.5 shadow-sm" aria-label="Secciones del viaje">
+        <nav className="grid grid-cols-4 gap-1 rounded-2xl border border-border bg-card p-1.5 shadow-sm" aria-label="Secciones del viaje">
           <button
             type="button"
             onClick={() => setSection('itinerary')}
@@ -400,6 +402,9 @@ export function TravelCalendar() {
             <Luggage className="size-4" />
             Equipaje
           </button>
+          <Link href="/profile" className="flex h-11 items-center justify-center gap-2 rounded-xl px-2 text-sm font-semibold text-muted-foreground transition-all hover:bg-muted hover:text-foreground">
+            <FileBadge className="size-4"/><span className="hidden sm:inline">Documentación</span><span className="sm:hidden">Docs</span>
+          </Link>
         </nav>
 
         {section === 'itinerary' && (

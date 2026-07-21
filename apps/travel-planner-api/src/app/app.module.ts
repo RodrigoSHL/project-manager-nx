@@ -8,6 +8,7 @@ import { ActivitiesModule } from './activities/activities.module';
 import { TravelDaysModule } from './travel-days/travel-days.module';
 import { LuggageModule } from './luggage/luggage.module';
 import { FinanceModule } from './finance/finance.module';
+import { TravelerProfileModule } from './traveler-profile/traveler-profile.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { FinanceModule } from './finance/finance.module';
     TravelDaysModule,
     LuggageModule,
     FinanceModule,
+    TravelerProfileModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -31,6 +31,7 @@ export interface IncomingFile {
 
 const APPLICATION = 'travel-planner-app';
 const OWNER_TYPE = 'activity';
+const TRAVELER_OWNER_TYPE = 'traveler-document';
 const PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const DOCUMENT_TYPES = new Set([
   'application/pdf',
@@ -41,6 +42,7 @@ const DOCUMENT_TYPES = new Set([
   'text/plain',
 ]);
 const CATEGORIES = new Set(['activity-photo', 'activity-document']);
+const TRAVELER_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/heic', 'image/heif']);
 const MAX_SIZE = Number(process.env.FILES_MAX_FILE_SIZE_BYTES || 10 * 1024 * 1024);
 
 @Injectable()
@@ -53,31 +55,33 @@ export class FilesApiService {
   async upload(file: IncomingFile | undefined, body: Record<string, string>, user: AuthenticatedUser) {
     if (!file) throw new BadRequestException('A file is required');
     if (file.size > MAX_SIZE) throw new HttpException('The file exceeds the configured size limit', 413);
-    this.assertFixedOwner(body.application, body.ownerType);
+    this.assertSupportedOwner(body.application, body.ownerType);
     this.assertUuid(body.ownerId, 'ownerId');
 
     const metadata = this.parseMetadata(body.metadata);
-    const tripId = String(metadata.tripId || '');
-    this.assertUuid(tripId, 'metadata.tripId');
     const category = String(metadata.category || '');
-    if (!CATEGORIES.has(category)) throw new BadRequestException('metadata.category must be activity-photo or activity-document');
-    const allowedTypes = category === 'activity-photo' ? PHOTO_TYPES : DOCUMENT_TYPES;
+    const travelerDocument = body.ownerType === TRAVELER_OWNER_TYPE;
+    if (travelerDocument && category !== 'traveler-document') throw new BadRequestException('metadata.category must be traveler-document');
+    if (!travelerDocument && !CATEGORIES.has(category)) throw new BadRequestException('metadata.category must be activity-photo or activity-document');
+    const allowedTypes = travelerDocument ? TRAVELER_TYPES : category === 'activity-photo' ? PHOTO_TYPES : DOCUMENT_TYPES;
     if (!allowedTypes.has(file.mimetype)) throw new UnsupportedMediaTypeException(category === 'activity-photo' ? 'Only JPG, PNG and WebP images are allowed' : 'Only PDF, Word, Excel and text documents are allowed');
-    await this.travelApi.getActivity(tripId, body.ownerId, user);
+    if (travelerDocument) await this.travelApi.travelerGet(`/documents/${body.ownerId}`, user);
+    else { const tripId = String(metadata.tripId || ''); this.assertUuid(tripId, 'metadata.tripId'); await this.travelApi.getActivity(tripId, body.ownerId, user); }
 
     const form = new FormData();
     form.append('file', new Blob([file.buffer], { type: file.mimetype }), file.originalname);
     form.append('application', APPLICATION);
-    form.append('ownerType', OWNER_TYPE);
+    form.append('ownerType', body.ownerType);
     form.append('ownerId', body.ownerId);
     form.append('metadata', JSON.stringify(metadata));
     return this.json('/files', { method: 'POST', body: form });
   }
 
   async list(query: Record<string, string>, user: AuthenticatedUser): Promise<FileRecord[]> {
-    this.assertFixedOwner(query.application, query.ownerType);
+    this.assertSupportedOwner(query.application, query.ownerType);
     this.assertUuid(query.ownerId, 'ownerId');
-    const files = await this.json<FileRecord[]>(`/files?application=${APPLICATION}&ownerType=${OWNER_TYPE}&ownerId=${encodeURIComponent(query.ownerId)}`);
+    const files = await this.json<FileRecord[]>(`/files?application=${APPLICATION}&ownerType=${encodeURIComponent(String(query.ownerType))}&ownerId=${encodeURIComponent(query.ownerId)}`);
+    if (query.ownerType === TRAVELER_OWNER_TYPE) { await this.travelApi.travelerGet(`/documents/${query.ownerId}`, user); return files.filter(file=>this.isTravelerDocument(file)); }
     const activityAsset = files.find((file) => this.isActivityAsset(file));
     if (activityAsset) await this.authorize(activityAsset, user);
     const category = query.category;
@@ -114,6 +118,7 @@ export class FilesApiService {
   }
 
   private async authorize(file: FileRecord, user: AuthenticatedUser) {
+    if (this.isTravelerDocument(file)) { await this.travelApi.travelerGet(`/documents/${file.ownerId}`, user); return; }
     if (!this.isActivityAsset(file)) throw new ForbiddenException('The file is not an activity asset');
     const tripId = String(file.metadata?.tripId || '');
     this.assertUuid(tripId, 'metadata.tripId');
@@ -124,9 +129,9 @@ export class FilesApiService {
     return file.application === APPLICATION && file.ownerType === OWNER_TYPE && CATEGORIES.has(String(file.metadata?.category || ''));
   }
 
-  private assertFixedOwner(application?: string, ownerType?: string) {
-    if (application !== APPLICATION || ownerType !== OWNER_TYPE) throw new BadRequestException('Only travel-planner-app activity assets are supported');
-  }
+  private isTravelerDocument(file:FileRecord){return file.application===APPLICATION&&file.ownerType===TRAVELER_OWNER_TYPE&&file.metadata?.category==='traveler-document'}
+
+  private assertSupportedOwner(application?:string,ownerType?:string){if(application!==APPLICATION||![OWNER_TYPE,TRAVELER_OWNER_TYPE].includes(ownerType||''))throw new BadRequestException('Unsupported file owner')}
 
   private assertUuid(value: string | undefined, field: string) {
     if (!value || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) throw new BadRequestException(`${field} must be a UUID`);

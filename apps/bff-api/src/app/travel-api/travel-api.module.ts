@@ -8,5 +8,6 @@ import { LuggageApiController } from './luggage-api.controller';
   imports: [AuthModule],
   controllers: [TravelApiController, LuggageApiController],
   providers: [TravelApiClient],
+  exports: [TravelApiClient],
 })
 export class TravelApiModule {}

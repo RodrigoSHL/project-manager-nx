@@ -2,6 +2,7 @@ import {
   Injectable,
   ServiceUnavailableException,
   HttpException,
+  Logger,
 } from '@nestjs/common';
 import { AuthenticatedUser } from '../auth/types/authenticated-user';
 
@@ -9,6 +10,7 @@ type Body = Record<string, unknown>;
 
 @Injectable()
 export class TravelApiClient {
+  private readonly logger = new Logger(TravelApiClient.name);
   private readonly baseUrl = this.resolveBaseUrl();
 
   // ── Trips ─────────────────────────────────────────────────────────────────
@@ -126,6 +128,10 @@ export class TravelApiClient {
     return this.authedGet(`/trips/${tripId}/activities`, user);
   }
 
+  getActivity(tripId: string, activityId: string, user: AuthenticatedUser) {
+    return this.authedGet(`/trips/${tripId}/activities/${activityId}`, user);
+  }
+
   createActivity(tripId: string, dto: Body, user: AuthenticatedUser) {
     return this.authedPost(`/trips/${tripId}/activities`, dto, user);
   }
@@ -143,8 +149,22 @@ export class TravelApiClient {
     );
   }
 
-  deleteActivity(tripId: string, activityId: string, user: AuthenticatedUser) {
-    return this.authedDelete(`/trips/${tripId}/activities/${activityId}`, user);
+  async deleteActivity(tripId: string, activityId: string, user: AuthenticatedUser) {
+    const filesUrl = (process.env.FILES_API_URL || 'http://localhost:3004/api').replace(/\/$/, '');
+    let photos: Array<{ id: string }> = [];
+    try {
+      const response = await fetch(`${filesUrl}/files?application=travel-planner-app&ownerType=activity&ownerId=${encodeURIComponent(activityId)}`);
+      if (response.ok) photos = await response.json() as Array<{ id: string }>;
+    } catch {
+      // Deleting the domain object remains authoritative if storage is unavailable.
+    }
+    await this.authedDelete(`/trips/${tripId}/activities/${activityId}`, user);
+    const cleanup = await Promise.allSettled(photos.map(async (photo) => {
+      const response = await fetch(`${filesUrl}/files/${photo.id}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error(`files-api returned ${response.status}`);
+    }));
+    const failures = cleanup.filter((result) => result.status === 'rejected').length;
+    if (failures) this.logger.error(`Activity ${activityId} was deleted, but ${failures} photo(s) require cleanup retry`);
   }
 
   // ── Finance ──────────────────────────────────────────────────────────────

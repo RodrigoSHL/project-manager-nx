@@ -179,7 +179,7 @@ export function TravelCalendar() {
       ? await store.updateActivity({ ...activity, id: existingActivityId })
       : await store.addActivity(activity)
     if (finance.createExpense) pendingFinancialActivity.current = saved
-    if (!finance.createExpense || !saved.price || !saved.priceCurrency || !store.tripId) return
+    if (!finance.createExpense || !saved.price || !saved.priceCurrency || !store.tripId) return saved
 
     const participantCount = finance.participantUserIds.length
     const amount = saved.priceType === 'per_person' ? multiplyDecimal(saved.price, participantCount) : saved.price
@@ -205,6 +205,7 @@ export function TravelCalendar() {
       notes: `Creado desde la actividad “${saved.title}”.`,
     })
     pendingFinancialActivity.current = null
+    return saved
   }
 
   function handleSelectDay(date: string) {
@@ -516,6 +517,7 @@ export function TravelCalendar() {
           people={financePeople}
           currentUserId={store.currentUser?.userId ?? ''}
           baseCurrency={store.currentTrip.baseCurrency ?? 'USD'}
+          tripId={store.tripId ?? ''}
         />
       )}
 

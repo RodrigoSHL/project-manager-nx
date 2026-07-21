@@ -9,6 +9,8 @@ import { CountrySelector } from './CountrySelector'
 import { cn } from '@/lib/utils'
 import { EXPENSE_CATEGORIES, ExpenseCategory } from '@/lib/finance'
 import { X, Save, Trash2, WalletCards, Loader2 } from 'lucide-react'
+import { ActivityPhotosSection } from './ActivityPhotosSection'
+import { uploadActivityPhoto } from '@/services/activityPhotoService'
 
 export interface ActivityExpenseDraft {
   createExpense: boolean
@@ -21,13 +23,14 @@ export interface ActivityExpenseDraft {
 interface Props {
   open: boolean
   onClose: () => void
-  onSave: (activity: Activity, finance: ActivityExpenseDraft) => Promise<void>
+  onSave: (activity: Activity, finance: ActivityExpenseDraft) => Promise<Activity>
   onDelete?: (id: string) => void
   initialDate?: string
   activity?: Activity | null
   people: Array<{ id: string; label: string }>
   currentUserId: string
   baseCurrency: string
+  tripId: string
 }
 
 const EMPTY_FORM: Omit<Activity, 'id'> = {
@@ -64,7 +67,7 @@ function activityTypeCategory(type: ActivityType): ExpenseCategory {
   return type === 'sightseeing' ? 'activities' : 'other'
 }
 
-export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate, activity, people, currentUserId, baseCurrency }: Props) {
+export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate, activity, people, currentUserId, baseCurrency, tripId }: Props) {
   const [form, setForm] = useState<Omit<Activity, 'id'>>(EMPTY_FORM)
   const [errors, setErrors] = useState<Partial<Record<keyof typeof EMPTY_FORM, string>>>({})
   const [createExpense, setCreateExpense] = useState(false)
@@ -74,6 +77,7 @@ export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate
   const [exchangeRate, setExchangeRate] = useState('')
   const [submitError, setSubmitError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [stagedPhotos, setStagedPhotos] = useState<File[]>([])
 
   useEffect(() => {
     if (activity) {
@@ -90,6 +94,7 @@ export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate
     setParticipantUserIds(activity?.financialParticipantUserIds?.length ? activity.financialParticipantUserIds : people.map(person => person.id))
     setExchangeRate('')
     setSubmitError('')
+    setStagedPhotos([])
   }, [activity, initialDate, open, currentUserId, people])
 
   if (!open) return null
@@ -136,7 +141,17 @@ export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate
     try {
       setSaving(true)
       setSubmitError('')
-      await onSave({ id, ...payload }, { createExpense, category: expenseCategory, payerUserId, participantUserIds, exchangeRate: exchangeRate || undefined })
+      const saved = await onSave({ id, ...payload }, { createExpense, category: expenseCategory, payerUserId, participantUserIds, exchangeRate: exchangeRate || undefined })
+      const failed: File[] = []
+      for (const [index, photo] of stagedPhotos.entries()) {
+        try { await uploadActivityPhoto(photo, saved.id, tripId, { sortOrder: index }) }
+        catch { failed.push(photo) }
+      }
+      if (failed.length) {
+        setStagedPhotos(failed)
+        setSubmitError(`La actividad quedó guardada, pero ${failed.length} fotografía(s) fallaron. Puedes volver a guardar para reintentarlas.`)
+        return
+      }
       onClose()
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'No se pudo guardar la actividad.')
@@ -416,6 +431,10 @@ export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate
                 <p className="text-xs text-destructive">{errors.link}</p>
               )}
             </div>
+          </div>
+
+          <div className="px-6 pb-5">
+            <ActivityPhotosSection activityId={activity?.id} staged={stagedPhotos} onStagedChange={setStagedPhotos} disabled={saving} />
           </div>
 
           {/* Footer */}

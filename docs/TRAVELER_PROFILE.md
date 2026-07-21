@@ -3,6 +3,19 @@
 El módulo se integra en `travel-planner-api`, `bff-api`, `files-api` y
 `travel-planner-app`; no crea otro servicio ni duplica usuarios o viajes.
 
+## Separación entre perfil y viaje
+
+- `/profile` contiene información permanente y privada del usuario: datos
+  personales, bóveda documental, contactos, seguros y direcciones frecuentes.
+- La sección `Preparación` del viaje activo contiene la selección de documentos
+  y el checklist personal para ese viaje.
+- Un documento se almacena una sola vez en la bóveda. `trip_documents` solo crea
+  el vínculo con un viaje, sin duplicar sus metadatos ni su archivo.
+- En un viaje compartido cada participante administra su propia selección y su
+  checklist; estos datos están identificados por `userId` y `tripId`.
+- Reservas, hoteles y direcciones específicas de una estadía pertenecen al
+  itinerario del viaje, no a las direcciones frecuentes del perfil.
+
 ## Datos y migración
 
 La migración `1784593000000-CreateTravelerProfile` crea:

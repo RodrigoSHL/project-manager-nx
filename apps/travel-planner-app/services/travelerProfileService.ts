@@ -7,6 +7,8 @@ export interface TravelDocument{id:string;type:DocumentType;displayName:string;i
 export interface Summary{completion:number;valid:number;expiring:number;expired:number;alerts:{type:string;message:string}[]}
 export interface TravelerProfile{personal:Record<string,string>;medical:Record<string,string>;privacy:Record<string,unknown>;summary:Summary}
 export interface TravelerResource{id:string;kind:'insurance'|'emergency_contact'|'important_address'|'medication'|'reminder';name:string;data:Record<string,string|boolean>;favorite:boolean;priority:number}
+export type ChecklistStatus='pending'|'in_progress'|'completed'|'not_applicable';
+export interface TripDocumentChecklistItem{id:string;tripId:string;label:string;status:ChecklistStatus;suggested:boolean;position:number}
 export const getProfile=()=>request<TravelerProfile>('');
 export const updateProfile=(data:Partial<TravelerProfile>)=>request<TravelerProfile>('',{method:'PATCH',body:JSON.stringify(data)});
 export const getDocuments=()=>request<TravelDocument[]>('/documents');
@@ -16,6 +18,12 @@ export const deleteDocument=(id:string)=>request<void>(`/documents/${id}`,{metho
 export const getResources=()=>request<TravelerResource[]>('/resources');
 export const createResource=(data:Partial<TravelerResource>)=>request<TravelerResource>('/resources',{method:'POST',body:JSON.stringify(data)});
 export const deleteResource=(id:string)=>request<void>(`/resources/${id}`,{method:'DELETE'});
+export const getTripDocuments=(tripId:string)=>request<TravelDocument[]>(`/trips/${tripId}/documents`);
+export const linkDocumentToTrip=(tripId:string,documentId:string)=>request<{id:string;tripId:string;documentId:string}>(`/trips/${tripId}/documents`,{method:'POST',body:JSON.stringify({documentId})});
+export const unlinkDocumentFromTrip=(tripId:string,documentId:string)=>request<void>(`/trips/${tripId}/documents/${documentId}`,{method:'DELETE'});
+export const getTripDocumentChecklist=(tripId:string)=>request<TripDocumentChecklistItem[]>(`/trips/${tripId}/checklist`);
+export const createTripChecklistItem=(tripId:string,label:string,position:number)=>request<TripDocumentChecklistItem>(`/trips/${tripId}/checklist`,{method:'POST',body:JSON.stringify({label,position})});
+export const updateTripChecklistItem=(tripId:string,id:string,data:Partial<Pick<TripDocumentChecklistItem,'label'|'status'|'position'>>)=>request<TripDocumentChecklistItem>(`/trips/${tripId}/checklist/${id}`,{method:'PATCH',body:JSON.stringify(data)});
 export async function uploadDocumentFile(documentId:string,file:File){const form=new FormData();form.append('file',file);form.append('application','travel-planner-app');form.append('ownerType','traveler-document');form.append('ownerId',documentId);form.append('metadata',JSON.stringify({category:'traveler-document'}));return response<{id:string}>(await fetch('/api/storage/files',{method:'POST',credentials:'include',headers:getAuthHeaders(),body:form}))}
 
 export interface DocumentFileContent {

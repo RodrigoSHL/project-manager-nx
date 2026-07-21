@@ -59,8 +59,29 @@ export class TravelerProfileService {
   async unlinkDocument(userId:string,tripId:string,documentId:string) { await this.trips.findOne(userId,tripId); const row=await this.tripDocuments.findOneBy({userId,tripId,documentId}); if(row) await this.tripDocuments.remove(row); }
   async documentsForTrip(userId:string,tripId:string) { await this.trips.findOne(userId,tripId); const links=await this.tripDocuments.findBy({userId,tripId}); return Promise.all(links.map(link=>this.getDocument(userId,link.documentId))); }
 
-  async getChecklist(userId:string,tripId:string) { await this.trips.findOne(userId,tripId); let rows=await this.checklist.find({where:{userId,tripId},order:{position:'ASC'}}); if(!rows.length) rows=await this.checklist.save(CHECKLIST.map((label,position)=>this.checklist.create({userId,tripId,label,position,suggested:true,status:ChecklistStatus.PENDING}))); return rows; }
-  async addChecklist(userId:string,tripId:string,dto:CreateChecklistItemDto) { await this.trips.findOne(userId,tripId); return this.checklist.save(this.checklist.create({...dto,userId,tripId,suggested:false})); }
+  async getChecklist(userId:string,tripId:string) {
+    await this.trips.findOne(userId,tripId);
+    return this.checklist.manager.transaction(async manager=>{
+      await manager.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))',[`${userId}:${tripId}`]);
+      const repository=manager.getRepository(TripDocumentChecklist);
+      let rows=await repository.find({where:{userId,tripId},order:{position:'ASC',createdAt:'ASC'}});
+      if(!rows.length){
+        await repository.save(CHECKLIST.map((label,position)=>repository.create({userId,tripId,label,position,suggested:true,status:ChecklistStatus.PENDING})));
+        rows=await repository.find({where:{userId,tripId},order:{position:'ASC',createdAt:'ASC'}});
+      }
+      return rows;
+    });
+  }
+  async addChecklist(userId:string,tripId:string,dto:CreateChecklistItemDto) {
+    await this.trips.findOne(userId,tripId);
+    const label=dto.label.trim();
+    return this.checklist.manager.transaction(async manager=>{
+      await manager.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))',[`${userId}:${tripId}`]);
+      const repository=manager.getRepository(TripDocumentChecklist);
+      const existing=await repository.findOneBy({userId,tripId,label});
+      return existing??repository.save(repository.create({...dto,label,userId,tripId,suggested:false}));
+    });
+  }
   async updateChecklist(userId:string,tripId:string,id:string,dto:UpdateChecklistItemDto) { await this.trips.findOne(userId,tripId); const row=await this.checklist.findOneBy({id,userId,tripId}); if(!row) throw new NotFoundException('Checklist item not found'); Object.assign(row,dto); return this.checklist.save(row); }
 
   async dashboard(userId:string) { const [documents,resources]=await Promise.all([this.documents.findBy({userId}),this.resources.findBy({userId})]); return this.summary(documents,resources); }

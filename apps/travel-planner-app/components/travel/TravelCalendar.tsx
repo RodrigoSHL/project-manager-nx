@@ -16,6 +16,7 @@ import { TripSummary } from './TripSummary';
 import { ShareTripModal } from './ShareTripModal';
 import { LuggageSection } from '../luggage/LuggageSection';
 import { FinanceSection } from '../finance/FinanceSection';
+import { TripDocumentsSection } from './TripDocumentsSection';
 import {
   addMonths,
   subMonths,
@@ -31,6 +32,7 @@ import {
 import { es } from 'date-fns/locale';
 import {
   CalendarDays,
+  ClipboardCheck,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -102,7 +104,7 @@ function multiplyDecimal(value: string, multiplier: number): string {
 
 export function TravelCalendar() {
   const store = useTravelStore();
-  const [section, setSection] = useState<'itinerary' | 'finance' | 'luggage'>('itinerary');
+  const [section, setSection] = useState<'itinerary' | 'finance' | 'luggage' | 'documents'>('itinerary');
   const [view, setView] = useState<CalendarView>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
@@ -372,7 +374,7 @@ export function TravelCalendar() {
           </div>
         </div>
 
-        <nav className="grid grid-cols-4 gap-1 rounded-2xl border border-border bg-card p-1.5 shadow-sm" aria-label="Secciones del viaje">
+        <nav className="grid grid-cols-5 gap-1 rounded-2xl border border-border bg-card p-1.5 shadow-sm" aria-label="Secciones del viaje y perfil personal">
           <button
             type="button"
             onClick={() => setSection('itinerary')}
@@ -400,10 +402,25 @@ export function TravelCalendar() {
             )}
           >
             <Luggage className="size-4" />
-            Equipaje
+            <span className="hidden sm:inline">Equipaje</span>
+            <span className="sm:hidden">Maleta</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSection('documents')}
+            className={cn(
+              'flex h-11 items-center justify-center gap-2 rounded-xl px-2 text-sm font-semibold transition-all',
+              section === 'documents'
+                ? 'bg-foreground text-background shadow-sm'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            )}
+          >
+            <ClipboardCheck className="size-4" />
+            <span className="hidden sm:inline">Preparación</span>
+            <span className="sm:hidden">Viaje</span>
           </button>
           <Link href="/profile" className="flex h-11 items-center justify-center gap-2 rounded-xl px-2 text-sm font-semibold text-muted-foreground transition-all hover:bg-muted hover:text-foreground">
-            <FileBadge className="size-4"/><span className="hidden sm:inline">Documentación</span><span className="sm:hidden">Docs</span>
+            <FileBadge className="size-4"/><span className="hidden sm:inline">Mi perfil</span><span className="sm:hidden">Perfil</span>
           </Link>
         </nav>
 
@@ -455,7 +472,12 @@ export function TravelCalendar() {
 
       {/* Main content */}
       <main>
-        {section === 'finance' && store.currentUser ? (
+        {section === 'documents' ? (
+          <TripDocumentsSection
+            tripId={store.currentTrip.id}
+            tripTitle={store.currentTrip.title}
+          />
+        ) : section === 'finance' && store.currentUser ? (
           <FinanceSection trip={store.currentTrip} currentUser={store.currentUser} activities={store.activities} canEdit={canEdit} />
         ) : section === 'luggage' ? (
           <LuggageSection

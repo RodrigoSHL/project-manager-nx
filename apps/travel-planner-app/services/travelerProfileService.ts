@@ -17,4 +17,29 @@ export const getResources=()=>request<TravelerResource[]>('/resources');
 export const createResource=(data:Partial<TravelerResource>)=>request<TravelerResource>('/resources',{method:'POST',body:JSON.stringify(data)});
 export const deleteResource=(id:string)=>request<void>(`/resources/${id}`,{method:'DELETE'});
 export async function uploadDocumentFile(documentId:string,file:File){const form=new FormData();form.append('file',file);form.append('application','travel-planner-app');form.append('ownerType','traveler-document');form.append('ownerId',documentId);form.append('metadata',JSON.stringify({category:'traveler-document'}));return response<{id:string}>(await fetch('/api/storage/files',{method:'POST',credentials:'include',headers:getAuthHeaders(),body:form}))}
-export function documentFileUrl(fileId:string){return `/api/storage/files/${fileId}/content`}
+
+export interface DocumentFileContent {
+  blob: Blob;
+  fileName: string;
+  mimeType: string;
+}
+
+export async function getDocumentFileContent(fileId:string):Promise<DocumentFileContent>{
+  const result=await fetch(`/api/storage/files/${fileId}/content`,{
+    cache:'no-store',
+    credentials:'include',
+    headers:getAuthHeaders(),
+  });
+  if(!result.ok){
+    const body=await result.json().catch(()=>null) as {message?:string}|null;
+    throw new Error(body?.message||`No se pudo abrir el archivo (${result.status})`);
+  }
+  const disposition=result.headers.get('content-disposition')||'';
+  const encodedName=disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+  const quotedName=disposition.match(/filename="([^"]+)"/i)?.[1];
+  return {
+    blob:await result.blob(),
+    fileName:encodedName?decodeURIComponent(encodedName):quotedName||'documento',
+    mimeType:result.headers.get('content-type')||'application/octet-stream',
+  };
+}

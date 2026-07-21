@@ -5,12 +5,12 @@ import * as https from 'https';
 import { URL } from 'url';
 
 // Agregar nuevos servicios aquí:
-// '/api/notifications' → process.env.NOTIFICATION_API_URL || 'http://localhost:3003'
 const SERVICE_ROUTES: { prefix: string; targetEnvVar: string; defaultUrl: string }[] = [
   { prefix: '/api/projects', targetEnvVar: 'PROJECT_API_URL', defaultUrl: 'http://localhost:3002' },
   { prefix: '/api/files', targetEnvVar: 'PROJECT_API_URL', defaultUrl: 'http://localhost:3002' },
   { prefix: '/api/users', targetEnvVar: 'USER_API_URL', defaultUrl: 'http://localhost:3001' },
   { prefix: '/api/workspaces', targetEnvVar: 'USER_API_URL', defaultUrl: 'http://localhost:3001' },
+  { prefix: '/api/trips', targetEnvVar: 'TRAVEL_API_URL', defaultUrl: 'http://localhost:3003' },
 ];
 
 @Injectable()

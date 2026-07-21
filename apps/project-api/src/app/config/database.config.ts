@@ -13,6 +13,7 @@ import { Label } from '../labels/entities/label.entity';
 import { Ticket } from '../tickets/entities/ticket.entity';
 import { Comment } from '../comments/entities/comment.entity';
 import { Subtask } from '../subtasks/entities/subtask.entity';
+import { TicketSupportDetail } from '../support-details/entities/ticket-support-detail.entity';
 
 export const databaseConfig: TypeOrmModuleOptions = {
   type: 'postgres',
@@ -36,8 +37,11 @@ export const databaseConfig: TypeOrmModuleOptions = {
     Ticket,
     Comment,
     Subtask,
+    TicketSupportDetail,
   ],
-  synchronize: true, // Crear tablas automáticamente en desarrollo
+  synchronize: process.env.TYPEORM_SYNCHRONIZE
+    ? process.env.TYPEORM_SYNCHRONIZE === 'true'
+    : process.env.NODE_ENV !== 'production',
   logging: process.env.NODE_ENV === 'development',
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
 }; 

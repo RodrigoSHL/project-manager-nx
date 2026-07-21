@@ -1,0 +1,115 @@
+@baseUrl = http://localhost:3003/api
+@userId = user-test-123
+
+### ─── TRIPS ───────────────────────────────────────────
+
+### 1. Crear viaje
+# @name createTrip
+POST {{baseUrl}}/trips
+Content-Type: application/json
+X-User-Id: {{userId}}
+
+{
+  "title": "Viaje a Chile",
+  "description": "Road trip por el sur de Chile",
+  "startDate": "2026-08-01",
+  "endDate": "2026-08-15"
+}
+
+### 2. Listar viajes del usuario
+GET {{baseUrl}}/trips
+X-User-Id: {{userId}}
+
+### 3. Ver viaje con actividades y días
+GET {{baseUrl}}/trips/{{createTrip.response.body.$.id}}
+X-User-Id: {{userId}}
+
+### 4. Editar viaje
+PATCH {{baseUrl}}/trips/{{createTrip.response.body.$.id}}
+Content-Type: application/json
+X-User-Id: {{userId}}
+
+{
+  "title": "Viaje a Chile 2026 ✈️"
+}
+
+### ─── ACTIVITIES ────────────────────────────────────────
+
+### 5. Crear actividad — vuelo
+# @name createFlight
+POST {{baseUrl}}/trips/{{createTrip.response.body.$.id}}/activities
+Content-Type: application/json
+X-User-Id: {{userId}}
+
+{
+  "title": "Vuelo SCL → PMC",
+  "type": "flight",
+  "date": "2026-08-01",
+  "startTime": "10:00",
+  "endTime": "12:30",
+  "countries": ["Chile"],
+  "originCountry": "Chile",
+  "destinationCountry": "Chile",
+  "city": "Santiago / Puerto Montt",
+  "status": "confirmed",
+  "priority": "high"
+}
+
+### 6. Crear actividad — alojamiento
+POST {{baseUrl}}/trips/{{createTrip.response.body.$.id}}/activities
+Content-Type: application/json
+X-User-Id: {{userId}}
+
+{
+  "title": "Hotel Cumbres Puerto Varas",
+  "type": "accommodation",
+  "date": "2026-08-01",
+  "startTime": "15:00",
+  "countries": ["Chile"],
+  "city": "Puerto Varas",
+  "status": "reserved",
+  "priority": "high"
+}
+
+### 7. Listar actividades del viaje
+GET {{baseUrl}}/trips/{{createTrip.response.body.$.id}}/activities
+X-User-Id: {{userId}}
+
+### 8. Editar actividad
+PATCH {{baseUrl}}/trips/{{createTrip.response.body.$.id}}/activities/{{createFlight.response.body.$.id}}
+Content-Type: application/json
+X-User-Id: {{userId}}
+
+{
+  "status": "confirmed",
+  "priority": "high"
+}
+
+### ─── TRAVEL DAYS ────────────────────────────────────────
+
+### 9. Configurar día (upsert)
+PUT {{baseUrl}}/trips/{{createTrip.response.body.$.id}}/days/2026-08-01
+Content-Type: application/json
+X-User-Id: {{userId}}
+
+{
+  "date": "2026-08-01",
+  "countries": ["Chile"],
+  "mainCity": "Puerto Varas",
+  "notes": "Primer día en el sur"
+}
+
+### 10. Listar días configurados
+GET {{baseUrl}}/trips/{{createTrip.response.body.$.id}}/days
+X-User-Id: {{userId}}
+
+### ─── AUTH GUARD ─────────────────────────────────────────
+
+### 11. Sin X-User-Id → debe devolver 401
+GET {{baseUrl}}/trips
+
+### ─── CLEANUP ────────────────────────────────────────────
+
+### 12. Eliminar viaje (en cascada elimina actividades y días)
+DELETE {{baseUrl}}/trips/{{createTrip.response.body.$.id}}
+X-User-Id: {{userId}}

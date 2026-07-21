@@ -1,0 +1,4 @@
+interface:
+  display_name: "Crear App Nx"
+  short_description: "Crea e integra apps Nx de punta a punta"
+  default_prompt: "Usa $create-nx-app para crear e integrar una nueva aplicación en este monorepo."

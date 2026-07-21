@@ -37,6 +37,7 @@ export enum TicketType {
   TASK = 'task',
   EPIC = 'epic',
   SUBTASK = 'subtask',
+  SUPPORT = 'support',
 }
 
 @Entity('tickets')

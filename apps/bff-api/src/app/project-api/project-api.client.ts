@@ -29,6 +29,24 @@ export class ProjectApiClient {
     return this.get('/projects/technologies');
   }
 
+  async forwardJsonRequest(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', path: string, body?: ProjectBody) {
+    const response = await this.fetchProjectApi(path, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Project API request failed with status ${response.status}`);
+    }
+
+    if (response.status === 204 || method === 'DELETE') {
+      return undefined;
+    }
+
+    return response.json();
+  }
+
   async findOne(id: string) {
     return this.get(`/projects/${encodeURIComponent(id)}`);
   }

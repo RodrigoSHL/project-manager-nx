@@ -21,3 +21,11 @@ EOSQL
 if [ -n "$USER_DATABASE_NAME" ] && [ "$USER_DATABASE_NAME" != "$POSTGRES_DB" ]; then
   create_db_if_missing "$USER_DATABASE_NAME"
 fi
+
+if [ -n "$TRAVEL_DB_NAME" ] && [ "$TRAVEL_DB_NAME" != "$POSTGRES_DB" ]; then
+  create_db_if_missing "$TRAVEL_DB_NAME"
+fi
+
+if [ -n "$FILES_DB_NAME" ] && [ "$FILES_DB_NAME" != "$POSTGRES_DB" ]; then
+  create_db_if_missing "$FILES_DB_NAME"
+fi

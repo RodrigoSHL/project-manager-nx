@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Ticket } from './entities/ticket.entity';
+import { Ticket, TicketType } from './entities/ticket.entity';
 import { Project } from '../projects/entities/project.entity';
+import { TicketSupportDetail } from '../support-details/entities/ticket-support-detail.entity';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 
@@ -13,6 +14,8 @@ export class TicketsService {
     private readonly ticketsRepository: Repository<Ticket>,
     @InjectRepository(Project)
     private readonly projectsRepository: Repository<Project>,
+    @InjectRepository(TicketSupportDetail)
+    private readonly supportDetailsRepository: Repository<TicketSupportDetail>,
   ) {}
 
   private async generateKey(projectId: string): Promise<string> {
@@ -27,7 +30,14 @@ export class TicketsService {
   async create(projectId: string, dto: CreateTicketDto): Promise<Ticket> {
     const key = await this.generateKey(projectId);
     const ticket = this.ticketsRepository.create({ ...dto, projectId, key });
-    return this.ticketsRepository.save(ticket);
+    const saved = await this.ticketsRepository.save(ticket);
+
+    if (saved.type === TicketType.SUPPORT) {
+      const detail = this.supportDetailsRepository.create({ ticketId: saved.id, isBillable: true });
+      await this.supportDetailsRepository.save(detail);
+    }
+
+    return saved;
   }
 
   findByProject(projectId: string): Promise<Ticket[]> {

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Deploy OCI App"
+  short_description: "Agregar y desplegar apps Nx en OCI"
+  default_prompt: "Usa $deploy-oci-app para agregar y desplegar una nueva aplicación del monorepo en Oracle Cloud."

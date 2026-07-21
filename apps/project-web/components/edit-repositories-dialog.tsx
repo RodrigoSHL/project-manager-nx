@@ -17,7 +17,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { 
-  Github, 
   ExternalLink, 
   GitBranch, 
   Plus, 
@@ -198,7 +197,7 @@ export function EditRepositoriesDialog({
       <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Github className="h-5 w-5" />
+            <GitBranch className="h-5 w-5" />
             Gestionar Repositorios
           </DialogTitle>
           <DialogDescription>
@@ -285,7 +284,7 @@ export function EditRepositoriesDialog({
                 repositories.map((repo) => (
                   <div key={repo.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center gap-3">
-                      <Github className="h-4 w-4 text-gray-600" />
+                      <GitBranch className="h-4 w-4 text-gray-600" />
                       <div>
                         <p className="font-medium">{repo.name}</p>
                         <p className="text-sm text-gray-500">{repo.url}</p>
@@ -320,7 +319,7 @@ export function EditRepositoriesDialog({
                 ))
               ) : (
                 <div className="text-center py-8 text-gray-500">
-                  <Github className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                  <GitBranch className="h-12 w-12 mx-auto mb-3 text-gray-400" />
                   <p>No hay repositorios configurados</p>
                   <p className="text-sm">Agrega tu primer repositorio usando el formulario de arriba</p>
                 </div>

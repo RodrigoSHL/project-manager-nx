@@ -1,0 +1,42 @@
+FROM node:20-bookworm-slim AS deps
+
+WORKDIR /workspace
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+FROM node:20-bookworm-slim AS builder
+
+WORKDIR /workspace
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY nx.json tsconfig.base.json jest.preset.js jest.config.ts eslint.config.mjs ./
+COPY apps ./apps
+
+ARG APP
+ENV NX_DAEMON=false
+RUN npx nx build ${APP} --configuration=production --skip-nx-cache
+
+FROM node:20-bookworm-slim AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ARG APP
+
+COPY --from=deps /workspace/node_modules ./node_modules
+COPY --from=builder /workspace/dist/apps/${APP} ./
+
+USER node
+
+CMD ["node", "main.js"]

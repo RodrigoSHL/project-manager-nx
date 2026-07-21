@@ -10,7 +10,6 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "./app-sidebar"
 import { TopNavbar } from "./top-navbar"
 import {
-  Github,
   ExternalLink,
   Database,
   Shield,
@@ -25,7 +24,6 @@ import {
   AlertCircle,
   CheckCircle,
   Mail,
-  Figma,
   MessageSquare,
   BookOpen,
   Target,
@@ -192,7 +190,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
       'design': { icon: Palette, color: 'text-purple-600' },
       'monitoring': { icon: Activity, color: 'text-green-600' },
       'communication': { icon: MessageSquare, color: 'text-yellow-600' },
-      'repository': { icon: Github, color: 'text-gray-600' },
+      'repository': { icon: GitBranch, color: 'text-gray-600' },
       'deployment': { icon: Rocket, color: 'text-orange-600' },
       'testing': { icon: TestTube, color: 'text-red-600' },
       'other': { icon: Globe, color: 'text-gray-600' }
@@ -433,7 +431,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                     <CardHeader>
                       <div className="flex items-center justify-between">
                         <CardTitle className="flex items-center gap-2">
-                          <Github className="h-5 w-5" />
+                          <GitBranch className="h-5 w-5" />
                           Repositorios ({currentProject.repositories.length})
                         </CardTitle>
                         <Button 
@@ -451,7 +449,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                         currentProject.repositories.map((repo) => (
                           <div key={repo.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                             <div className="flex items-center gap-3">
-                              <Github className="h-4 w-4 text-gray-600" />
+                              <GitBranch className="h-4 w-4 text-gray-600" />
                               <div>
                                 <p className="font-medium">{repo.name}</p>
                                 <p className="text-sm text-gray-500">{repo.type}</p>
@@ -472,7 +470,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                         ))
                       ) : (
                         <div className="text-center py-4 text-gray-500">
-                          <Github className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                          <GitBranch className="h-8 w-8 mx-auto mb-2 text-gray-400" />
                           <p>No hay repositorios configurados</p>
                         </div>
                       )}

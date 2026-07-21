@@ -1,0 +1,42 @@
+FROM node:20-bookworm-slim AS deps
+
+WORKDIR /workspace
+
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+FROM node:20-bookworm-slim AS builder
+
+WORKDIR /workspace
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY nx.json tsconfig.base.json jest.preset.js jest.config.ts eslint.config.mjs ./
+COPY apps ./apps
+
+ARG APP
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_BFF_URL
+ENV NX_DAEMON=false
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_BFF_URL=${NEXT_PUBLIC_BFF_URL}
+RUN npx nx build ${APP} --configuration=production --skip-nx-cache
+
+FROM node:20-bookworm-slim AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
+ARG APP
+
+COPY --from=deps /workspace/node_modules ./node_modules
+COPY --from=builder /workspace/apps/${APP}/.next ./.next
+COPY --from=builder /workspace/apps/${APP}/public ./public
+COPY --from=builder /workspace/apps/${APP}/next.config.* ./
+
+USER node
+
+CMD ["node_modules/.bin/next", "start", "-p", "3000", "-H", "0.0.0.0"]

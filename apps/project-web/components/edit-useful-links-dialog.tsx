@@ -30,7 +30,7 @@ import {
   Palette, 
   Activity, 
   MessageSquare, 
-  Github, 
+  GitBranch, 
   Rocket, 
   TestTube, 
   Plus, 
@@ -63,7 +63,7 @@ const LINK_TYPES = [
   { value: 'design', label: 'Diseño', icon: Palette, color: 'bg-purple-100 text-purple-800' },
   { value: 'monitoring', label: 'Monitoreo', icon: Activity, color: 'bg-green-100 text-green-800' },
   { value: 'communication', label: 'Comunicación', icon: MessageSquare, color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'repository', label: 'Repositorio', icon: Github, color: 'bg-gray-100 text-gray-800' },
+  { value: 'repository', label: 'Repositorio', icon: GitBranch, color: 'bg-gray-100 text-gray-800' },
   { value: 'deployment', label: 'Despliegue', icon: Rocket, color: 'bg-orange-100 text-orange-800' },
   { value: 'testing', label: 'Testing', icon: TestTube, color: 'bg-red-100 text-red-800' },
   { value: 'other', label: 'Otro', icon: Globe, color: 'bg-gray-100 text-gray-800' }

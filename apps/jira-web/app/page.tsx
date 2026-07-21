@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Layers, LayoutGrid, Zap, LayoutDashboard, Ticket as TicketIcon, BarChart3, Users, Settings, Plus, Calendar, Pencil, Trash2, Bug, BookOpen, CheckSquare } from 'lucide-react'
+import { Layers, LayoutGrid, Zap, LayoutDashboard, Ticket as TicketIcon, BarChart3, Users, Settings, Plus, Calendar, Pencil, Trash2, Bug, BookOpen, CheckSquare, LifeBuoy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { AppSidebar } from '@/components/app-sidebar'
@@ -25,6 +25,8 @@ import { Button } from '@/components/ui/button'
 import { CreateSprintDialog } from '@/components/create-sprint-dialog'
 import { EditSprintDialog } from '@/components/edit-sprint-dialog'
 import { CreateTicketDialog } from '@/components/create-ticket-dialog'
+import { CreateSupportDialog } from '@/components/create-support-dialog'
+import { SupportView } from '@/components/support-view'
 import { useWorkspace } from '@/contexts/workspace-context'
 import type { ApiProject, ApiSprint, ApiTicket, ApiTeamMember } from '@/types/project'
 
@@ -47,6 +49,7 @@ export default function ProjectManagement() {
   const [createTicketInitialStatus, setCreateTicketInitialStatus] = React.useState<ApiTicket['status']>('todo')
   const [createTicketInitialSprintId, setCreateTicketInitialSprintId] = React.useState<string | null | undefined>(undefined)
   const [ticketDetailOpen, setTicketDetailOpen] = React.useState(false)
+  const [createSupportOpen, setCreateSupportOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState('')
   const [filters, setFilters] = React.useState({
     assignee: 'all',
@@ -297,6 +300,7 @@ export default function ProjectManagement() {
       story: { label: 'Story', Icon: BookOpen, className: 'text-emerald-400', bgClassName: 'bg-emerald-400/10' },
       epic: { label: 'Epic', Icon: Layers, className: 'text-purple-400', bgClassName: 'bg-purple-400/10' },
       subtask: { label: 'Subtask', Icon: CheckSquare, className: 'text-muted-foreground', bgClassName: 'bg-muted' },
+      support: { label: 'Soporte', Icon: LifeBuoy, className: 'text-sky-400', bgClassName: 'bg-sky-400/10' },
     }
 
     return (
@@ -452,7 +456,7 @@ export default function ProjectManagement() {
         <Card className="p-5">
           <h3 className="font-semibold mb-4">Distribución por tipo</h3>
           <div className="space-y-3">
-            {['story', 'task', 'bug'].map(type => {
+            {['story', 'task', 'bug', 'support'].map(type => {
               const count = filteredTickets.filter(t => t.type === type).length
               const percent = filteredTickets.length > 0 ? (count / filteredTickets.length) * 100 : 0
               return (
@@ -767,6 +771,16 @@ export default function ProjectManagement() {
         )
       case 'tickets':
         return <AllTicketsView />
+      case 'support':
+        return (
+          <SupportView
+            tickets={tickets}
+            projectId={currentProject}
+            teamMembers={teamMembers}
+            onCreateSupport={() => setCreateSupportOpen(true)}
+            onTicketUpdated={handleTicketUpdated}
+          />
+        )
       case 'reports':
         return <ReportsView />
       case 'team':
@@ -862,6 +876,14 @@ export default function ProjectManagement() {
         sprints={sprints}
         initialStatus={createTicketInitialStatus}
         initialSprintId={createTicketInitialSprintId}
+        onCreated={handleTicketCreated}
+      />
+
+      <CreateSupportDialog
+        open={createSupportOpen}
+        onOpenChange={setCreateSupportOpen}
+        projectId={currentProject}
+        teamMembers={teamMembers}
         onCreated={handleTicketCreated}
       />
     </div>

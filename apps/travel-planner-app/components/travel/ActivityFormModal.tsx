@@ -11,6 +11,8 @@ import { EXPENSE_CATEGORIES, ExpenseCategory } from '@/lib/finance'
 import { X, Save, Trash2, WalletCards, Loader2 } from 'lucide-react'
 import { ActivityPhotosSection } from './ActivityPhotosSection'
 import { uploadActivityPhoto } from '@/services/activityPhotoService'
+import { ActivityDocumentsSection, StagedActivityDocument } from './ActivityDocumentsSection'
+import { uploadActivityDocument } from '@/services/activityDocumentService'
 
 export interface ActivityExpenseDraft {
   createExpense: boolean
@@ -78,6 +80,7 @@ export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate
   const [submitError, setSubmitError] = useState('')
   const [saving, setSaving] = useState(false)
   const [stagedPhotos, setStagedPhotos] = useState<File[]>([])
+  const [stagedDocuments, setStagedDocuments] = useState<StagedActivityDocument[]>([])
 
   useEffect(() => {
     if (activity) {
@@ -95,6 +98,7 @@ export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate
     setExchangeRate('')
     setSubmitError('')
     setStagedPhotos([])
+    setStagedDocuments([])
   }, [activity, initialDate, open, currentUserId, people])
 
   if (!open) return null
@@ -150,6 +154,17 @@ export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate
       if (failed.length) {
         setStagedPhotos(failed)
         setSubmitError(`La actividad quedó guardada, pero ${failed.length} fotografía(s) fallaron. Puedes volver a guardar para reintentarlas.`)
+        return
+      }
+      const failedDocuments: StagedActivityDocument[] = []
+      for (const document of stagedDocuments) {
+        try { await uploadActivityDocument(document.file, saved.id, tripId, document.documentType) }
+        catch { failedDocuments.push(document) }
+      }
+      if (failedDocuments.length) {
+        setStagedPhotos([])
+        setStagedDocuments(failedDocuments)
+        setSubmitError(`La actividad quedó guardada, pero ${failedDocuments.length} documento(s) fallaron. Puedes volver a guardar para reintentarlos.`)
         return
       }
       onClose()
@@ -435,6 +450,9 @@ export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate
 
           <div className="px-6 pb-5">
             <ActivityPhotosSection activityId={activity?.id} staged={stagedPhotos} onStagedChange={setStagedPhotos} disabled={saving} />
+          </div>
+          <div className="px-6 pb-5">
+            <ActivityDocumentsSection activityId={activity?.id} staged={stagedDocuments} onStagedChange={setStagedDocuments} disabled={saving} />
           </div>
 
           {/* Footer */}

@@ -22,7 +22,7 @@ export interface FileRecord {
   [key: string]: unknown;
 }
 
-export interface IncomingImage {
+export interface IncomingFile {
   buffer: Buffer;
   mimetype: string;
   originalname: string;
@@ -31,7 +31,16 @@ export interface IncomingImage {
 
 const APPLICATION = 'travel-planner-app';
 const OWNER_TYPE = 'activity';
-const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const DOCUMENT_TYPES = new Set([
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain',
+]);
+const CATEGORIES = new Set(['activity-photo', 'activity-document']);
 const MAX_SIZE = Number(process.env.FILES_MAX_FILE_SIZE_BYTES || 10 * 1024 * 1024);
 
 @Injectable()
@@ -41,17 +50,19 @@ export class FilesApiService {
 
   constructor(private readonly travelApi: TravelApiClient) {}
 
-  async upload(file: IncomingImage | undefined, body: Record<string, string>, user: AuthenticatedUser) {
+  async upload(file: IncomingFile | undefined, body: Record<string, string>, user: AuthenticatedUser) {
     if (!file) throw new BadRequestException('A file is required');
-    if (!ALLOWED_TYPES.has(file.mimetype)) throw new UnsupportedMediaTypeException('Only JPG, PNG and WebP images are allowed');
-    if (file.size > MAX_SIZE) throw new HttpException('The image exceeds the configured size limit', 413);
+    if (file.size > MAX_SIZE) throw new HttpException('The file exceeds the configured size limit', 413);
     this.assertFixedOwner(body.application, body.ownerType);
     this.assertUuid(body.ownerId, 'ownerId');
 
     const metadata = this.parseMetadata(body.metadata);
     const tripId = String(metadata.tripId || '');
     this.assertUuid(tripId, 'metadata.tripId');
-    if (metadata.category !== 'activity-photo') throw new BadRequestException('metadata.category must be activity-photo');
+    const category = String(metadata.category || '');
+    if (!CATEGORIES.has(category)) throw new BadRequestException('metadata.category must be activity-photo or activity-document');
+    const allowedTypes = category === 'activity-photo' ? PHOTO_TYPES : DOCUMENT_TYPES;
+    if (!allowedTypes.has(file.mimetype)) throw new UnsupportedMediaTypeException(category === 'activity-photo' ? 'Only JPG, PNG and WebP images are allowed' : 'Only PDF, Word, Excel and text documents are allowed');
     await this.travelApi.getActivity(tripId, body.ownerId, user);
 
     const form = new FormData();
@@ -67,8 +78,11 @@ export class FilesApiService {
     this.assertFixedOwner(query.application, query.ownerType);
     this.assertUuid(query.ownerId, 'ownerId');
     const files = await this.json<FileRecord[]>(`/files?application=${APPLICATION}&ownerType=${OWNER_TYPE}&ownerId=${encodeURIComponent(query.ownerId)}`);
-    if (files.length) await this.authorize(files[0], user);
-    return files.filter((file) => this.isActivityPhoto(file));
+    const activityAsset = files.find((file) => this.isActivityAsset(file));
+    if (activityAsset) await this.authorize(activityAsset, user);
+    const category = query.category;
+    if (category && !CATEGORIES.has(category)) throw new BadRequestException('Unsupported category');
+    return files.filter((file) => this.isActivityAsset(file) && (!category || file.metadata?.category === category));
   }
 
   async get(id: string, user: AuthenticatedUser): Promise<FileRecord> {
@@ -94,24 +108,24 @@ export class FilesApiService {
   }
 
   async cleanup(files: FileRecord[]): Promise<void> {
-    const results = await Promise.allSettled(files.filter((file) => this.isActivityPhoto(file)).map((file) => this.request(`/files/${file.id}`, { method: 'DELETE' })));
+    const results = await Promise.allSettled(files.filter((file) => this.isActivityAsset(file)).map((file) => this.request(`/files/${file.id}`, { method: 'DELETE' })));
     const failures = results.filter((result) => result.status === 'rejected').length;
     if (failures) this.logger.error(`Activity deleted, but ${failures} photo(s) could not be cleaned up`);
   }
 
   private async authorize(file: FileRecord, user: AuthenticatedUser) {
-    if (!this.isActivityPhoto(file)) throw new ForbiddenException('The file is not an activity photo');
+    if (!this.isActivityAsset(file)) throw new ForbiddenException('The file is not an activity asset');
     const tripId = String(file.metadata?.tripId || '');
     this.assertUuid(tripId, 'metadata.tripId');
     await this.travelApi.getActivity(tripId, String(file.ownerId), user);
   }
 
-  private isActivityPhoto(file: FileRecord) {
-    return file.application === APPLICATION && file.ownerType === OWNER_TYPE && file.metadata?.category === 'activity-photo';
+  private isActivityAsset(file: FileRecord) {
+    return file.application === APPLICATION && file.ownerType === OWNER_TYPE && CATEGORIES.has(String(file.metadata?.category || ''));
   }
 
   private assertFixedOwner(application?: string, ownerType?: string) {
-    if (application !== APPLICATION || ownerType !== OWNER_TYPE) throw new BadRequestException('Only travel-planner-app activity photos are supported');
+    if (application !== APPLICATION || ownerType !== OWNER_TYPE) throw new BadRequestException('Only travel-planner-app activity assets are supported');
   }
 
   private assertUuid(value: string | undefined, field: string) {

@@ -36,7 +36,7 @@ export async function uploadActivityPhoto(file: File, activityId: string, tripId
 }
 
 export async function listActivityPhotos(activityId: string) {
-  const query = new URLSearchParams({ application: 'travel-planner-app', ownerType: 'activity', ownerId: activityId });
+  const query = new URLSearchParams({ application: 'travel-planner-app', ownerType: 'activity', ownerId: activityId, category: 'activity-photo' });
   return checked<ActivityPhoto[]>(await fetch(`${FILES_URL}?${query}`, { credentials: 'include', headers: getAuthHeaders(), cache: 'no-store' }), 'No fue posible cargar las fotografías');
 }
 

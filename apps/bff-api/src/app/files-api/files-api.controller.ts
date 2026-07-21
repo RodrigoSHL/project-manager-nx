@@ -3,7 +3,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ExpressRequestWithUser } from '../auth/types/express-request-with-user';
-import { FilesApiService, IncomingImage } from './files-api.service';
+import { FilesApiService, IncomingFile } from './files-api.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('api/storage/files')
@@ -12,7 +12,7 @@ export class FilesApiController {
 
   @Post()
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: Number(process.env.FILES_MAX_FILE_SIZE_BYTES || 10 * 1024 * 1024) } }))
-  upload(@UploadedFile() file: IncomingImage | undefined, @Body() body: Record<string, string>, @Request() req: ExpressRequestWithUser) {
+  upload(@UploadedFile() file: IncomingFile | undefined, @Body() body: Record<string, string>, @Request() req: ExpressRequestWithUser) {
     return this.files.upload(file, body, req.user);
   }
 

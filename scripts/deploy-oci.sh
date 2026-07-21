@@ -35,6 +35,7 @@ CANONICAL_SERVICES=(
   project-api
   user-api
   travel-planner-api
+  files-api
   bff-api
   project-web
   jira-web
@@ -129,9 +130,9 @@ select_profile_interactively() {
   local selection=""
 
   printf '\n¿Qué quieres desplegar?\n'
-  printf '  1) Travel completo (User API, Travel API, BFF y frontend)\n'
+  printf '  1) Travel completo (User API, Travel API, Files API, BFF y frontend)\n'
   printf '  2) Solo frontend Travel\n'
-  printf '  3) Backend Travel (User API, Travel API y BFF)\n'
+  printf '  3) Backend Travel (User API, Travel API, Files API y BFF)\n'
   printf '  4) Plataforma completa (APIs, BFF y tres frontends)\n'
   printf '  5) Selección personalizada\n'
   read -r -p 'Selecciona [1-5]: ' selection
@@ -159,16 +160,16 @@ resolve_services() {
 
   case "$PROFILE" in
     travel-full)
-      raw_services="user-api,travel-planner-api,bff-api,travel-planner-app"
+      raw_services="user-api,travel-planner-api,files-api,bff-api,travel-planner-app"
       ;;
     travel-frontend)
       raw_services="travel-planner-app"
       ;;
     travel-backend)
-      raw_services="user-api,travel-planner-api,bff-api"
+      raw_services="user-api,travel-planner-api,files-api,bff-api"
       ;;
     platform-full)
-      raw_services="project-api,user-api,travel-planner-api,bff-api,project-web,jira-web,travel-planner-app"
+      raw_services="project-api,user-api,travel-planner-api,files-api,bff-api,project-web,jira-web,travel-planner-app"
       ;;
     custom)
       raw_services="$CUSTOM_SERVICES"
@@ -504,6 +505,41 @@ printf 'Sync remoto validado; .env.deploy no cambió.\n'
 REMOTE
 }
 
+ensure_remote_databases() {
+  contains_service files-api "${SERVICES[@]}" || return 0
+
+  log "Comprobando la base de datos de files-api"
+  remote_bash "$REMOTE_DIR" <<'REMOTE'
+set -Eeuo pipefail
+REMOTE_DIR=$1
+cd "$REMOTE_DIR"
+
+set -a
+# shellcheck disable=SC1091
+source .env.deploy
+set +a
+
+FILES_DATABASE=${FILES_DB_NAME:-files_db}
+[[ "$FILES_DATABASE" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] \
+  || { printf 'FILES_DB_NAME no es un identificador PostgreSQL válido.\n' >&2; exit 1; }
+
+POSTGRES_CONTAINER=$(docker compose --env-file .env.deploy -f docker-compose.prod.yml ps -q postgres)
+test -n "$POSTGRES_CONTAINER"
+
+DATABASE_EXISTS=$(docker exec "$POSTGRES_CONTAINER" sh -c \
+  'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "SELECT 1 FROM pg_database WHERE datname = '\''$1'\''"' \
+  sh "$FILES_DATABASE")
+
+if [[ "$DATABASE_EXISTS" != 1 ]]; then
+  docker exec "$POSTGRES_CONTAINER" sh -c \
+    'createdb -U "$POSTGRES_USER" "$1"' sh "$FILES_DATABASE"
+  printf 'Base de files-api creada después del backup.\n'
+else
+  printf 'Base de files-api ya existe.\n'
+fi
+REMOTE
+}
+
 build_remote_images() {
   [[ ${#BUILD_SERVICES[@]} -gt 0 ]] || return 0
   log "Construyendo imágenes ARM64 en OCI sin reemplazar contenedores"
@@ -636,7 +672,7 @@ cd "$REMOTE_DIR"
 docker compose --env-file .env.deploy -f docker-compose.prod.yml ps
 
 BFF_CONTAINER=$(docker compose --env-file .env.deploy -f docker-compose.prod.yml ps -q bff-api)
-docker exec "$BFF_CONTAINER" node -e "Promise.all([fetch('http://127.0.0.1:3000/health'),fetch('http://127.0.0.1:3000/api/trips'),fetch('http://travel-planner-api:3003/api'),fetch('http://user-api:3001/api/health')]).then(r=>{console.log('BFF_HEALTH='+r[0].status);console.log('TRIPS_WITHOUT_JWT='+r[1].status);console.log('TRAVEL_UPSTREAM='+r[2].status);console.log('USER_UPSTREAM='+r[3].status);if(r[0].status!==200||r[1].status!==401||r[2].status!==200||r[3].status!==200)process.exit(1)})"
+docker exec "$BFF_CONTAINER" node -e "Promise.all([fetch('http://127.0.0.1:3000/health'),fetch('http://127.0.0.1:3000/api/trips'),fetch('http://travel-planner-api:3003/api'),fetch('http://user-api:3001/api/health'),fetch('http://files-api:3004/api/health')]).then(r=>{console.log('BFF_HEALTH='+r[0].status);console.log('TRIPS_WITHOUT_JWT='+r[1].status);console.log('TRAVEL_UPSTREAM='+r[2].status);console.log('USER_UPSTREAM='+r[3].status);console.log('FILES_UPSTREAM='+r[4].status);if(r[0].status!==200||r[1].status!==401||r[2].status!==200||r[3].status!==200||r[4].status!==200)process.exit(1)})"
 
 for SERVICE in "${SERVICES[@]}"; do
   CONTAINER_ID=$(docker compose --env-file .env.deploy -f docker-compose.prod.yml ps -q "$SERVICE")
@@ -714,6 +750,7 @@ main() {
   create_remote_backup
   rsync_repo apply
   validate_remote_sync
+  ensure_remote_databases
   build_remote_images
   deploy_services
   verify_remote

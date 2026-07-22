@@ -71,11 +71,14 @@ export class UsersService {
   }
 
   async validateCredentials(email: string, password: string): Promise<User> {
-    const user = await this.usersRepo
-      .createQueryBuilder('user')
-      .addSelect('user.passwordHash')
-      .where('user.email = :email', { email })
-      .getOne();
+    const normalizedEmail = email?.trim().toLowerCase();
+    const user = normalizedEmail
+      ? await this.usersRepo
+          .createQueryBuilder('user')
+          .addSelect('user.passwordHash')
+          .where('LOWER(user.email) = :email', { email: normalizedEmail })
+          .getOne()
+      : null;
 
     if (!user?.passwordHash) {
       throw new UnauthorizedException('Invalid credentials');

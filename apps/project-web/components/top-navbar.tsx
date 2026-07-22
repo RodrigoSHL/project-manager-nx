@@ -1,8 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { Bell, Moon, Sun, Settings, LogOut, User, Shield, Folder } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useRouter } from "next/navigation"
+import { Bell, Moon, Sun, Settings, LogOut, Shield } from "lucide-react"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -24,15 +25,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { SidebarTrigger } from "@/components/ui/sidebar"
-
-// Datos de ejemplo del usuario
-const userData = {
-  name: "Ana García",
-  email: "ana.garcia@empresa.com",
-  role: "Tech Lead",
-  avatar: "/placeholder.svg?height=32&width=32",
-  initials: "AG",
-}
+import { useAuth } from "@/contexts/auth-context"
 
 // Datos de ejemplo de notificaciones
 const notifications = [
@@ -71,22 +64,27 @@ const notifications = [
 ]
 
 export function TopNavbar() {
+  const router = useRouter()
   const { theme, setTheme } = useTheme()
+  const { user, logout } = useAuth()
   const [isNotificationsOpen, setIsNotificationsOpen] = React.useState(false)
 
   const unreadCount = notifications.filter((n) => !n.read).length
 
-  const handleLogout = () => {
-    console.log("Cerrando sesión...")
-  }
-
   const handleSettings = () => {
-    console.log("Abriendo configuración...")
+    router.push("/settings")
   }
 
   const toggleTheme = () => {
     setTheme(theme === "light" ? "dark" : "light")
   }
+
+  const initials = user.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0]?.toUpperCase())
+    .join("") || user.email[0]?.toUpperCase() || "U"
 
   return (
     <div className="flex items-center justify-between gap-4 px-6 py-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -151,20 +149,19 @@ export function TopNavbar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={userData.avatar || "/placeholder.svg"} alt={userData.name} />
-                <AvatarFallback>{userData.initials}</AvatarFallback>
+                <AvatarFallback>{initials}</AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{userData.name}</p>
-                <p className="text-xs leading-none text-muted-foreground">{userData.email}</p>
+                <p className="text-sm font-medium leading-none">{user.name}</p>
+                <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
                 <div className="flex items-center gap-2 mt-2">
                   <Badge variant="secondary" className="text-xs">
                     <Shield className="w-3 h-3 mr-1" />
-                    {userData.role}
+                    Administrador
                   </Badge>
                 </div>
               </div>
@@ -174,12 +171,7 @@ export function TopNavbar() {
               <Settings className="mr-2 h-4 w-4" />
               <span>Configuración</span>
             </DropdownMenuItem>
-            <DropdownMenuItem>
-              <User className="mr-2 h-4 w-4" />
-              <span>Mi Perfil</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600">
+            <DropdownMenuItem onClick={logout} className="text-red-600 focus:text-red-600">
               <LogOut className="mr-2 h-4 w-4" />
               <span>Cerrar Sesión</span>
             </DropdownMenuItem>

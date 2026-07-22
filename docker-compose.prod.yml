@@ -151,6 +151,7 @@ services:
       NODE_ENV: production
       PORT: 3000
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
+      INTERNAL_API_URL: http://bff-api:3000
     depends_on:
       bff-api:
         condition: service_healthy

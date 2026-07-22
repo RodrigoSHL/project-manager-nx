@@ -7,5 +7,6 @@ import { ProjectApiController } from './project-api.controller';
   imports: [AuthModule],
   controllers: [ProjectApiController],
   providers: [ProjectApiClient],
+  exports: [ProjectApiClient],
 })
 export class ProjectApiModule {}

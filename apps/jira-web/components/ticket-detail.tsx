@@ -19,6 +19,11 @@ import {
   Loader2,
   LifeBuoy,
   Pencil,
+  Paperclip,
+  Upload,
+  Download,
+  File as FileIcon,
+  Image as ImageIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -49,7 +54,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { typeConfig } from '@/lib/mock-data'
-import type { ApiComment, ApiTicket, ApiTeamMember } from '@/types/project'
+import type { ApiComment, ApiTicket, ApiTeamMember, ApiTicketAttachment } from '@/types/project'
 import { updateTicket } from '@/services/ticketService'
 import {
   createTicketComment,
@@ -58,6 +63,13 @@ import {
   updateTicketComment,
 } from '@/services/commentService'
 import { useAuth } from '@/contexts/auth-context'
+import {
+  TICKET_ATTACHMENT_ACCEPT,
+  deleteTicketAttachment,
+  downloadTicketAttachment,
+  listTicketAttachments,
+  uploadTicketAttachment,
+} from '@/services/ticketAttachmentService'
 
 // ── Config ───────────────────────────────────────────────────────────────────
 
@@ -139,6 +151,11 @@ export function TicketDetail({
   const [commentError, setCommentError] = React.useState<string | null>(null)
   const [editingCommentId, setEditingCommentId] = React.useState<string | null>(null)
   const [editingCommentBody, setEditingCommentBody] = React.useState('')
+  const [attachments, setAttachments] = React.useState<ApiTicketAttachment[]>([])
+  const [attachmentsLoading, setAttachmentsLoading] = React.useState(false)
+  const [attachmentAction, setAttachmentAction] = React.useState<string | null>(null)
+  const [attachmentError, setAttachmentError] = React.useState<string | null>(null)
+  const attachmentInputRef = React.useRef<HTMLInputElement>(null)
 
   React.useEffect(() => {
     if (!ticket) return
@@ -154,6 +171,9 @@ export function TicketDetail({
     setCommentError(null)
     setEditingCommentId(null)
     setEditingCommentBody('')
+    setAttachments([])
+    setAttachmentError(null)
+    setAttachmentAction(null)
   }, [ticket?.id])
 
   React.useEffect(() => {
@@ -173,6 +193,30 @@ export function TicketDetail({
       })
       .finally(() => {
         if (!cancelled) setCommentsLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, projectId, ticket?.id])
+
+  React.useEffect(() => {
+    if (!open || !ticket) return
+    let cancelled = false
+
+    setAttachmentsLoading(true)
+    setAttachmentError(null)
+    listTicketAttachments(projectId, ticket.id)
+      .then(data => {
+        if (!cancelled) setAttachments(data)
+      })
+      .catch(error => {
+        if (!cancelled) {
+          setAttachmentError(error instanceof Error ? error.message : 'No se pudieron cargar los archivos.')
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setAttachmentsLoading(false)
       })
 
     return () => {
@@ -309,6 +353,54 @@ export function TicketDetail({
       .slice(0, 2)
       .map(part => part[0]?.toUpperCase())
       .join('') || 'U'
+  }
+
+  const addAttachment = async (file?: File) => {
+    if (!file || attachmentAction) return
+    setAttachmentAction('upload')
+    setAttachmentError(null)
+    try {
+      const created = await uploadTicketAttachment(projectId, ticket.id, ticket.key, file)
+      setAttachments(prev => [created, ...prev])
+    } catch (error) {
+      setAttachmentError(error instanceof Error ? error.message : 'No se pudo subir el archivo.')
+    } finally {
+      setAttachmentAction(null)
+      if (attachmentInputRef.current) attachmentInputRef.current.value = ''
+    }
+  }
+
+  const downloadAttachment = async (attachment: ApiTicketAttachment) => {
+    if (attachmentAction) return
+    setAttachmentAction(attachment.id)
+    setAttachmentError(null)
+    try {
+      await downloadTicketAttachment(attachment.id, attachment.originalName)
+    } catch (error) {
+      setAttachmentError(error instanceof Error ? error.message : 'No se pudo descargar el archivo.')
+    } finally {
+      setAttachmentAction(null)
+    }
+  }
+
+  const removeAttachment = async (attachment: ApiTicketAttachment) => {
+    if (attachmentAction || !window.confirm(`¿Eliminar ${attachment.originalName}?`)) return
+    setAttachmentAction(attachment.id)
+    setAttachmentError(null)
+    try {
+      await deleteTicketAttachment(attachment.id)
+      setAttachments(prev => prev.filter(candidate => candidate.id !== attachment.id))
+    } catch (error) {
+      setAttachmentError(error instanceof Error ? error.message : 'No se pudo eliminar el archivo.')
+    } finally {
+      setAttachmentAction(null)
+    }
+  }
+
+  const formatFileSize = (size: number) => {
+    if (size < 1024) return `${size} B`
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -615,6 +707,108 @@ export function TicketDetail({
                   <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className="text-muted-foreground w-24">Vence</span>
                   <span>{formatDate(ticket.dueDate)}</span>
+                </div>
+              )}
+            </div>
+
+            <Separator className="my-6" />
+
+            {/* ── Attachments ─────────────────────────────────────────────── */}
+            <div>
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Paperclip className="h-4 w-4" />
+                  <h3 className="text-sm font-semibold">Archivos ({attachments.length})</h3>
+                </div>
+                <input
+                  ref={attachmentInputRef}
+                  type="file"
+                  accept={TICKET_ATTACHMENT_ACCEPT}
+                  className="hidden"
+                  onChange={event => void addAttachment(event.target.files?.[0])}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={Boolean(attachmentAction)}
+                  onClick={() => attachmentInputRef.current?.click()}
+                >
+                  {attachmentAction === 'upload' ? (
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Upload className="mr-2 h-3.5 w-3.5" />
+                  )}
+                  Adjuntar
+                </Button>
+              </div>
+
+              <p className="mb-3 text-xs text-muted-foreground">
+                Imágenes, PDF, Word, Excel, PowerPoint, CSV o texto · máximo 10 MB.
+              </p>
+
+              {attachmentError && (
+                <p role="alert" className="mb-3 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {attachmentError}
+                </p>
+              )}
+
+              {attachmentsLoading && (
+                <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Cargando archivos…
+                </div>
+              )}
+
+              {!attachmentsLoading && attachments.length === 0 && (
+                <p className="rounded-lg border border-dashed px-4 py-5 text-center text-sm text-muted-foreground">
+                  Este ticket todavía no tiene archivos adjuntos.
+                </p>
+              )}
+
+              {!attachmentsLoading && attachments.length > 0 && (
+                <div className="space-y-2">
+                  {attachments.map(attachment => {
+                    const AttachmentIcon = attachment.mimeType.startsWith('image/') ? ImageIcon : FileIcon
+                    const busy = attachmentAction === attachment.id
+                    return (
+                      <div key={attachment.id} className="flex items-center gap-3 rounded-lg border p-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
+                          <AttachmentIcon className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium" title={attachment.originalName}>
+                            {attachment.originalName}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatFileSize(attachment.size)} · {formatDate(attachment.createdAt)}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          disabled={Boolean(attachmentAction)}
+                          onClick={() => void downloadAttachment(attachment)}
+                        >
+                          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                          <span className="sr-only">Descargar {attachment.originalName}</span>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          disabled={Boolean(attachmentAction)}
+                          onClick={() => void removeAttachment(attachment)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Eliminar {attachment.originalName}</span>
+                        </Button>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </div>

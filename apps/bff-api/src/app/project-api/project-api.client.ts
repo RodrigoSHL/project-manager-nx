@@ -55,6 +55,20 @@ export class ProjectApiClient {
     return this.commentRequest('GET', this.commentPath(projectId, ticketId));
   }
 
+  async findTicket(projectId: string, ticketId: string) {
+    const response = await this.fetchProjectApi(
+      `/projects/${encodeURIComponent(projectId)}/tickets/${encodeURIComponent(ticketId)}`,
+      { method: 'GET' },
+    );
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({ message: 'Project API ticket request failed' }));
+      throw new HttpException(body, response.status);
+    }
+
+    return response.json();
+  }
+
   async createTicketComment(projectId: string, ticketId: string, body: string, user: AuthenticatedUser) {
     return this.commentRequest('POST', this.commentPath(projectId, ticketId), {
       body,

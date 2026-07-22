@@ -42,6 +42,24 @@ export interface ApiComment {
   updatedAt: string
 }
 
+export interface ApiTicketAttachment {
+  id: string
+  application: 'jira-web'
+  ownerType: 'ticket'
+  ownerId: string
+  originalName: string
+  mimeType: string
+  size: number
+  metadata: {
+    category: 'ticket-attachment'
+    projectId: string
+    ticketKey?: string
+    uploadedBy?: string
+  }
+  createdAt: string
+  updatedAt: string
+}
+
 export interface ApiTeamMember {
   id: string
   name: string

@@ -5,6 +5,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { ExpressRequestWithUser } from '../auth/types/express-request-with-user';
 import { UserRole } from '../user-api/user-api.client';
 import { CreateProjectDto } from './dto/create-project.dto';
+import { CommentBodyDto } from './dto/comment-body.dto';
 import { ProjectApiClient } from './project-api.client';
 
 @Controller('api/projects')
@@ -120,6 +121,57 @@ export class ProjectApiController {
       'DELETE',
       `/projects/${encodeURIComponent(projectId)}/tickets/${encodeURIComponent(ticketId)}`,
     );
+  }
+
+  @Get(':projectId/tickets/:ticketId/comments')
+  @UseGuards(JwtAuthGuard)
+  findTicketComments(
+    @Param('projectId') projectId: string,
+    @Param('ticketId') ticketId: string,
+  ) {
+    return this.projectApiClient.findTicketComments(projectId, ticketId);
+  }
+
+  @Post(':projectId/tickets/:ticketId/comments')
+  @HttpCode(HttpStatus.CREATED)
+  @UseGuards(JwtAuthGuard)
+  createTicketComment(
+    @Param('projectId') projectId: string,
+    @Param('ticketId') ticketId: string,
+    @Body() dto: CommentBodyDto,
+    @Request() req: ExpressRequestWithUser,
+  ) {
+    return this.projectApiClient.createTicketComment(projectId, ticketId, dto.body.trim(), req.user);
+  }
+
+  @Patch(':projectId/tickets/:ticketId/comments/:commentId')
+  @UseGuards(JwtAuthGuard)
+  updateTicketComment(
+    @Param('projectId') projectId: string,
+    @Param('ticketId') ticketId: string,
+    @Param('commentId') commentId: string,
+    @Body() dto: CommentBodyDto,
+    @Request() req: ExpressRequestWithUser,
+  ) {
+    return this.projectApiClient.updateTicketComment(
+      projectId,
+      ticketId,
+      commentId,
+      dto.body.trim(),
+      req.user,
+    );
+  }
+
+  @Delete(':projectId/tickets/:ticketId/comments/:commentId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(JwtAuthGuard)
+  deleteTicketComment(
+    @Param('projectId') projectId: string,
+    @Param('ticketId') ticketId: string,
+    @Param('commentId') commentId: string,
+    @Request() req: ExpressRequestWithUser,
+  ) {
+    return this.projectApiClient.deleteTicketComment(projectId, ticketId, commentId, req.user);
   }
 
   @Get(':id')

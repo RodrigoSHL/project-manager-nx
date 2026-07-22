@@ -33,6 +33,15 @@ export interface ApiLabel {
   color: string | null
 }
 
+export interface ApiComment {
+  id: string
+  ticketId: string
+  authorId: string
+  body: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface ApiTeamMember {
   id: string
   name: string

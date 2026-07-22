@@ -18,6 +18,7 @@ import {
   Trash2,
   Loader2,
   LifeBuoy,
+  Pencil,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -48,8 +49,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { typeConfig } from '@/lib/mock-data'
-import type { ApiTicket, ApiTeamMember } from '@/types/project'
+import type { ApiComment, ApiTicket, ApiTeamMember } from '@/types/project'
 import { updateTicket } from '@/services/ticketService'
+import {
+  createTicketComment,
+  deleteTicketComment,
+  getTicketComments,
+  updateTicketComment,
+} from '@/services/commentService'
+import { useAuth } from '@/contexts/auth-context'
 
 // ── Config ───────────────────────────────────────────────────────────────────
 
@@ -92,12 +100,6 @@ const typeIcons: Record<string, React.ElementType> = {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface LocalComment {
-  id: string
-  content: string
-  createdAt: string
-}
-
 interface TicketDetailProps {
   ticket: ApiTicket | null
   open: boolean
@@ -117,6 +119,7 @@ export function TicketDetail({
   teamMembers = [],
   onUpdated,
 }: TicketDetailProps) {
+  const { user } = useAuth()
   const [saving, setSaving] = React.useState(false)
 
   const [title, setTitle] = React.useState('')
@@ -130,7 +133,12 @@ export function TicketDetail({
   const [showLabelInput, setShowLabelInput] = React.useState(false)
 
   const [newComment, setNewComment] = React.useState('')
-  const [comments, setComments] = React.useState<LocalComment[]>([])
+  const [comments, setComments] = React.useState<ApiComment[]>([])
+  const [commentsLoading, setCommentsLoading] = React.useState(false)
+  const [commentSaving, setCommentSaving] = React.useState(false)
+  const [commentError, setCommentError] = React.useState<string | null>(null)
+  const [editingCommentId, setEditingCommentId] = React.useState<string | null>(null)
+  const [editingCommentBody, setEditingCommentBody] = React.useState('')
 
   React.useEffect(() => {
     if (!ticket) return
@@ -143,7 +151,34 @@ export function TicketDetail({
     setNewComment('')
     setLabelInput('')
     setShowLabelInput(false)
+    setCommentError(null)
+    setEditingCommentId(null)
+    setEditingCommentBody('')
   }, [ticket?.id])
+
+  React.useEffect(() => {
+    if (!open || !ticket) return
+    let cancelled = false
+
+    setCommentsLoading(true)
+    setCommentError(null)
+    getTicketComments(projectId, ticket.id)
+      .then(data => {
+        if (!cancelled) setComments(data)
+      })
+      .catch(error => {
+        if (!cancelled) {
+          setCommentError(error instanceof Error ? error.message : 'No se pudieron cargar los comentarios.')
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setCommentsLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, projectId, ticket?.id])
 
   if (!ticket) return null
 
@@ -202,13 +237,78 @@ export function TicketDetail({
 
   // ── Comment helpers ────────────────────────────────────────────────────────
 
-  const addComment = () => {
-    if (!newComment.trim()) return
-    setComments(prev => [
-      ...prev,
-      { id: Date.now().toString(), content: newComment.trim(), createdAt: new Date().toISOString() },
-    ])
-    setNewComment('')
+  const addComment = async () => {
+    const body = newComment.trim()
+    if (!body || commentSaving) return
+
+    setCommentSaving(true)
+    setCommentError(null)
+    try {
+      const created = await createTicketComment(projectId, ticket.id, body)
+      setComments(prev => [...prev, created])
+      setNewComment('')
+    } catch (error) {
+      setCommentError(error instanceof Error ? error.message : 'No se pudo publicar el comentario.')
+    } finally {
+      setCommentSaving(false)
+    }
+  }
+
+  const startEditingComment = (comment: ApiComment) => {
+    setEditingCommentId(comment.id)
+    setEditingCommentBody(comment.body)
+    setCommentError(null)
+  }
+
+  const saveComment = async (commentId: string) => {
+    const body = editingCommentBody.trim()
+    if (!body || commentSaving) return
+
+    setCommentSaving(true)
+    setCommentError(null)
+    try {
+      const updated = await updateTicketComment(projectId, ticket.id, commentId, body)
+      setComments(prev => prev.map(comment => comment.id === commentId ? updated : comment))
+      setEditingCommentId(null)
+      setEditingCommentBody('')
+    } catch (error) {
+      setCommentError(error instanceof Error ? error.message : 'No se pudo editar el comentario.')
+    } finally {
+      setCommentSaving(false)
+    }
+  }
+
+  const removeComment = async (commentId: string) => {
+    if (!window.confirm('¿Eliminar este comentario?') || commentSaving) return
+
+    setCommentSaving(true)
+    setCommentError(null)
+    try {
+      await deleteTicketComment(projectId, ticket.id, commentId)
+      setComments(prev => prev.filter(comment => comment.id !== commentId))
+    } catch (error) {
+      setCommentError(error instanceof Error ? error.message : 'No se pudo eliminar el comentario.')
+    } finally {
+      setCommentSaving(false)
+    }
+  }
+
+  const getCommentAuthor = (authorId: string) => {
+    if (authorId === user.userId) {
+      return { name: user.name, avatar: undefined }
+    }
+
+    const member = teamMembers.find(candidate => candidate.userId === authorId)
+    return { name: member?.name ?? 'Usuario', avatar: member?.avatar }
+  }
+
+  const getInitials = (name: string) => {
+    return name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(part => part[0]?.toUpperCase())
+      .join('') || 'U'
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -530,7 +630,7 @@ export function TicketDetail({
 
               <div className="flex gap-3 mb-6">
                 <Avatar className="h-8 w-8 shrink-0">
-                  <AvatarFallback className="text-xs">Yo</AvatarFallback>
+                  <AvatarFallback className="text-xs">{getInitials(user.name)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 space-y-2">
                   <Textarea
@@ -538,37 +638,133 @@ export function TicketDetail({
                     value={newComment}
                     onChange={e => setNewComment(e.target.value)}
                     onKeyDown={e => {
-                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) addComment()
+                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void addComment()
                     }}
+                    disabled={commentSaving}
+                    maxLength={5000}
                     className="min-h-20 resize-none"
                   />
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] text-muted-foreground">⌘ + Enter para enviar</span>
-                    <Button size="sm" disabled={!newComment.trim()} onClick={addComment}>
-                      Comentar
+                    <Button size="sm" disabled={!newComment.trim() || commentSaving} onClick={() => void addComment()}>
+                      {commentSaving && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                      Publicar
                     </Button>
                   </div>
                 </div>
               </div>
 
-              {comments.length > 0 && (
+              {commentError && (
+                <p role="alert" className="mb-4 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {commentError}
+                </p>
+              )}
+
+              {commentsLoading && (
+                <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Cargando comentarios…
+                </div>
+              )}
+
+              {!commentsLoading && comments.length === 0 && (
+                <p className="py-4 text-sm text-muted-foreground">Aún no hay comentarios en este ticket.</p>
+              )}
+
+              {!commentsLoading && comments.length > 0 && (
                 <div className="space-y-4">
-                  {comments.map(comment => (
-                    <div key={comment.id} className="flex gap-3">
-                      <Avatar className="h-8 w-8 shrink-0">
-                        <AvatarFallback className="text-xs">Yo</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm font-medium">Yo</span>
-                          <span className="text-xs text-muted-foreground">hace un momento</span>
+                  {comments.map(comment => {
+                    const author = getCommentAuthor(comment.authorId)
+                    const isOwnComment = comment.authorId === user.userId
+                    const wasEdited = comment.updatedAt !== comment.createdAt
+
+                    return (
+                      <div key={comment.id} className="flex gap-3">
+                        <Avatar className="h-8 w-8 shrink-0">
+                          {author.avatar && <AvatarImage src={author.avatar} alt={author.name} />}
+                          <AvatarFallback className="text-xs">{getInitials(author.name)}</AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-1 flex items-center gap-2">
+                            <span className="text-sm font-medium">{isOwnComment ? 'Tú' : author.name}</span>
+                            <span className="text-xs text-muted-foreground">{formatDate(comment.createdAt)}</span>
+                            {wasEdited && <span className="text-[11px] text-muted-foreground">(editado)</span>}
+
+                            {isOwnComment && editingCommentId !== comment.id && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="ml-auto h-7 w-7">
+                                    <MoreHorizontal className="h-3.5 w-3.5" />
+                                    <span className="sr-only">Opciones del comentario</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => startEditingComment(comment)}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => void removeComment(comment.id)}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Eliminar
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </div>
+
+                          {editingCommentId === comment.id ? (
+                            <div className="space-y-2">
+                              <Textarea
+                                value={editingCommentBody}
+                                onChange={event => setEditingCommentBody(event.target.value)}
+                                onKeyDown={event => {
+                                  if (event.key === 'Escape') {
+                                    setEditingCommentId(null)
+                                    setEditingCommentBody('')
+                                  }
+                                  if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+                                    void saveComment(comment.id)
+                                  }
+                                }}
+                                disabled={commentSaving}
+                                maxLength={5000}
+                                className="min-h-20 resize-none"
+                                autoFocus
+                              />
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={commentSaving}
+                                  onClick={() => {
+                                    setEditingCommentId(null)
+                                    setEditingCommentBody('')
+                                  }}
+                                >
+                                  Cancelar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  disabled={!editingCommentBody.trim() || commentSaving}
+                                  onClick={() => void saveComment(comment.id)}
+                                >
+                                  {commentSaving && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                                  Guardar
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+                              {comment.body}
+                            </p>
+                          )}
                         </div>
-                        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                          {comment.content}
-                        </p>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>

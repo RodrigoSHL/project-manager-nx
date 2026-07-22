@@ -1,4 +1,4 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { HttpException, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { AuthenticatedUser } from '../auth/types/authenticated-user';
 import { CreateProjectDto } from './dto/create-project.dto';
 
@@ -49,6 +49,45 @@ export class ProjectApiClient {
 
   async findOne(id: string) {
     return this.get(`/projects/${encodeURIComponent(id)}`);
+  }
+
+  async findTicketComments(projectId: string, ticketId: string) {
+    return this.commentRequest('GET', this.commentPath(projectId, ticketId));
+  }
+
+  async createTicketComment(projectId: string, ticketId: string, body: string, user: AuthenticatedUser) {
+    return this.commentRequest('POST', this.commentPath(projectId, ticketId), {
+      body,
+      authorId: user.userId,
+    });
+  }
+
+  async updateTicketComment(
+    projectId: string,
+    ticketId: string,
+    commentId: string,
+    body: string,
+    user: AuthenticatedUser,
+  ) {
+    const requester = `requesterId=${encodeURIComponent(user.userId)}`;
+    return this.commentRequest(
+      'PATCH',
+      `${this.commentPath(projectId, ticketId)}/${encodeURIComponent(commentId)}?${requester}`,
+      { body },
+    );
+  }
+
+  async deleteTicketComment(
+    projectId: string,
+    ticketId: string,
+    commentId: string,
+    user: AuthenticatedUser,
+  ) {
+    const requester = `requesterId=${encodeURIComponent(user.userId)}`;
+    return this.commentRequest(
+      'DELETE',
+      `${this.commentPath(projectId, ticketId)}/${encodeURIComponent(commentId)}?${requester}`,
+    );
   }
 
   async createProject(dto: CreateProjectDto, user: AuthenticatedUser) {
@@ -145,6 +184,30 @@ export class ProjectApiClient {
       'x-user-email': user.email,
       'x-user-roles': user.roles.join(','),
     };
+  }
+
+  private commentPath(projectId: string, ticketId: string): string {
+    return `/projects/${encodeURIComponent(projectId)}/tickets/${encodeURIComponent(ticketId)}/comments`;
+  }
+
+  private async commentRequest(
+    method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+    path: string,
+    body?: ProjectBody,
+  ) {
+    const response = await this.fetchProjectApi(path, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+
+    if (!response.ok) {
+      const message = await response.text().catch(() => 'Project API comment request failed');
+      throw new HttpException(message || 'Project API comment request failed', response.status);
+    }
+
+    if (method === 'DELETE' || response.status === 204) return undefined;
+    return response.json();
   }
 
   private async fetchProjectApi(path: string, init: RequestInit): Promise<Response> {

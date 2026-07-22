@@ -6,6 +6,9 @@ export default {
     '^.+\\.[tj]sx?$': ['babel-jest', { presets: ['next/babel'] }],
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/$1',
+  },
   coverageDirectory: '../../coverage/apps/jira-web',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
 }

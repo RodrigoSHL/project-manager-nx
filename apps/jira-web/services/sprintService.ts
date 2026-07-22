@@ -1,6 +1,7 @@
 import type { ApiSprint } from '@/types/project'
+import { authenticatedFetch } from '@/lib/api'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? '/api'
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`)
@@ -8,7 +9,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
 }
 
 export async function getSprintsByProject(projectId: string): Promise<ApiSprint[]> {
-  const res = await fetch(`${API_BASE_URL}/projects/${projectId}/sprints`, { cache: 'no-store' })
+  const res = await authenticatedFetch(`${API_BASE_URL}/projects/${projectId}/sprints`, { cache: 'no-store' })
   return handleResponse<ApiSprint[]>(res)
 }
 
@@ -18,7 +19,7 @@ export async function createSprint(projectId: string, data: {
   startDate?: string
   endDate?: string
 }): Promise<ApiSprint> {
-  const res = await fetch(`${API_BASE_URL}/projects/${projectId}/sprints`, {
+  const res = await authenticatedFetch(`${API_BASE_URL}/projects/${projectId}/sprints`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -32,7 +33,7 @@ export async function updateSprint(projectId: string, sprintId: string, data: Pa
   startDate: string
   endDate: string
 }>): Promise<ApiSprint> {
-  const res = await fetch(`${API_BASE_URL}/projects/${projectId}/sprints/${sprintId}`, {
+  const res = await authenticatedFetch(`${API_BASE_URL}/projects/${projectId}/sprints/${sprintId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -41,7 +42,7 @@ export async function updateSprint(projectId: string, sprintId: string, data: Pa
 }
 
 export async function activateSprint(projectId: string, sprintId: string): Promise<ApiSprint> {
-  const res = await fetch(`${API_BASE_URL}/projects/${projectId}/sprints/${sprintId}/activate`, {
+  const res = await authenticatedFetch(`${API_BASE_URL}/projects/${projectId}/sprints/${sprintId}/activate`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
   })
@@ -49,7 +50,7 @@ export async function activateSprint(projectId: string, sprintId: string): Promi
 }
 
 export async function deleteSprint(projectId: string, sprintId: string): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/projects/${projectId}/sprints/${sprintId}`, {
+  const res = await authenticatedFetch(`${API_BASE_URL}/projects/${projectId}/sprints/${sprintId}`, {
     method: 'DELETE',
   })
   if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`)

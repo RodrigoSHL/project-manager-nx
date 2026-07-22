@@ -1,12 +1,11 @@
 'use client'
 
 import * as React from 'react'
-import { Search, Plus, Moon, Sun, Bell, Menu, Filter, SlidersHorizontal } from 'lucide-react'
+import { Search, Plus, Moon, Sun, Bell, Menu, SlidersHorizontal, LogOut, Shield } from 'lucide-react'
 import { useTheme } from 'next-themes'
-import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +23,7 @@ import {
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import type { ApiProject, ApiSprint } from '@/types/project'
+import { useAuth } from '@/contexts/auth-context'
 
 interface TopBarProps {
   onMenuClick: () => void
@@ -57,9 +57,15 @@ export function TopBar({
   activeSprint = null,
 }: TopBarProps) {
   const { theme, setTheme } = useTheme()
+  const { user, logout } = useAuth()
   const [mounted, setMounted] = React.useState(false)
   const project = projects.find(p => p.id === currentProject)
-  const currentUser = { name: 'Usuario', email: '', avatar: '' }
+  const initials = user.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0]?.toUpperCase())
+    .join('') || user.email[0]?.toUpperCase() || 'U'
 
   React.useEffect(() => {
     setMounted(true)
@@ -83,7 +89,7 @@ export function TopBar({
                 {project && (
                   <div 
                     className="w-2.5 h-2.5 rounded-sm shrink-0" 
-                    style={{ backgroundColor: project.color }}
+                    style={{ backgroundColor: project.color ?? '#6b7280' }}
                   />
                 )}
                 <SelectValue placeholder="Seleccionar proyecto" />
@@ -214,23 +220,29 @@ export function TopBar({
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={currentUser.avatar} alt={currentUser.name} />
-                <AvatarFallback>{currentUser.name.charAt(0)}</AvatarFallback>
+                <AvatarFallback>{initials}</AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>
               <div className="flex flex-col">
-                <span className="font-medium">{currentUser.name}</span>
-                <span className="text-xs text-muted-foreground font-normal">{currentUser.email}</span>
+                <span className="font-medium">{user.name}</span>
+                <span className="text-xs text-muted-foreground font-normal">{user.email}</span>
+                <span className="mt-2 inline-flex w-fit items-center gap-1 rounded-md bg-secondary px-2 py-1 text-[11px] font-medium">
+                  <Shield className="h-3 w-3" />
+                  Administrador
+                </span>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>Perfil</DropdownMenuItem>
             <DropdownMenuItem>Preferencias</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">Cerrar sesión</DropdownMenuItem>
+            <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
+              <LogOut className="mr-2 h-4 w-4" />
+              Cerrar sesión
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

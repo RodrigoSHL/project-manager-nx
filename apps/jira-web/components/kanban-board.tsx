@@ -16,7 +16,7 @@ interface KanbanBoardProps {
   onStatusChange?: (ticketId: string, status: ApiTicket['status']) => void
 }
 
-const columns: ApiTicket['status'][] = ['todo', 'in_progress', 'in_review', 'done']
+const columns = ['todo', 'in_progress', 'in_review', 'done'] as const satisfies readonly ApiTicket['status'][]
 
 export function KanbanBoard({ tickets, onTicketClick, onCreateTicket, onStatusChange }: KanbanBoardProps) {
   const [draggedTicket, setDraggedTicket] = React.useState<ApiTicket | null>(null)

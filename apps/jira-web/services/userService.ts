@@ -1,4 +1,6 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api'
+import { authenticatedFetch } from '@/lib/api'
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? '/api'
 
 export interface User {
   id: string
@@ -37,11 +39,11 @@ async function handleResponse<T>(res: Response): Promise<T> {
 
 export const WorkspaceService = {
   getAll: (): Promise<Workspace[]> =>
-    fetch(`${API_BASE_URL}/workspaces`).then(r => handleResponse<Workspace[]>(r)),
+    authenticatedFetch(`${API_BASE_URL}/workspaces`).then(r => handleResponse<Workspace[]>(r)),
 
   getOne: (id: string): Promise<Workspace> =>
-    fetch(`${API_BASE_URL}/workspaces/${id}`).then(r => handleResponse<Workspace>(r)),
+    authenticatedFetch(`${API_BASE_URL}/workspaces/${id}`).then(r => handleResponse<Workspace>(r)),
 
   getMembers: (workspaceId: string): Promise<WorkspaceMember[]> =>
-    fetch(`${API_BASE_URL}/workspaces/${workspaceId}/members`).then(r => handleResponse<WorkspaceMember[]>(r)),
+    authenticatedFetch(`${API_BASE_URL}/workspaces/${workspaceId}/members`).then(r => handleResponse<WorkspaceMember[]>(r)),
 }

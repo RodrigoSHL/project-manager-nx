@@ -1,6 +1,7 @@
 import type { ApiSupportDetail } from '@/types/project'
+import { authenticatedFetch } from '@/lib/api'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? '/api'
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -18,7 +19,7 @@ export async function getSupportDetail(
   projectId: string,
   ticketId: string,
 ): Promise<ApiSupportDetail> {
-  const res = await fetch(supportDetailUrl(projectId, ticketId))
+  const res = await authenticatedFetch(supportDetailUrl(projectId, ticketId))
   return handleResponse<ApiSupportDetail>(res)
 }
 
@@ -27,7 +28,7 @@ export async function updateSupportDetail(
   ticketId: string,
   data: Partial<Omit<ApiSupportDetail, 'id' | 'ticketId' | 'createdAt' | 'updatedAt'>>,
 ): Promise<ApiSupportDetail> {
-  const res = await fetch(supportDetailUrl(projectId, ticketId), {
+  const res = await authenticatedFetch(supportDetailUrl(projectId, ticketId), {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -40,7 +41,7 @@ export async function createSupportDetail(
   ticketId: string,
   data: Partial<Omit<ApiSupportDetail, 'id' | 'ticketId' | 'createdAt' | 'updatedAt'>> = {},
 ): Promise<ApiSupportDetail> {
-  const res = await fetch(supportDetailUrl(projectId, ticketId), {
+  const res = await authenticatedFetch(supportDetailUrl(projectId, ticketId), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -52,7 +53,7 @@ export async function deleteSupportDetail(
   projectId: string,
   ticketId: string,
 ): Promise<void> {
-  const res = await fetch(supportDetailUrl(projectId, ticketId), { method: 'DELETE' })
+  const res = await authenticatedFetch(supportDetailUrl(projectId, ticketId), { method: 'DELETE' })
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText)
     throw new Error(text || res.statusText)

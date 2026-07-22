@@ -1,6 +1,7 @@
 import type { ApiTicket } from '@/types/project'
+import { authenticatedFetch } from '@/lib/api'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? '/api'
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`)
@@ -8,7 +9,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
 }
 
 export async function getTicketsByProject(projectId: string): Promise<ApiTicket[]> {
-  const res = await fetch(`${API_BASE_URL}/projects/${projectId}/tickets`, { cache: 'no-store' })
+  const res = await authenticatedFetch(`${API_BASE_URL}/projects/${projectId}/tickets`, { cache: 'no-store' })
   return handleResponse<ApiTicket[]>(res)
 }
 
@@ -23,7 +24,7 @@ export async function createTicket(projectId: string, data: {
   storyPoints?: number | null
   dueDate?: string | null
 }): Promise<ApiTicket> {
-  const res = await fetch(`${API_BASE_URL}/projects/${projectId}/tickets`, {
+  const res = await authenticatedFetch(`${API_BASE_URL}/projects/${projectId}/tickets`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -42,7 +43,7 @@ export async function updateTicket(projectId: string, ticketId: string, data: Pa
   storyPoints: number | null
   dueDate: string | null
 }>): Promise<ApiTicket> {
-  const res = await fetch(`${API_BASE_URL}/projects/${projectId}/tickets/${ticketId}`, {
+  const res = await authenticatedFetch(`${API_BASE_URL}/projects/${projectId}/tickets/${ticketId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -51,7 +52,7 @@ export async function updateTicket(projectId: string, ticketId: string, data: Pa
 }
 
 export async function deleteTicket(projectId: string, ticketId: string): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/projects/${projectId}/tickets/${ticketId}`, {
+  const res = await authenticatedFetch(`${API_BASE_URL}/projects/${projectId}/tickets/${ticketId}`, {
     method: 'DELETE',
   })
   if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`)

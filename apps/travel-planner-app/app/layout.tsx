@@ -1,5 +1,6 @@
 import { Inter } from 'next/font/google'
 import type { Metadata, Viewport } from 'next'
+import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -10,8 +11,10 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'light',
-  themeColor: '#3b82f6',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f8f7f4' },
+    { media: '(prefers-color-scheme: dark)', color: '#0b0d14' },
+  ],
 }
 
 export default function RootLayout({
@@ -20,9 +23,16 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className="bg-background">
+    <html lang="es" className="bg-background" suppressHydrationWarning>
       <body className={`${inter.className} antialiased`}>
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   )

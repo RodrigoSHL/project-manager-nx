@@ -6,7 +6,12 @@ const FILES_URL = `${API_BASE_URL}/storage/files`
 
 export const MAX_TICKET_ATTACHMENT_SIZE = 10 * 1024 * 1024
 export const TICKET_ATTACHMENT_ACCEPT = [
-  'image/*',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/heic',
+  'image/heif',
   '.pdf',
   '.doc',
   '.docx',

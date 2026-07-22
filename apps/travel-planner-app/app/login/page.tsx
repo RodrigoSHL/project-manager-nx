@@ -81,11 +81,11 @@ function LoginForm() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 p-3 sm:p-6">
-      <div className="pointer-events-none absolute -left-24 -top-24 size-80 rounded-full bg-sky-200/40 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 -right-20 size-96 rounded-full bg-amber-200/35 blur-3xl" />
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-muted/30 p-3 sm:p-6">
+      <div className="pointer-events-none absolute -left-24 -top-24 size-80 rounded-full bg-sky-300/25 blur-3xl dark:bg-sky-500/10" />
+      <div className="pointer-events-none absolute -bottom-32 -right-20 size-96 rounded-full bg-amber-300/25 blur-3xl dark:bg-amber-400/10" />
 
-      <div className="relative z-10 grid w-full max-w-5xl overflow-hidden rounded-[32px] border border-white/80 bg-white/85 shadow-2xl shadow-slate-900/10 backdrop-blur-xl lg:grid-cols-[1.05fr_0.95fr]">
+      <div className="relative z-10 grid w-full max-w-5xl overflow-hidden rounded-[32px] border bg-background/90 shadow-2xl shadow-foreground/10 backdrop-blur-xl lg:grid-cols-[1.05fr_0.95fr]">
         <aside className="relative hidden min-h-[680px] overflow-hidden bg-gradient-to-br from-sky-600 via-blue-600 to-indigo-700 p-10 text-white lg:flex lg:flex-col lg:justify-between">
           <div className="absolute -right-20 -top-20 size-72 rounded-full border-[48px] border-white/[0.07]" />
           <div className="absolute bottom-28 left-8 size-52 rounded-full bg-cyan-300/15 blur-3xl" />
@@ -201,7 +201,7 @@ function LoginForm() {
             </div>
 
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              <p className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {error}
               </p>
             )}

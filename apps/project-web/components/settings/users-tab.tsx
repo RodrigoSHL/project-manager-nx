@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Users, Trash2, Mail, Loader2, Search, UserCircle2 } from "lucide-react"
+import { Plus, Users, Trash2, Mail, Loader2, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -42,6 +42,8 @@ export function UsersTab() {
   const [name, setName] = React.useState("")
   const [email, setEmail] = React.useState("")
   const [avatarUrl, setAvatarUrl] = React.useState("")
+  const [password, setPassword] = React.useState("")
+  const [passwordConfirmation, setPasswordConfirmation] = React.useState("")
 
   React.useEffect(() => {
     UserService.getAll()
@@ -55,16 +57,32 @@ export function UsersTab() {
   )
 
   const handleCreate = async () => {
+    const normalizedName = name.trim()
+    const normalizedEmail = email.trim().toLowerCase()
+    if (password.length < 8) {
+      setCreateError("La contraseña debe tener al menos 8 caracteres")
+      return
+    }
+    if (password !== passwordConfirmation) {
+      setCreateError("Las contraseñas no coinciden")
+      return
+    }
+
     setCreating(true)
     setCreateError("")
     try {
-      const dto: CreateUserDto = { name, email, ...(avatarUrl ? { avatarUrl } : {}) }
+      const dto: CreateUserDto = {
+        name: normalizedName,
+        email: normalizedEmail,
+        password,
+        ...(avatarUrl.trim() ? { avatarUrl: avatarUrl.trim() } : {}),
+      }
       const user = await UserService.create(dto)
       setUsers(prev => [user, ...prev])
       setCreateOpen(false)
-      setName(""); setEmail(""); setAvatarUrl("")
-    } catch (e: any) {
-      setCreateError(e.message)
+      setName(""); setEmail(""); setAvatarUrl(""); setPassword(""); setPasswordConfirmation("")
+    } catch (error: unknown) {
+      setCreateError(error instanceof Error ? error.message : "No se pudo crear el usuario")
     } finally {
       setCreating(false)
     }
@@ -233,11 +251,35 @@ export function UsersTab() {
               <Label htmlFor="u-avatar">Avatar URL <span className="text-muted-foreground">(opcional)</span></Label>
               <Input id="u-avatar" placeholder="https://..." value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)} />
             </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="u-password">Contraseña inicial</Label>
+              <Input
+                id="u-password"
+                type="password"
+                autoComplete="new-password"
+                placeholder="Mínimo 8 caracteres"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="u-password-confirmation">Confirmar contraseña</Label>
+              <Input
+                id="u-password-confirmation"
+                type="password"
+                autoComplete="new-password"
+                value={passwordConfirmation}
+                onChange={e => setPasswordConfirmation(e.target.value)}
+              />
+            </div>
             {createError && <p className="text-xs text-destructive">{createError}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCreate} disabled={creating || !name || !email}>
+            <Button
+              onClick={handleCreate}
+              disabled={creating || !name.trim() || !email.trim() || !password || !passwordConfirmation}
+            >
               {creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Crear usuario
             </Button>

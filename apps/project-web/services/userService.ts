@@ -14,6 +14,7 @@ export interface User {
 export interface CreateUserDto {
   email: string;
   name: string;
+  password: string;
   avatarUrl?: string;
 }
 
@@ -50,7 +51,8 @@ async function handleResponse<T>(res: Response): Promise<T> {
   if (res.status === 204) return undefined as T;
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error(error.message ?? `HTTP ${res.status}`);
+    const message = Array.isArray(error.message) ? error.message[0] : error.message;
+    throw new Error(message ?? `HTTP ${res.status}`);
   }
   return res.json();
 }

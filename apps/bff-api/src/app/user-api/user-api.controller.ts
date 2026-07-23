@@ -1,18 +1,57 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
-import { UserApiClient } from './user-api.client';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { UserApiClient, UserRole } from './user-api.client';
 
 @Controller('api')
 export class UserApiController {
   constructor(private readonly userApiClient: UserApiClient) {}
 
   @Get('users')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   findAllUsers() {
     return this.userApiClient.findAllUsers();
   }
 
   @Get('users/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   findOneUser(@Param('id') id: string) {
     return this.userApiClient.findOneUser(id);
+  }
+
+  @Post('users')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  createUser(@Body() dto: CreateUserDto) {
+    return this.userApiClient.createUser({
+      ...dto,
+      email: dto.email.trim().toLowerCase(),
+      name: dto.name.trim(),
+    });
+  }
+
+  @Patch('users/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  updateUser(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+    return this.userApiClient.updateUser(id, {
+      ...dto,
+      ...(dto.email ? { email: dto.email.trim().toLowerCase() } : {}),
+      ...(dto.name ? { name: dto.name.trim() } : {}),
+    });
+  }
+
+  @Delete('users/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  removeUser(@Param('id') id: string) {
+    return this.userApiClient.removeUser(id);
   }
 
   @Post('workspaces')

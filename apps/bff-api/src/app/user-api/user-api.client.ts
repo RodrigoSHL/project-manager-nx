@@ -1,11 +1,6 @@
-import { Injectable, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
-
-interface CreateUserRequest {
-  email: string;
-  name: string;
-  password: string;
-  avatarUrl?: string;
-}
+import { HttpException, Injectable, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 type JsonBody = Record<string, unknown>;
 
@@ -25,18 +20,29 @@ export interface UserApiUser {
 export class UserApiClient {
   private readonly baseUrl = this.resolveBaseUrl();
 
-  async createUser(dto: CreateUserRequest): Promise<UserApiUser> {
+  async createUser(dto: CreateUserDto): Promise<UserApiUser> {
     const response = await this.fetchUserApi('/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dto),
     });
 
-    if (!response.ok) {
-      throw new Error(`User API create user failed with status ${response.status}`);
-    }
+    return this.userResponse(response, 'User API create user failed');
+  }
 
-    return response.json() as Promise<UserApiUser>;
+  async updateUser(id: string, dto: UpdateUserDto): Promise<UserApiUser> {
+    const response = await this.fetchUserApi(`/users/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dto),
+    });
+
+    return this.userResponse(response, 'User API update user failed');
+  }
+
+  async removeUser(id: string): Promise<void> {
+    const response = await this.fetchUserApi(`/users/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!response.ok) await this.throwUpstream(response, 'User API delete user failed');
   }
 
   async validateCredentials(email: string, password: string): Promise<UserApiUser> {
@@ -139,6 +145,16 @@ export class UserApiClient {
     if (!response.ok) {
       throw new Error(`User API delete failed with status ${response.status}`);
     }
+  }
+
+  private async userResponse(response: Response, fallback: string): Promise<UserApiUser> {
+    if (!response.ok) await this.throwUpstream(response, fallback);
+    return response.json() as Promise<UserApiUser>;
+  }
+
+  private async throwUpstream(response: Response, fallback: string): Promise<never> {
+    const body = await response.json().catch(() => ({ message: fallback }));
+    throw new HttpException(body, response.status >= 400 && response.status < 500 ? response.status : 502);
   }
 
   private async fetchUserApi(path: string, init: RequestInit): Promise<Response> {

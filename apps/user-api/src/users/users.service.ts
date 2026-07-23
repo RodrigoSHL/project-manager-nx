@@ -1,10 +1,11 @@
 import {
+  ConflictException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -19,13 +20,22 @@ export class UsersService {
 
   async create(dto: CreateUserDto): Promise<User> {
     const { password, ...userData } = dto;
-    const user = this.usersRepo.create(userData);
+    const user = this.usersRepo.create({
+      ...userData,
+      email: dto.email.trim().toLowerCase(),
+      name: dto.name.trim(),
+    });
 
     if (password) {
       user.passwordHash = await bcrypt.hash(password, 10);
     }
 
-    const savedUser = await this.usersRepo.save(user);
+    let savedUser: User;
+    try {
+      savedUser = await this.usersRepo.save(user);
+    } catch (error) {
+      this.rethrowUserConflict(error);
+    }
     return this.findOne(savedUser.id);
   }
 
@@ -55,13 +65,21 @@ export class UsersService {
   async update(id: string, dto: UpdateUserDto): Promise<User> {
     await this.findOne(id);
     const { password, ...userData } = dto;
-    const updateData: Partial<User> = { ...userData };
+    const updateData: Partial<User> = {
+      ...userData,
+      ...(dto.email ? { email: dto.email.trim().toLowerCase() } : {}),
+      ...(dto.name ? { name: dto.name.trim() } : {}),
+    };
 
     if (password) {
       updateData.passwordHash = await bcrypt.hash(password, 10);
     }
 
-    await this.usersRepo.update(id, updateData);
+    try {
+      await this.usersRepo.update(id, updateData);
+    } catch (error) {
+      this.rethrowUserConflict(error);
+    }
     return this.findOne(id);
   }
 
@@ -91,5 +109,16 @@ export class UsersService {
 
     delete user.passwordHash;
     return user;
+  }
+
+  private rethrowUserConflict(error: unknown): never {
+    if (error instanceof QueryFailedError) {
+      const driverError = error.driverError as { code?: string };
+      if (driverError.code === '23505') {
+        throw new ConflictException('A user with this email already exists');
+      }
+    }
+
+    throw error;
   }
 }

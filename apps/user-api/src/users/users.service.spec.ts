@@ -1,6 +1,6 @@
 import { ConflictException } from '@nestjs/common';
 import { QueryFailedError, Repository } from 'typeorm';
-import { User } from './entities/user.entity';
+import { User, UserRole } from './entities/user.entity';
 import { UsersService } from './users.service';
 
 describe('UsersService creation', () => {
@@ -25,7 +25,7 @@ describe('UsersService creation', () => {
       id: 'user-1',
       email: 'new@example.com',
       name: 'New User',
-      roles: ['user'],
+      roles: [UserRole.USER, UserRole.ADMIN],
     };
     repository.save.mockResolvedValue(saved);
     repository.findOneBy.mockResolvedValue(saved);
@@ -33,10 +33,12 @@ describe('UsersService creation', () => {
     await expect(service.create({
       email: '  NEW@Example.com ',
       name: ' New User ',
+      roles: [UserRole.USER, UserRole.ADMIN],
     })).resolves.toEqual(saved);
     expect(repository.create).toHaveBeenCalledWith({
       email: 'new@example.com',
       name: 'New User',
+      roles: [UserRole.USER, UserRole.ADMIN],
     });
   });
 

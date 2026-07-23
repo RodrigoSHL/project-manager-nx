@@ -32,6 +32,7 @@ export class UserApiController {
       ...dto,
       email: dto.email.trim().toLowerCase(),
       name: dto.name.trim(),
+      roles: dto.roles?.length ? dto.roles : [UserRole.USER],
     });
   }
 

@@ -1,5 +1,5 @@
 import { HttpException } from '@nestjs/common';
-import { UserApiClient } from './user-api.client';
+import { UserApiClient, UserRole } from './user-api.client';
 
 describe('UserApiClient user administration', () => {
   let client: UserApiClient;
@@ -21,7 +21,7 @@ describe('UserApiClient user administration', () => {
       id: 'user-1',
       email: 'new@example.com',
       name: 'New User',
-      roles: ['user'],
+      roles: [UserRole.USER, UserRole.ADMIN],
     };
     fetchMock.mockResolvedValue(new Response(JSON.stringify(created), { status: 201 }));
 
@@ -29,6 +29,7 @@ describe('UserApiClient user administration', () => {
       email: created.email,
       name: created.name,
       password: 'password-123',
+      roles: [UserRole.USER, UserRole.ADMIN],
     })).resolves.toEqual(created);
     expect(fetchMock).toHaveBeenCalledWith('http://user-api.test/api/users', {
       method: 'POST',
@@ -37,6 +38,7 @@ describe('UserApiClient user administration', () => {
         email: created.email,
         name: created.name,
         password: 'password-123',
+        roles: [UserRole.USER, UserRole.ADMIN],
       }),
     });
   });

@@ -9,6 +9,14 @@ export interface CurrentUser {
   roles: UserRole[]
 }
 
+export function canAccessProjectWeb(roles: UserRole[] | undefined): boolean {
+  return Boolean(roles?.some(role => role === 'user' || role === 'admin'))
+}
+
+export function isProjectAdmin(roles: UserRole[] | undefined): boolean {
+  return Boolean(roles?.includes('admin'))
+}
+
 interface JwtPayload {
   sub?: string
   email?: string

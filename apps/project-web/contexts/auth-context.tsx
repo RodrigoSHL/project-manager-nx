@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Loader2, ShieldAlert } from "lucide-react"
 import {
   buildLoginUrl,
+  canAccessProjectWeb,
   clearAccessToken,
   getAccessToken,
   getAuthHeaders,
@@ -60,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         const profile = (await response.json()) as CurrentUser
-        if (!profile.roles?.includes("admin")) {
+        if (!canAccessProjectWeb(profile.roles)) {
           clearAccessToken()
           router.replace(buildLoginUrl("forbidden"))
           return

@@ -1,8 +1,10 @@
 import {
   buildLoginUrl,
+  canAccessProjectWeb,
   clearAccessToken,
   getAuthHeaders,
   getCurrentUser,
+  isProjectAdmin,
   setAccessToken,
 } from './auth'
 
@@ -91,5 +93,16 @@ describe('project-web auth helpers', () => {
     clearAccessToken()
 
     expect(getAuthHeaders()).toEqual({})
+  })
+
+  it('allows the user base role and keeps admin access for compatibility', () => {
+    expect(canAccessProjectWeb(['user'])).toBe(true)
+    expect(canAccessProjectWeb(['admin'])).toBe(true)
+    expect(canAccessProjectWeb([])).toBe(false)
+  })
+
+  it('identifies administrative access independently from base access', () => {
+    expect(isProjectAdmin(['user'])).toBe(false)
+    expect(isProjectAdmin(['user', 'admin'])).toBe(true)
   })
 })

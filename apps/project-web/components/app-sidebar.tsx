@@ -22,6 +22,7 @@ import {
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { isProjectAdmin } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -42,6 +43,7 @@ import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { CreateProjectDialog } from "./create-project-dialog"
 import { useProjects } from "@/hooks/useProjects"
+import { useAuth } from "@/contexts/auth-context"
 import { useWorkspace } from "@/contexts/workspace-context"
 import { ProjectStatus } from "@/types/project"
 
@@ -106,7 +108,9 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
   const [searchQuery, setSearchQuery] = React.useState("")
   const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false)
   const { projects, loading, error } = useProjects()
+  const { user } = useAuth()
   const { workspaces, selectedWorkspace, setSelectedWorkspace } = useWorkspace()
+  const isAdmin = isProjectAdmin(user.roles)
 
   // Separar proyectos activos y archivados
   const activeProjects = projects.filter(project => 
@@ -159,13 +163,17 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
             {workspaces.length === 0 && (
               <DropdownMenuItem disabled>No hay workspaces</DropdownMenuItem>
             )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <a href="/settings" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Gestionar workspaces
-              </a>
-            </DropdownMenuItem>
+            {isAdmin && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <a href="/settings" className="flex items-center gap-2">
+                    <Settings className="h-4 w-4" />
+                    Gestionar workspaces
+                  </a>
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -300,28 +308,32 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
 
       <SidebarFooter>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <CreateProjectDialog
-              open={isCreateDialogOpen}
-              onOpenChange={setIsCreateDialogOpen}
-              onProjectCreated={(project) => {
-                router.push(`/projects/${project.id}`)
-              }}
-            >
-              <Button variant="outline" className="w-full justify-start bg-transparent" size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo Proyecto
-              </Button>
-            </CreateProjectDialog>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <a href="/settings" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                <span>Configuración</span>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          {isAdmin && (
+            <>
+              <SidebarMenuItem>
+                <CreateProjectDialog
+                  open={isCreateDialogOpen}
+                  onOpenChange={setIsCreateDialogOpen}
+                  onProjectCreated={(project) => {
+                    router.push(`/projects/${project.id}`)
+                  }}
+                >
+                  <Button variant="outline" className="w-full justify-start bg-transparent" size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nuevo Proyecto
+                  </Button>
+                </CreateProjectDialog>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <a href="/settings" className="flex items-center gap-2">
+                    <Settings className="h-4 w-4" />
+                    <span>Configuración</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </>
+          )}
         </SidebarMenu>
       </SidebarFooter>
       <SidebarRail />

@@ -2,10 +2,13 @@ import { authenticatedFetch } from '@/lib/api';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? '/api';
 
+export type UserRole = 'user' | 'admin';
+
 export interface User {
   id: string;
   email: string;
   name: string;
+  roles: UserRole[];
   avatarUrl?: string;
   createdAt: string;
   updatedAt: string;
@@ -15,6 +18,7 @@ export interface CreateUserDto {
   email: string;
   name: string;
   password: string;
+  roles: UserRole[];
   avatarUrl?: string;
 }
 

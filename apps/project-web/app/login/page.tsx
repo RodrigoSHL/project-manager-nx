@@ -11,7 +11,7 @@ import {
   ShieldCheck,
   Users,
 } from "lucide-react"
-import { setAccessToken, type CurrentUser } from "@/lib/auth"
+import { canAccessProjectWeb, setAccessToken, type CurrentUser } from "@/lib/auth"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "/api"
 
@@ -36,7 +36,7 @@ function LoginForm() {
     reason === "expired"
       ? "Tu sesión expiró. Inicia sesión nuevamente."
       : reason === "forbidden"
-        ? "ProjectHub requiere una cuenta con rol de administrador."
+        ? "ProjectHub requiere una cuenta con rol de usuario."
         : null,
   )
 
@@ -68,8 +68,8 @@ function LoginForm() {
         return
       }
 
-      if (!data.user.roles?.includes("admin")) {
-        setError("Tu cuenta no tiene permisos de administrador para usar ProjectHub.")
+      if (!canAccessProjectWeb(data.user.roles)) {
+        setError("Tu cuenta no tiene el rol de usuario requerido para usar ProjectHub.")
         return
       }
 
@@ -103,7 +103,7 @@ function LoginForm() {
           <div className="relative max-w-md">
             <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold">
               <ShieldCheck className="size-3.5" />
-              Acceso administrativo seguro
+              Acceso seguro para tu equipo
             </span>
             <h1 className="text-balance text-4xl font-bold leading-[1.08] tracking-tight">
               Tus proyectos, equipos y operaciones en un solo lugar.

@@ -22,6 +22,7 @@ describe('project-web user service', () => {
       name: 'New User',
       email: 'new@example.com',
       password: 'password-123',
+      roles: ['user' as const],
     }
     const created = { id: 'user-1', ...dto, createdAt: '', updatedAt: '' }
     mockedFetch.mockResolvedValue(response(created, 201))
@@ -41,6 +42,7 @@ describe('project-web user service', () => {
       name: 'New User',
       email: 'new@example.com',
       password: 'short',
+      roles: ['user'],
     })).rejects.toThrow('password must be longer than or equal to 8 characters')
   })
 })

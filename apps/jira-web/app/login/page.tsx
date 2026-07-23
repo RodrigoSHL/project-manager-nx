@@ -11,7 +11,7 @@ import {
   Loader2,
   ShieldCheck,
 } from 'lucide-react'
-import { setAccessToken, type CurrentUser } from '@/lib/auth'
+import { canAccessJiraWeb, setAccessToken, type CurrentUser } from '@/lib/auth'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? '/api'
 
@@ -36,7 +36,7 @@ function LoginForm() {
     reason === 'expired'
       ? 'Tu sesión expiró. Inicia sesión nuevamente.'
       : reason === 'forbidden'
-        ? 'FlowBoard requiere una cuenta con rol de administrador.'
+        ? 'FlowBoard requiere una cuenta con rol de usuario.'
         : null,
   )
 
@@ -68,8 +68,8 @@ function LoginForm() {
         return
       }
 
-      if (!data.user.roles?.includes('admin')) {
-        setError('Tu cuenta no tiene permisos de administrador para usar FlowBoard.')
+      if (!canAccessJiraWeb(data.user.roles)) {
+        setError('Tu cuenta no tiene permisos de usuario para usar FlowBoard.')
         return
       }
 
@@ -103,7 +103,7 @@ function LoginForm() {
           <div className="relative max-w-md">
             <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold">
               <ShieldCheck className="size-3.5" />
-              Acceso administrativo seguro
+              Acceso seguro para tu equipo
             </span>
             <h1 className="text-balance text-4xl font-bold leading-[1.08] tracking-tight">
               Planifica, prioriza y entrega cada sprint con claridad.
@@ -137,7 +137,7 @@ function LoginForm() {
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Bienvenido de vuelta</p>
             <h2 className="text-3xl font-bold tracking-tight">Inicia sesión</h2>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              Usa una cuenta con permisos de administrador.
+              Usa una cuenta con rol de usuario.
             </p>
           </div>
 
@@ -187,7 +187,7 @@ function LoginForm() {
           </form>
 
           <p className="mt-6 text-center text-xs leading-relaxed text-muted-foreground">
-            Las cuentas nuevas deben ser habilitadas como administradoras antes de acceder.
+            Las cuentas nuevas deben tener el rol de usuario antes de acceder.
           </p>
         </section>
       </div>

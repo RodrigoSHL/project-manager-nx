@@ -1,5 +1,6 @@
 import {
   buildLoginUrl,
+  canAccessJiraWeb,
   clearAccessToken,
   getAuthHeaders,
   getCurrentUser,
@@ -67,6 +68,13 @@ describe('jira-web auth helpers', () => {
       name: 'Admin User',
       roles: ['user', 'admin'],
     })
+  })
+
+  it('allows the user base role and keeps admin access for compatibility', () => {
+    expect(canAccessJiraWeb(['user'])).toBe(true)
+    expect(canAccessJiraWeb(['admin'])).toBe(true)
+    expect(canAccessJiraWeb([])).toBe(false)
+    expect(canAccessJiraWeb(undefined)).toBe(false)
   })
 
   it('rejects expired tokens', () => {

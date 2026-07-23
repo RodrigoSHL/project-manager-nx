@@ -9,6 +9,10 @@ export interface CurrentUser {
   roles: UserRole[]
 }
 
+export function canAccessJiraWeb(roles: UserRole[] | undefined): boolean {
+  return Boolean(roles?.some(role => role === 'user' || role === 'admin'))
+}
+
 interface JwtPayload {
   sub?: string
   email?: string

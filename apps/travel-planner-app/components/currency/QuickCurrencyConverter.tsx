@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ArrowRightLeft,
   Info,
@@ -13,36 +13,13 @@ import type {
   CurrencyConversion,
   CurrencyOption,
 } from '@/services/currencyService';
-
-const FALLBACK_CURRENCIES: CurrencyOption[] = [
-  { code: 'CLP', name: 'Chilean Peso', symbol: '$' },
-  { code: 'EUR', name: 'Euro', symbol: '€' },
-  { code: 'GBP', name: 'British Pound', symbol: '£' },
-  { code: 'USD', name: 'United States Dollar', symbol: '$' },
-  { code: 'CHF', name: 'Swiss Franc', symbol: 'CHF' },
-  { code: 'DKK', name: 'Danish Krone', symbol: 'kr' },
-  { code: 'NOK', name: 'Norwegian Krone', symbol: 'kr' },
-  { code: 'SEK', name: 'Swedish Krona', symbol: 'kr' },
-  { code: 'CZK', name: 'Czech Koruna', symbol: 'Kč' },
-  { code: 'PLN', name: 'Polish Zloty', symbol: 'zł' },
-  { code: 'HUF', name: 'Hungarian Forint', symbol: 'Ft' },
-];
-
-const PRIORITY_CODES = FALLBACK_CURRENCIES.map(({ code }) => code);
-
-function formatCurrency(value: number, currency: string): string {
-  return new Intl.NumberFormat('es-CL', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: currency === 'CLP' ? 0 : 2,
-  }).format(value);
-}
-
-function formatRate(value: number): string {
-  return new Intl.NumberFormat('es-CL', {
-    maximumSignificantDigits: 6,
-  }).format(value);
-}
+import {
+  currencyName,
+  FALLBACK_CURRENCIES,
+  formatCurrencyAmount,
+  formatRate,
+  mergeCurrencies,
+} from './currency-ui';
 
 function CurrencySelect({
   currencies,
@@ -55,11 +32,6 @@ function CurrencySelect({
   onChange: (value: string) => void;
   label: string;
 }) {
-  const displayNames = useMemo(
-    () => new Intl.DisplayNames(['es'], { type: 'currency' }),
-    []
-  );
-
   return (
     <select
       value={value}
@@ -69,14 +41,18 @@ function CurrencySelect({
     >
       {currencies.map((currency) => (
         <option key={currency.code} value={currency.code}>
-          {currency.code} · {displayNames.of(currency.code) ?? currency.name}
+          {currency.code} · {currencyName(currency.code)}
         </option>
       ))}
     </select>
   );
 }
 
-export function QuickCurrencyConverter() {
+export function QuickCurrencyConverter({
+  onExpand,
+}: {
+  onExpand?: () => void;
+}) {
   const [amount, setAmount] = useState('100000');
   const [from, setFrom] = useState('CLP');
   const [to, setTo] = useState('EUR');
@@ -94,24 +70,7 @@ export function QuickCurrencyConverter() {
     const controller = new AbortController();
     getCurrencies(controller.signal)
       .then((available) => {
-        const unique = new Map(
-          [...FALLBACK_CURRENCIES, ...available].map((currency) => [
-            currency.code,
-            currency,
-          ])
-        );
-        setCurrencies(
-          [...unique.values()].sort((left, right) => {
-            const leftPriority = PRIORITY_CODES.indexOf(left.code);
-            const rightPriority = PRIORITY_CODES.indexOf(right.code);
-            if (leftPriority >= 0 || rightPriority >= 0) {
-              if (leftPriority < 0) return 1;
-              if (rightPriority < 0) return -1;
-              return leftPriority - rightPriority;
-            }
-            return left.code.localeCompare(right.code);
-          })
-        );
+        setCurrencies(mergeCurrencies(available));
       })
       .catch((requestError: unknown) => {
         if (
@@ -170,8 +129,9 @@ export function QuickCurrencyConverter() {
       className="overflow-hidden rounded-[26px] border border-border bg-card shadow-sm"
     >
       <div className="grid lg:grid-cols-[minmax(220px,0.72fr)_minmax(0,2fr)]">
-        <div className="relative overflow-hidden bg-gradient-to-br from-amber-400 via-orange-400 to-rose-500 p-5 text-white sm:p-6">
+        <div className="relative overflow-hidden bg-gradient-to-br from-teal-500 via-cyan-500 to-sky-600 p-5 text-white sm:p-6">
           <div className="pointer-events-none absolute -right-10 -top-12 size-36 rounded-full border-[28px] border-white/10" />
+          <div className="pointer-events-none absolute -bottom-12 left-10 size-28 rounded-full bg-emerald-200/20 blur-2xl" />
           <div className="relative">
             <div className="mb-4 flex size-10 items-center justify-center rounded-2xl bg-white/20 backdrop-blur">
               <Landmark className="size-5" />
@@ -243,7 +203,7 @@ export function QuickCurrencyConverter() {
                     <Loader2 className="size-4 animate-spin" />
                   ) : conversion ? (
                     <span className="truncate">
-                      {formatCurrency(conversion.convertedAmount, to)}
+                      {formatCurrencyAmount(conversion.convertedAmount, to)}
                     </span>
                   ) : (
                     <span className="text-sm text-muted-foreground">—</span>
@@ -291,17 +251,29 @@ export function QuickCurrencyConverter() {
                 Tasa referencial de bancos centrales; no incluye comisiones.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setRefreshKey((key) => key + 1)}
-              disabled={loading || !amountIsValid}
-              className="flex h-9 shrink-0 items-center justify-center gap-2 rounded-xl border border-border px-3 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <RefreshCw
-                className={`size-3.5 ${loading ? 'animate-spin' : ''}`}
-              />
-              Actualizar
-            </button>
+            <div className="flex shrink-0 gap-2">
+              <button
+                type="button"
+                onClick={() => setRefreshKey((key) => key + 1)}
+                disabled={loading || !amountIsValid}
+                className="flex h-9 items-center justify-center gap-2 rounded-xl border border-border px-3 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <RefreshCw
+                  className={`size-3.5 ${loading ? 'animate-spin' : ''}`}
+                />
+                Actualizar
+              </button>
+              {onExpand && (
+                <button
+                  type="button"
+                  onClick={onExpand}
+                  className="flex h-9 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 px-3 text-xs font-bold text-white shadow-sm shadow-cyan-950/15 transition hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  Más divisas
+                  <ArrowRightLeft className="size-3.5" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

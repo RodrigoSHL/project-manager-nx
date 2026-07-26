@@ -199,6 +199,10 @@ export class TravelApiClient {
     );
   }
 
+  currencyPut(path: string, dto: Body, user: AuthenticatedUser) {
+    return this.authedPut(`/currency/${path}`, dto, user);
+  }
+
   // ── Travel Days ───────────────────────────────────────────────────────────
 
   listDays(tripId: string, user: AuthenticatedUser) {

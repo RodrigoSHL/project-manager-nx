@@ -32,6 +32,7 @@ import {
 import { es } from 'date-fns/locale';
 import {
   CalendarDays,
+  BadgeDollarSign,
   ClipboardCheck,
   ChevronDown,
   ChevronLeft,
@@ -54,6 +55,7 @@ import { clearToken } from '@/lib/auth';
 import { createExpense as createFinanceExpense } from '@/services/financeService';
 import { getUserProfile } from '@/services/tripService';
 import { QuickCurrencyConverter } from '../currency/QuickCurrencyConverter';
+import { CurrencySection } from '../currency/CurrencySection';
 
 const EMPTY_FILTERS: Filters = {
   country: '',
@@ -105,7 +107,7 @@ function multiplyDecimal(value: string, multiplier: number): string {
 
 export function TravelCalendar() {
   const store = useTravelStore();
-  const [section, setSection] = useState<'itinerary' | 'finance' | 'luggage' | 'documents'>('itinerary');
+  const [section, setSection] = useState<'itinerary' | 'currency' | 'finance' | 'luggage' | 'documents'>('itinerary');
   const [view, setView] = useState<CalendarView>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
@@ -375,7 +377,7 @@ export function TravelCalendar() {
           </div>
         </div>
 
-        <nav className="grid grid-cols-5 gap-1 rounded-2xl border border-border bg-card p-1.5 shadow-sm" aria-label="Secciones del viaje y perfil personal">
+        <nav className="grid grid-cols-3 gap-1 rounded-2xl border border-border bg-card p-1.5 shadow-sm sm:grid-cols-6" aria-label="Secciones del viaje y perfil personal">
           <button
             type="button"
             onClick={() => setSection('itinerary')}
@@ -388,6 +390,19 @@ export function TravelCalendar() {
           >
             <CalendarDays className="size-4" />
             Itinerario
+          </button>
+          <button
+            type="button"
+            onClick={() => setSection('currency')}
+            className={cn(
+              'flex h-11 items-center justify-center gap-2 rounded-xl px-2 text-sm font-semibold transition-all',
+              section === 'currency'
+                ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-sm'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            )}
+          >
+            <BadgeDollarSign className="size-4" />
+            Divisas
           </button>
           <button type="button" onClick={() => setSection('finance')} className={cn('flex h-11 items-center justify-center gap-2 rounded-xl px-2 text-sm font-semibold transition-all',section === 'finance'?'bg-foreground text-background shadow-sm':'text-muted-foreground hover:bg-muted hover:text-foreground')}>
             <WalletCards className="size-4"/><span className="hidden sm:inline">Finanzas</span><span className="sm:hidden">Gastos</span>
@@ -427,7 +442,7 @@ export function TravelCalendar() {
 
         {section === 'itinerary' && (
           <>
-            <QuickCurrencyConverter />
+            <QuickCurrencyConverter onExpand={() => setSection('currency')} />
 
             {/* Trip summary */}
             <TripSummary activities={store.activities} />
@@ -475,7 +490,9 @@ export function TravelCalendar() {
 
       {/* Main content */}
       <main>
-        {section === 'documents' ? (
+        {section === 'currency' ? (
+          <CurrencySection />
+        ) : section === 'documents' ? (
           <TripDocumentsSection
             tripId={store.currentTrip.id}
             tripTitle={store.currentTrip.title}

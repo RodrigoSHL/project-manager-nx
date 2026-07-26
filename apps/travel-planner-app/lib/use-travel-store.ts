@@ -199,18 +199,25 @@ export function useTravelStore() {
   const deleteActivity = useCallback(
     async (id: string) => {
       if (!tripId) return;
-      setStore((prev) => {
-        const activity = prev.activities.find((a) => a.id === id);
-        const newActivities = prev.activities.filter((a) => a.id !== id);
-        const newTravelDays = activity
-          ? syncTravelDay(newActivities, activity.date, prev.travelDays)
-          : prev.travelDays;
-        return { activities: newActivities, travelDays: newTravelDays };
-      });
       try {
         await apiDeleteActivity(tripId, id);
+        setStore((prev) => {
+          const activity = prev.activities.find((a) => a.id === id);
+          const newActivities = prev.activities.filter((a) => a.id !== id);
+          const newTravelDays = activity
+            ? syncTravelDay(newActivities, activity.date, prev.travelDays)
+            : prev.travelDays;
+          return { activities: newActivities, travelDays: newTravelDays };
+        });
+        setError(null);
       } catch (err) {
         console.error('Error eliminando actividad:', err);
+        const message =
+          err instanceof Error
+            ? err.message
+            : 'No se pudo eliminar la actividad.';
+        setError(message);
+        throw err;
       }
     },
     [tripId]

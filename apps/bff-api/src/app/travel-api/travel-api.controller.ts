@@ -228,6 +228,7 @@ export class TravelApiController {
   // ── Finance ──────────────────────────────────────────────────────────────
   @Get(':tripId/finance/budget') financeBudget(@Request() req:ExpressRequestWithUser,@Param('tripId') tripId:string){ return this.client.financeGet(tripId,'budget',req.user); }
   @Put(':tripId/finance/budget') saveFinanceBudget(@Request() req:ExpressRequestWithUser,@Param('tripId') tripId:string,@Body() dto:Record<string,unknown>){ return this.client.financePut(tripId,'budget',dto,req.user); }
+  @Delete(':tripId/finance/budget') @HttpCode(HttpStatus.NO_CONTENT) deleteFinanceBudget(@Request() req:ExpressRequestWithUser,@Param('tripId') tripId:string){ return this.client.financeDelete(tripId,'budget',req.user); }
   @Get(':tripId/finance/expenses') financeExpenses(@Request() req:ExpressRequestWithUser,@Param('tripId') tripId:string,@Query() query:Record<string,unknown>){ return this.client.financeGet(tripId,'expenses',req.user,query); }
   @Post(':tripId/finance/expenses') createFinanceExpense(@Request() req:ExpressRequestWithUser,@Param('tripId') tripId:string,@Body() dto:Record<string,unknown>){ return this.client.financePost(tripId,'expenses',dto,req.user); }
   @Patch(':tripId/finance/expenses/:id') updateFinanceExpense(@Request() req:ExpressRequestWithUser,@Param('tripId') tripId:string,@Param('id') id:string,@Body() dto:Record<string,unknown>){ return this.client.financePatch(tripId,`expenses/${id}`,dto,req.user); }

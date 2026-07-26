@@ -11,8 +11,9 @@ Planner API → PostgreSQL. No incorpora otro servicio ni una fuente externa obl
 - Las divisiones se persisten en `expense_splits`; no se reconstruyen desde el gasto.
 - Una liquidación es un registro separado y nunca modifica el costo del viaje.
 - Los gastos usan borrado lógico. Las liquidaciones se anulan con usuario y fecha.
-- Una actividad admite costo planificado y como máximo un gasto real vinculado. La
-  restricción única en `expenses.activityId` evita contabilizarla dos veces.
+- Una actividad admite costo planificado y como máximo un gasto activo vinculado.
+  Un índice único parcial en `expenses.activityId` evita contabilizarla dos veces
+  sin impedir que un gasto eliminado lógicamente sea reemplazado.
 - El formulario de actividad permite opcionalmente crear ese gasto al guardar. El
   usuario elige categoría, pagador, participantes y tasa manual cuando la moneda es
   distinta de la moneda base. Los precios por persona se multiplican por la cantidad
@@ -20,6 +21,11 @@ Planner API → PostgreSQL. No incorpora otro servicio ni una fuente externa obl
 - El propietario administra todos los gastos. Un editor crea gastos y modifica o
   elimina los que creó. Los viewers solo consultan. La API verifica que pagadores,
   participantes y actividades pertenezcan al viaje.
+- El presupuesto disponible descuenta tanto gastos efectivos como estimados. El
+  resumen mantiene separados `totalSpent`, `totalPlanned` y `totalCommitted`.
+- Cambiar la moneda del presupuesto actualiza la moneda base y reconvierte
+  transaccionalmente los gastos activos solo cuando todos ya están expresados
+  originalmente en la nueva moneda y no existen liquidaciones publicadas.
 
 ## Migración
 
@@ -28,6 +34,11 @@ financieros opcionales de `activities` y las tablas `trip_budgets`, `expenses`,
 `expense_splits`, `settlements` y `exchange_rates`, con claves, checks e índices.
 Es compatible con viajes y actividades existentes porque los campos nuevos de
 actividad son opcionales y la moneda base tiene `USD` como valor inicial.
+
+`1785067300000-FixActiveActivityExpenseLink.ts` sustituye la restricción global
+de `expenses.activityId` por un índice único parcial aplicable solo a gastos
+activos. Así se conserva el vínculo histórico durante el borrado lógico y se
+permite crear un nuevo gasto para la actividad.
 
 En producción, `travel-planner-api` ya usa `TRAVEL_MIGRATIONS_RUN=true` y
 `TYPEORM_SYNCHRONIZE=false`; la migración se ejecuta al iniciar el servicio. Antes de
@@ -39,7 +50,7 @@ No se realizó despliegue ni se modificó una base remota como parte de este cam
 Todas las rutas requieren JWT en el BFF y se publican bajo
 `/api/trips/:tripId/finance`:
 
-- `GET|PUT /budget`
+- `GET|PUT|DELETE /budget`
 - `GET|POST /expenses`
 - `PATCH|DELETE /expenses/:id`
 - `POST /expenses/:id/duplicate`

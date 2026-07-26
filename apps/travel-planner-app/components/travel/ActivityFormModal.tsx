@@ -26,7 +26,7 @@ interface Props {
   open: boolean
   onClose: () => void
   onSave: (activity: Activity, finance: ActivityExpenseDraft) => Promise<Activity>
-  onDelete?: (id: string) => void
+  onDelete?: (id: string) => Promise<void>
   initialDate?: string
   activity?: Activity | null
   people: Array<{ id: string; label: string }>
@@ -175,6 +175,21 @@ export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate
     }
   }
 
+  async function handleDelete() {
+    if (!activity || !onDelete) return
+    if (!window.confirm(`¿Eliminar “${activity.title}”?`)) return
+    try {
+      setSaving(true)
+      setSubmitError('')
+      await onDelete(activity.id)
+      onClose()
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'No se pudo eliminar la actividad.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   function setField<K extends keyof typeof form>(key: K, value: typeof form[K]) {
     setForm(prev => ({ ...prev, [key]: value }))
   }
@@ -208,7 +223,8 @@ export function ActivityFormModal({ open, onClose, onSave, onDelete, initialDate
             {activity && onDelete && (
               <button
                 type="button"
-                onClick={() => { onDelete(activity.id); onClose() }}
+                onClick={handleDelete}
+                disabled={saving}
                 className="p-1.5 rounded-lg text-muted-foreground hover:bg-red-50 hover:text-red-600 transition-colors"
                 aria-label="Eliminar actividad"
               >

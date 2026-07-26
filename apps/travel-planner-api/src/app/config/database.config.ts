@@ -21,6 +21,7 @@ import { TripDocument, TripDocumentChecklist } from '../traveler-profile/entitie
 import { CreateTravelerProfile1784593000000 } from '../../migrations/1784593000000-CreateTravelerProfile';
 import { CurrencyPreference } from '../currency/entities/currency-preference.entity';
 import { CreateCurrencyPreferences1785067200000 } from '../../migrations/1785067200000-CreateCurrencyPreferences';
+import { FixActiveActivityExpenseLink1785067300000 } from '../../migrations/1785067300000-FixActiveActivityExpenseLink';
 
 export const databaseConfig: TypeOrmModuleOptions = {
   type: 'postgres',
@@ -36,6 +37,7 @@ export const databaseConfig: TypeOrmModuleOptions = {
     CreateTripFinance1784332900000,
     CreateTravelerProfile1784593000000,
     CreateCurrencyPreferences1785067200000,
+    FixActiveActivityExpenseLink1785067300000,
   ],
   migrationsRun: process.env.TRAVEL_MIGRATIONS_RUN === 'true',
   synchronize: process.env.TYPEORM_SYNCHRONIZE

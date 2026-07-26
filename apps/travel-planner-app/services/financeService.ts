@@ -6,6 +6,7 @@ function init(method?:string,body?:unknown):RequestInit{return {method,credentia
 export async function getFinanceSummary(tripId:string){return response<FinanceSummary>(await fetch(`${base}/${tripId}/finance/summary`,init()));}
 export async function getBudget(tripId:string){return response<Budget>(await fetch(`${base}/${tripId}/finance/budget`,init()));}
 export async function saveBudget(tripId:string,data:{amount:string;currency:string;alertThresholds:number[]}){return response<Budget>(await fetch(`${base}/${tripId}/finance/budget`,init('PUT',data)));}
+export async function deleteBudget(tripId:string){return response<void>(await fetch(`${base}/${tripId}/finance/budget`,init('DELETE')));}
 export async function getExpenses(tripId:string,params:URLSearchParams){return response<{items:Expense[];total:number;page:number;limit:number}>(await fetch(`${base}/${tripId}/finance/expenses?${params}`,init()));}
 export async function createExpense(tripId:string,data:ExpenseInput){return response<Expense>(await fetch(`${base}/${tripId}/finance/expenses`,init('POST',data)));}
 export async function updateExpense(tripId:string,id:string,data:ExpenseInput){return response<Expense>(await fetch(`${base}/${tripId}/finance/expenses/${id}`,init('PATCH',data)));}

@@ -32,6 +32,7 @@ import {
 import { es } from 'date-fns/locale';
 import {
   CalendarDays,
+  AlertTriangle,
   BadgeDollarSign,
   ClipboardCheck,
   ChevronDown,
@@ -118,6 +119,7 @@ export function TravelCalendar() {
   const [travelDayModalDate, setTravelDayModalDate] = useState<string>('');
   const [shareOpen, setShareOpen] = useState(false);
   const [participantNames, setParticipantNames] = useState<Record<string, string>>({})
+  const [activityActionError, setActivityActionError] = useState('')
   const pendingFinancialActivity = useRef<Activity | null>(null)
 
   const access = useMemo(() => {
@@ -213,6 +215,20 @@ export function TravelCalendar() {
     })
     pendingFinancialActivity.current = null
     return saved
+  }
+
+  async function handleDeleteActivity(activityId: string) {
+    if (!window.confirm('¿Eliminar esta actividad?')) return
+    try {
+      setActivityActionError('')
+      await store.deleteActivity(activityId)
+    } catch (error) {
+      setActivityActionError(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo eliminar la actividad.'
+      )
+    }
   }
 
   function handleSelectDay(date: string) {
@@ -488,6 +504,13 @@ export function TravelCalendar() {
         )}
       </header>
 
+      {activityActionError && (
+        <div className="flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          <span>{activityActionError}</span>
+        </div>
+      )}
+
       {/* Main content */}
       <main>
         {section === 'currency' ? (
@@ -523,7 +546,7 @@ export function TravelCalendar() {
             travelDays={store.travelDays}
             onAddActivity={openNewActivity}
             onEditActivity={openEditActivity}
-            onDeleteActivity={store.deleteActivity}
+            onDeleteActivity={handleDeleteActivity}
             onDuplicateActivity={store.duplicateActivity}
             canEdit={canEdit}
           />
@@ -534,7 +557,7 @@ export function TravelCalendar() {
             travelDays={store.travelDays}
             onAddActivity={openNewActivity}
             onEditActivity={openEditActivity}
-            onDeleteActivity={store.deleteActivity}
+            onDeleteActivity={handleDeleteActivity}
             onDuplicateActivity={store.duplicateActivity}
             canEdit={canEdit}
           />
@@ -545,7 +568,7 @@ export function TravelCalendar() {
             filters={filters}
             onAddActivity={openNewActivity}
             onEditActivity={openEditActivity}
-            onDeleteActivity={store.deleteActivity}
+            onDeleteActivity={handleDeleteActivity}
             onDuplicateActivity={store.duplicateActivity}
             canEdit={canEdit}
           />

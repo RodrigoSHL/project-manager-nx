@@ -53,6 +53,7 @@ import { cn } from '@/lib/utils';
 import { clearToken } from '@/lib/auth';
 import { createExpense as createFinanceExpense } from '@/services/financeService';
 import { getUserProfile } from '@/services/tripService';
+import { QuickCurrencyConverter } from '../currency/QuickCurrencyConverter';
 
 const EMPTY_FILTERS: Filters = {
   country: '',
@@ -426,6 +427,8 @@ export function TravelCalendar() {
 
         {section === 'itinerary' && (
           <>
+            <QuickCurrencyConverter />
+
             {/* Trip summary */}
             <TripSummary activities={store.activities} />
 

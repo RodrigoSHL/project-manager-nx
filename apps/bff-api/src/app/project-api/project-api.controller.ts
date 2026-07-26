@@ -1,35 +1,64 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { ExpressRequestWithUser } from '../auth/types/express-request-with-user';
 import { UserRole } from '../user-api/user-api.client';
-import { CreateProjectDto } from './dto/create-project.dto';
 import { CommentBodyDto } from './dto/comment-body.dto';
+import { CreateProjectDto } from './dto/create-project.dto';
+import { ProjectAccessService } from './project-access.service';
 import { ProjectApiClient } from './project-api.client';
 
 @Controller('api/projects')
+@UseGuards(JwtAuthGuard)
 export class ProjectApiController {
-  constructor(private readonly projectApiClient: ProjectApiClient) {}
+  constructor(
+    private readonly projectApiClient: ProjectApiClient,
+    private readonly projectAccessService: ProjectAccessService,
+  ) {}
 
   @Get()
-  findAll(@Query('workspaceId') workspaceId?: string) {
-    return this.projectApiClient.findAll(workspaceId);
+  findAll(
+    @Request() req: ExpressRequestWithUser,
+    @Query('workspaceId') workspaceId?: string,
+  ) {
+    return this.projectAccessService.findAccessibleProjects(req.user, workspaceId);
   }
 
   @Get('stats')
-  getStats() {
-    return this.projectApiClient.getProjectStats();
+  getStats(@Request() req: ExpressRequestWithUser) {
+    return this.projectAccessService.getAccessibleStats(req.user);
   }
 
   @Get('status/:status')
-  findByStatus(@Param('status') status: string) {
-    return this.projectApiClient.findByStatus(status);
+  async findByStatus(
+    @Param('status') status: string,
+    @Request() req: ExpressRequestWithUser,
+  ) {
+    const projects = await this.projectApiClient.findByStatus(status);
+    return this.projectAccessService.filterAccessibleProjects(projects, req.user);
   }
 
   @Get('business-unit/:businessUnit')
-  findByBusinessUnit(@Param('businessUnit') businessUnit: string) {
-    return this.projectApiClient.findByBusinessUnit(businessUnit);
+  async findByBusinessUnit(
+    @Param('businessUnit') businessUnit: string,
+    @Request() req: ExpressRequestWithUser,
+  ) {
+    const projects = await this.projectApiClient.findByBusinessUnit(businessUnit);
+    return this.projectAccessService.filterAccessibleProjects(projects, req.user);
   }
 
   @Get('technologies')
@@ -38,17 +67,38 @@ export class ProjectApiController {
   }
 
   @Post(':projectId/sprints')
-  createSprint(@Param('projectId') projectId: string, @Body() dto: Record<string, unknown>) {
-    return this.projectApiClient.forwardJsonRequest('POST', `/projects/${encodeURIComponent(projectId)}/sprints`, dto);
+  async createSprint(
+    @Param('projectId') projectId: string,
+    @Body() dto: Record<string, unknown>,
+    @Request() req: ExpressRequestWithUser,
+  ) {
+    await this.projectAccessService.assertProjectAccess(projectId, req.user);
+    return this.projectApiClient.forwardJsonRequest(
+      'POST',
+      `/projects/${encodeURIComponent(projectId)}/sprints`,
+      dto,
+    );
   }
 
   @Get(':projectId/sprints')
-  findSprints(@Param('projectId') projectId: string) {
-    return this.projectApiClient.forwardJsonRequest('GET', `/projects/${encodeURIComponent(projectId)}/sprints`);
+  async findSprints(
+    @Param('projectId') projectId: string,
+    @Request() req: ExpressRequestWithUser,
+  ) {
+    await this.projectAccessService.assertProjectAccess(projectId, req.user);
+    return this.projectApiClient.forwardJsonRequest(
+      'GET',
+      `/projects/${encodeURIComponent(projectId)}/sprints`,
+    );
   }
 
   @Get(':projectId/sprints/:sprintId')
-  findSprint(@Param('projectId') projectId: string, @Param('sprintId') sprintId: string) {
+  async findSprint(
+    @Param('projectId') projectId: string,
+    @Param('sprintId') sprintId: string,
+    @Request() req: ExpressRequestWithUser,
+  ) {
+    await this.projectAccessService.assertProjectAccess(projectId, req.user);
     return this.projectApiClient.forwardJsonRequest(
       'GET',
       `/projects/${encodeURIComponent(projectId)}/sprints/${encodeURIComponent(sprintId)}`,
@@ -56,11 +106,13 @@ export class ProjectApiController {
   }
 
   @Patch(':projectId/sprints/:sprintId')
-  updateSprint(
+  async updateSprint(
     @Param('projectId') projectId: string,
     @Param('sprintId') sprintId: string,
     @Body() dto: Record<string, unknown>,
+    @Request() req: ExpressRequestWithUser,
   ) {
+    await this.projectAccessService.assertProjectAccess(projectId, req.user);
     return this.projectApiClient.forwardJsonRequest(
       'PATCH',
       `/projects/${encodeURIComponent(projectId)}/sprints/${encodeURIComponent(sprintId)}`,
@@ -69,7 +121,12 @@ export class ProjectApiController {
   }
 
   @Patch(':projectId/sprints/:sprintId/activate')
-  activateSprint(@Param('projectId') projectId: string, @Param('sprintId') sprintId: string) {
+  async activateSprint(
+    @Param('projectId') projectId: string,
+    @Param('sprintId') sprintId: string,
+    @Request() req: ExpressRequestWithUser,
+  ) {
+    await this.projectAccessService.assertProjectAccess(projectId, req.user);
     return this.projectApiClient.forwardJsonRequest(
       'PATCH',
       `/projects/${encodeURIComponent(projectId)}/sprints/${encodeURIComponent(sprintId)}/activate`,
@@ -77,7 +134,12 @@ export class ProjectApiController {
   }
 
   @Delete(':projectId/sprints/:sprintId')
-  removeSprint(@Param('projectId') projectId: string, @Param('sprintId') sprintId: string) {
+  async removeSprint(
+    @Param('projectId') projectId: string,
+    @Param('sprintId') sprintId: string,
+    @Request() req: ExpressRequestWithUser,
+  ) {
+    await this.projectAccessService.assertProjectAccess(projectId, req.user);
     return this.projectApiClient.forwardJsonRequest(
       'DELETE',
       `/projects/${encodeURIComponent(projectId)}/sprints/${encodeURIComponent(sprintId)}`,
@@ -85,17 +147,38 @@ export class ProjectApiController {
   }
 
   @Post(':projectId/tickets')
-  createTicket(@Param('projectId') projectId: string, @Body() dto: Record<string, unknown>) {
-    return this.projectApiClient.forwardJsonRequest('POST', `/projects/${encodeURIComponent(projectId)}/tickets`, dto);
+  async createTicket(
+    @Param('projectId') projectId: string,
+    @Body() dto: Record<string, unknown>,
+    @Request() req: ExpressRequestWithUser,
+  ) {
+    await this.projectAccessService.assertProjectAccess(projectId, req.user);
+    return this.projectApiClient.forwardJsonRequest(
+      'POST',
+      `/projects/${encodeURIComponent(projectId)}/tickets`,
+      dto,
+    );
   }
 
   @Get(':projectId/tickets')
-  findTickets(@Param('projectId') projectId: string) {
-    return this.projectApiClient.forwardJsonRequest('GET', `/projects/${encodeURIComponent(projectId)}/tickets`);
+  async findTickets(
+    @Param('projectId') projectId: string,
+    @Request() req: ExpressRequestWithUser,
+  ) {
+    await this.projectAccessService.assertProjectAccess(projectId, req.user);
+    return this.projectApiClient.forwardJsonRequest(
+      'GET',
+      `/projects/${encodeURIComponent(projectId)}/tickets`,
+    );
   }
 
   @Get(':projectId/tickets/:ticketId')
-  findTicket(@Param('projectId') projectId: string, @Param('ticketId') ticketId: string) {
+  async findTicket(
+    @Param('projectId') projectId: string,
+    @Param('ticketId') ticketId: string,
+    @Request() req: ExpressRequestWithUser,
+  ) {
+    await this.projectAccessService.assertProjectAccess(projectId, req.user);
     return this.projectApiClient.forwardJsonRequest(
       'GET',
       `/projects/${encodeURIComponent(projectId)}/tickets/${encodeURIComponent(ticketId)}`,
@@ -103,11 +186,13 @@ export class ProjectApiController {
   }
 
   @Patch(':projectId/tickets/:ticketId')
-  updateTicket(
+  async updateTicket(
     @Param('projectId') projectId: string,
     @Param('ticketId') ticketId: string,
     @Body() dto: Record<string, unknown>,
+    @Request() req: ExpressRequestWithUser,
   ) {
+    await this.projectAccessService.assertProjectAccess(projectId, req.user);
     return this.projectApiClient.forwardJsonRequest(
       'PATCH',
       `/projects/${encodeURIComponent(projectId)}/tickets/${encodeURIComponent(ticketId)}`,
@@ -116,7 +201,12 @@ export class ProjectApiController {
   }
 
   @Delete(':projectId/tickets/:ticketId')
-  removeTicket(@Param('projectId') projectId: string, @Param('ticketId') ticketId: string) {
+  async removeTicket(
+    @Param('projectId') projectId: string,
+    @Param('ticketId') ticketId: string,
+    @Request() req: ExpressRequestWithUser,
+  ) {
+    await this.projectAccessService.assertProjectAccess(projectId, req.user);
     return this.projectApiClient.forwardJsonRequest(
       'DELETE',
       `/projects/${encodeURIComponent(projectId)}/tickets/${encodeURIComponent(ticketId)}`,
@@ -124,35 +214,41 @@ export class ProjectApiController {
   }
 
   @Get(':projectId/tickets/:ticketId/comments')
-  @UseGuards(JwtAuthGuard)
-  findTicketComments(
+  async findTicketComments(
     @Param('projectId') projectId: string,
     @Param('ticketId') ticketId: string,
+    @Request() req: ExpressRequestWithUser,
   ) {
+    await this.projectAccessService.assertProjectAccess(projectId, req.user);
     return this.projectApiClient.findTicketComments(projectId, ticketId);
   }
 
   @Post(':projectId/tickets/:ticketId/comments')
   @HttpCode(HttpStatus.CREATED)
-  @UseGuards(JwtAuthGuard)
-  createTicketComment(
+  async createTicketComment(
     @Param('projectId') projectId: string,
     @Param('ticketId') ticketId: string,
     @Body() dto: CommentBodyDto,
     @Request() req: ExpressRequestWithUser,
   ) {
-    return this.projectApiClient.createTicketComment(projectId, ticketId, dto.body.trim(), req.user);
+    await this.projectAccessService.assertProjectAccess(projectId, req.user);
+    return this.projectApiClient.createTicketComment(
+      projectId,
+      ticketId,
+      dto.body.trim(),
+      req.user,
+    );
   }
 
   @Patch(':projectId/tickets/:ticketId/comments/:commentId')
-  @UseGuards(JwtAuthGuard)
-  updateTicketComment(
+  async updateTicketComment(
     @Param('projectId') projectId: string,
     @Param('ticketId') ticketId: string,
     @Param('commentId') commentId: string,
     @Body() dto: CommentBodyDto,
     @Request() req: ExpressRequestWithUser,
   ) {
+    await this.projectAccessService.assertProjectAccess(projectId, req.user);
     return this.projectApiClient.updateTicketComment(
       projectId,
       ticketId,
@@ -164,24 +260,29 @@ export class ProjectApiController {
 
   @Delete(':projectId/tickets/:ticketId/comments/:commentId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @UseGuards(JwtAuthGuard)
-  deleteTicketComment(
+  async deleteTicketComment(
     @Param('projectId') projectId: string,
     @Param('ticketId') ticketId: string,
     @Param('commentId') commentId: string,
     @Request() req: ExpressRequestWithUser,
   ) {
-    return this.projectApiClient.deleteTicketComment(projectId, ticketId, commentId, req.user);
+    await this.projectAccessService.assertProjectAccess(projectId, req.user);
+    return this.projectApiClient.deleteTicketComment(
+      projectId,
+      ticketId,
+      commentId,
+      req.user,
+    );
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.projectApiClient.findOne(id);
+  findOne(@Param('id') id: string, @Request() req: ExpressRequestWithUser) {
+    return this.projectAccessService.findAccessibleProject(id, req.user);
   }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
   create(@Body() dto: CreateProjectDto, @Request() req: ExpressRequestWithUser) {
     return this.projectApiClient.createProject(dto, req.user);
@@ -189,29 +290,37 @@ export class ProjectApiController {
 
   @Post('seed')
   @HttpCode(HttpStatus.CREATED)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
   runSeed(@Request() req: ExpressRequestWithUser) {
     return this.projectApiClient.runSeed(req.user);
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  update(@Param('id') id: string, @Body() dto: Record<string, unknown>, @Request() req: ExpressRequestWithUser) {
+  update(
+    @Param('id') id: string,
+    @Body() dto: Record<string, unknown>,
+    @Request() req: ExpressRequestWithUser,
+  ) {
     return this.projectApiClient.updateProject(id, dto, req.user);
   }
 
   @Patch(':id/granular')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  granularUpdate(@Param('id') id: string, @Body() dto: Record<string, unknown>, @Request() req: ExpressRequestWithUser) {
+  granularUpdate(
+    @Param('id') id: string,
+    @Body() dto: Record<string, unknown>,
+    @Request() req: ExpressRequestWithUser,
+  ) {
     return this.projectApiClient.granularUpdateProject(id, dto, req.user);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
   remove(@Param('id') id: string, @Request() req: ExpressRequestWithUser) {
     return this.projectApiClient.deleteProject(id, req.user);

@@ -4,25 +4,38 @@ import { CreateProjectDto } from './dto/create-project.dto';
 
 type ProjectBody = Record<string, unknown>;
 
+export interface ProjectApiTeamMember {
+  userId?: string | null;
+}
+
+export interface ProjectApiProject extends Record<string, unknown> {
+  id: string;
+  workspaceId?: string | null;
+  teamMembers?: ProjectApiTeamMember[];
+  status?: string;
+  priority?: string;
+  businessUnit?: string;
+}
+
 @Injectable()
 export class ProjectApiClient {
   private readonly baseUrl = this.resolveBaseUrl();
 
-  async findAll(workspaceId?: string) {
+  async findAll(workspaceId?: string): Promise<ProjectApiProject[]> {
     const query = workspaceId ? `?workspaceId=${encodeURIComponent(workspaceId)}` : '';
-    return this.get(`/projects${query}`);
+    return this.get<ProjectApiProject[]>(`/projects${query}`);
   }
 
   async getProjectStats() {
     return this.get('/projects/stats');
   }
 
-  async findByStatus(status: string) {
-    return this.get(`/projects/status/${encodeURIComponent(status)}`);
+  async findByStatus(status: string): Promise<ProjectApiProject[]> {
+    return this.get<ProjectApiProject[]>(`/projects/status/${encodeURIComponent(status)}`);
   }
 
-  async findByBusinessUnit(businessUnit: string) {
-    return this.get(`/projects/business-unit/${encodeURIComponent(businessUnit)}`);
+  async findByBusinessUnit(businessUnit: string): Promise<ProjectApiProject[]> {
+    return this.get<ProjectApiProject[]>(`/projects/business-unit/${encodeURIComponent(businessUnit)}`);
   }
 
   async findAllTechnologies() {
@@ -47,8 +60,8 @@ export class ProjectApiClient {
     return response.json();
   }
 
-  async findOne(id: string) {
-    return this.get(`/projects/${encodeURIComponent(id)}`);
+  async findOne(id: string): Promise<ProjectApiProject> {
+    return this.get<ProjectApiProject>(`/projects/${encodeURIComponent(id)}`);
   }
 
   async findTicketComments(projectId: string, ticketId: string) {
@@ -175,14 +188,14 @@ export class ProjectApiClient {
     return response.json();
   }
 
-  private async get(path: string) {
+  private async get<T = unknown>(path: string): Promise<T> {
     const response = await this.fetchProjectApi(path, { method: 'GET' });
 
     if (!response.ok) {
       throw new Error(`Project API request failed with status ${response.status}`);
     }
 
-    return response.json();
+    return response.json() as Promise<T>;
   }
 
   private authenticatedJsonHeaders(user: AuthenticatedUser): Record<string, string> {

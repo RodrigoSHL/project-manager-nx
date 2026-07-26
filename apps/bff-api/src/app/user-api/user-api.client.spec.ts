@@ -65,4 +65,15 @@ describe('UserApiClient user administration', () => {
       message: 'A user with this email already exists',
     });
   });
+
+  it('requests only workspaces linked to the authenticated user', async () => {
+    const workspaces = [{ id: 'workspace-1', name: 'Workspace 1', slug: 'workspace-1' }];
+    fetchMock.mockResolvedValue(new Response(JSON.stringify(workspaces), { status: 200 }));
+
+    await expect(client.findWorkspacesForUser('user/1')).resolves.toEqual(workspaces);
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://user-api.test/api/workspaces/for-user/user%2F1',
+      { method: 'GET' },
+    );
+  });
 });

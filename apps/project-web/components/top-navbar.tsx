@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Bell, Moon, Sun, Settings, LogOut, Shield } from "lucide-react"
+import { Bell, Moon, Sun, Settings, LogOut, Shield, UserRound } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/breadcrumb"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { useAuth } from "@/contexts/auth-context"
+import { isProjectAdmin } from "@/lib/auth"
 
 // Datos de ejemplo de notificaciones
 const notifications = [
@@ -68,6 +69,7 @@ export function TopNavbar() {
   const { theme, setTheme } = useTheme()
   const { user, logout } = useAuth()
   const [isNotificationsOpen, setIsNotificationsOpen] = React.useState(false)
+  const isAdmin = isProjectAdmin(user.roles)
 
   const unreadCount = notifications.filter((n) => !n.read).length
 
@@ -160,17 +162,21 @@ export function TopNavbar() {
                 <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
                 <div className="flex items-center gap-2 mt-2">
                   <Badge variant="secondary" className="text-xs">
-                    <Shield className="w-3 h-3 mr-1" />
-                    Administrador
+                    {isAdmin
+                      ? <Shield className="w-3 h-3 mr-1" />
+                      : <UserRound className="w-3 h-3 mr-1" />}
+                    {isAdmin ? "Administrador" : "Usuario"}
                   </Badge>
                 </div>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleSettings}>
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Configuración</span>
-            </DropdownMenuItem>
+            {isAdmin && (
+              <DropdownMenuItem onClick={handleSettings}>
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Configuración</span>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={logout} className="text-red-600 focus:text-red-600">
               <LogOut className="mr-2 h-4 w-4" />
               <span>Cerrar Sesión</span>

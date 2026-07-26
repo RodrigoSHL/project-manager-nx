@@ -25,6 +25,11 @@ export class WorkspacesController {
     return this.workspacesService.findAll();
   }
 
+  @Get('for-user/:userId')
+  findForUser(@Param('userId') userId: string) {
+    return this.workspacesService.findForUser(userId);
+  }
+
   @Get('slug/:slug')
   findBySlug(@Param('slug') slug: string) {
     return this.workspacesService.findBySlug(slug);

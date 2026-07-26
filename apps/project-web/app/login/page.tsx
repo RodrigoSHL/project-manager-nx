@@ -137,7 +137,7 @@ function LoginForm() {
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Bienvenido de vuelta</p>
             <h2 className="text-3xl font-bold tracking-tight">Inicia sesión</h2>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              Usa una cuenta con permisos de administrador.
+              Usa una cuenta habilitada para ProjectHub.
             </p>
           </div>
 
@@ -187,7 +187,7 @@ function LoginForm() {
           </form>
 
           <p className="mt-6 text-center text-xs leading-relaxed text-muted-foreground">
-            Las cuentas nuevas deben ser habilitadas como administradoras antes de acceder.
+            El acceso a workspaces y proyectos depende de las membresías asignadas a tu cuenta.
           </p>
         </section>
       </div>

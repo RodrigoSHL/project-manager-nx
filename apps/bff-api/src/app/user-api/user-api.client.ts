@@ -16,6 +16,13 @@ export interface UserApiUser {
   roles: UserRole[];
 }
 
+export interface UserApiWorkspace {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+}
+
 @Injectable()
 export class UserApiClient {
   private readonly baseUrl = this.resolveBaseUrl();
@@ -76,15 +83,19 @@ export class UserApiClient {
   }
 
   async findAllWorkspaces() {
-    return this.get('/workspaces');
+    return this.get<UserApiWorkspace[]>('/workspaces');
+  }
+
+  async findWorkspacesForUser(userId: string) {
+    return this.get<UserApiWorkspace[]>(`/workspaces/for-user/${encodeURIComponent(userId)}`);
   }
 
   async findWorkspaceBySlug(slug: string) {
-    return this.get(`/workspaces/slug/${encodeURIComponent(slug)}`);
+    return this.get<UserApiWorkspace>(`/workspaces/slug/${encodeURIComponent(slug)}`);
   }
 
   async findOneWorkspace(id: string) {
-    return this.get(`/workspaces/${encodeURIComponent(id)}`);
+    return this.get<UserApiWorkspace>(`/workspaces/${encodeURIComponent(id)}`);
   }
 
   async updateWorkspace(id: string, dto: JsonBody) {
@@ -115,14 +126,14 @@ export class UserApiClient {
     return this.remove(`/workspaces/${encodeURIComponent(workspaceId)}/members/${encodeURIComponent(userId)}`);
   }
 
-  private async get(path: string) {
+  private async get<T = unknown>(path: string): Promise<T> {
     const response = await this.fetchUserApi(path, { method: 'GET' });
 
     if (!response.ok) {
       throw new Error(`User API request failed with status ${response.status}`);
     }
 
-    return response.json();
+    return response.json() as Promise<T>;
   }
 
   private async write(path: string, method: 'POST' | 'PATCH', body: JsonBody) {

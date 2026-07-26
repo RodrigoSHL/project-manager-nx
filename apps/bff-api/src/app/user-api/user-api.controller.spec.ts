@@ -1,5 +1,6 @@
 import { UserApiClient, UserRole } from './user-api.client';
 import { UserApiController } from './user-api.controller';
+import { WorkspaceAccessService } from './workspace-access.service';
 
 describe('UserApiController user roles', () => {
   let client: { createUser: jest.Mock };
@@ -7,7 +8,10 @@ describe('UserApiController user roles', () => {
 
   beforeEach(() => {
     client = { createUser: jest.fn() };
-    controller = new UserApiController(client as unknown as UserApiClient);
+    controller = new UserApiController(
+      client as unknown as UserApiClient,
+      {} as WorkspaceAccessService,
+    );
   });
 
   it('uses the selected roles when an administrator creates a user', async () => {

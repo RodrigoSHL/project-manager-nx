@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 import { Workspace } from './entities/workspace.entity';
+import { WorkspaceMember } from '../workspace-members/entities/workspace-member.entity';
 
 @Injectable()
 export class WorkspacesService {
@@ -21,6 +22,15 @@ export class WorkspacesService {
 
   findAll(): Promise<Workspace[]> {
     return this.workspacesRepo.find({ order: { createdAt: 'DESC' } });
+  }
+
+  findForUser(userId: string): Promise<Workspace[]> {
+    return this.workspacesRepo
+      .createQueryBuilder('workspace')
+      .innerJoin(WorkspaceMember, 'member', 'member.workspaceId = workspace.id')
+      .where('member.userId = :userId', { userId })
+      .orderBy('workspace.createdAt', 'DESC')
+      .getMany();
   }
 
   async findOne(id: string): Promise<Workspace> {

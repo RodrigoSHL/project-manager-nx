@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
@@ -24,6 +23,7 @@ import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { createTicket } from '@/services/ticketService'
 import { updateSupportDetail } from '@/services/supportDetailService'
+import { getTeamMemberAssigneeId } from '@/lib/team-members'
 import type { ApiTicket, ApiTeamMember } from '@/types/project'
 
 interface CreateSupportDialogProps {
@@ -191,7 +191,7 @@ export function CreateSupportDialog({
                     <SelectContent>
                       <SelectItem value="none">Sin asignar</SelectItem>
                       {teamMembers.map(m => (
-                        <SelectItem key={m.id} value={m.userId ?? m.id}>
+                        <SelectItem key={m.id} value={getTeamMemberAssigneeId(m)}>
                           {m.name}
                         </SelectItem>
                       ))}

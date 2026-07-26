@@ -22,7 +22,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import type { ApiProject, ApiSprint } from '@/types/project'
+import { getTeamMemberAssigneeId } from '@/lib/team-members'
+import type { ApiProject, ApiSprint, ApiTeamMember } from '@/types/project'
 import { useAuth } from '@/contexts/auth-context'
 
 interface TopBarProps {
@@ -35,6 +36,7 @@ interface TopBarProps {
   onSearchChange: (query: string) => void
   projects?: ApiProject[]
   activeSprint?: ApiSprint | null
+  teamMembers?: ApiTeamMember[]
   filters: {
     assignee: string
     status: string
@@ -55,6 +57,7 @@ export function TopBar({
   onFilterChange,
   projects = [],
   activeSprint = null,
+  teamMembers = [],
 }: TopBarProps) {
   const { theme, setTheme } = useTheme()
   const { user, logout } = useAuth()
@@ -142,6 +145,12 @@ export function TopBar({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="unassigned">Sin asignar</SelectItem>
+              {teamMembers.map(member => (
+                <SelectItem key={member.id} value={getTeamMemberAssigneeId(member)}>
+                  {member.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 

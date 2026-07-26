@@ -68,6 +68,7 @@ export interface ApiTeamMember {
   userId: string | null
   avatar?: string
   projectId: string
+  isActive?: boolean
 }
 
 export interface ApiSupportDetail {

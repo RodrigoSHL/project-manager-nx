@@ -50,7 +50,10 @@ export class ProjectApiClient {
     });
 
     if (!response.ok) {
-      throw new Error(`Project API request failed with status ${response.status}`);
+      const errorBody = await response.json().catch(() => ({
+        message: `Project API request failed with status ${response.status}`,
+      }));
+      throw new HttpException(errorBody, response.status);
     }
 
     if (response.status === 204 || method === 'DELETE') {

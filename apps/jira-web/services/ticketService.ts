@@ -4,7 +4,11 @@ import { authenticatedFetch } from '@/lib/api'
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? '/api'
 
 async function handleResponse<T>(res: Response): Promise<T> {
-  if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`)
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ message: res.statusText }))
+    const message = Array.isArray(body.message) ? body.message[0] : body.message
+    throw new Error(message ?? `HTTP error! status: ${res.status}`)
+  }
   return res.json()
 }
 

@@ -32,7 +32,7 @@ export class CreateTicketDto {
 
   @IsUUID()
   @IsOptional()
-  assigneeId?: string;
+  assigneeId?: string | null;
 
   @IsUUID()
   @IsOptional()

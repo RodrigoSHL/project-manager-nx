@@ -37,6 +37,10 @@ import {
 } from '@/components/ui/tooltip'
 import { getSupportDetail, updateSupportDetail } from '@/services/supportDetailService'
 import { updateTicket } from '@/services/ticketService'
+import {
+  findTeamMemberByAssigneeId,
+  getTeamMemberAssigneeId,
+} from '@/lib/team-members'
 import { ValorizarDialog } from '@/components/valorizar-dialog'
 import type { ApiTicket, ApiTeamMember, ApiSupportDetail } from '@/types/project'
 
@@ -73,13 +77,17 @@ function getSlaState(slaDeadline: string | null, resolved: boolean): SlaState {
 }
 
 function SlaIndicator({ slaDeadline, resolved }: { slaDeadline: string | null; resolved: boolean }) {
+  if (!slaDeadline) {
+    return <span className="text-xs text-muted-foreground/50">—</span>
+  }
+
   const state = getSlaState(slaDeadline, resolved)
 
   if (state === 'none') {
     return <span className="text-xs text-muted-foreground/50">—</span>
   }
 
-  const fmt = new Date(slaDeadline!).toLocaleDateString('es-ES', {
+  const fmt = new Date(slaDeadline).toLocaleDateString('es-ES', {
     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
   })
 
@@ -119,7 +127,6 @@ interface SupportDetailSheetProps {
 }
 
 function SupportDetailSheet({ ticket, open, onClose, projectId, teamMembers, onUpdated }: SupportDetailSheetProps) {
-  const [detail, setDetail]             = React.useState<ApiSupportDetail | null>(null)
   const [loadingDetail, setLoadingDetail] = React.useState(false)
 
   // — Ticket editable state
@@ -149,17 +156,16 @@ function SupportDetailSheet({ ticket, open, onClose, projectId, teamMembers, onU
     setPriority(ticket.priority)
     setTitle(ticket.title)
     setDesc(ticket.description ?? '')
-    setAssigneeId(ticket.assigneeId ?? 'none')
-  }, [ticket])
+    const member = findTeamMemberByAssigneeId(teamMembers, ticket.assigneeId)
+    setAssigneeId(member ? getTeamMemberAssigneeId(member) : 'none')
+  }, [ticket, teamMembers])
 
   // Load support detail when sheet opens
   React.useEffect(() => {
     if (!open || !ticket) return
-    setDetail(null)
     setLoadingDetail(true)
     getSupportDetail(projectId, ticket.id)
       .then(d => {
-        setDetail(d)
         setClientContact(d.clientContact ?? '')
         setUfValue(d.ufValue != null ? String(d.ufValue) : '')
         setIsBillable(d.isBillable)
@@ -169,7 +175,7 @@ function SupportDetailSheet({ ticket, open, onClose, projectId, teamMembers, onU
         setResolvedAt(d.resolvedAt ? d.resolvedAt.slice(0, 16) : '')
         setNotes(d.notes ?? '')
       })
-      .catch(() => setDetail(null))
+      .catch(() => undefined)
       .finally(() => setLoadingDetail(false))
   }, [open, ticket, projectId])
 
@@ -306,7 +312,7 @@ function SupportDetailSheet({ ticket, open, onClose, projectId, teamMembers, onU
                   <SelectContent>
                     <SelectItem value="none">Sin asignar</SelectItem>
                     {teamMembers.map(m => (
-                      <SelectItem key={m.id} value={m.userId ?? m.id}>
+                      <SelectItem key={m.id} value={getTeamMemberAssigneeId(m)}>
                         <div className="flex items-center gap-2">
                           <Avatar className="h-5 w-5">
                             <AvatarImage src={m.avatar} />

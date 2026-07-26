@@ -8,21 +8,21 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { 
-  Ticket, 
   TicketType, 
-  TicketPriority, 
   users, 
   priorityConfig, 
   typeConfig,
   comments
 } from '@/lib/mock-data'
-import type { ApiTicket } from '@/types/project'
+import { findTeamMemberByAssigneeId } from '@/lib/team-members'
+import type { ApiTeamMember, ApiTicket } from '@/types/project'
 
 interface TicketCardProps {
   ticket: ApiTicket
   onClick: () => void
   variant?: 'board' | 'list'
   isDragging?: boolean
+  teamMembers?: ApiTeamMember[]
 }
 
 const typeIcons: Record<TicketType, React.ElementType> = {
@@ -34,8 +34,9 @@ const typeIcons: Record<TicketType, React.ElementType> = {
   support: LifeBuoy,
 }
 
-export function TicketCard({ ticket, onClick, variant = 'board', isDragging = false }: TicketCardProps) {
-  const assignee = ticket.assigneeId ? users.find(u => u.id === ticket.assigneeId) : null
+export function TicketCard({ ticket, onClick, variant = 'board', isDragging = false, teamMembers = [] }: TicketCardProps) {
+  const assignee = findTeamMemberByAssigneeId(teamMembers, ticket.assigneeId)
+    ?? (ticket.assigneeId ? users.find(u => u.id === ticket.assigneeId) : null)
   const TypeIcon = typeIcons[ticket.type] ?? CheckSquare
   const priority = priorityConfig[ticket.priority as keyof typeof priorityConfig] ?? { label: ticket.priority, color: 'text-muted-foreground', icon: '○' }
   const type = typeConfig[ticket.type as keyof typeof typeConfig] ?? { label: ticket.type, color: 'text-muted-foreground', bgColor: 'bg-muted' }

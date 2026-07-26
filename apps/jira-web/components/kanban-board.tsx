@@ -7,18 +7,19 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { TicketCard } from '@/components/ticket-card'
 import { statusConfig } from '@/lib/mock-data'
-import type { ApiTicket } from '@/types/project'
+import type { ApiTeamMember, ApiTicket } from '@/types/project'
 
 interface KanbanBoardProps {
   tickets: ApiTicket[]
   onTicketClick: (ticket: ApiTicket) => void
   onCreateTicket: (status: ApiTicket['status']) => void
   onStatusChange?: (ticketId: string, status: ApiTicket['status']) => void
+  teamMembers?: ApiTeamMember[]
 }
 
 const columns = ['todo', 'in_progress', 'in_review', 'done'] as const satisfies readonly ApiTicket['status'][]
 
-export function KanbanBoard({ tickets, onTicketClick, onCreateTicket, onStatusChange }: KanbanBoardProps) {
+export function KanbanBoard({ tickets, onTicketClick, onCreateTicket, onStatusChange, teamMembers = [] }: KanbanBoardProps) {
   const [draggedTicket, setDraggedTicket] = React.useState<ApiTicket | null>(null)
   const [dragOverColumn, setDragOverColumn] = React.useState<ApiTicket['status'] | null>(null)
 
@@ -107,6 +108,7 @@ export function KanbanBoard({ tickets, onTicketClick, onCreateTicket, onStatusCh
                       ticket={ticket}
                       onClick={() => onTicketClick(ticket)}
                       isDragging={draggedTicket?.id === ticket.id}
+                      teamMembers={teamMembers}
                     />
                   </div>
                 ))}

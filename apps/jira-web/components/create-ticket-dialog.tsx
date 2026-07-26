@@ -22,13 +22,15 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { createTicket } from '@/services/ticketService'
-import type { ApiTicket, ApiSprint } from '@/types/project'
+import { getTeamMemberAssigneeId } from '@/lib/team-members'
+import type { ApiTicket, ApiSprint, ApiTeamMember } from '@/types/project'
 
 interface CreateTicketDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   projectId: string
   sprints: ApiSprint[]
+  teamMembers?: ApiTeamMember[]
   initialStatus?: ApiTicket['status']
   initialSprintId?: string | null
   onCreated: (ticket: ApiTicket) => void
@@ -64,6 +66,7 @@ export function CreateTicketDialog({
   onOpenChange,
   projectId,
   sprints,
+  teamMembers = [],
   initialStatus,
   initialSprintId,
   onCreated,
@@ -74,6 +77,7 @@ export function CreateTicketDialog({
   const [priority, setPriority] = React.useState<ApiTicket['priority']>('medium')
   const [type, setType] = React.useState<ApiTicket['type']>('task')
   const [sprintId, setSprintId] = React.useState<string>('none')
+  const [assigneeId, setAssigneeId] = React.useState<string>('none')
   const [storyPoints, setStoryPoints] = React.useState('')
   const [dueDate, setDueDate] = React.useState('')
   const [saving, setSaving] = React.useState(false)
@@ -90,6 +94,7 @@ export function CreateTicketDialog({
     setType('task')
     // undefined = no preference (default to active sprint); null = explicitly no sprint (backlog)
     setSprintId(initialSprintId !== undefined ? (initialSprintId ?? 'none') : (activeSprint?.id ?? 'none'))
+    setAssigneeId('none')
     setStoryPoints('')
     setDueDate('')
     setError('')
@@ -111,6 +116,7 @@ export function CreateTicketDialog({
         priority,
         type,
         sprintId: sprintId === 'none' ? null : sprintId,
+        assigneeId: assigneeId === 'none' ? null : assigneeId,
         storyPoints: storyPoints ? parseInt(storyPoints, 10) : null,
         dueDate: dueDate || null,
       })
@@ -118,7 +124,7 @@ export function CreateTicketDialog({
       onOpenChange(false)
     } catch (err) {
       console.error(err)
-      setError('Error al crear el ticket. Intenta de nuevo.')
+      setError(err instanceof Error ? err.message : 'Error al crear el ticket. Intenta de nuevo.')
     } finally {
       setSaving(false)
     }
@@ -227,8 +233,24 @@ export function CreateTicketDialog({
             </div>
           </div>
 
-          {/* Story points / Due date row */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Assignee / Story points / Due date row */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="space-y-1.5">
+              <Label>Asignado a</Label>
+              <Select value={assigneeId} onValueChange={setAssigneeId} disabled={saving}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sin asignar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin asignar</SelectItem>
+                  {teamMembers.map(member => (
+                    <SelectItem key={member.id} value={getTeamMemberAssigneeId(member)}>
+                      {member.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-1.5">
               <Label htmlFor="ticket-sp">Story Points</Label>
               <Input

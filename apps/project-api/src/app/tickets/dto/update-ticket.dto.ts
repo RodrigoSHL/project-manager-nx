@@ -33,7 +33,7 @@ export class UpdateTicketDto {
 
   @IsUUID()
   @IsOptional()
-  assigneeId?: string;
+  assigneeId?: string | null;
 
   @IsUUID()
   @IsOptional()

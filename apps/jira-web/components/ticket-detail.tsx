@@ -64,6 +64,10 @@ import {
 } from '@/services/commentService'
 import { useAuth } from '@/contexts/auth-context'
 import {
+  findTeamMemberByAssigneeId,
+  getTeamMemberAssigneeId,
+} from '@/lib/team-members'
+import {
   TICKET_ATTACHMENT_ACCEPT,
   deleteTicketAttachment,
   downloadTicketAttachment,
@@ -232,6 +236,7 @@ export function TicketDetail({
     color: 'text-muted-foreground',
     bgColor: 'bg-muted',
   }
+  const selectedAssignee = findTeamMemberByAssigneeId(teamMembers, ticket.assigneeId)
 
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString('es-ES', {
@@ -561,7 +566,7 @@ export function TicketDetail({
                   Asignado
                 </label>
                 <Select
-                  value={ticket.assigneeId ?? 'unassigned'}
+                  value={selectedAssignee ? getTeamMemberAssigneeId(selectedAssignee) : 'unassigned'}
                   onValueChange={v => patch({ assigneeId: v === 'unassigned' ? null : v })}
                 >
                   <SelectTrigger className="w-full h-9">
@@ -575,7 +580,7 @@ export function TicketDetail({
                       </div>
                     </SelectItem>
                     {teamMembers.map(member => (
-                      <SelectItem key={member.id} value={member.id}>
+                      <SelectItem key={member.id} value={getTeamMemberAssigneeId(member)}>
                         <div className="flex items-center gap-2">
                           <Avatar className="h-5 w-5">
                             <AvatarImage src={member.avatar} />

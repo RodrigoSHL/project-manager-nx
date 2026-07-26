@@ -8,9 +8,9 @@ import {
   UnsupportedMediaTypeException,
 } from '@nestjs/common';
 import { AuthenticatedUser } from '../auth/types/authenticated-user';
+import { ProjectAccessService } from '../project-api/project-access.service';
 import { ProjectApiClient } from '../project-api/project-api.client';
 import { TravelApiClient } from '../travel-api/travel-api.client';
-import { UserRole } from '../user-api/user-api.client';
 
 export interface FileRecord {
   id: string;
@@ -74,6 +74,7 @@ export class FilesApiService {
   constructor(
     private readonly travelApi: TravelApiClient,
     private readonly projectApi: ProjectApiClient,
+    private readonly projectAccess: ProjectAccessService,
   ) {}
 
   async upload(file: IncomingFile | undefined, body: Record<string, string>, user: AuthenticatedUser) {
@@ -90,11 +91,10 @@ export class FilesApiService {
       category = 'ticket-attachment';
       const projectId = String(metadata.projectId || '');
       this.assertUuid(projectId, 'metadata.projectId');
-      this.assertJiraUser(user);
       if (!TICKET_ATTACHMENT_TYPES.has(file.mimetype)) {
         throw new UnsupportedMediaTypeException('Only images, PDF, Word, Excel, PowerPoint, CSV and text files are allowed');
       }
-      await this.projectApi.findTicket(projectId, body.ownerId);
+      await this.authorizeJiraTicket(projectId, body.ownerId, user);
       metadata.category = category;
       metadata.projectId = projectId;
       metadata.uploadedBy = user.userId;
@@ -121,8 +121,7 @@ export class FilesApiService {
     if (query.application === JIRA_APPLICATION && query.ownerType === TICKET_OWNER_TYPE) {
       const projectId = String(query.projectId || '');
       this.assertUuid(projectId, 'projectId');
-      this.assertJiraUser(user);
-      await this.projectApi.findTicket(projectId, query.ownerId);
+      await this.authorizeJiraTicket(projectId, query.ownerId, user);
       const files = await this.json<FileRecord[]>(`/files?application=${JIRA_APPLICATION}&ownerType=${TICKET_OWNER_TYPE}&ownerId=${encodeURIComponent(query.ownerId)}`);
       return files.filter((file) => this.isTicketAttachment(file) && file.metadata?.projectId === projectId);
     }
@@ -165,10 +164,9 @@ export class FilesApiService {
 
   private async authorize(file: FileRecord, user: AuthenticatedUser) {
     if (this.isTicketAttachment(file)) {
-      this.assertJiraUser(user);
       const projectId = String(file.metadata?.projectId || '');
       this.assertUuid(projectId, 'metadata.projectId');
-      await this.projectApi.findTicket(projectId, String(file.ownerId));
+      await this.authorizeJiraTicket(projectId, String(file.ownerId), user);
       return;
     }
     if (this.isTravelerDocument(file)) { await this.travelApi.travelerGet(`/documents/${file.ownerId}`, user); return; }
@@ -196,8 +194,13 @@ export class FilesApiService {
     if (!travelOwner && !jiraOwner) throw new BadRequestException('Unsupported file owner');
   }
 
-  private assertJiraUser(user: AuthenticatedUser) {
-    if (!user.roles.includes(UserRole.ADMIN)) throw new ForbiddenException('Admin access is required for Jira attachments');
+  private async authorizeJiraTicket(
+    projectId: string,
+    ticketId: string,
+    user: AuthenticatedUser,
+  ): Promise<void> {
+    await this.projectAccess.assertProjectAccess(projectId, user);
+    await this.projectApi.findTicket(projectId, ticketId);
   }
 
   private assertUuid(value: string | undefined, field: string) {

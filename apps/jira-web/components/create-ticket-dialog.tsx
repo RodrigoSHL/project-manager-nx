@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Loader2, TicketIcon } from 'lucide-react'
+import { ClipboardPaste, Copy, Loader2, TicketIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -23,6 +23,11 @@ import {
 } from '@/components/ui/select'
 import { createTicket } from '@/services/ticketService'
 import { getTeamMemberAssigneeId } from '@/lib/team-members'
+import {
+  createTicketTemplate,
+  parseTicketTemplate,
+  serializeTicketTemplate,
+} from '@/lib/ticket-template'
 import type { ApiTicket, ApiSprint, ApiTeamMember } from '@/types/project'
 
 interface CreateTicketDialogProps {
@@ -73,7 +78,7 @@ export function CreateTicketDialog({
 }: CreateTicketDialogProps) {
   const [title, setTitle] = React.useState('')
   const [description, setDescription] = React.useState('')
-  const [status, setStatus] = React.useState<ApiTicket['status']>('todo')
+  const [status, setStatus] = React.useState<Exclude<ApiTicket['status'], 'cancelled'>>('todo')
   const [priority, setPriority] = React.useState<ApiTicket['priority']>('medium')
   const [type, setType] = React.useState<ApiTicket['type']>('task')
   const [sprintId, setSprintId] = React.useState<string>('none')
@@ -82,6 +87,7 @@ export function CreateTicketDialog({
   const [dueDate, setDueDate] = React.useState('')
   const [saving, setSaving] = React.useState(false)
   const [error, setError] = React.useState('')
+  const [templateMessage, setTemplateMessage] = React.useState('')
 
   const activeSprint = sprints.find(s => s.isActive)
 
@@ -89,7 +95,7 @@ export function CreateTicketDialog({
     if (!open) return
     setTitle('')
     setDescription('')
-    setStatus(initialStatus ?? 'todo')
+    setStatus(initialStatus === 'cancelled' ? 'todo' : (initialStatus ?? 'todo'))
     setPriority('medium')
     setType('task')
     // undefined = no preference (default to active sprint); null = explicitly no sprint (backlog)
@@ -98,7 +104,60 @@ export function CreateTicketDialog({
     setStoryPoints('')
     setDueDate('')
     setError('')
+    setTemplateMessage('')
   }, [open, initialStatus, initialSprintId, activeSprint?.id])
+
+  const handleCopyTemplate = async () => {
+    setError('')
+    setTemplateMessage('')
+
+    if (!navigator.clipboard) {
+      setError('Tu navegador no permite acceder al portapapeles.')
+      return
+    }
+
+    try {
+      const template = createTicketTemplate({
+        title,
+        description,
+        type,
+        priority,
+        status,
+        storyPoints,
+        dueDate,
+      })
+      await navigator.clipboard.writeText(serializeTicketTemplate(template))
+      setTemplateMessage('Estructura copiada. Puedes pegarla o compartirla.')
+    } catch (err) {
+      console.error(err)
+      setError('No se pudo copiar la estructura al portapapeles.')
+    }
+  }
+
+  const handlePasteTemplate = async () => {
+    setError('')
+    setTemplateMessage('')
+
+    if (!navigator.clipboard) {
+      setError('Tu navegador no permite acceder al portapapeles.')
+      return
+    }
+
+    try {
+      const template = parseTicketTemplate(await navigator.clipboard.readText())
+      setTitle(template.title)
+      setDescription(template.description)
+      setType(template.type)
+      setPriority(template.priority)
+      setStatus(template.status)
+      setStoryPoints(template.storyPoints === null ? '' : String(template.storyPoints))
+      setDueDate(template.dueDate ?? '')
+      setTemplateMessage('JSON pegado. Revisa los datos y crea el ticket.')
+    } catch (err) {
+      console.error(err)
+      setError(err instanceof Error ? err.message : 'No se pudo leer el JSON del portapapeles.')
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -141,6 +200,16 @@ export function CreateTicketDialog({
           <DialogDescription>
             Añade un nuevo ticket al proyecto.
           </DialogDescription>
+          <div className="flex flex-wrap gap-2 pt-1">
+            <Button type="button" variant="outline" size="sm" onClick={handleCopyTemplate} disabled={saving}>
+              <Copy className="h-4 w-4" />
+              Copiar estructura JSON
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={handlePasteTemplate} disabled={saving}>
+              <ClipboardPaste className="h-4 w-4" />
+              Pegar JSON
+            </Button>
+          </div>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 py-2">
@@ -201,7 +270,7 @@ export function CreateTicketDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Estado</Label>
-              <Select value={status} onValueChange={v => setStatus(v as ApiTicket['status'])} disabled={saving}>
+              <Select value={status} onValueChange={v => setStatus(v as Exclude<ApiTicket['status'], 'cancelled'>)} disabled={saving}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -291,6 +360,7 @@ export function CreateTicketDialog({
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
+          {templateMessage && <p className="text-sm text-muted-foreground">{templateMessage}</p>}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { CurrentUser, RequestUser } from '../decorators/current-user.decorator';
 import { InternalAuthGuard } from '../guards/internal-auth.guard';
 import { CreateLuggageDto, UpdateLuggageDto } from './dto/luggage.dto';
@@ -32,5 +32,11 @@ export class LuggageController {
   @Post(':id/archive')
   archive(@CurrentUser() user: RequestUser, @Param('id') id: string) {
     return this.luggageService.archive(user.id, id);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  remove(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.luggageService.remove(user.id, id);
   }
 }

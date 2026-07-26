@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Archive, ChevronDown, Loader2, Ruler, Save, Scale, X } from 'lucide-react'
+import { Archive, ChevronDown, Loader2, Ruler, Save, Scale, Trash2, X } from 'lucide-react'
 import { Luggage, LuggageInput, LuggageType } from '@/services/luggageService'
 import { LUGGAGE_PRESETS, LUGGAGE_TYPES, luggageIcon } from './luggage-ui'
 
@@ -12,6 +12,7 @@ interface Props {
   onClose: () => void
   onSave: (data: LuggageInput) => Promise<void>
   onArchive?: () => Promise<void>
+  onDelete?: () => Promise<void>
 }
 
 const EMPTY: LuggageInput = {
@@ -24,7 +25,7 @@ const EMPTY: LuggageInput = {
   checkedBaggage: false,
 }
 
-export function LuggageFormModal({ open, luggage, preset, onClose, onSave, onArchive }: Props) {
+export function LuggageFormModal({ open, luggage, preset, onClose, onSave, onArchive, onDelete }: Props) {
   const [form, setForm] = useState<LuggageInput>(EMPTY)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -84,6 +85,19 @@ export function LuggageFormModal({ open, luggage, preset, onClose, onSave, onArc
       await onArchive()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No pudimos archivar esta maleta.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function remove() {
+    if (!onDelete || !window.confirm('¿Eliminar esta maleta definitivamente? Se quitará de todos tus viajes, pero los artículos de tus listas se conservarán sin maleta asignada.')) return
+    setSaving(true)
+    setError(null)
+    try {
+      await onDelete()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No pudimos eliminar esta maleta.')
     } finally {
       setSaving(false)
     }
@@ -198,8 +212,11 @@ export function LuggageFormModal({ open, luggage, preset, onClose, onSave, onArc
           </div>
 
           <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-border bg-card/95 px-5 py-4 backdrop-blur sm:px-7">
-            {luggage && onArchive ? (
-              <button type="button" disabled={saving} onClick={archive} className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-red-50 hover:text-red-600 disabled:opacity-50"><Archive className="size-4" /> Archivar</button>
+            {luggage ? (
+              <div className="flex items-center gap-1">
+                {onArchive && <button type="button" disabled={saving} onClick={archive} className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted disabled:opacity-50"><Archive className="size-4" /> Archivar</button>}
+                {onDelete && <button type="button" disabled={saving} onClick={remove} className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"><Trash2 className="size-4" /> Eliminar</button>}
+              </div>
             ) : <span />}
             <div className="flex gap-2">
               <button type="button" onClick={onClose} className="h-10 rounded-xl border border-border px-4 text-sm font-medium hover:bg-muted">Cancelar</button>

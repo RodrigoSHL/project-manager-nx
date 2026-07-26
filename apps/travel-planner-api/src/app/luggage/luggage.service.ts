@@ -69,4 +69,9 @@ export class LuggageService {
     luggage.archived = true;
     return this.luggageRepository.save(luggage);
   }
+
+  async remove(ownerId: string, id: string): Promise<void> {
+    const luggage = await this.findOwned(ownerId, id);
+    await this.luggageRepository.remove(luggage);
+  }
 }

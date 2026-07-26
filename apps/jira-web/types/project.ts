@@ -93,6 +93,7 @@ export interface ApiTicket {
   sprintId: string | null
   title: string
   description: string | null
+  acceptanceCriteria: string | null
   status: 'backlog' | 'todo' | 'in_progress' | 'in_review' | 'done' | 'cancelled'
   priority: 'lowest' | 'low' | 'medium' | 'high' | 'urgent'
   type: 'story' | 'bug' | 'task' | 'epic' | 'subtask' | 'support'

@@ -78,6 +78,7 @@ export function CreateTicketDialog({
 }: CreateTicketDialogProps) {
   const [title, setTitle] = React.useState('')
   const [description, setDescription] = React.useState('')
+  const [acceptanceCriteria, setAcceptanceCriteria] = React.useState('')
   const [status, setStatus] = React.useState<Exclude<ApiTicket['status'], 'cancelled'>>('todo')
   const [priority, setPriority] = React.useState<ApiTicket['priority']>('medium')
   const [type, setType] = React.useState<ApiTicket['type']>('task')
@@ -95,6 +96,7 @@ export function CreateTicketDialog({
     if (!open) return
     setTitle('')
     setDescription('')
+    setAcceptanceCriteria('')
     setStatus(initialStatus === 'cancelled' ? 'todo' : (initialStatus ?? 'todo'))
     setPriority('medium')
     setType('task')
@@ -120,6 +122,7 @@ export function CreateTicketDialog({
       const template = createTicketTemplate({
         title,
         description,
+        acceptanceCriteria,
         type,
         priority,
         status,
@@ -147,6 +150,7 @@ export function CreateTicketDialog({
       const template = parseTicketTemplate(await navigator.clipboard.readText())
       setTitle(template.title)
       setDescription(template.description)
+      setAcceptanceCriteria(template.acceptanceCriteria)
       setType(template.type)
       setPriority(template.priority)
       setStatus(template.status)
@@ -171,6 +175,7 @@ export function CreateTicketDialog({
       const ticket = await createTicket(projectId, {
         title: title.trim(),
         description: description.trim() || undefined,
+        acceptanceCriteria: acceptanceCriteria.trim() || undefined,
         status,
         priority,
         type,
@@ -353,6 +358,19 @@ export function CreateTicketDialog({
               placeholder="Detalles adicionales, criterios de aceptación..."
               value={description}
               onChange={e => setDescription(e.target.value)}
+              disabled={saving}
+              rows={3}
+              className="resize-none"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="ticket-acceptance-criteria">Criterios de aceptación</Label>
+            <Textarea
+              id="ticket-acceptance-criteria"
+              placeholder="¿Qué debe cumplirse para dar el ticket por terminado?"
+              value={acceptanceCriteria}
+              onChange={e => setAcceptanceCriteria(e.target.value)}
               disabled={saving}
               rows={3}
               className="resize-none"

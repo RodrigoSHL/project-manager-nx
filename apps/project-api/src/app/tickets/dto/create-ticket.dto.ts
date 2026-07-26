@@ -14,6 +14,11 @@ export class CreateTicketDto {
   @IsOptional()
   description?: string;
 
+  @IsString()
+  @IsOptional()
+  @MaxLength(10000)
+  acceptanceCriteria?: string;
+
   @IsEnum(TicketType)
   @IsOptional()
   type?: TicketType;

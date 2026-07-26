@@ -9,6 +9,7 @@ describe('ticket template', () => {
     const template = createTicketTemplate({
       title: '  Corregir login  ',
       description: '  La sesión expira.  ',
+      acceptanceCriteria: '  El usuario puede iniciar sesión.  ',
       type: 'bug',
       priority: 'high',
       status: 'todo',
@@ -19,6 +20,7 @@ describe('ticket template', () => {
     expect(JSON.parse(serializeTicketTemplate(template))).toEqual({
       title: 'Corregir login',
       description: 'La sesión expira.',
+      acceptanceCriteria: 'El usuario puede iniciar sesión.',
       type: 'bug',
       priority: 'high',
       status: 'todo',
@@ -31,6 +33,7 @@ describe('ticket template', () => {
     expect(parseTicketTemplate(JSON.stringify({
       title: 'Nuevo ticket',
       description: '',
+      acceptanceCriteria: '',
       type: 'task',
       priority: 'medium',
       status: 'todo',
@@ -39,10 +42,23 @@ describe('ticket template', () => {
     }))).toMatchObject({ title: 'Nuevo ticket', type: 'task' })
   })
 
+  it('keeps older JSON templates compatible without acceptance criteria', () => {
+    expect(parseTicketTemplate(JSON.stringify({
+      title: 'Ticket anterior',
+      description: '',
+      type: 'task',
+      priority: 'medium',
+      status: 'todo',
+      storyPoints: null,
+      dueDate: null,
+    }))).toMatchObject({ acceptanceCriteria: '' })
+  })
+
   it('rejects invalid enum values', () => {
     expect(() => parseTicketTemplate(JSON.stringify({
       title: 'Ticket',
       description: '',
+      acceptanceCriteria: '',
       type: 'invalid',
       priority: 'medium',
       status: 'todo',

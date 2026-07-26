@@ -20,6 +20,7 @@ export async function getTicketsByProject(projectId: string): Promise<ApiTicket[
 export async function createTicket(projectId: string, data: {
   title: string
   description?: string
+  acceptanceCriteria?: string
   status?: string
   priority?: string
   type?: string
@@ -39,6 +40,7 @@ export async function createTicket(projectId: string, data: {
 export async function updateTicket(projectId: string, ticketId: string, data: Partial<{
   title: string
   description: string
+  acceptanceCriteria: string | null
   status: string
   priority: string
   type: string

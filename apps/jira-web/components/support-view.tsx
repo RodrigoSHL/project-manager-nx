@@ -134,6 +134,7 @@ function SupportDetailSheet({ ticket, open, onClose, projectId, teamMembers, onU
   const [priority, setPriority] = React.useState<ApiTicket['priority']>('high')
   const [title, setTitle]       = React.useState('')
   const [description, setDesc]  = React.useState('')
+  const [acceptanceCriteria, setAcceptanceCriteria] = React.useState('')
   const [assigneeId, setAssigneeId] = React.useState('none')
 
   // — Support-detail editable state
@@ -156,6 +157,7 @@ function SupportDetailSheet({ ticket, open, onClose, projectId, teamMembers, onU
     setPriority(ticket.priority)
     setTitle(ticket.title)
     setDesc(ticket.description ?? '')
+    setAcceptanceCriteria(ticket.acceptanceCriteria ?? '')
     const member = findTeamMemberByAssigneeId(teamMembers, ticket.assigneeId)
     setAssigneeId(member ? getTeamMemberAssigneeId(member) : 'none')
   }, [ticket, teamMembers])
@@ -186,7 +188,7 @@ function SupportDetailSheet({ ticket, open, onClose, projectId, teamMembers, onU
     try {
       // Update ticket
       const updatedTicket = await updateTicket(projectId, ticket.id, {
-        title, description, status, priority,
+        title, description, acceptanceCriteria, status, priority,
         assigneeId: assigneeId !== 'none' ? assigneeId : null,
       })
 
@@ -300,6 +302,17 @@ function SupportDetailSheet({ ticket, open, onClose, projectId, teamMembers, onU
                   rows={5}
                   className="resize-none text-sm"
                   placeholder="Describe el problema..."
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Criterios de aceptación</Label>
+                <Textarea
+                  value={acceptanceCriteria}
+                  onChange={e => setAcceptanceCriteria(e.target.value)}
+                  rows={4}
+                  className="resize-none text-sm"
+                  placeholder="¿Qué debe cumplirse para resolver el soporte?"
                 />
               </div>
 

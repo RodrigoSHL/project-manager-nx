@@ -52,6 +52,7 @@ export function CreateSupportDialog({
   // — Ticket fields
   const [title, setTitle]               = React.useState('')
   const [description, setDescription]   = React.useState('')
+  const [acceptanceCriteria, setAcceptanceCriteria] = React.useState('')
   const [priority, setPriority]         = React.useState<ApiTicket['priority']>('high')
   const [assigneeId, setAssigneeId]     = React.useState('none')
 
@@ -67,7 +68,7 @@ export function CreateSupportDialog({
 
   React.useEffect(() => {
     if (!open) {
-      setTitle(''); setDescription(''); setPriority('high'); setAssigneeId('none')
+      setTitle(''); setDescription(''); setAcceptanceCriteria(''); setPriority('high'); setAssigneeId('none')
       setClientContact(''); setUfValue(''); setIsBillable(true); setSlaDeadline(''); setNotes('')
       setError('')
     }
@@ -83,6 +84,7 @@ export function CreateSupportDialog({
       const ticket = await createTicket(projectId, {
         title:       title.trim(),
         description: description.trim() || undefined,
+        acceptanceCriteria: acceptanceCriteria.trim() || undefined,
         type:        'support',
         priority,
         status:      'todo',
@@ -157,6 +159,18 @@ export function CreateSupportDialog({
                   placeholder="Describe el problema reportado por el cliente..."
                   value={description}
                   onChange={e => setDescription(e.target.value)}
+                  rows={3}
+                  className="resize-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="support-acceptance-criteria" className="text-sm font-medium">Criterios de aceptación</Label>
+                <Textarea
+                  id="support-acceptance-criteria"
+                  placeholder="¿Qué debe cumplirse para resolver el soporte?"
+                  value={acceptanceCriteria}
+                  onChange={e => setAcceptanceCriteria(e.target.value)}
                   rows={3}
                   className="resize-none"
                 />

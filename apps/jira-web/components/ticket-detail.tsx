@@ -143,6 +143,8 @@ export function TicketDetail({
 
   const [description, setDescription] = React.useState('')
   const [isEditingDescription, setIsEditingDescription] = React.useState(false)
+  const [acceptanceCriteria, setAcceptanceCriteria] = React.useState('')
+  const [isEditingAcceptanceCriteria, setIsEditingAcceptanceCriteria] = React.useState(false)
 
   const [localLabels, setLocalLabels] = React.useState<ApiTicket['labels']>([])
   const [labelInput, setLabelInput] = React.useState('')
@@ -165,10 +167,12 @@ export function TicketDetail({
     if (!ticket) return
     setTitle(ticket.title)
     setDescription(ticket.description ?? '')
+    setAcceptanceCriteria(ticket.acceptanceCriteria ?? '')
     setLocalLabels(ticket.labels ?? [])
     setComments([])
     setIsEditingTitle(false)
     setIsEditingDescription(false)
+    setIsEditingAcceptanceCriteria(false)
     setNewComment('')
     setLabelInput('')
     setShowLabelInput(false)
@@ -268,6 +272,14 @@ export function TicketDetail({
     setIsEditingDescription(false)
     const trimmed = description.trim() || undefined
     if (trimmed !== (ticket.description ?? undefined)) patch({ description: trimmed })
+  }
+
+  const saveAcceptanceCriteria = () => {
+    setIsEditingAcceptanceCriteria(false)
+    const trimmed = acceptanceCriteria.trim() || null
+    if (trimmed !== (ticket.acceptanceCriteria ?? null)) {
+      patch({ acceptanceCriteria: trimmed })
+    }
   }
 
   // ── Label helpers ──────────────────────────────────────────────────────────
@@ -646,6 +658,33 @@ export function TicketDetail({
                   onClick={() => setIsEditingDescription(true)}
                 >
                   {description || 'Haz clic para añadir descripción...'}
+                </div>
+              )}
+            </div>
+
+            <div className="mb-6">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">
+                Criterios de aceptación
+              </label>
+              {isEditingAcceptanceCriteria ? (
+                <Textarea
+                  value={acceptanceCriteria}
+                  onChange={e => setAcceptanceCriteria(e.target.value)}
+                  onBlur={saveAcceptanceCriteria}
+                  className="min-h-30 resize-none"
+                  placeholder="Añade los criterios que deben cumplirse..."
+                  autoFocus
+                />
+              ) : (
+                <div
+                  className={cn(
+                    'p-3 rounded-lg bg-muted/50 min-h-20 cursor-text text-sm leading-relaxed whitespace-pre-wrap',
+                    'hover:bg-muted/80 transition-colors',
+                    !acceptanceCriteria && 'text-muted-foreground italic',
+                  )}
+                  onClick={() => setIsEditingAcceptanceCriteria(true)}
+                >
+                  {acceptanceCriteria || 'Haz clic para añadir criterios de aceptación...'}
                 </div>
               )}
             </div>

@@ -3,6 +3,7 @@ import type { ApiTicket } from '@/types/project'
 export interface TicketTemplate {
   title: string
   description: string
+  acceptanceCriteria: string
   type: ApiTicket['type']
   priority: ApiTicket['priority']
   status: Exclude<ApiTicket['status'], 'cancelled'>
@@ -38,6 +39,7 @@ const TICKET_STATUSES: ReadonlySet<TicketTemplate['status']> = new Set([
 export function createTicketTemplate(values: {
   title: string
   description: string
+  acceptanceCriteria: string
   type: TicketTemplate['type']
   priority: TicketTemplate['priority']
   status: TicketTemplate['status']
@@ -47,6 +49,7 @@ export function createTicketTemplate(values: {
   return {
     title: values.title.trim(),
     description: values.description.trim(),
+    acceptanceCriteria: values.acceptanceCriteria.trim(),
     type: values.type,
     priority: values.priority,
     status: values.status,
@@ -75,6 +78,7 @@ export function parseTicketTemplate(raw: string): TicketTemplate {
   const data = value as Record<string, unknown>
   const title = data.title
   const description = data.description
+  const acceptanceCriteria = data.acceptanceCriteria
   const type = data.type
   const priority = data.priority
   const status = data.status
@@ -83,6 +87,9 @@ export function parseTicketTemplate(raw: string): TicketTemplate {
 
   if (typeof title !== 'string') throw new Error('El campo "title" debe ser texto.')
   if (typeof description !== 'string') throw new Error('El campo "description" debe ser texto.')
+  if (acceptanceCriteria !== undefined && acceptanceCriteria !== null && typeof acceptanceCriteria !== 'string') {
+    throw new Error('El campo "acceptanceCriteria" debe ser texto.')
+  }
   if (typeof type !== 'string' || !TICKET_TYPES.has(type as TicketTemplate['type'])) {
     throw new Error('El campo "type" no contiene un tipo de ticket válido.')
   }
@@ -102,6 +109,7 @@ export function parseTicketTemplate(raw: string): TicketTemplate {
   return {
     title: title.trim(),
     description: description.trim(),
+    acceptanceCriteria: typeof acceptanceCriteria === 'string' ? acceptanceCriteria.trim() : '',
     type: type as TicketTemplate['type'],
     priority: priority as TicketTemplate['priority'],
     status: status as TicketTemplate['status'],

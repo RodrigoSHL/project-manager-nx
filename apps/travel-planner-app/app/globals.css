@@ -114,3 +114,13 @@
     background: color-mix(in oklab, var(--primary) 22%, transparent);
   }
 }
+
+@layer components {
+  .country-strip {
+    background: var(--country-strip-light);
+  }
+
+  .dark .country-strip {
+    background: var(--country-strip-dark);
+  }
+}

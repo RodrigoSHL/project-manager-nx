@@ -57,6 +57,7 @@ import { createExpense as createFinanceExpense } from '@/services/financeService
 import { getUserProfile } from '@/services/tripService';
 import { QuickCurrencyConverter } from '../currency/QuickCurrencyConverter';
 import { CurrencySection } from '../currency/CurrencySection';
+import { ThemeToggle } from '../theme-toggle';
 
 const EMPTY_FILTERS: Filters = {
   country: '',
@@ -280,6 +281,7 @@ export function TravelCalendar() {
                 <div className="flex size-9 items-center justify-center rounded-full border border-white/20 bg-white/15 text-xs font-bold backdrop-blur">
                   {store.currentUser?.name?.slice(0, 2).toUpperCase() || 'TU'}
                 </div>
+                <ThemeToggle />
                 <button
                   onClick={() => {
                     clearToken();

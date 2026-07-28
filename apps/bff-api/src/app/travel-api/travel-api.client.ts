@@ -62,6 +62,10 @@ export class TravelApiClient {
     return this.authedPost(`/luggage/${id}/archive`, {}, user);
   }
 
+  removeLuggage(id: string, user: AuthenticatedUser) {
+    return this.authedDelete(`/luggage/${id}`, user);
+  }
+
   // ── Trip luggage and packing ─────────────────────────────────────────────
 
   listTripLuggage(tripId: string, user: AuthenticatedUser) {

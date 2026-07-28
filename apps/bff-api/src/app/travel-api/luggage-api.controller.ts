@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ExpressRequestWithUser } from '../auth/types/express-request-with-user';
 import { TravelApiClient } from './travel-api.client';
@@ -35,5 +35,11 @@ export class LuggageApiController {
   @Post(':id/archive')
   archive(@Request() req: ExpressRequestWithUser, @Param('id') id: string) {
     return this.client.archiveLuggage(id, req.user);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  remove(@Request() req: ExpressRequestWithUser, @Param('id') id: string) {
+    return this.client.removeLuggage(id, req.user);
   }
 }

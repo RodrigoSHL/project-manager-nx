@@ -8,7 +8,7 @@ export default defineConfig(() => ({
   root: __dirname,
   cacheDir: '../../node_modules/.vite/apps/inspection-web',
   server: {
-    port: 4205,
+    port: 4204,
     host: 'localhost',
   },
   preview: {

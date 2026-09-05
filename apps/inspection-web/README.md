@@ -1,4 +1,4 @@
-# GridAssets — etapa 1
+# GridAssets — etapa 2
 
 Esqueleto visual de una aplicación para gestión de subestaciones y activos.
 
@@ -10,7 +10,7 @@ Desde la raíz del monorepo:
 npx nx serve inspection-web
 ```
 
-Abrir `http://localhost:4205`.
+Abrir `http://localhost:4204`.
 
 ## Alcance actual
 
@@ -18,11 +18,13 @@ Abrir `http://localhost:4205`.
 - Layout responsive con sidebar en escritorio y menú lateral en móvil.
 - Navegación con React Router.
 - Dashboard con valores escritos directamente en el frontend.
-- Páginas vacías para Activos, Trabajos, Hallazgos y Administración.
+- Módulo de Activos con selector de tenant y sitio, árbol jerárquico, búsqueda y detalle.
+- Datos mock para 2 tenants, 4 sitios y más de 15 activos por tenant.
+- Páginas vacías para Trabajos, Hallazgos y Administración.
 - Componentes reutilizables `Button`, `Sheet`, `PageHeader` y `EmptyState`.
 
 No existen backend, base de datos, almacenamiento local, llamadas HTTP,
-Service Worker, sincronización, modelos de dominio ni formularios reales.
+Service Worker, sincronización, trabajos, pautas, hallazgos ni formularios reales.
 
 ## Estructura
 
@@ -32,6 +34,8 @@ src/
 ├── routes/       # Relación entre URL y página
 ├── layouts/      # Estructura compartida: sidebar, cabecera y contenido
 ├── pages/        # Una pantalla por ruta
+├── features/     # Código agrupado por módulo funcional
+│   └── assets/   # Modelos, datos mock, filtros, árbol y detalle de activos
 ├── components/   # Componentes visuales reutilizables
 │   └── ui/       # Primitives compatibles con shadcn/ui
 ├── lib/          # Funciones pequeñas compartidas

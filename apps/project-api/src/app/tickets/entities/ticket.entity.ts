@@ -62,6 +62,9 @@ export class Ticket {
   @Column({ type: 'text', nullable: true })
   description: string;
 
+  @Column({ type: 'text', nullable: true })
+  acceptanceCriteria: string;
+
   @Column({ type: 'enum', enum: TicketStatus, default: TicketStatus.BACKLOG })
   status: TicketStatus;
 

@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Layers, LayoutGrid, Zap, LayoutDashboard, Ticket as TicketIcon, BarChart3, Users, Settings, Plus, Calendar, Pencil, Trash2, Bug, BookOpen, CheckSquare, LifeBuoy } from 'lucide-react'
+import { Layers, LayoutGrid, Zap, Ticket as TicketIcon, BarChart3, Plus, Calendar, Pencil, Trash2, Bug, BookOpen, CheckSquare, LifeBuoy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { AppSidebar } from '@/components/app-sidebar'
@@ -17,7 +17,6 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { getProjectsByWorkspace, getProjectTeamMembers } from '@/services/projectService'
 import { getSprintsByProject, activateSprint, deleteSprint } from '@/services/sprintService'
 import { getTicketsByProject, updateTicket } from '@/services/ticketService'
@@ -27,7 +26,12 @@ import { EditSprintDialog } from '@/components/edit-sprint-dialog'
 import { CreateTicketDialog } from '@/components/create-ticket-dialog'
 import { CreateSupportDialog } from '@/components/create-support-dialog'
 import { SupportView } from '@/components/support-view'
+import { AssigneeFilter } from '@/components/assignee-filter'
 import { useWorkspace } from '@/contexts/workspace-context'
+import {
+  findTeamMemberByAssigneeId,
+  isAssignedToTeamMember,
+} from '@/lib/team-members'
 import type { ApiProject, ApiSprint, ApiTicket, ApiTeamMember } from '@/types/project'
 
 export default function ProjectManagement() {
@@ -56,6 +60,7 @@ export default function ProjectManagement() {
     status: 'all',
     priority: 'all',
   })
+  const [boardAssigneeFilters, setBoardAssigneeFilters] = React.useState<string[]>([])
 
   React.useEffect(() => {
     if (!selectedWorkspace) {
@@ -79,6 +84,8 @@ export default function ProjectManagement() {
     setSprints([])
     setTickets([])
     setTeamMembers([])
+    setFilters(prev => ({ ...prev, assignee: 'all' }))
+    setBoardAssigneeFilters([])
     Promise.all([
       getSprintsByProject(currentProject),
       getTicketsByProject(currentProject),
@@ -86,7 +93,7 @@ export default function ProjectManagement() {
     ]).then(([sprintsData, ticketsData, membersData]) => {
       setSprints(sprintsData)
       setTickets(ticketsData)
-      setTeamMembers(membersData)
+      setTeamMembers(membersData.filter(member => member.isActive !== false))
     }).catch(console.error)
   }, [currentProject])
 
@@ -97,14 +104,27 @@ export default function ProjectManagement() {
     return tickets.filter(ticket => {
       if (ticket.projectId !== currentProject) return false
       if (searchQuery && !ticket.title.toLowerCase().includes(searchQuery.toLowerCase()) && !ticket.key.toLowerCase().includes(searchQuery.toLowerCase())) return false
-      if (filters.assignee !== 'all' && ticket.assigneeId !== filters.assignee) return false
+      if (filters.assignee === 'unassigned' && ticket.assigneeId) return false
+      if (filters.assignee !== 'all' && filters.assignee !== 'unassigned') {
+        const member = findTeamMemberByAssigneeId(teamMembers, filters.assignee)
+        if (!member || !isAssignedToTeamMember(ticket.assigneeId, member)) return false
+      }
       if (filters.status !== 'all' && ticket.status !== filters.status) return false
       if (filters.priority !== 'all' && ticket.priority !== filters.priority) return false
       return true
     })
-  }, [tickets, currentProject, searchQuery, filters])
+  }, [tickets, currentProject, searchQuery, filters, teamMembers])
 
-  const sprintTickets = filteredTickets.filter(t => t.sprintId === activeSprint?.id)
+  const sprintTickets = filteredTickets.filter(ticket => {
+    if (ticket.sprintId !== activeSprint?.id) return false
+    if (boardAssigneeFilters.length === 0) return true
+
+    return boardAssigneeFilters.some(assigneeFilter => {
+      if (assigneeFilter === 'unassigned') return !ticket.assigneeId
+      const member = findTeamMemberByAssigneeId(teamMembers, assigneeFilter)
+      return Boolean(member && isAssignedToTeamMember(ticket.assigneeId, member))
+    })
+  })
 
   const handleTicketClick = (ticket: ApiTicket) => {
     setSelectedTicket(ticket)
@@ -163,7 +183,13 @@ export default function ProjectManagement() {
   }
 
   const handleFilterChange = (key: string, value: string) => {
+    if (key === 'assignee') setBoardAssigneeFilters([])
     setFilters(prev => ({ ...prev, [key]: value }))
+  }
+
+  const handleBoardAssigneeFilterChange = (values: string[]) => {
+    setFilters(prev => ({ ...prev, assignee: 'all' }))
+    setBoardAssigneeFilters(values)
   }
 
   // Dashboard view content
@@ -372,7 +398,7 @@ export default function ProjectManagement() {
                           <span className="font-medium truncate max-w-xs">{ticket.title}</span>
                           {ticket.labels && ticket.labels.length > 0 && (
                             <div className="flex items-center gap-1 shrink-0">
-                              {ticket.labels.slice(0, 2).map((label: any) => (
+                              {ticket.labels.slice(0, 2).map(label => (
                                 <Badge key={label.id} variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
                                   {label.name}
                                 </Badge>
@@ -651,6 +677,12 @@ export default function ProjectManagement() {
               <>
                 <SprintInfo sprint={activeSprint} tickets={sprintTickets} onEdit={() => setEditingSprint(activeSprint)} />
 
+                <AssigneeFilter
+                  members={teamMembers}
+                  values={boardAssigneeFilters}
+                  onChange={handleBoardAssigneeFilterChange}
+                />
+
                 <Tabs defaultValue="board" className="w-full">
                   <TabsList className="mb-4">
                     <TabsTrigger value="board" className="gap-2">
@@ -668,6 +700,7 @@ export default function ProjectManagement() {
                       onTicketClick={handleTicketClick}
                       onCreateTicket={handleCreateTicket}
                       onStatusChange={handleStatusChange}
+                      teamMembers={teamMembers}
                     />
                   </TabsContent>
                   <TabsContent value="list">
@@ -678,6 +711,7 @@ export default function ProjectManagement() {
                           ticket={ticket}
                           onClick={() => handleTicketClick(ticket)}
                           variant="list"
+                          teamMembers={teamMembers}
                         />
                       ))}
                     </div>
@@ -832,6 +866,7 @@ export default function ProjectManagement() {
           onFilterChange={handleFilterChange}
           projects={apiProjects}
           activeSprint={activeSprint}
+          teamMembers={teamMembers}
         />
 
         <main className="flex-1 overflow-auto">
@@ -861,19 +896,22 @@ export default function ProjectManagement() {
         onCreated={handleSprintCreated}
       />
 
-      <EditSprintDialog
-        open={!!editingSprint}
-        onOpenChange={open => { if (!open) setEditingSprint(null) }}
-        sprint={editingSprint!}
-        projectId={currentProject}
-        onUpdated={handleSprintUpdated}
-      />
+      {editingSprint && (
+        <EditSprintDialog
+          open
+          onOpenChange={open => { if (!open) setEditingSprint(null) }}
+          sprint={editingSprint}
+          projectId={currentProject}
+          onUpdated={handleSprintUpdated}
+        />
+      )}
 
       <CreateTicketDialog
         open={createTicketOpen}
         onOpenChange={setCreateTicketOpen}
         projectId={currentProject}
         sprints={sprints}
+        teamMembers={teamMembers}
         initialStatus={createTicketInitialStatus}
         initialSprintId={createTicketInitialSprintId}
         onCreated={handleTicketCreated}

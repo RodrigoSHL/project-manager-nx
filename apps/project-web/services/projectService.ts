@@ -1,6 +1,7 @@
 import { Project, ProjectStats } from '@/types/project';
+import { authenticatedFetch } from '@/lib/api';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? '/api';
 
 export class ProjectService {
   private static async handleResponse<T>(response: Response): Promise<T> {
@@ -11,37 +12,39 @@ export class ProjectService {
   }
 
   static async getAllProjects(): Promise<Project[]> {
-    const response = await fetch(`${API_BASE_URL}/projects`);
+    const response = await authenticatedFetch(`${API_BASE_URL}/projects`, { cache: 'no-store' });
     return this.handleResponse<Project[]>(response);
   }
 
   static async getProjectsByWorkspace(workspaceId: string): Promise<Project[]> {
-    const response = await fetch(`${API_BASE_URL}/projects?workspaceId=${encodeURIComponent(workspaceId)}`);
+    const response = await authenticatedFetch(`${API_BASE_URL}/projects?workspaceId=${encodeURIComponent(workspaceId)}`, {
+      cache: 'no-store',
+    });
     return this.handleResponse<Project[]>(response);
   }
 
   static async getProjectById(id: string): Promise<Project> {
-    const response = await fetch(`${API_BASE_URL}/projects/${id}`);
+    const response = await authenticatedFetch(`${API_BASE_URL}/projects/${id}`, { cache: 'no-store' });
     return this.handleResponse<Project>(response);
   }
 
   static async getProjectStats(): Promise<ProjectStats> {
-    const response = await fetch(`${API_BASE_URL}/projects/stats`);
+    const response = await authenticatedFetch(`${API_BASE_URL}/projects/stats`, { cache: 'no-store' });
     return this.handleResponse<ProjectStats>(response);
   }
 
   static async getProjectsByStatus(status: string): Promise<Project[]> {
-    const response = await fetch(`${API_BASE_URL}/projects/status/${status}`);
+    const response = await authenticatedFetch(`${API_BASE_URL}/projects/status/${status}`, { cache: 'no-store' });
     return this.handleResponse<Project[]>(response);
   }
 
   static async getProjectsByBusinessUnit(businessUnit: string): Promise<Project[]> {
-    const response = await fetch(`${API_BASE_URL}/projects/business-unit/${businessUnit}`);
+    const response = await authenticatedFetch(`${API_BASE_URL}/projects/business-unit/${businessUnit}`, { cache: 'no-store' });
     return this.handleResponse<Project[]>(response);
   }
 
   static async createProject(projectData: Partial<Project>): Promise<Project> {
-    const response = await fetch(`${API_BASE_URL}/projects`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/projects`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -52,7 +55,7 @@ export class ProjectService {
   }
 
   static async updateProject(id: string, projectData: Partial<Project>): Promise<Project> {
-    const response = await fetch(`${API_BASE_URL}/projects/${id}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/projects/${id}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -63,7 +66,7 @@ export class ProjectService {
   }
 
   static async deleteProject(id: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/projects/${id}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/projects/${id}`, {
       method: 'DELETE',
     });
     if (!response.ok) {
@@ -72,19 +75,19 @@ export class ProjectService {
   }
 
   static async runSeed(): Promise<any> {
-    const response = await fetch(`${API_BASE_URL}/projects/seed`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/projects/seed`, {
       method: 'POST',
     });
     return this.handleResponse(response);
   }
 
   static async getAllTechnologies(): Promise<any[]> {
-    const response = await fetch(`${API_BASE_URL}/projects/technologies`);
+    const response = await authenticatedFetch(`${API_BASE_URL}/projects/technologies`, { cache: 'no-store' });
     return this.handleResponse<any[]>(response);
   }
 
   static async granularUpdateProject(id: string, updateData: any): Promise<Project> {
-    const response = await fetch(`${API_BASE_URL}/projects/${id}/granular`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/projects/${id}/granular`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',

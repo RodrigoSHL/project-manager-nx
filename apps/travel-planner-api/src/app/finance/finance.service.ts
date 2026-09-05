@@ -34,12 +34,80 @@ export class FinanceService {
     const trip = await this.tripsService.assertCanEdit(userId, tripId);
     this.assertParticipants(trip, Object.keys(dto.personalBudgets ?? {}));
     const currency = dto.currency.toUpperCase();
-    trip.baseCurrency = currency;
-    await this.dataSource.getRepository(Trip).save(trip);
-    let budget = await this.budgets.findOneBy({ tripId });
-    budget = this.budgets.create({ ...budget, tripId, amountMinor: decimalToMinor(dto.amount, currency).toString(), currency,
-      categoryBudgets: this.mapBudget(dto.categoryBudgets, currency), personalBudgets: this.mapBudget(dto.personalBudgets, currency), alertThresholds: dto.alertThresholds ?? [75, 90, 100] });
-    return this.presentBudget(await this.budgets.save(budget));
+    const currencyChanged = currency !== trip.baseCurrency;
+    const expensesToRebase = currencyChanged
+      ? await this.expenses.find({
+          where: { tripId, deletedAt: IsNull() },
+          relations: ['splits'],
+        })
+      : [];
+
+    if (
+      expensesToRebase.some(
+        (expense) => expense.originalCurrency !== currency
+      )
+    ) {
+      throw new BadRequestException(
+        'Budget currency cannot change while active expenses use another currency'
+      );
+    }
+
+    if (
+      currencyChanged &&
+      (await this.settlements.countBy({ tripId, status: 'posted' })) > 0
+    ) {
+      throw new BadRequestException(
+        'Budget currency cannot change after settlements have been posted'
+      );
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      const tripRepository = manager.getRepository(Trip);
+      const budgetRepository = manager.getRepository(TripBudget);
+      const expenseRepository = manager.getRepository(Expense);
+      const splitRepository = manager.getRepository(ExpenseSplit);
+
+      if (currencyChanged) {
+        trip.baseCurrency = currency;
+        await tripRepository.save(trip);
+
+        for (const expense of expensesToRebase) {
+          const rebasedTotal = BigInt(expense.originalAmountMinor);
+          const rebasedSplits = this.rebaseSplits(
+            expense.splits,
+            rebasedTotal
+          );
+          const expenseWithoutRelations: Partial<Expense> = { ...expense };
+          delete expenseWithoutRelations.splits;
+          await expenseRepository.save({
+            ...expenseWithoutRelations,
+            baseCurrency: currency,
+            convertedAmountMinor: rebasedTotal.toString(),
+            exchangeRate: '1',
+            exchangeRateDate: null,
+            exchangeRateSource: 'identity',
+          });
+          await splitRepository.save(rebasedSplits);
+        }
+      }
+
+      const existingBudget = await budgetRepository.findOneBy({ tripId });
+      const budget = budgetRepository.create({
+        ...existingBudget,
+        tripId,
+        amountMinor: decimalToMinor(dto.amount, currency).toString(),
+        currency,
+        categoryBudgets: this.mapBudget(dto.categoryBudgets, currency),
+        personalBudgets: this.mapBudget(dto.personalBudgets, currency),
+        alertThresholds: dto.alertThresholds ?? [75, 90, 100],
+      });
+      return this.presentBudget(await budgetRepository.save(budget));
+    });
+  }
+
+  async removeBudget(userId: string, tripId: string): Promise<void> {
+    await this.tripsService.assertCanEdit(userId, tripId);
+    await this.budgets.delete({ tripId });
   }
 
   async list(userId: string, tripId: string, query: ExpenseQueryDto) {
@@ -116,14 +184,16 @@ export class FinanceService {
     const actual = expenses.filter((e) => !['estimated','cancelled'].includes(e.status));
     const planned = expenses.filter((e) => e.status === 'estimated');
     const sum = (list: Expense[]) => list.reduce((n, e) => n + BigInt(e.convertedAmountMinor), 0n);
-    const spent = sum(actual); const plannedTotal = sum(planned); const paid = sum(actual.filter((e) => e.status === 'paid')); const pending = spent - paid;
+    const spent = sum(actual); const plannedTotal = sum(planned); const committed = spent + plannedTotal; const paid = sum(actual.filter((e) => e.status === 'paid')); const pending = spent - paid;
     const categoryMap = new Map<string, bigint>(); const payerMap = new Map<string, bigint>();
-    actual.forEach((e) => { categoryMap.set(e.category, (categoryMap.get(e.category) ?? 0n) + BigInt(e.convertedAmountMinor)); payerMap.set(e.payerUserId, (payerMap.get(e.payerUserId) ?? 0n) + BigInt(e.convertedAmountMinor)); });
+    [...actual, ...planned].forEach((e) => { categoryMap.set(e.category, (categoryMap.get(e.category) ?? 0n) + BigInt(e.convertedAmountMinor)); });
+    actual.forEach((e) => { payerMap.set(e.payerUserId, (payerMap.get(e.payerUserId) ?? 0n) + BigInt(e.convertedAmountMinor)); });
     const days = Math.max(1, trip.startDate ? Math.floor((Date.now() - new Date(trip.startDate + 'T00:00:00').getTime()) / 86400000) + 1 : 1);
     const remainingDays = Math.max(1, trip.endDate ? Math.ceil((new Date(trip.endDate + 'T23:59:59').getTime() - Date.now()) / 86400000) : 1);
-    const budgetMinor = budget ? BigInt(budget.amountMinor) : null; const remaining = budgetMinor === null ? null : budgetMinor - spent;
+    const budgetMinor = budget ? BigInt(budget.amountMinor) : null; const remaining = budgetMinor === null ? null : budgetMinor - committed;
+    const projectedFinal = committed + (spent / BigInt(days)) * BigInt(remainingDays);
     const top = (m: Map<string,bigint>) => [...m.entries()].sort((a,b) => a[1] === b[1] ? 0 : a[1] > b[1] ? -1 : 1)[0];
-    return { currency: trip.baseCurrency, totalSpent: minorToDecimal(spent, trip.baseCurrency), totalPlanned: minorToDecimal(plannedTotal, trip.baseCurrency), totalPaid: minorToDecimal(paid, trip.baseCurrency), totalPending: minorToDecimal(pending, trip.baseCurrency), budget: budgetMinor === null ? null : minorToDecimal(budgetMinor, trip.baseCurrency), remaining: remaining === null ? null : minorToDecimal(remaining, trip.baseCurrency), consumedPercent: budgetMinor && budgetMinor > 0n ? Number((spent * 10000n) / budgetMinor) / 100 : null, dailyAverage: minorToDecimal(spent / BigInt(days), trip.baseCurrency), recommendedDaily: remaining === null ? null : minorToDecimal(remaining > 0n ? remaining / BigInt(remainingDays) : 0n, trip.baseCurrency), projectedFinal: minorToDecimal((spent / BigInt(days)) * BigInt(days + remainingDays), trip.baseCurrency), topCategory: top(categoryMap)?.[0] ?? null, topPayerUserId: top(payerMap)?.[0] ?? null, recent: expenses.slice(0, 5).map((e) => this.presentExpense(e)), balances };
+    return { currency: trip.baseCurrency, totalSpent: minorToDecimal(spent, trip.baseCurrency), totalPlanned: minorToDecimal(plannedTotal, trip.baseCurrency), totalCommitted: minorToDecimal(committed, trip.baseCurrency), totalPaid: minorToDecimal(paid, trip.baseCurrency), totalPending: minorToDecimal(pending, trip.baseCurrency), budget: budgetMinor === null ? null : minorToDecimal(budgetMinor, trip.baseCurrency), remaining: remaining === null ? null : minorToDecimal(remaining, trip.baseCurrency), consumedPercent: budgetMinor && budgetMinor > 0n ? Number((committed * 10000n) / budgetMinor) / 100 : null, dailyAverage: minorToDecimal(spent / BigInt(days), trip.baseCurrency), recommendedDaily: remaining === null ? null : minorToDecimal(remaining > 0n ? remaining / BigInt(remainingDays) : 0n, trip.baseCurrency), projectedFinal: minorToDecimal(projectedFinal, trip.baseCurrency), topCategory: top(categoryMap)?.[0] ?? null, topPayerUserId: top(payerMap)?.[0] ?? null, recent: expenses.slice(0, 5).map((e) => this.presentExpense(e)), balances };
   }
 
   async balances(userId: string, tripId: string) {
@@ -169,7 +239,14 @@ export class FinanceService {
     return this.dataSource.transaction(async (manager) => {
       const repo = manager.getRepository(Expense); const splitRepo = manager.getRepository(ExpenseSplit);
       if (existing) await splitRepo.delete({ expenseId: existing.id });
-      const expense = repo.create({ ...(existing ?? {}), tripId, title:dto.title.trim(), originalAmountMinor:original.toString(), originalCurrency:currency, exchangeRate:rate, convertedAmountMinor:converted.toString(), baseCurrency:trip.baseCurrency, exchangeRateDate:dto.exchangeRateDate ?? null, exchangeRateSource:dto.exchangeRateSource ?? (currency === trip.baseCurrency ? 'identity' : 'manual'), category:dto.category, subcategory:dto.subcategory ?? null, incurredAt:new Date(dto.incurredAt), city:dto.city ?? null, createdByUserId:existing?.createdByUserId ?? userId, updatedByUserId:existing ? userId : null, payerUserId:dto.payerUserId, expenseType:dto.expenseType, splitMethod:dto.splitMethod, activityId:dto.activityId ?? null, paymentMethod:dto.paymentMethod ?? null, status:dto.status, notes:dto.notes ?? null, receiptUrl:dto.receiptUrl ?? null, items:(dto.items ?? []).map((item)=>({description:item.description,amountMinor:decimalToMinor(item.amount,currency).toString()})), recurringGroupId:dto.recurringGroupId ?? null });
+      const existingIdentity = existing
+        ? {
+            id: existing.id,
+            createdAt: existing.createdAt,
+            deletedAt: existing.deletedAt,
+          }
+        : {};
+      const expense = repo.create({ ...existingIdentity, tripId, title:dto.title.trim(), originalAmountMinor:original.toString(), originalCurrency:currency, exchangeRate:rate, convertedAmountMinor:converted.toString(), baseCurrency:trip.baseCurrency, exchangeRateDate:dto.exchangeRateDate ?? null, exchangeRateSource:dto.exchangeRateSource ?? (currency === trip.baseCurrency ? 'identity' : 'manual'), category:dto.category, subcategory:dto.subcategory ?? null, incurredAt:new Date(dto.incurredAt), city:dto.city ?? null, createdByUserId:existing?.createdByUserId ?? userId, updatedByUserId:existing ? userId : null, payerUserId:dto.payerUserId, expenseType:dto.expenseType, splitMethod:dto.splitMethod, activityId:dto.activityId ?? null, paymentMethod:dto.paymentMethod ?? null, status:dto.status, notes:dto.notes ?? null, receiptUrl:dto.receiptUrl ?? null, items:(dto.items ?? []).map((item)=>({description:item.description,amountMinor:decimalToMinor(item.amount,currency).toString()})), recurringGroupId:dto.recurringGroupId ?? null });
       const saved = await repo.save(expense); saved.splits = await splitRepo.save(splits.map((s)=>splitRepo.create({expenseId:saved.id,...s}))); return this.presentExpense(saved);
     });
   }
@@ -180,6 +257,26 @@ export class FinanceService {
     else if (dto.splitMethod === 'custom_amount') { const originalParts = dto.splits.map((s)=>decimalToMinor(s.amount ?? '', currency)); if (originalParts.reduce((a,b)=>a+b,0n)!==original) throw new BadRequestException('Custom split amounts must equal the expense total'); amounts=originalParts.map((a)=>convertMinor(a, dto.exchangeRate ?? '1', currency, baseCurrency)); amounts[amounts.length-1] += converted-amounts.reduce((a,b)=>a+b,0n); }
     else { const key = dto.splitMethod === 'percentage' ? 'percentage' : 'shares'; const scaled=dto.splits.map((s)=>decimalToMinor((s[key] as string) ?? '', 'BHD')); const total=scaled.reduce((a,b)=>a+b,0n); if (total<=0n || (key==='percentage' && total!==100000n)) throw new BadRequestException(key==='percentage'?'Percentages must equal 100':'Shares must be greater than zero'); amounts=scaled.map((v)=>(converted*v)/total); amounts[amounts.length-1]+=converted-amounts.reduce((a,b)=>a+b,0n); }
     return dto.splits.map((s,i)=>({ participantUserId:s.participantUserId, amountMinor:amounts[i].toString(), percentage:s.percentage ?? null, shares:s.shares ?? null, generatesDebt:dto.splitMethod==='gift' ? false : s.generatesDebt ?? true }));
+  }
+
+  private rebaseSplits(splits: ExpenseSplit[], total: bigint): ExpenseSplit[] {
+    const previousTotal = splits.reduce(
+      (sum, split) => sum + BigInt(split.amountMinor),
+      0n
+    );
+    const amounts =
+      previousTotal > 0n
+        ? splits.map(
+            (split) => (total * BigInt(split.amountMinor)) / previousTotal
+          )
+        : allocateEqual(total, splits.length);
+    if (amounts.length) {
+      amounts[amounts.length - 1] +=
+        total - amounts.reduce((sum, amount) => sum + amount, 0n);
+    }
+    return splits.map((split, index) =>
+      Object.assign(split, { amountMinor: amounts[index].toString() })
+    );
   }
 
   private assertParticipants(trip:{userId:string;members:Array<{userId:string}>}, ids:string[]) { const allowed=new Set([trip.userId,...trip.members.map((m)=>m.userId)]); if (ids.some((id)=>!allowed.has(id))) throw new BadRequestException('Every participant must belong to the trip'); }

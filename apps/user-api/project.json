@@ -33,6 +33,14 @@
           "buildTarget": "user-api:build:production"
         }
       }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "apps/user-api/jest.config.ts",
+        "passWithNoTests": true
+      }
     }
   },
   "tags": []

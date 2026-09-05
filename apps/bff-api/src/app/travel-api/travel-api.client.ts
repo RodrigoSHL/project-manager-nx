@@ -62,6 +62,10 @@ export class TravelApiClient {
     return this.authedPost(`/luggage/${id}/archive`, {}, user);
   }
 
+  removeLuggage(id: string, user: AuthenticatedUser) {
+    return this.authedDelete(`/luggage/${id}`, user);
+  }
+
   // ── Trip luggage and packing ─────────────────────────────────────────────
 
   listTripLuggage(tripId: string, user: AuthenticatedUser) {
@@ -181,6 +185,27 @@ export class TravelApiClient {
   financePut(tripId:string,path:string,dto:Body,user:AuthenticatedUser){ return this.authedPut(`/trips/${tripId}/finance/${path}`,dto,user); }
   financePatch(tripId:string,path:string,dto:Body,user:AuthenticatedUser){ return this.authedPatch(`/trips/${tripId}/finance/${path}`,dto,user); }
   financeDelete(tripId:string,path:string,user:AuthenticatedUser){ return this.authedDelete(`/trips/${tripId}/finance/${path}`,user); }
+
+  // ── Currency conversion ──────────────────────────────────────────────────
+
+  currencyGet(
+    path: string,
+    user: AuthenticatedUser,
+    query?: Record<string, unknown>
+  ) {
+    const params = new URLSearchParams();
+    Object.entries(query ?? {}).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') params.set(key, String(value));
+    });
+    return this.authedGet(
+      `/currency/${path}${params.size ? `?${params}` : ''}`,
+      user
+    );
+  }
+
+  currencyPut(path: string, dto: Body, user: AuthenticatedUser) {
+    return this.authedPut(`/currency/${path}`, dto, user);
+  }
 
   // ── Travel Days ───────────────────────────────────────────────────────────
 

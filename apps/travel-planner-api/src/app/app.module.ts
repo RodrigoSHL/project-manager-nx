@@ -9,6 +9,7 @@ import { TravelDaysModule } from './travel-days/travel-days.module';
 import { LuggageModule } from './luggage/luggage.module';
 import { FinanceModule } from './finance/finance.module';
 import { TravelerProfileModule } from './traveler-profile/traveler-profile.module';
+import { CurrencyModule } from './currency/currency.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { TravelerProfileModule } from './traveler-profile/traveler-profile.modul
     LuggageModule,
     FinanceModule,
     TravelerProfileModule,
+    CurrencyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

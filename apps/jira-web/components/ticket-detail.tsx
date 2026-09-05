@@ -18,6 +18,12 @@ import {
   Trash2,
   Loader2,
   LifeBuoy,
+  Pencil,
+  Paperclip,
+  Upload,
+  Download,
+  File as FileIcon,
+  Image as ImageIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -48,8 +54,26 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { typeConfig } from '@/lib/mock-data'
-import type { ApiTicket, ApiTeamMember } from '@/types/project'
+import type { ApiComment, ApiTicket, ApiTeamMember, ApiTicketAttachment } from '@/types/project'
 import { updateTicket } from '@/services/ticketService'
+import {
+  createTicketComment,
+  deleteTicketComment,
+  getTicketComments,
+  updateTicketComment,
+} from '@/services/commentService'
+import { useAuth } from '@/contexts/auth-context'
+import {
+  findTeamMemberByAssigneeId,
+  getTeamMemberAssigneeId,
+} from '@/lib/team-members'
+import {
+  TICKET_ATTACHMENT_ACCEPT,
+  deleteTicketAttachment,
+  downloadTicketAttachment,
+  listTicketAttachments,
+  uploadTicketAttachment,
+} from '@/services/ticketAttachmentService'
 
 // ── Config ───────────────────────────────────────────────────────────────────
 
@@ -92,12 +116,6 @@ const typeIcons: Record<string, React.ElementType> = {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface LocalComment {
-  id: string
-  content: string
-  createdAt: string
-}
-
 interface TicketDetailProps {
   ticket: ApiTicket | null
   open: boolean
@@ -117,6 +135,7 @@ export function TicketDetail({
   teamMembers = [],
   onUpdated,
 }: TicketDetailProps) {
+  const { user } = useAuth()
   const [saving, setSaving] = React.useState(false)
 
   const [title, setTitle] = React.useState('')
@@ -124,26 +143,94 @@ export function TicketDetail({
 
   const [description, setDescription] = React.useState('')
   const [isEditingDescription, setIsEditingDescription] = React.useState(false)
+  const [acceptanceCriteria, setAcceptanceCriteria] = React.useState('')
+  const [isEditingAcceptanceCriteria, setIsEditingAcceptanceCriteria] = React.useState(false)
 
   const [localLabels, setLocalLabels] = React.useState<ApiTicket['labels']>([])
   const [labelInput, setLabelInput] = React.useState('')
   const [showLabelInput, setShowLabelInput] = React.useState(false)
 
   const [newComment, setNewComment] = React.useState('')
-  const [comments, setComments] = React.useState<LocalComment[]>([])
+  const [comments, setComments] = React.useState<ApiComment[]>([])
+  const [commentsLoading, setCommentsLoading] = React.useState(false)
+  const [commentSaving, setCommentSaving] = React.useState(false)
+  const [commentError, setCommentError] = React.useState<string | null>(null)
+  const [editingCommentId, setEditingCommentId] = React.useState<string | null>(null)
+  const [editingCommentBody, setEditingCommentBody] = React.useState('')
+  const [attachments, setAttachments] = React.useState<ApiTicketAttachment[]>([])
+  const [attachmentsLoading, setAttachmentsLoading] = React.useState(false)
+  const [attachmentAction, setAttachmentAction] = React.useState<string | null>(null)
+  const [attachmentError, setAttachmentError] = React.useState<string | null>(null)
+  const attachmentInputRef = React.useRef<HTMLInputElement>(null)
 
   React.useEffect(() => {
     if (!ticket) return
     setTitle(ticket.title)
     setDescription(ticket.description ?? '')
+    setAcceptanceCriteria(ticket.acceptanceCriteria ?? '')
     setLocalLabels(ticket.labels ?? [])
     setComments([])
     setIsEditingTitle(false)
     setIsEditingDescription(false)
+    setIsEditingAcceptanceCriteria(false)
     setNewComment('')
     setLabelInput('')
     setShowLabelInput(false)
+    setCommentError(null)
+    setEditingCommentId(null)
+    setEditingCommentBody('')
+    setAttachments([])
+    setAttachmentError(null)
+    setAttachmentAction(null)
   }, [ticket?.id])
+
+  React.useEffect(() => {
+    if (!open || !ticket) return
+    let cancelled = false
+
+    setCommentsLoading(true)
+    setCommentError(null)
+    getTicketComments(projectId, ticket.id)
+      .then(data => {
+        if (!cancelled) setComments(data)
+      })
+      .catch(error => {
+        if (!cancelled) {
+          setCommentError(error instanceof Error ? error.message : 'No se pudieron cargar los comentarios.')
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setCommentsLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, projectId, ticket?.id])
+
+  React.useEffect(() => {
+    if (!open || !ticket) return
+    let cancelled = false
+
+    setAttachmentsLoading(true)
+    setAttachmentError(null)
+    listTicketAttachments(projectId, ticket.id)
+      .then(data => {
+        if (!cancelled) setAttachments(data)
+      })
+      .catch(error => {
+        if (!cancelled) {
+          setAttachmentError(error instanceof Error ? error.message : 'No se pudieron cargar los archivos.')
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setAttachmentsLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, projectId, ticket?.id])
 
   if (!ticket) return null
 
@@ -153,6 +240,7 @@ export function TicketDetail({
     color: 'text-muted-foreground',
     bgColor: 'bg-muted',
   }
+  const selectedAssignee = findTeamMemberByAssigneeId(teamMembers, ticket.assigneeId)
 
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString('es-ES', {
@@ -186,6 +274,14 @@ export function TicketDetail({
     if (trimmed !== (ticket.description ?? undefined)) patch({ description: trimmed })
   }
 
+  const saveAcceptanceCriteria = () => {
+    setIsEditingAcceptanceCriteria(false)
+    const trimmed = acceptanceCriteria.trim() || null
+    if (trimmed !== (ticket.acceptanceCriteria ?? null)) {
+      patch({ acceptanceCriteria: trimmed })
+    }
+  }
+
   // ── Label helpers ──────────────────────────────────────────────────────────
 
   const addLabel = () => {
@@ -202,13 +298,126 @@ export function TicketDetail({
 
   // ── Comment helpers ────────────────────────────────────────────────────────
 
-  const addComment = () => {
-    if (!newComment.trim()) return
-    setComments(prev => [
-      ...prev,
-      { id: Date.now().toString(), content: newComment.trim(), createdAt: new Date().toISOString() },
-    ])
-    setNewComment('')
+  const addComment = async () => {
+    const body = newComment.trim()
+    if (!body || commentSaving) return
+
+    setCommentSaving(true)
+    setCommentError(null)
+    try {
+      const created = await createTicketComment(projectId, ticket.id, body)
+      setComments(prev => [...prev, created])
+      setNewComment('')
+    } catch (error) {
+      setCommentError(error instanceof Error ? error.message : 'No se pudo publicar el comentario.')
+    } finally {
+      setCommentSaving(false)
+    }
+  }
+
+  const startEditingComment = (comment: ApiComment) => {
+    setEditingCommentId(comment.id)
+    setEditingCommentBody(comment.body)
+    setCommentError(null)
+  }
+
+  const saveComment = async (commentId: string) => {
+    const body = editingCommentBody.trim()
+    if (!body || commentSaving) return
+
+    setCommentSaving(true)
+    setCommentError(null)
+    try {
+      const updated = await updateTicketComment(projectId, ticket.id, commentId, body)
+      setComments(prev => prev.map(comment => comment.id === commentId ? updated : comment))
+      setEditingCommentId(null)
+      setEditingCommentBody('')
+    } catch (error) {
+      setCommentError(error instanceof Error ? error.message : 'No se pudo editar el comentario.')
+    } finally {
+      setCommentSaving(false)
+    }
+  }
+
+  const removeComment = async (commentId: string) => {
+    if (!window.confirm('¿Eliminar este comentario?') || commentSaving) return
+
+    setCommentSaving(true)
+    setCommentError(null)
+    try {
+      await deleteTicketComment(projectId, ticket.id, commentId)
+      setComments(prev => prev.filter(comment => comment.id !== commentId))
+    } catch (error) {
+      setCommentError(error instanceof Error ? error.message : 'No se pudo eliminar el comentario.')
+    } finally {
+      setCommentSaving(false)
+    }
+  }
+
+  const getCommentAuthor = (authorId: string) => {
+    if (authorId === user.userId) {
+      return { name: user.name, avatar: undefined }
+    }
+
+    const member = teamMembers.find(candidate => candidate.userId === authorId)
+    return { name: member?.name ?? 'Usuario', avatar: member?.avatar }
+  }
+
+  const getInitials = (name: string) => {
+    return name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(part => part[0]?.toUpperCase())
+      .join('') || 'U'
+  }
+
+  const addAttachment = async (file?: File) => {
+    if (!file || attachmentAction) return
+    setAttachmentAction('upload')
+    setAttachmentError(null)
+    try {
+      const created = await uploadTicketAttachment(projectId, ticket.id, ticket.key, file)
+      setAttachments(prev => [created, ...prev])
+    } catch (error) {
+      setAttachmentError(error instanceof Error ? error.message : 'No se pudo subir el archivo.')
+    } finally {
+      setAttachmentAction(null)
+      if (attachmentInputRef.current) attachmentInputRef.current.value = ''
+    }
+  }
+
+  const downloadAttachment = async (attachment: ApiTicketAttachment) => {
+    if (attachmentAction) return
+    setAttachmentAction(attachment.id)
+    setAttachmentError(null)
+    try {
+      await downloadTicketAttachment(attachment.id, attachment.originalName)
+    } catch (error) {
+      setAttachmentError(error instanceof Error ? error.message : 'No se pudo descargar el archivo.')
+    } finally {
+      setAttachmentAction(null)
+    }
+  }
+
+  const removeAttachment = async (attachment: ApiTicketAttachment) => {
+    if (attachmentAction || !window.confirm(`¿Eliminar ${attachment.originalName}?`)) return
+    setAttachmentAction(attachment.id)
+    setAttachmentError(null)
+    try {
+      await deleteTicketAttachment(attachment.id)
+      setAttachments(prev => prev.filter(candidate => candidate.id !== attachment.id))
+    } catch (error) {
+      setAttachmentError(error instanceof Error ? error.message : 'No se pudo eliminar el archivo.')
+    } finally {
+      setAttachmentAction(null)
+    }
+  }
+
+  const formatFileSize = (size: number) => {
+    if (size < 1024) return `${size} B`
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -369,7 +578,7 @@ export function TicketDetail({
                   Asignado
                 </label>
                 <Select
-                  value={ticket.assigneeId ?? 'unassigned'}
+                  value={selectedAssignee ? getTeamMemberAssigneeId(selectedAssignee) : 'unassigned'}
                   onValueChange={v => patch({ assigneeId: v === 'unassigned' ? null : v })}
                 >
                   <SelectTrigger className="w-full h-9">
@@ -383,7 +592,7 @@ export function TicketDetail({
                       </div>
                     </SelectItem>
                     {teamMembers.map(member => (
-                      <SelectItem key={member.id} value={member.id}>
+                      <SelectItem key={member.id} value={getTeamMemberAssigneeId(member)}>
                         <div className="flex items-center gap-2">
                           <Avatar className="h-5 w-5">
                             <AvatarImage src={member.avatar} />
@@ -449,6 +658,33 @@ export function TicketDetail({
                   onClick={() => setIsEditingDescription(true)}
                 >
                   {description || 'Haz clic para añadir descripción...'}
+                </div>
+              )}
+            </div>
+
+            <div className="mb-6">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">
+                Criterios de aceptación
+              </label>
+              {isEditingAcceptanceCriteria ? (
+                <Textarea
+                  value={acceptanceCriteria}
+                  onChange={e => setAcceptanceCriteria(e.target.value)}
+                  onBlur={saveAcceptanceCriteria}
+                  className="min-h-30 resize-none"
+                  placeholder="Añade los criterios que deben cumplirse..."
+                  autoFocus
+                />
+              ) : (
+                <div
+                  className={cn(
+                    'p-3 rounded-lg bg-muted/50 min-h-20 cursor-text text-sm leading-relaxed whitespace-pre-wrap',
+                    'hover:bg-muted/80 transition-colors',
+                    !acceptanceCriteria && 'text-muted-foreground italic',
+                  )}
+                  onClick={() => setIsEditingAcceptanceCriteria(true)}
+                >
+                  {acceptanceCriteria || 'Haz clic para añadir criterios de aceptación...'}
                 </div>
               )}
             </div>
@@ -521,6 +757,108 @@ export function TicketDetail({
 
             <Separator className="my-6" />
 
+            {/* ── Attachments ─────────────────────────────────────────────── */}
+            <div>
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Paperclip className="h-4 w-4" />
+                  <h3 className="text-sm font-semibold">Archivos ({attachments.length})</h3>
+                </div>
+                <input
+                  ref={attachmentInputRef}
+                  type="file"
+                  accept={TICKET_ATTACHMENT_ACCEPT}
+                  className="hidden"
+                  onChange={event => void addAttachment(event.target.files?.[0])}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={Boolean(attachmentAction)}
+                  onClick={() => attachmentInputRef.current?.click()}
+                >
+                  {attachmentAction === 'upload' ? (
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Upload className="mr-2 h-3.5 w-3.5" />
+                  )}
+                  Adjuntar
+                </Button>
+              </div>
+
+              <p className="mb-3 text-xs text-muted-foreground">
+                Imágenes, PDF, Word, Excel, PowerPoint, CSV o texto · máximo 10 MB.
+              </p>
+
+              {attachmentError && (
+                <p role="alert" className="mb-3 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {attachmentError}
+                </p>
+              )}
+
+              {attachmentsLoading && (
+                <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Cargando archivos…
+                </div>
+              )}
+
+              {!attachmentsLoading && attachments.length === 0 && (
+                <p className="rounded-lg border border-dashed px-4 py-5 text-center text-sm text-muted-foreground">
+                  Este ticket todavía no tiene archivos adjuntos.
+                </p>
+              )}
+
+              {!attachmentsLoading && attachments.length > 0 && (
+                <div className="space-y-2">
+                  {attachments.map(attachment => {
+                    const AttachmentIcon = attachment.mimeType.startsWith('image/') ? ImageIcon : FileIcon
+                    const busy = attachmentAction === attachment.id
+                    return (
+                      <div key={attachment.id} className="flex items-center gap-3 rounded-lg border p-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
+                          <AttachmentIcon className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium" title={attachment.originalName}>
+                            {attachment.originalName}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatFileSize(attachment.size)} · {formatDate(attachment.createdAt)}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          disabled={Boolean(attachmentAction)}
+                          onClick={() => void downloadAttachment(attachment)}
+                        >
+                          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                          <span className="sr-only">Descargar {attachment.originalName}</span>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          disabled={Boolean(attachmentAction)}
+                          onClick={() => void removeAttachment(attachment)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Eliminar {attachment.originalName}</span>
+                        </Button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            <Separator className="my-6" />
+
             {/* ── Comments ──────────────────────────────────────────────────── */}
             <div>
               <div className="flex items-center gap-2 mb-4">
@@ -530,7 +868,7 @@ export function TicketDetail({
 
               <div className="flex gap-3 mb-6">
                 <Avatar className="h-8 w-8 shrink-0">
-                  <AvatarFallback className="text-xs">Yo</AvatarFallback>
+                  <AvatarFallback className="text-xs">{getInitials(user.name)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 space-y-2">
                   <Textarea
@@ -538,37 +876,133 @@ export function TicketDetail({
                     value={newComment}
                     onChange={e => setNewComment(e.target.value)}
                     onKeyDown={e => {
-                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) addComment()
+                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void addComment()
                     }}
+                    disabled={commentSaving}
+                    maxLength={5000}
                     className="min-h-20 resize-none"
                   />
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] text-muted-foreground">⌘ + Enter para enviar</span>
-                    <Button size="sm" disabled={!newComment.trim()} onClick={addComment}>
-                      Comentar
+                    <Button size="sm" disabled={!newComment.trim() || commentSaving} onClick={() => void addComment()}>
+                      {commentSaving && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                      Publicar
                     </Button>
                   </div>
                 </div>
               </div>
 
-              {comments.length > 0 && (
+              {commentError && (
+                <p role="alert" className="mb-4 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {commentError}
+                </p>
+              )}
+
+              {commentsLoading && (
+                <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Cargando comentarios…
+                </div>
+              )}
+
+              {!commentsLoading && comments.length === 0 && (
+                <p className="py-4 text-sm text-muted-foreground">Aún no hay comentarios en este ticket.</p>
+              )}
+
+              {!commentsLoading && comments.length > 0 && (
                 <div className="space-y-4">
-                  {comments.map(comment => (
-                    <div key={comment.id} className="flex gap-3">
-                      <Avatar className="h-8 w-8 shrink-0">
-                        <AvatarFallback className="text-xs">Yo</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm font-medium">Yo</span>
-                          <span className="text-xs text-muted-foreground">hace un momento</span>
+                  {comments.map(comment => {
+                    const author = getCommentAuthor(comment.authorId)
+                    const isOwnComment = comment.authorId === user.userId
+                    const wasEdited = comment.updatedAt !== comment.createdAt
+
+                    return (
+                      <div key={comment.id} className="flex gap-3">
+                        <Avatar className="h-8 w-8 shrink-0">
+                          {author.avatar && <AvatarImage src={author.avatar} alt={author.name} />}
+                          <AvatarFallback className="text-xs">{getInitials(author.name)}</AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-1 flex items-center gap-2">
+                            <span className="text-sm font-medium">{isOwnComment ? 'Tú' : author.name}</span>
+                            <span className="text-xs text-muted-foreground">{formatDate(comment.createdAt)}</span>
+                            {wasEdited && <span className="text-[11px] text-muted-foreground">(editado)</span>}
+
+                            {isOwnComment && editingCommentId !== comment.id && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="ml-auto h-7 w-7">
+                                    <MoreHorizontal className="h-3.5 w-3.5" />
+                                    <span className="sr-only">Opciones del comentario</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => startEditingComment(comment)}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => void removeComment(comment.id)}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Eliminar
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </div>
+
+                          {editingCommentId === comment.id ? (
+                            <div className="space-y-2">
+                              <Textarea
+                                value={editingCommentBody}
+                                onChange={event => setEditingCommentBody(event.target.value)}
+                                onKeyDown={event => {
+                                  if (event.key === 'Escape') {
+                                    setEditingCommentId(null)
+                                    setEditingCommentBody('')
+                                  }
+                                  if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+                                    void saveComment(comment.id)
+                                  }
+                                }}
+                                disabled={commentSaving}
+                                maxLength={5000}
+                                className="min-h-20 resize-none"
+                                autoFocus
+                              />
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={commentSaving}
+                                  onClick={() => {
+                                    setEditingCommentId(null)
+                                    setEditingCommentBody('')
+                                  }}
+                                >
+                                  Cancelar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  disabled={!editingCommentBody.trim() || commentSaving}
+                                  onClick={() => void saveComment(comment.id)}
+                                >
+                                  {commentSaving && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                                  Guardar
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+                              {comment.body}
+                            </p>
+                          )}
                         </div>
-                        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                          {comment.content}
-                        </p>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>

@@ -1,28 +1,41 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { HttpException, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { AuthenticatedUser } from '../auth/types/authenticated-user';
 import { CreateProjectDto } from './dto/create-project.dto';
 
 type ProjectBody = Record<string, unknown>;
 
+export interface ProjectApiTeamMember {
+  userId?: string | null;
+}
+
+export interface ProjectApiProject extends Record<string, unknown> {
+  id: string;
+  workspaceId?: string | null;
+  teamMembers?: ProjectApiTeamMember[];
+  status?: string;
+  priority?: string;
+  businessUnit?: string;
+}
+
 @Injectable()
 export class ProjectApiClient {
   private readonly baseUrl = this.resolveBaseUrl();
 
-  async findAll(workspaceId?: string) {
+  async findAll(workspaceId?: string): Promise<ProjectApiProject[]> {
     const query = workspaceId ? `?workspaceId=${encodeURIComponent(workspaceId)}` : '';
-    return this.get(`/projects${query}`);
+    return this.get<ProjectApiProject[]>(`/projects${query}`);
   }
 
   async getProjectStats() {
     return this.get('/projects/stats');
   }
 
-  async findByStatus(status: string) {
-    return this.get(`/projects/status/${encodeURIComponent(status)}`);
+  async findByStatus(status: string): Promise<ProjectApiProject[]> {
+    return this.get<ProjectApiProject[]>(`/projects/status/${encodeURIComponent(status)}`);
   }
 
-  async findByBusinessUnit(businessUnit: string) {
-    return this.get(`/projects/business-unit/${encodeURIComponent(businessUnit)}`);
+  async findByBusinessUnit(businessUnit: string): Promise<ProjectApiProject[]> {
+    return this.get<ProjectApiProject[]>(`/projects/business-unit/${encodeURIComponent(businessUnit)}`);
   }
 
   async findAllTechnologies() {
@@ -37,7 +50,10 @@ export class ProjectApiClient {
     });
 
     if (!response.ok) {
-      throw new Error(`Project API request failed with status ${response.status}`);
+      const errorBody = await response.json().catch(() => ({
+        message: `Project API request failed with status ${response.status}`,
+      }));
+      throw new HttpException(errorBody, response.status);
     }
 
     if (response.status === 204 || method === 'DELETE') {
@@ -47,8 +63,61 @@ export class ProjectApiClient {
     return response.json();
   }
 
-  async findOne(id: string) {
-    return this.get(`/projects/${encodeURIComponent(id)}`);
+  async findOne(id: string): Promise<ProjectApiProject> {
+    return this.get<ProjectApiProject>(`/projects/${encodeURIComponent(id)}`);
+  }
+
+  async findTicketComments(projectId: string, ticketId: string) {
+    return this.commentRequest('GET', this.commentPath(projectId, ticketId));
+  }
+
+  async findTicket(projectId: string, ticketId: string) {
+    const response = await this.fetchProjectApi(
+      `/projects/${encodeURIComponent(projectId)}/tickets/${encodeURIComponent(ticketId)}`,
+      { method: 'GET' },
+    );
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({ message: 'Project API ticket request failed' }));
+      throw new HttpException(body, response.status);
+    }
+
+    return response.json();
+  }
+
+  async createTicketComment(projectId: string, ticketId: string, body: string, user: AuthenticatedUser) {
+    return this.commentRequest('POST', this.commentPath(projectId, ticketId), {
+      body,
+      authorId: user.userId,
+    });
+  }
+
+  async updateTicketComment(
+    projectId: string,
+    ticketId: string,
+    commentId: string,
+    body: string,
+    user: AuthenticatedUser,
+  ) {
+    const requester = `requesterId=${encodeURIComponent(user.userId)}`;
+    return this.commentRequest(
+      'PATCH',
+      `${this.commentPath(projectId, ticketId)}/${encodeURIComponent(commentId)}?${requester}`,
+      { body },
+    );
+  }
+
+  async deleteTicketComment(
+    projectId: string,
+    ticketId: string,
+    commentId: string,
+    user: AuthenticatedUser,
+  ) {
+    const requester = `requesterId=${encodeURIComponent(user.userId)}`;
+    return this.commentRequest(
+      'DELETE',
+      `${this.commentPath(projectId, ticketId)}/${encodeURIComponent(commentId)}?${requester}`,
+    );
   }
 
   async createProject(dto: CreateProjectDto, user: AuthenticatedUser) {
@@ -122,14 +191,14 @@ export class ProjectApiClient {
     return response.json();
   }
 
-  private async get(path: string) {
+  private async get<T = unknown>(path: string): Promise<T> {
     const response = await this.fetchProjectApi(path, { method: 'GET' });
 
     if (!response.ok) {
       throw new Error(`Project API request failed with status ${response.status}`);
     }
 
-    return response.json();
+    return response.json() as Promise<T>;
   }
 
   private authenticatedJsonHeaders(user: AuthenticatedUser): Record<string, string> {
@@ -145,6 +214,30 @@ export class ProjectApiClient {
       'x-user-email': user.email,
       'x-user-roles': user.roles.join(','),
     };
+  }
+
+  private commentPath(projectId: string, ticketId: string): string {
+    return `/projects/${encodeURIComponent(projectId)}/tickets/${encodeURIComponent(ticketId)}/comments`;
+  }
+
+  private async commentRequest(
+    method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+    path: string,
+    body?: ProjectBody,
+  ) {
+    const response = await this.fetchProjectApi(path, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+
+    if (!response.ok) {
+      const message = await response.text().catch(() => 'Project API comment request failed');
+      throw new HttpException(message || 'Project API comment request failed', response.status);
+    }
+
+    if (method === 'DELETE' || response.status === 204) return undefined;
+    return response.json();
   }
 
   private async fetchProjectApi(path: string, init: RequestInit): Promise<Response> {

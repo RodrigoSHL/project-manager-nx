@@ -11,6 +11,10 @@ export type ExpenseStatus = 'estimated' | 'pending' | 'partial' | 'paid' | 'canc
 @Index('IDX_expenses_trip_date', ['tripId', 'incurredAt'])
 @Index('IDX_expenses_trip_category', ['tripId', 'category'])
 @Index('IDX_expenses_trip_payer', ['tripId', 'payerUserId'])
+@Index('UQ_expenses_active_activity', ['activityId'], {
+  unique: true,
+  where: '"deletedAt" IS NULL AND "activityId" IS NOT NULL',
+})
 export class Expense {
   @PrimaryGeneratedColumn('uuid') id: string;
   @Column('uuid') tripId: string;
@@ -32,7 +36,7 @@ export class Expense {
   @Column('uuid') payerUserId: string;
   @Column({ default: 'individual' }) expenseType: ExpenseType;
   @Column({ default: 'equal' }) splitMethod: SplitMethod;
-  @Column('uuid', { nullable: true, unique: true }) activityId: string | null;
+  @Column('uuid', { nullable: true }) activityId: string | null;
   @ManyToOne(() => Activity, { nullable: true, onDelete: 'SET NULL' }) @JoinColumn({ name: 'activityId' }) activity: Activity | null;
   @Column({ nullable: true }) paymentMethod: string | null;
   @Column({ default: 'paid' }) status: ExpenseStatus;

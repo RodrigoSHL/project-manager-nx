@@ -23,7 +23,7 @@ export class PackingService {
   async listTripLuggage(userId: string, tripId: string): Promise<TripLuggage[]> {
     await this.tripsService.findOne(userId, tripId);
     return this.tripLuggageRepository.find({
-      where: { tripId },
+      where: { tripId, ownerId: userId },
       relations: ['luggage', 'items'],
       order: { createdAt: 'ASC' },
     });
@@ -66,7 +66,7 @@ export class PackingService {
 
   async createItem(userId: string, tripId: string, dto: CreatePackingItemDto): Promise<PackingItem> {
     await this.tripsService.findOne(userId, tripId);
-    if (dto.luggageId) await this.assertTripLuggage(tripId, dto.luggageId);
+    if (dto.luggageId) await this.assertOwnedTripLuggage(userId, tripId, dto.luggageId);
     const item = this.packingItemRepository.create({
       ...dto,
       tripId,
@@ -81,7 +81,7 @@ export class PackingService {
 
   async updateItem(userId: string, tripId: string, id: string, dto: UpdatePackingItemDto): Promise<PackingItem> {
     const item = await this.findEditableItem(userId, tripId, id);
-    if (dto.luggageId) await this.assertTripLuggage(tripId, dto.luggageId);
+    if (dto.luggageId) await this.assertOwnedTripLuggage(userId, tripId, dto.luggageId);
     Object.assign(item, dto);
     if (dto.purchaseRequired === true) item.status = PackingItemStatus.TO_BUY;
     if (dto.packed === true) item.haveIt = true;
@@ -178,9 +178,9 @@ export class PackingService {
     return item;
   }
 
-  private async assertTripLuggage(tripId: string, id: string): Promise<void> {
-    const exists = await this.tripLuggageRepository.exist({ where: { id, tripId } });
-    if (!exists) throw new BadRequestException('Selected luggage does not belong to this trip');
+  private async assertOwnedTripLuggage(userId: string, tripId: string, id: string): Promise<void> {
+    const exists = await this.tripLuggageRepository.exist({ where: { id, tripId, ownerId: userId } });
+    if (!exists) throw new BadRequestException('Selected luggage does not belong to you in this trip');
   }
 
   private calculateTripDays(startDate?: string, endDate?: string): number {

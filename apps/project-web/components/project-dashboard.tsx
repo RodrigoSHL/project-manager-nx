@@ -54,10 +54,14 @@ import { EditDocumentsDialog } from "./edit-documents-dialog"
 import { EditCloudServicesDialog } from "./edit-cloud-services-dialog"
 import { ArchitectureDiagramDialog } from "./architecture-diagram-dialog"
 import { ArchitectureViewerDialog } from "./architecture-viewer-dialog"
+import { useAuth } from "@/contexts/auth-context"
+import { isProjectAdmin } from "@/lib/auth"
 
 
 export function ProjectDashboard({ projectId }: { projectId?: string }) {
   const { projects, currentProject, setCurrentProject, loading, error, updateProject, updateProjectInList } = useProjects()
+  const { user } = useAuth()
+  const isAdmin = isProjectAdmin(user.roles)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [editRepositoriesDialogOpen, setEditRepositoriesDialogOpen] = useState(false)
   const [editTeamMembersDialogOpen, setEditTeamMembersDialogOpen] = useState(false)
@@ -303,7 +307,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
     const latestDiagram = getLatestArchitectureDiagram()
     if (latestDiagram) {
       setArchitectureViewerDialogOpen(true)
-    } else {
+    } else if (isAdmin) {
       setArchitectureDiagramDialogOpen(true)
     }
   }
@@ -377,10 +381,12 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                           <FileText className="mr-2 h-4 w-4" />
                           Exportar
                         </Button>
-                        <Button size="sm" onClick={() => setEditDialogOpen(true)}>
-                          <Target className="mr-2 h-4 w-4" />
-                          Editar
-                        </Button>
+                        {isAdmin && (
+                          <Button size="sm" onClick={() => setEditDialogOpen(true)}>
+                            <Target className="mr-2 h-4 w-4" />
+                            Editar
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardHeader>
@@ -434,14 +440,16 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                           <GitBranch className="h-5 w-5" />
                           Repositorios ({currentProject.repositories.length})
                         </CardTitle>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => setEditRepositoriesDialogOpen(true)}
-                        >
-                          <Edit3 className="mr-2 h-4 w-4" />
-                          Editar
-                        </Button>
+                        {isAdmin && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditRepositoriesDialogOpen(true)}
+                          >
+                            <Edit3 className="mr-2 h-4 w-4" />
+                            Editar
+                          </Button>
+                        )}
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -485,19 +493,23 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                           <Server className="h-5 w-5" />
                           Infraestructura
                         </CardTitle>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => setEditCloudServicesDialogOpen(true)}
-                        >
-                          <Edit3 className="mr-2 h-4 w-4" />
-                          Editar
-                        </Button>
+                        {isAdmin && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditCloudServicesDialogOpen(true)}
+                          >
+                            <Edit3 className="mr-2 h-4 w-4" />
+                            Editar
+                          </Button>
+                        )}
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div 
-                        className="aspect-video bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors overflow-hidden"
+                        className={`aspect-video bg-gray-100 rounded-lg transition-colors overflow-hidden ${
+                          getLatestArchitectureDiagram() || isAdmin ? "cursor-pointer hover:bg-gray-200" : ""
+                        }`}
                         onClick={handleArchitectureClick}
                       >
                         {(() => {
@@ -538,7 +550,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                                 <div className="text-center text-gray-500">
                                   <Cloud className="h-8 w-8 mx-auto mb-2" />
                                   <p className="text-sm">Diagrama de Arquitectura</p>
-                                  <p className="text-xs">Haz clic para subir</p>
+                                  {isAdmin && <p className="text-xs">Haz clic para subir</p>}
                                 </div>
                               </div>
                             )
@@ -568,7 +580,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                             <div className="text-center py-4 text-gray-500">
                               <Cloud className="h-6 w-6 mx-auto mb-2 text-gray-400" />
                               <p className="text-sm">No hay servicios cloud configurados</p>
-                              <p className="text-xs">Haz clic en &quot;Editar&quot; para agregar servicios</p>
+                              {isAdmin && <p className="text-xs">Haz clic en &quot;Editar&quot; para agregar servicios</p>}
                             </div>
                           )}
                         </div>
@@ -585,14 +597,16 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                         <Server className="h-5 w-5" />
                         Entornos y URLs
                       </CardTitle>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setEditEnvironmentsDialogOpen(true)}
-                      >
-                        <Edit3 className="mr-2 h-4 w-4" />
-                        Editar
-                      </Button>
+                      {isAdmin && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditEnvironmentsDialogOpen(true)}
+                        >
+                          <Edit3 className="mr-2 h-4 w-4" />
+                          Editar
+                        </Button>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -636,7 +650,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                       <div className="text-center py-8 text-gray-500">
                         <Server className="h-12 w-12 mx-auto mb-3 text-gray-400" />
                         <p>No hay entornos configurados</p>
-                        <p className="text-sm">Haz clic en &quot;Editar&quot; para agregar entornos al proyecto</p>
+                          {isAdmin && <p className="text-sm">Haz clic en &quot;Editar&quot; para agregar entornos al proyecto</p>}
                       </div>
                     )}
                   </CardContent>
@@ -689,14 +703,16 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                           <FileText className="h-5 w-5" />
                           Documentación
                         </CardTitle>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => setEditDocumentsDialogOpen(true)}
-                        >
-                          <Edit3 className="mr-2 h-4 w-4" />
-                          Editar
-                        </Button>
+                        {isAdmin && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditDocumentsDialogOpen(true)}
+                          >
+                            <Edit3 className="mr-2 h-4 w-4" />
+                            Editar
+                          </Button>
+                        )}
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
@@ -727,7 +743,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                         <div className="text-center py-6 text-gray-500">
                           <FileText className="h-8 w-8 mx-auto mb-2 text-gray-400" />
                           <p className="text-sm">No hay documentos en el proyecto</p>
-                          <p className="text-xs">Haz clic en &quot;Editar&quot; para agregar documentos</p>
+                          {isAdmin && <p className="text-xs">Haz clic en &quot;Editar&quot; para agregar documentos</p>}
                         </div>
                       )}
                       {currentProject.files && currentProject.files.length > 5 && (
@@ -749,14 +765,16 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                         <Users className="h-5 w-5" />
                         Equipo Responsable
                       </CardTitle>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setEditTeamMembersDialogOpen(true)}
-                      >
-                        <Edit3 className="mr-2 h-4 w-4" />
-                        Editar
-                      </Button>
+                      {isAdmin && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditTeamMembersDialogOpen(true)}
+                        >
+                          <Edit3 className="mr-2 h-4 w-4" />
+                          Editar
+                        </Button>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -801,7 +819,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                       <div className="text-center py-8 text-gray-500">
                         <Users className="h-12 w-12 mx-auto mb-3 text-gray-400" />
                         <p>No hay miembros del equipo configurados</p>
-                        <p className="text-sm">Haz clic en &quot;Editar&quot; para agregar miembros al equipo</p>
+                        {isAdmin && <p className="text-sm">Haz clic en &quot;Editar&quot; para agregar miembros al equipo</p>}
                       </div>
                     )}
                   </CardContent>
@@ -816,14 +834,16 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                           <Calendar className="h-5 w-5" />
                           Roadmap y Tareas
                         </CardTitle>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => setEditTasksDialogOpen(true)}
-                        >
-                          <Edit3 className="mr-2 h-4 w-4" />
-                          Editar
-                        </Button>
+                        {isAdmin && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditTasksDialogOpen(true)}
+                          >
+                            <Edit3 className="mr-2 h-4 w-4" />
+                            Editar
+                          </Button>
+                        )}
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -864,7 +884,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                         <div className="text-center py-6 text-gray-500">
                           <Calendar className="h-8 w-8 mx-auto mb-2 text-gray-400" />
                           <p className="text-sm">No hay tareas configuradas</p>
-                          <p className="text-xs">Haz clic en &quot;Editar&quot; para agregar tareas al proyecto</p>
+                          {isAdmin && <p className="text-xs">Haz clic en &quot;Editar&quot; para agregar tareas al proyecto</p>}
                         </div>
                       )}
                     </CardContent>
@@ -878,14 +898,16 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                           <Link className="h-5 w-5" />
                           Enlaces Útiles
                         </CardTitle>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => setEditUsefulLinksDialogOpen(true)}
-                        >
-                          <Edit3 className="mr-2 h-4 w-4" />
-                          Editar
-                        </Button>
+                        {isAdmin && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditUsefulLinksDialogOpen(true)}
+                          >
+                            <Edit3 className="mr-2 h-4 w-4" />
+                            Editar
+                          </Button>
+                        )}
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
@@ -908,7 +930,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                         <div className="text-center py-6 text-gray-500">
                           <Link className="h-8 w-8 mx-auto mb-2 text-gray-400" />
                           <p className="text-sm">No hay enlaces útiles configurados</p>
-                          <p className="text-xs">Haz clic en &quot;Editar&quot; para agregar enlaces al proyecto</p>
+                          {isAdmin && <p className="text-xs">Haz clic en &quot;Editar&quot; para agregar enlaces al proyecto</p>}
                         </div>
                       )}
                     </CardContent>

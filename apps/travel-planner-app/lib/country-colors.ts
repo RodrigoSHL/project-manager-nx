@@ -22,17 +22,64 @@ export const COUNTRY_COLORS: Record<string, string> = {
   Chile: '#ECAFB2',              // rojo suave
 }
 
+// Dark-mode counterparts keep each country's hue while avoiding bright pastel
+// blocks against the calendar's near-black surface.
+export const DARK_COUNTRY_COLORS: Record<string, string> = {
+  España: '#584717',
+  Francia: '#193D5B',
+  Italia: '#1C4936',
+  Suiza: '#5A2930',
+  'Reino Unido': '#39385C',
+  Alemania: '#3C424A',
+  Portugal: '#1B4B3D',
+  'Países Bajos': '#5B371B',
+  Austria: '#56313B',
+  Bélgica: '#50451E',
+  Grecia: '#17485C',
+  'República Checa': '#353B61',
+  Hungría: '#284B35',
+  Polonia: '#572F3C',
+  Croacia: '#572D34',
+  Noruega: '#4A304C',
+  Suecia: '#214858',
+  Dinamarca: '#572A38',
+  Irlanda: '#1E4D31',
+  Escocia: '#203F5B',
+  Chile: '#5A2932',
+}
+
 export const DEFAULT_COUNTRY_COLOR = '#E2E8F0'
+export const DEFAULT_DARK_COUNTRY_COLOR = '#374151'
 
 export function getCountryColor(country: string): string {
   return COUNTRY_COLORS[country] ?? DEFAULT_COUNTRY_COLOR
 }
 
-export function getCountryTabBackground(countries: string[]): string {
-  const firstColor = getCountryColor(countries[0] ?? '')
+export function getDarkCountryColor(country: string): string {
+  return DARK_COUNTRY_COLORS[country] ?? DEFAULT_DARK_COUNTRY_COLOR
+}
+
+function getBackground(
+  countries: string[],
+  getColor: (country: string) => string
+): string {
+  const firstColor = getColor(countries[0] ?? '')
 
   if (countries.length < 2) return firstColor
 
-  const lastColor = getCountryColor(countries[countries.length - 1])
+  const lastColor = getColor(countries[countries.length - 1])
   return `linear-gradient(110deg, ${firstColor} 0%, ${firstColor} 46%, ${lastColor} 54%, ${lastColor} 100%)`
+}
+
+export function getCountryTabBackground(countries: string[]): string {
+  return getBackground(countries, getCountryColor)
+}
+
+export function getCountryTabBackgrounds(
+  countries: string[]
+): { light: string; dark: string } {
+  return {
+    light: getBackground(countries, getCountryColor),
+    dark: getBackground(countries, getDarkCountryColor),
+  }
 }

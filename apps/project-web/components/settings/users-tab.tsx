@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Users, Trash2, Mail, Loader2, Search, UserCircle2 } from "lucide-react"
+import { Check, Plus, Users, Trash2, Mail, Loader2, Search, ShieldCheck, UserRound } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,7 +9,13 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
-import { UserService, type User, type CreateUserDto } from "@/services/userService"
+import { Badge } from "@/components/ui/badge"
+import { UserService, type User, type CreateUserDto, type UserRole } from "@/services/userService"
+
+const roleOptions: Array<{ value: UserRole; label: string; description: string; icon: React.ElementType }> = [
+  { value: "user", label: "Usuario", description: "Acceso base a ProjectHub", icon: UserRound },
+  { value: "admin", label: "Administrador", description: "Gestiona usuarios y configuración", icon: ShieldCheck },
+]
 
 function initials(name: string) {
   return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
@@ -42,6 +48,9 @@ export function UsersTab() {
   const [name, setName] = React.useState("")
   const [email, setEmail] = React.useState("")
   const [avatarUrl, setAvatarUrl] = React.useState("")
+  const [password, setPassword] = React.useState("")
+  const [passwordConfirmation, setPasswordConfirmation] = React.useState("")
+  const [roles, setRoles] = React.useState<UserRole[]>(["user"])
 
   React.useEffect(() => {
     UserService.getAll()
@@ -55,19 +64,46 @@ export function UsersTab() {
   )
 
   const handleCreate = async () => {
+    const normalizedName = name.trim()
+    const normalizedEmail = email.trim().toLowerCase()
+    if (password.length < 8) {
+      setCreateError("La contraseña debe tener al menos 8 caracteres")
+      return
+    }
+    if (password !== passwordConfirmation) {
+      setCreateError("Las contraseñas no coinciden")
+      return
+    }
+    if (roles.length === 0) {
+      setCreateError("Selecciona al menos un rol")
+      return
+    }
+
     setCreating(true)
     setCreateError("")
     try {
-      const dto: CreateUserDto = { name, email, ...(avatarUrl ? { avatarUrl } : {}) }
+      const dto: CreateUserDto = {
+        name: normalizedName,
+        email: normalizedEmail,
+        password,
+        roles,
+        ...(avatarUrl.trim() ? { avatarUrl: avatarUrl.trim() } : {}),
+      }
       const user = await UserService.create(dto)
       setUsers(prev => [user, ...prev])
       setCreateOpen(false)
-      setName(""); setEmail(""); setAvatarUrl("")
-    } catch (e: any) {
-      setCreateError(e.message)
+      setName(""); setEmail(""); setAvatarUrl(""); setPassword(""); setPasswordConfirmation(""); setRoles(["user"])
+    } catch (error: unknown) {
+      setCreateError(error instanceof Error ? error.message : "No se pudo crear el usuario")
     } finally {
       setCreating(false)
     }
+  }
+
+  const toggleRole = (role: UserRole) => {
+    setRoles(current => current.includes(role)
+      ? current.filter(candidate => candidate !== role)
+      : [...current, role])
   }
 
   const handleRemove = async (id: string) => {
@@ -148,6 +184,13 @@ export function UsersTab() {
                       <Mail className="h-3 w-3 shrink-0" />
                       <span className="truncate">{user.email}</span>
                     </div>
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {user.roles.map(role => (
+                        <Badge key={role} variant="secondary" className="px-1.5 py-0 text-[10px] capitalize">
+                          {role}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </button>
@@ -184,6 +227,13 @@ export function UsersTab() {
               <div className="text-center">
                 <div className="font-semibold">{selectedUser.name}</div>
                 <div className="text-sm text-muted-foreground">{selectedUser.email}</div>
+                <div className="mt-2 flex justify-center gap-1">
+                  {selectedUser.roles.map(role => (
+                    <Badge key={role} variant={role === "admin" ? "default" : "secondary"} className="capitalize">
+                      {role}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -233,11 +283,63 @@ export function UsersTab() {
               <Label htmlFor="u-avatar">Avatar URL <span className="text-muted-foreground">(opcional)</span></Label>
               <Input id="u-avatar" placeholder="https://..." value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)} />
             </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="u-password">Contraseña inicial</Label>
+              <Input
+                id="u-password"
+                type="password"
+                autoComplete="new-password"
+                placeholder="Mínimo 8 caracteres"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="u-password-confirmation">Confirmar contraseña</Label>
+              <Input
+                id="u-password-confirmation"
+                type="password"
+                autoComplete="new-password"
+                value={passwordConfirmation}
+                onChange={e => setPasswordConfirmation(e.target.value)}
+              />
+            </div>
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium">Roles</legend>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {roleOptions.map(option => {
+                  const selected = roles.includes(option.value)
+                  const RoleIcon = option.icon
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => toggleRole(option.value)}
+                      className={`relative rounded-lg border p-3 text-left transition-colors ${
+                        selected ? "border-primary bg-primary/5" : "hover:border-primary/40"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <RoleIcon className="h-4 w-4" />
+                        <span className="text-sm font-medium">{option.label}</span>
+                        {selected && <Check className="ml-auto h-4 w-4 text-primary" />}
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">Puedes seleccionar uno o ambos roles.</p>
+            </fieldset>
             {createError && <p className="text-xs text-destructive">{createError}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCreate} disabled={creating || !name || !email}>
+            <Button
+              onClick={handleCreate}
+              disabled={creating || !name.trim() || !email.trim() || !password || !passwordConfirmation || roles.length === 0}
+            >
               {creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Crear usuario
             </Button>

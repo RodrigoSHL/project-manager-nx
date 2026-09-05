@@ -2,13 +2,10 @@
 
 import * as React from 'react'
 import { Calendar, Target, TrendingUp, CheckCircle2, Clock, Users, Pencil } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Ticket, Sprint, users } from '@/lib/mock-data'
 import type { ApiTicket, ApiSprint } from '@/types/project'
 
 interface SprintInfoProps {
@@ -21,8 +18,6 @@ export function SprintInfo({ sprint, tickets, onEdit }: SprintInfoProps) {
   const totalTickets = tickets.length
   const doneTickets = tickets.filter(t => t.status === 'done').length
   const inProgressTickets = tickets.filter(t => t.status === 'in_progress' || t.status === 'in_review').length
-  const todoTickets = tickets.filter(t => t.status === 'todo').length
-
   const totalStoryPoints = tickets.reduce((acc, t) => acc + (t.storyPoints || 0), 0)
   const completedStoryPoints = tickets
     .filter(t => t.status === 'done')
@@ -30,18 +25,23 @@ export function SprintInfo({ sprint, tickets, onEdit }: SprintInfoProps) {
 
   const progress = totalTickets > 0 ? (doneTickets / totalTickets) * 100 : 0
 
-  const startDate = new Date(sprint.startDate)
-  const endDate = new Date(sprint.endDate)
+  const startDate = sprint.startDate ? new Date(sprint.startDate) : null
+  const endDate = sprint.endDate ? new Date(sprint.endDate) : null
   const today = new Date()
-  const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
-  const elapsedDays = Math.ceil((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+  const totalDays = startDate && endDate
+    ? Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)))
+    : 0
+  const elapsedDays = startDate
+    ? Math.max(0, Math.ceil((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)))
+    : 0
   const remainingDays = Math.max(0, totalDays - elapsedDays)
-  const timeProgress = Math.min(100, (elapsedDays / totalDays) * 100)
+  const timeProgress = totalDays > 0 ? Math.min(100, (elapsedDays / totalDays) * 100) : 0
 
   const assigneeCount = new Set(tickets.map(t => t.assigneeId).filter(Boolean)).size
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('es-ES', { 
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return 'Sin fecha'
+    return new Date(dateStr).toLocaleDateString('es-ES', {
       month: 'short', 
       day: 'numeric' 
     })

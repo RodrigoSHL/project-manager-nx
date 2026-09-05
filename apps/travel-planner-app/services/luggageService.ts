@@ -146,6 +146,7 @@ export const luggageApi = {
   update: (id: string, data: Partial<LuggageInput>) => request<Luggage>(`/luggage/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   duplicate: (id: string) => request<Luggage>(`/luggage/${id}/duplicate`, { method: 'POST', body: '{}' }),
   archive: (id: string) => request<Luggage>(`/luggage/${id}/archive`, { method: 'POST', body: '{}' }),
+  remove: (id: string) => request<void>(`/luggage/${id}`, { method: 'DELETE' }),
   listForTrip: (tripId: string) => request<TripLuggage[]>(`/trips/${tripId}/luggage`),
   addToTrip: (tripId: string, luggageId: string) => request<TripLuggage>(`/trips/${tripId}/luggage`, { method: 'POST', body: JSON.stringify({ luggageId }) }),
   removeFromTrip: (tripId: string, id: string) => request<void>(`/trips/${tripId}/luggage/${id}`, { method: 'DELETE' }),

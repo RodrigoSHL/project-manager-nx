@@ -33,6 +33,33 @@ export interface ApiLabel {
   color: string | null
 }
 
+export interface ApiComment {
+  id: string
+  ticketId: string
+  authorId: string
+  body: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ApiTicketAttachment {
+  id: string
+  application: 'jira-web'
+  ownerType: 'ticket'
+  ownerId: string
+  originalName: string
+  mimeType: string
+  size: number
+  metadata: {
+    category: 'ticket-attachment'
+    projectId: string
+    ticketKey?: string
+    uploadedBy?: string
+  }
+  createdAt: string
+  updatedAt: string
+}
+
 export interface ApiTeamMember {
   id: string
   name: string
@@ -41,6 +68,7 @@ export interface ApiTeamMember {
   userId: string | null
   avatar?: string
   projectId: string
+  isActive?: boolean
 }
 
 export interface ApiSupportDetail {
@@ -65,6 +93,7 @@ export interface ApiTicket {
   sprintId: string | null
   title: string
   description: string | null
+  acceptanceCriteria: string | null
   status: 'backlog' | 'todo' | 'in_progress' | 'in_review' | 'done' | 'cancelled'
   priority: 'lowest' | 'low' | 'medium' | 'high' | 'urgent'
   type: 'story' | 'bug' | 'task' | 'epic' | 'subtask' | 'support'

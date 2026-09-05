@@ -225,7 +225,15 @@ export function LuggageSection({ trip, currentUserId, canEditTrip }: Props) {
         <button onClick={() => { setEditingItem(null); setItemModalOpen(true) }} className="fixed bottom-5 right-4 z-30 flex h-13 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-xl shadow-primary/30 transition hover:-translate-y-0.5 sm:bottom-7 sm:right-7"><Plus className="size-5" /> Artículo</button>
       )}
 
-      <LuggageFormModal open={bagModalOpen} luggage={editingBag} preset={bagPreset} onClose={() => setBagModalOpen(false)} onSave={saveBag} onArchive={editingBag ? async () => { await luggageApi.archive(editingBag.id); setBagModalOpen(false); await refresh() } : undefined} />
+      <LuggageFormModal
+        open={bagModalOpen}
+        luggage={editingBag}
+        preset={bagPreset}
+        onClose={() => setBagModalOpen(false)}
+        onSave={saveBag}
+        onArchive={editingBag ? async () => { await luggageApi.archive(editingBag.id); setBagModalOpen(false); await refresh() } : undefined}
+        onDelete={editingBag ? async () => { await luggageApi.remove(editingBag.id); setBagModalOpen(false); await refresh() } : undefined}
+      />
       <PackingItemModal open={itemModalOpen} item={editingItem} luggage={tripLuggage} onClose={() => setItemModalOpen(false)} onSave={saveItem} />
     </section>
   )

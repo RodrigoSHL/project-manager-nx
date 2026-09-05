@@ -77,18 +77,18 @@ export const ACTIVITY_TYPE_LABELS: Record<ActivityType, string> = {
 }
 
 export const ACTIVITY_TYPE_COLORS: Record<ActivityType, { bg: string; text: string; border: string }> = {
-  flight:        { bg: 'bg-sky-100',    text: 'text-sky-800',    border: 'border-sky-300' },
-  train:         { bg: 'bg-violet-100', text: 'text-violet-800', border: 'border-violet-300' },
-  bus:           { bg: 'bg-indigo-100', text: 'text-indigo-800', border: 'border-indigo-300' },
-  transfer:      { bg: 'bg-blue-100',   text: 'text-blue-800',   border: 'border-blue-300' },
-  accommodation: { bg: 'bg-amber-100',  text: 'text-amber-800',  border: 'border-amber-300' },
-  sightseeing:   { bg: 'bg-emerald-100',text: 'text-emerald-800',border: 'border-emerald-300' },
-  food:          { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-300' },
-  shopping:      { bg: 'bg-pink-100',   text: 'text-pink-800',   border: 'border-pink-300' },
-  document:      { bg: 'bg-red-100',    text: 'text-red-800',    border: 'border-red-300' },
-  reminder:      { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-300' },
-  free:          { bg: 'bg-teal-100',   text: 'text-teal-800',   border: 'border-teal-300' },
-  other:         { bg: 'bg-gray-100',   text: 'text-gray-700',   border: 'border-gray-300' },
+  flight:        { bg: 'bg-sky-100 dark:bg-sky-950/80',       text: 'text-sky-800 dark:text-sky-200',       border: 'border-sky-300 dark:border-sky-800' },
+  train:         { bg: 'bg-violet-100 dark:bg-violet-950/80', text: 'text-violet-800 dark:text-violet-200', border: 'border-violet-300 dark:border-violet-800' },
+  bus:           { bg: 'bg-indigo-100 dark:bg-indigo-950/80', text: 'text-indigo-800 dark:text-indigo-200', border: 'border-indigo-300 dark:border-indigo-800' },
+  transfer:      { bg: 'bg-blue-100 dark:bg-blue-950/80',     text: 'text-blue-800 dark:text-blue-200',     border: 'border-blue-300 dark:border-blue-800' },
+  accommodation: { bg: 'bg-amber-100 dark:bg-amber-950/80',   text: 'text-amber-800 dark:text-amber-200',   border: 'border-amber-300 dark:border-amber-800' },
+  sightseeing:   { bg: 'bg-emerald-100 dark:bg-emerald-950/80', text: 'text-emerald-800 dark:text-emerald-200', border: 'border-emerald-300 dark:border-emerald-800' },
+  food:          { bg: 'bg-orange-100 dark:bg-orange-950/80', text: 'text-orange-800 dark:text-orange-200', border: 'border-orange-300 dark:border-orange-800' },
+  shopping:      { bg: 'bg-pink-100 dark:bg-pink-950/80',     text: 'text-pink-800 dark:text-pink-200',     border: 'border-pink-300 dark:border-pink-800' },
+  document:      { bg: 'bg-red-100 dark:bg-red-950/80',       text: 'text-red-800 dark:text-red-200',       border: 'border-red-300 dark:border-red-800' },
+  reminder:      { bg: 'bg-yellow-100 dark:bg-yellow-950/80', text: 'text-yellow-800 dark:text-yellow-200', border: 'border-yellow-300 dark:border-yellow-800' },
+  free:          { bg: 'bg-teal-100 dark:bg-teal-950/80',     text: 'text-teal-800 dark:text-teal-200',     border: 'border-teal-300 dark:border-teal-800' },
+  other:         { bg: 'bg-gray-100 dark:bg-gray-800',        text: 'text-gray-700 dark:text-gray-200',     border: 'border-gray-300 dark:border-gray-700' },
 }
 
 export const STATUS_LABELS: Record<ActivityStatus, string> = {
@@ -99,10 +99,10 @@ export const STATUS_LABELS: Record<ActivityStatus, string> = {
 }
 
 export const STATUS_COLORS: Record<ActivityStatus, { bg: string; text: string }> = {
-  pending:   { bg: 'bg-yellow-100', text: 'text-yellow-800' },
-  confirmed: { bg: 'bg-green-100',  text: 'text-green-800' },
-  reserved:  { bg: 'bg-blue-100',   text: 'text-blue-800' },
-  cancelled: { bg: 'bg-red-100',    text: 'text-red-700' },
+  pending:   { bg: 'bg-yellow-100 dark:bg-yellow-950/80', text: 'text-yellow-800 dark:text-yellow-200' },
+  confirmed: { bg: 'bg-green-100 dark:bg-green-950/80',   text: 'text-green-800 dark:text-green-200' },
+  reserved:  { bg: 'bg-blue-100 dark:bg-blue-950/80',     text: 'text-blue-800 dark:text-blue-200' },
+  cancelled: { bg: 'bg-red-100 dark:bg-red-950/80',       text: 'text-red-700 dark:text-red-200' },
 }
 
 export const PRIORITY_LABELS: Record<ActivityPriority, string> = {

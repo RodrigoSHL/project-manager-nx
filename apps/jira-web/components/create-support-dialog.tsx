@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
@@ -24,6 +23,7 @@ import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { createTicket } from '@/services/ticketService'
 import { updateSupportDetail } from '@/services/supportDetailService'
+import { getTeamMemberAssigneeId } from '@/lib/team-members'
 import type { ApiTicket, ApiTeamMember } from '@/types/project'
 
 interface CreateSupportDialogProps {
@@ -52,6 +52,7 @@ export function CreateSupportDialog({
   // — Ticket fields
   const [title, setTitle]               = React.useState('')
   const [description, setDescription]   = React.useState('')
+  const [acceptanceCriteria, setAcceptanceCriteria] = React.useState('')
   const [priority, setPriority]         = React.useState<ApiTicket['priority']>('high')
   const [assigneeId, setAssigneeId]     = React.useState('none')
 
@@ -67,7 +68,7 @@ export function CreateSupportDialog({
 
   React.useEffect(() => {
     if (!open) {
-      setTitle(''); setDescription(''); setPriority('high'); setAssigneeId('none')
+      setTitle(''); setDescription(''); setAcceptanceCriteria(''); setPriority('high'); setAssigneeId('none')
       setClientContact(''); setUfValue(''); setIsBillable(true); setSlaDeadline(''); setNotes('')
       setError('')
     }
@@ -83,6 +84,7 @@ export function CreateSupportDialog({
       const ticket = await createTicket(projectId, {
         title:       title.trim(),
         description: description.trim() || undefined,
+        acceptanceCriteria: acceptanceCriteria.trim() || undefined,
         type:        'support',
         priority,
         status:      'todo',
@@ -162,6 +164,18 @@ export function CreateSupportDialog({
                 />
               </div>
 
+              <div className="space-y-1.5">
+                <Label htmlFor="support-acceptance-criteria" className="text-sm font-medium">Criterios de aceptación</Label>
+                <Textarea
+                  id="support-acceptance-criteria"
+                  placeholder="¿Qué debe cumplirse para resolver el soporte?"
+                  value={acceptanceCriteria}
+                  onChange={e => setAcceptanceCriteria(e.target.value)}
+                  rows={3}
+                  className="resize-none"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium">Prioridad</Label>
@@ -191,7 +205,7 @@ export function CreateSupportDialog({
                     <SelectContent>
                       <SelectItem value="none">Sin asignar</SelectItem>
                       {teamMembers.map(m => (
-                        <SelectItem key={m.id} value={m.userId ?? m.id}>
+                        <SelectItem key={m.id} value={getTeamMemberAssigneeId(m)}>
                           {m.name}
                         </SelectItem>
                       ))}

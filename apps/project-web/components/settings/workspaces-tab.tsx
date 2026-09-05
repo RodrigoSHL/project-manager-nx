@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { WorkspaceService, UserService, type Workspace, type WorkspaceMember, type User } from "@/services/userService"
 import { ProjectService } from "@/services/projectService"
 import { type Project } from "@/types/project"
+import { EditTeamMembersDialog } from "@/components/edit-team-members-dialog"
 
 const roleConfig = {
   owner:  { label: "Owner",  icon: Crown,  color: "text-amber-600 bg-amber-50 border-amber-200" },
@@ -69,6 +70,8 @@ export function WorkspacesTab() {
   const [linkProjectOpen, setLinkProjectOpen] = React.useState(false)
   const [linkProjectId, setLinkProjectId] = React.useState("")
   const [linkingProject, setLinkingProject] = React.useState(false)
+  const [teamProject, setTeamProject] = React.useState<Project | null>(null)
+  const [teamDialogOpen, setTeamDialogOpen] = React.useState(false)
 
   React.useEffect(() => {
     WorkspaceService.getAll()
@@ -153,6 +156,21 @@ export function WorkspacesTab() {
     await ProjectService.updateProject(projectId, { workspaceId: undefined } as Parameters<typeof ProjectService.updateProject>[1])
     setWsProjects(prev => prev.filter(p => p.id !== projectId))
     setAllProjects(prev => prev.map(p => p.id === projectId ? { ...p, workspaceId: undefined } : p))
+  }
+
+  const openTeamDialog = (project: Project) => {
+    setTeamProject(project)
+    setTeamDialogOpen(true)
+  }
+
+  const handleTeamUpdate = (updatedProject: Project) => {
+    setWsProjects(prev => prev.map(project =>
+      project.id === updatedProject.id ? updatedProject : project
+    ))
+    setAllProjects(prev => prev.map(project =>
+      project.id === updatedProject.id ? updatedProject : project
+    ))
+    setTeamProject(updatedProject)
   }
 
   const unlinkableProjects = allProjects.filter(p => !wsProjects.some(wp => wp.id === p.id))
@@ -357,6 +375,15 @@ export function WorkspacesTab() {
                       {p.key && (
                         <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded shrink-0">{p.key}</span>
                       )}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openTeamDialog(p)}
+                      >
+                        <Users className="h-3.5 w-3.5 mr-1.5" />
+                        Equipo ({p.teamMembers?.length ?? 0})
+                      </Button>
                       <button
                         onClick={() => handleUnlinkProject(p.id)}
                         className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-1 rounded"
@@ -507,6 +534,15 @@ export function WorkspacesTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <EditTeamMembersDialog
+        project={teamProject}
+        open={teamDialogOpen}
+        onOpenChange={setTeamDialogOpen}
+        onSave={handleTeamUpdate}
+        workspaceId={selectedWs?.id}
+        workspaceName={selectedWs?.name}
+      />
     </div>
   )
 }

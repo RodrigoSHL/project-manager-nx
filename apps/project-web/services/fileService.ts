@@ -1,6 +1,7 @@
 import { ProjectFile, FileType } from '@/types/project'
+import { authenticatedFetch } from '@/lib/api'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api'
 
 export class FileService {
   static async uploadFile(
@@ -17,7 +18,7 @@ export class FileService {
       formData.append('description', description)
     }
 
-    const response = await fetch(`${API_BASE_URL}/files`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/files`, {
       method: 'POST',
       body: formData,
     })
@@ -45,7 +46,7 @@ export class FileService {
       formData.append('description', description)
     }
 
-    const response = await fetch(`${API_BASE_URL}/files/multiple`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/files/multiple`, {
       method: 'POST',
       body: formData,
     })
@@ -73,7 +74,7 @@ export class FileService {
   }
 
   static async getFilesByProjectId(projectId: string): Promise<ProjectFile[]> {
-    const response = await fetch(`${API_BASE_URL}/files/project/${projectId}`)
+    const response = await authenticatedFetch(`${API_BASE_URL}/files/project/${projectId}`, { cache: 'no-store' })
 
     if (!response.ok) {
       throw new Error('Error al obtener los archivos del proyecto')
@@ -83,7 +84,7 @@ export class FileService {
   }
 
   static async downloadFile(fileId: string): Promise<Blob> {
-    const response = await fetch(`${API_BASE_URL}/files/${fileId}`)
+    const response = await authenticatedFetch(`${API_BASE_URL}/files/${fileId}`)
 
     if (!response.ok) {
       throw new Error('Error al descargar el archivo')
@@ -93,7 +94,7 @@ export class FileService {
   }
 
   static async deleteFile(fileId: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/files/${fileId}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/files/${fileId}`, {
       method: 'DELETE',
     })
 
@@ -103,7 +104,7 @@ export class FileService {
   }
 
   static async getFileInfo(fileId: string): Promise<ProjectFile> {
-    const response = await fetch(`${API_BASE_URL}/files/info/${fileId}`)
+    const response = await authenticatedFetch(`${API_BASE_URL}/files/info/${fileId}`, { cache: 'no-store' })
 
     if (!response.ok) {
       throw new Error('Error al obtener información del archivo')
@@ -134,4 +135,4 @@ export class FileService {
     if (mimetype.includes('text/')) return '📄'
     return '📎'
   }
-} 
+}

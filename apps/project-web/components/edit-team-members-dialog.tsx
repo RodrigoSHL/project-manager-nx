@@ -11,7 +11,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
 import {
   Select,
   SelectContent,
@@ -32,6 +31,8 @@ interface EditTeamMembersDialogProps {
   onOpenChange: (open: boolean) => void
   onSave: (project: Project) => void
   onProjectUpdate?: (updatedProject: Project) => void
+  workspaceId?: string
+  workspaceName?: string
 }
 
 const TEAM_ROLES = [
@@ -55,12 +56,17 @@ export function EditTeamMembersDialog({
   onOpenChange,
   onSave,
   onProjectUpdate,
+  workspaceId,
+  workspaceName,
 }: EditTeamMembersDialogProps) {
   const { selectedWorkspace } = useWorkspace()
+  const activeWorkspaceId = workspaceId ?? selectedWorkspace?.id
+  const activeWorkspaceName = workspaceName ?? selectedWorkspace?.name
 
   const [teamMembers, setTeamMembers] = React.useState<TeamMember[]>([])
   const [wsMembers, setWsMembers] = React.useState<WorkspaceMember[]>([])
   const [wsLoading, setWsLoading] = React.useState(false)
+  const [wsLoadError, setWsLoadError] = React.useState("")
 
   const [selectedUserId, setSelectedUserId] = React.useState("")
   const [selectedRole, setSelectedRole] = React.useState("")
@@ -68,18 +74,20 @@ export function EditTeamMembersDialog({
 
   React.useEffect(() => {
     if (!open || !project) return
-    setTeamMembers([...project.teamMembers])
+    setTeamMembers([...(project.teamMembers ?? [])])
     setSelectedUserId("")
     setSelectedRole("")
+    setWsMembers([])
+    setWsLoadError("")
 
-    if (selectedWorkspace) {
+    if (activeWorkspaceId) {
       setWsLoading(true)
-      WorkspaceService.getMembers(selectedWorkspace.id)
+      WorkspaceService.getMembers(activeWorkspaceId)
         .then(setWsMembers)
-        .catch(console.error)
+        .catch(() => setWsLoadError("No fue posible cargar los miembros del workspace."))
         .finally(() => setWsLoading(false))
     }
-  }, [open, project, selectedWorkspace])
+  }, [open, project, activeWorkspaceId])
 
   // Miembros del workspace que aún no están en el proyecto
   const availableWsMembers = wsMembers.filter(
@@ -107,6 +115,12 @@ export function EditTeamMembersDialog({
 
   const handleRemove = (memberId: string) => {
     setTeamMembers(prev => prev.filter(m => m.id !== memberId))
+  }
+
+  const handleRoleChange = (memberId: string, role: string) => {
+    setTeamMembers(prev => prev.map(member =>
+      member.id === memberId ? { ...member, role } : member
+    ))
   }
 
   const handleSave = async () => {
@@ -149,7 +163,7 @@ export function EditTeamMembersDialog({
           </DialogTitle>
           <DialogDescription>
             Asigna miembros del workspace{" "}
-            <span className="font-medium">{selectedWorkspace?.name}</span> al proyecto{" "}
+            <span className="font-medium">{activeWorkspaceName}</span> al proyecto{" "}
             <span className="font-medium">{project?.name}</span>.
           </DialogDescription>
         </DialogHeader>
@@ -164,6 +178,8 @@ export function EditTeamMembersDialog({
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Cargando miembros...
               </div>
+            ) : wsLoadError ? (
+              <p className="text-sm text-destructive py-2">{wsLoadError}</p>
             ) : availableWsMembers.length === 0 ? (
               <p className="text-sm text-muted-foreground py-2">
                 {wsMembers.length === 0
@@ -240,9 +256,21 @@ export function EditTeamMembersDialog({
                       <p className="text-sm font-medium truncate">{member.name}</p>
                       <p className="text-xs text-muted-foreground truncate">{member.email}</p>
                     </div>
-                    <Badge variant="secondary" className="text-xs shrink-0">
-                      {TEAM_ROLES.find(r => r.value === member.role)?.label ?? member.role}
-                    </Badge>
+                    <Select
+                      value={member.role}
+                      onValueChange={(role) => handleRoleChange(member.id, role)}
+                    >
+                      <SelectTrigger className="h-8 w-36 text-xs shrink-0">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TEAM_ROLES.map(role => (
+                          <SelectItem key={role.value} value={role.value}>
+                            {role.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Button
                       variant="ghost"
                       size="icon"

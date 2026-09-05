@@ -6,6 +6,7 @@ import { Project } from '../projects/entities/project.entity';
 import { TicketSupportDetail } from '../support-details/entities/ticket-support-detail.entity';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
+import { TeamMember } from '../projects/entities/team-member.entity';
 
 @Injectable()
 export class TicketsService {
@@ -16,7 +17,29 @@ export class TicketsService {
     private readonly projectsRepository: Repository<Project>,
     @InjectRepository(TicketSupportDetail)
     private readonly supportDetailsRepository: Repository<TicketSupportDetail>,
+    @InjectRepository(TeamMember)
+    private readonly teamMembersRepository: Repository<TeamMember>,
   ) {}
+
+  private async assertProjectMemberAssignee(
+    projectId: string,
+    assigneeId?: string | null,
+  ): Promise<void> {
+    if (!assigneeId) return;
+
+    const member = await this.teamMembersRepository.findOne({
+      where: [
+        { projectId, id: assigneeId, isActive: true },
+        { projectId, userId: assigneeId, isActive: true },
+      ],
+    });
+
+    if (!member) {
+      throw new BadRequestException(
+        'El responsable debe ser un miembro activo del proyecto',
+      );
+    }
+  }
 
   private async generateKey(projectId: string): Promise<string> {
     const project = await this.projectsRepository.findOne({ where: { id: projectId } });
@@ -28,6 +51,7 @@ export class TicketsService {
   }
 
   async create(projectId: string, dto: CreateTicketDto): Promise<Ticket> {
+    await this.assertProjectMemberAssignee(projectId, dto.assigneeId);
     const key = await this.generateKey(projectId);
     const ticket = this.ticketsRepository.create({ ...dto, projectId, key });
     const saved = await this.ticketsRepository.save(ticket);
@@ -59,6 +83,9 @@ export class TicketsService {
 
   async update(projectId: string, id: string, dto: UpdateTicketDto): Promise<Ticket> {
     const ticket = await this.findOne(projectId, id);
+    if (dto.assigneeId !== undefined) {
+      await this.assertProjectMemberAssignee(projectId, dto.assigneeId);
+    }
     Object.assign(ticket, dto);
     return this.ticketsRepository.save(ticket);
   }
@@ -68,4 +95,3 @@ export class TicketsService {
     await this.ticketsRepository.remove(ticket);
   }
 }
-

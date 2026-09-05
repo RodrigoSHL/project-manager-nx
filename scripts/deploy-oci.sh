@@ -69,6 +69,8 @@ Opciones:
   --key RUTA             Clave privada SSH (también ATOMDEV_SSH_KEY)
   --dry-run              Preflight y rsync simulado; no cambia producción
   --skip-local-build     Omite el build Docker local (el build ARM64 remoto sigue)
+                         Por defecto, el build local se ejecuta de forma secuencial
+                         para no saturar Docker Desktop.
   --yes                  No solicitar confirmaciones; exige --profile/--services
   -h, --help             Mostrar esta ayuda
 
@@ -363,14 +365,21 @@ build_local_images() {
       || die "El build local es una puerta de validación; usa --skip-local-build para omitirlo explícitamente"
   fi
 
-  log "Construyendo imágenes localmente"
+  log "Construyendo imágenes localmente de forma secuencial"
   (
     cd "$ROOT_DIR"
-    DATABASE_PASSWORD=validation-only \
-      JWT_SECRET=validation-only \
-      NEXT_PUBLIC_API_URL=/api \
-      NEXT_PUBLIC_BFF_URL= \
-      docker compose -f "$COMPOSE_FILE" build "${BUILD_SERVICES[@]}"
+    export COMPOSE_PARALLEL_LIMIT=1
+    export BUILDKIT_PROGRESS="${BUILDKIT_PROGRESS:-plain}"
+
+    local service
+    for service in "${BUILD_SERVICES[@]}"; do
+      log "Build local: $service"
+      DATABASE_PASSWORD=validation-only \
+        JWT_SECRET=validation-only \
+        NEXT_PUBLIC_API_URL=/api \
+        NEXT_PUBLIC_BFF_URL= \
+        docker compose -f "$COMPOSE_FILE" build "$service"
+    done
   )
 }
 

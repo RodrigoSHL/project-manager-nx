@@ -1,7 +1,8 @@
 'use client';
 
+import type { CSSProperties } from 'react';
 import { Activity, TravelDay, COUNTRIES } from '@/lib/types';
-import { getCountryTabBackground } from '@/lib/country-colors';
+import { getCountryTabBackgrounds } from '@/lib/country-colors';
 import { ActivityTypeBadge } from './ActivityTypeBadge';
 import { cn } from '@/lib/utils';
 import { Plus, ArrowRight, Pencil, Flag } from 'lucide-react';
@@ -53,6 +54,7 @@ export function CalendarDay({
   const overflow = activities.length - maxVisible;
 
   const countries = travelDay?.countries ?? [];
+  const countryBackgrounds = getCountryTabBackgrounds(countries);
 
   return (
     <div
@@ -69,8 +71,13 @@ export function CalendarDay({
       {/* Country strip */}
       {countries.length > 0 ? (
         <div
-          className="group/strip flex items-center justify-between gap-1 px-2 py-1 text-xs font-medium text-slate-800 rounded-t-lg border-b border-black/10"
-          style={{ background: getCountryTabBackground(countries) }}
+          className="country-strip group/strip flex items-center justify-between gap-1 rounded-t-lg border-b border-black/10 px-2 py-1 text-xs font-medium text-slate-800 dark:border-white/10 dark:text-slate-100"
+          style={
+            {
+              '--country-strip-light': countryBackgrounds.light,
+              '--country-strip-dark': countryBackgrounds.dark,
+            } as CSSProperties
+          }
         >
           {countries.length === 1 ? (
             <span className="truncate">
@@ -79,7 +86,7 @@ export function CalendarDay({
           ) : (
             <span className="flex items-center gap-1 truncate">
               <span>{getCountryFlag(countries[0])}</span>
-              <ArrowRight className="w-3 h-3 text-slate-600 shrink-0" />
+              <ArrowRight className="h-3 w-3 shrink-0 text-slate-600 dark:text-slate-300" />
               <span>{getCountryFlag(countries[countries.length - 1])}</span>
             </span>
           )}
@@ -89,7 +96,7 @@ export function CalendarDay({
                 e.stopPropagation();
                 onEditTravelDay(date);
               }}
-              className="opacity-0 group-hover/strip:opacity-100 transition-opacity p-0.5 rounded hover:bg-black/10"
+              className="rounded p-0.5 opacity-0 transition-opacity hover:bg-black/10 group-hover/strip:opacity-100 dark:hover:bg-white/10"
               aria-label="Editar día"
             >
               <Pencil className="w-2.5 h-2.5" />

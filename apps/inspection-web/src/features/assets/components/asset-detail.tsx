@@ -4,6 +4,7 @@ import {
   isSubstationAsset,
 } from '../../asset-types/asset-type-selectors';
 import { AvailableWorkTypes } from '../../work-types/components/available-work-types';
+import type { AssetType } from '../../asset-types/models';
 import { formatAssetStatus, formatSiteType } from '../asset-formatters';
 import type { Asset, Site, Tenant } from '../models';
 
@@ -12,6 +13,7 @@ type AssetDetailProps = {
   parent: Asset | null;
   tenant: Tenant;
   site: Site;
+  assetTypes: AssetType[];
 };
 
 const statusClasses: Record<Asset['status'], string> = {
@@ -20,7 +22,13 @@ const statusClasses: Record<Asset['status'], string> = {
   INACTIVE: 'bg-slate-100 text-slate-600 ring-slate-500/20',
 };
 
-export function AssetDetail({ asset, parent, tenant, site }: AssetDetailProps) {
+export function AssetDetail({
+  asset,
+  parent,
+  tenant,
+  site,
+  assetTypes,
+}: AssetDetailProps) {
   if (!asset) {
     return (
       <section className="grid min-h-80 place-items-center rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center">
@@ -39,8 +47,8 @@ export function AssetDetail({ asset, parent, tenant, site }: AssetDetailProps) {
     );
   }
 
-  const assetType = findAssetType(asset.tenantId, asset.assetTypeId);
-  const isSubstation = isSubstationAsset(asset);
+  const assetType = findAssetType(asset, assetTypes);
+  const isSubstation = isSubstationAsset(asset, assetTypes);
 
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-24">

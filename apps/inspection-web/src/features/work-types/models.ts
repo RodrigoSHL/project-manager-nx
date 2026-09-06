@@ -3,7 +3,7 @@ export interface WorkType {
   tenantId: string;
   code: string;
   name: string;
-  description?: string;
+  description?: string | null;
   active: boolean;
 }
 
@@ -21,4 +21,8 @@ export interface AssetWorkType {
   assetId: string;
   workTypeId: string;
   enabled: boolean;
+}
+
+export interface EffectiveWorkType extends WorkType {
+  source: 'ASSET' | 'ASSET_TYPE';
 }

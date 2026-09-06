@@ -9,10 +9,12 @@ import {
 import { cn } from '../../../lib/utils';
 import { formatAssetStatus } from '../asset-formatters';
 import { isSubstationAsset } from '../../asset-types/asset-type-selectors';
+import type { AssetType } from '../../asset-types/models';
 import type { Asset } from '../models';
 
 type AssetTreeProps = {
   assets: Asset[];
+  assetTypes: AssetType[];
   expandedIds: Set<string>;
   selectedAssetId: string | null;
   searchQuery: string;
@@ -62,6 +64,7 @@ function getVisibleIds(assets: Asset[], searchQuery: string) {
 
 function AssetTreeNode({
   asset,
+  assetTypes,
   childrenByParent,
   visibleIds,
   expandedIds,
@@ -76,7 +79,7 @@ function AssetTreeNode({
   const hasChildren = children.length > 0;
   const isExpanded = searchQuery.trim().length > 0 || expandedIds.has(asset.id);
   const isSelected = selectedAssetId === asset.id;
-  const isSubstation = isSubstationAsset(asset);
+  const isSubstation = isSubstationAsset(asset, assetTypes);
   const Icon = isSubstation ? Building2 : Box;
 
   return (
@@ -146,6 +149,7 @@ function AssetTreeNode({
             <AssetTreeNode
               key={child.id}
               asset={child}
+              assetTypes={assetTypes}
               childrenByParent={childrenByParent}
               visibleIds={visibleIds}
               expandedIds={expandedIds}
@@ -202,6 +206,7 @@ export function AssetTree(props: AssetTreeProps) {
         <AssetTreeNode
           key={asset.id}
           asset={asset}
+          assetTypes={props.assetTypes}
           childrenByParent={childrenByParent}
           visibleIds={visibleIds}
           expandedIds={props.expandedIds}

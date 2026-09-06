@@ -18,7 +18,6 @@ import { Button } from '../components/ui/button';
 import {
   findAssetType,
   isSubstationAsset,
-  listAssetTypesByTenant,
 } from '../features/asset-types/asset-type-selectors';
 import type { AssetAdminForm as AssetAdminFormValues } from '../features/assets/asset-admin-schema';
 import {
@@ -75,12 +74,8 @@ export function AdminAssetsPage() {
   const selectedAsset = admin.assets.find(
     (asset) => asset.id === selectedAssetId
   );
-  const assetTypes = useMemo(
-    () => listAssetTypesByTenant(admin.tenantId),
-    [admin.tenantId]
-  );
   const selectedAssetType = selectedAsset
-    ? findAssetType(selectedAsset.tenantId, selectedAsset.assetTypeId)
+    ? findAssetType(selectedAsset, admin.assetTypes)
     : undefined;
   const assetsById = useMemo(
     () => new Map(admin.assets.map((asset) => [asset.id, asset])),
@@ -306,6 +301,7 @@ export function AdminAssetsPage() {
             ) : (
               <AssetTree
                 assets={admin.assets}
+                assetTypes={admin.assetTypes}
                 expandedIds={expandedIds}
                 selectedAssetId={selectedAssetId}
                 searchQuery={searchQuery}
@@ -321,7 +317,7 @@ export function AdminAssetsPage() {
             <AssetAdminForm
               asset={editorMode === 'edit' ? selectedAsset ?? null : null}
               assets={admin.assets}
-              assetTypes={assetTypes}
+              assetTypes={admin.assetTypes}
               initialParentId={
                 editorMode === 'create-child' ? selectedAssetId : null
               }
@@ -334,12 +330,12 @@ export function AdminAssetsPage() {
               <div className="flex items-start justify-between gap-4">
                 <span
                   className={`grid size-12 shrink-0 place-items-center rounded-xl ${
-                    isSubstationAsset(selectedAsset)
+                    isSubstationAsset(selectedAsset, admin.assetTypes)
                       ? 'bg-slate-950 text-white'
                       : 'bg-slate-100 text-slate-700'
                   }`}
                 >
-                  {isSubstationAsset(selectedAsset) ? (
+                  {isSubstationAsset(selectedAsset, admin.assetTypes) ? (
                     <Building2 className="size-6" />
                   ) : (
                     <Box className="size-6" />

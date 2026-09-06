@@ -26,6 +26,16 @@ export class CatalogController {
     return this.catalogService.listSites(tenantId);
   }
 
+  @Get(':tenantId/asset-types')
+  listAssetTypes(@Param('tenantId', new ParseUUIDPipe()) tenantId: string) {
+    return this.catalogService.listAssetTypes(tenantId);
+  }
+
+  @Get(':tenantId/work-types')
+  listWorkTypes(@Param('tenantId', new ParseUUIDPipe()) tenantId: string) {
+    return this.catalogService.listWorkTypes(tenantId);
+  }
+
   @Get(':tenantId/sites/:siteId/assets')
   listAssets(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
@@ -50,6 +60,19 @@ export class CatalogController {
     @Param('assetId', new ParseUUIDPipe()) assetId: string
   ) {
     return this.catalogService.getAsset(tenantId, siteId, assetId);
+  }
+
+  @Get(':tenantId/sites/:siteId/assets/:assetId/work-types')
+  listEffectiveWorkTypes(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('siteId', new ParseUUIDPipe()) siteId: string,
+    @Param('assetId', new ParseUUIDPipe()) assetId: string
+  ) {
+    return this.catalogService.listEffectiveWorkTypes(
+      tenantId,
+      siteId,
+      assetId
+    );
   }
 
   @Patch(':tenantId/sites/:siteId/assets/:assetId')

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { assetCatalogApi } from './asset-catalog-api';
+import type { AssetType } from '../asset-types/models';
 import type { Asset, Site, Tenant } from './models';
 
 function errorMessage(error: unknown) {
@@ -12,6 +13,7 @@ export function useAssetCatalog() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [assetTypes, setAssetTypes] = useState<AssetType[]>([]);
   const [tenantId, setTenantId] = useState('');
   const [siteId, setSiteId] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -53,11 +55,14 @@ export function useAssetCatalog() {
     setLoadingSites(true);
     setError(null);
 
-    assetCatalogApi
-      .listSites(tenantId, controller.signal)
-      .then((data) => {
-        setSites(data);
-        setSiteId(data[0]?.id ?? '');
+    Promise.all([
+      assetCatalogApi.listSites(tenantId, controller.signal),
+      assetCatalogApi.listAssetTypes(tenantId, controller.signal),
+    ])
+      .then(([siteData, assetTypeData]) => {
+        setSites(siteData);
+        setAssetTypes(assetTypeData);
+        setSiteId(siteData[0]?.id ?? '');
       })
       .catch((requestError: unknown) => {
         if (!controller.signal.aborted) setError(errorMessage(requestError));
@@ -94,6 +99,7 @@ export function useAssetCatalog() {
     setSiteId('');
     setSites([]);
     setAssets([]);
+    setAssetTypes([]);
   }
 
   function selectSite(nextSiteId: string) {
@@ -103,6 +109,7 @@ export function useAssetCatalog() {
 
   return {
     assets,
+    assetTypes,
     error,
     isLoading: loadingTenants || loadingSites || loadingAssets,
     retry: () => setRetryKey((current) => current + 1),

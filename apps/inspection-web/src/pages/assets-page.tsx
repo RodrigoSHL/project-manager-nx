@@ -175,6 +175,7 @@ export function AssetsPage() {
             <div className="max-h-[38rem] overflow-auto p-2 md:p-3">
               <AssetTree
                 assets={assets}
+                assetTypes={catalog.assetTypes}
                 expandedIds={expandedIds}
                 selectedAssetId={selectedAssetId}
                 searchQuery={searchQuery}
@@ -189,6 +190,7 @@ export function AssetsPage() {
             parent={parentAsset}
             tenant={tenant}
             site={site}
+            assetTypes={catalog.assetTypes}
           />
         </div>
       ) : null}

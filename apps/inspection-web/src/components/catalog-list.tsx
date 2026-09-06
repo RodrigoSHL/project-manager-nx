@@ -2,7 +2,7 @@ type CatalogListItem = {
   id: string;
   code: string;
   name: string;
-  description?: string;
+  description?: string | null;
   active: boolean;
 };
 

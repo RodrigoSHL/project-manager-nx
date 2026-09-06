@@ -28,6 +28,34 @@ describe('InspectionApiClient', () => {
     );
   });
 
+  it('forwards catalog and effective work type requests', async () => {
+    fetchMock.mockImplementation(async () =>
+      Promise.resolve(
+        new Response(JSON.stringify([{ id: 'catalog-item-1' }]), {
+          status: 200,
+        })
+      )
+    );
+    const client = new InspectionApiClient();
+
+    await client.listAssetTypes('tenant-1');
+    await client.listWorkTypes('tenant-1');
+    await client.listEffectiveWorkTypes('tenant-1', 'site-1', 'asset-1');
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'http://inspection-api.test/api/tenants/tenant-1/asset-types'
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'http://inspection-api.test/api/tenants/tenant-1/work-types'
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      'http://inspection-api.test/api/tenants/tenant-1/sites/site-1/assets/asset-1/work-types'
+    );
+  });
+
   it('reports when inspection-api is unavailable', async () => {
     fetchMock.mockRejectedValue(new Error('connection refused'));
     const client = new InspectionApiClient();
@@ -45,7 +73,7 @@ describe('InspectionApiClient', () => {
     const payload = {
       code: 'TR-NEW',
       name: 'Transformador nuevo',
-      type: 'POWER_TRANSFORMER',
+      assetTypeId: 'asset-type-1',
       parentId: null,
       status: 'ACTIVE' as const,
       description: null,

@@ -7,7 +7,7 @@ import {
 export type AssetMutationPayload = {
   code?: string;
   name?: string;
-  type?: string;
+  assetTypeId?: string;
   parentId?: string | null;
   status?: 'ACTIVE' | 'OUT_OF_SERVICE' | 'INACTIVE';
   description?: string | null;
@@ -25,6 +25,14 @@ export class InspectionApiClient {
     return this.get(`/tenants/${encodeURIComponent(tenantId)}/sites`);
   }
 
+  listAssetTypes(tenantId: string) {
+    return this.get(`/tenants/${encodeURIComponent(tenantId)}/asset-types`);
+  }
+
+  listWorkTypes(tenantId: string) {
+    return this.get(`/tenants/${encodeURIComponent(tenantId)}/work-types`);
+  }
+
   listAssets(tenantId: string, siteId: string) {
     return this.get(
       `/tenants/${encodeURIComponent(tenantId)}/sites/${encodeURIComponent(
@@ -38,6 +46,14 @@ export class InspectionApiClient {
       `/tenants/${encodeURIComponent(tenantId)}/sites/${encodeURIComponent(
         siteId
       )}/assets/${encodeURIComponent(assetId)}`
+    );
+  }
+
+  listEffectiveWorkTypes(tenantId: string, siteId: string, assetId: string) {
+    return this.get(
+      `/tenants/${encodeURIComponent(tenantId)}/sites/${encodeURIComponent(
+        siteId
+      )}/assets/${encodeURIComponent(assetId)}/work-types`
     );
   }
 

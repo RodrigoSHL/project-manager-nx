@@ -1,12 +1,11 @@
-import { useState } from 'react';
+import { AlertCircle, LoaderCircle } from 'lucide-react';
+import { Button } from '../components/ui/button';
 import { CatalogList } from '../components/catalog-list';
 import { CatalogTenantSelector } from '../components/catalog-tenant-selector';
-import { listWorkTypesByTenant } from '../features/work-types/work-type-selectors';
-import { mockCatalogTenants } from '../mocks/asset-work-type-catalog';
+import { useReferenceCatalog } from '../features/catalogs/use-reference-catalog';
 
 export function AdminWorkTypesPage() {
-  const [tenantId, setTenantId] = useState(mockCatalogTenants[0]?.id ?? '');
-  const workTypes = listWorkTypesByTenant(tenantId);
+  const catalog = useReferenceCatalog();
 
   return (
     <section>
@@ -18,9 +17,9 @@ export function AdminWorkTypesPage() {
 
       <div className="mt-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <CatalogTenantSelector
-          tenants={mockCatalogTenants}
-          tenantId={tenantId}
-          onChange={setTenantId}
+          tenants={catalog.tenants}
+          tenantId={catalog.tenantId}
+          onChange={catalog.selectTenant}
         />
         <p className="mt-3 text-xs text-slate-500">
           Cada empresa posee su propio catálogo aunque los nombres sean
@@ -29,10 +28,27 @@ export function AdminWorkTypesPage() {
       </div>
 
       <div className="mt-5">
-        <CatalogList
-          items={workTypes}
-          emptyMessage="Esta empresa no tiene tipos de trabajo configurados."
-        />
+        {catalog.isLoading ? (
+          <div className="grid min-h-48 place-items-center rounded-xl border border-slate-200 bg-white">
+            <LoaderCircle className="size-7 animate-spin text-slate-500" />
+          </div>
+        ) : null}
+        {catalog.error ? (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="size-5" /> {catalog.error}
+            </div>
+            <Button variant="outline" className="mt-3" onClick={catalog.retry}>
+              Reintentar
+            </Button>
+          </div>
+        ) : null}
+        {!catalog.isLoading && !catalog.error ? (
+          <CatalogList
+            items={catalog.workTypes}
+            emptyMessage="Esta empresa no tiene tipos de trabajo configurados."
+          />
+        ) : null}
       </div>
     </section>
   );

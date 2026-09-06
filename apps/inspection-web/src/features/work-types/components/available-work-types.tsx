@@ -1,13 +1,13 @@
 import { Check, Wrench } from 'lucide-react';
 import type { Asset } from '../../assets/models';
-import { getEffectiveWorkTypes } from '../work-type-selectors';
+import { useEffectiveWorkTypes } from '../use-effective-work-types';
 
 type AvailableWorkTypesProps = {
   asset: Asset;
 };
 
 export function AvailableWorkTypes({ asset }: AvailableWorkTypesProps) {
-  const availableWorkTypes = getEffectiveWorkTypes(asset);
+  const { error, isLoading, workTypes } = useEffectiveWorkTypes(asset);
 
   return (
     <section className="mt-6 border-t border-slate-200 pt-5">
@@ -21,9 +21,21 @@ export function AvailableWorkTypes({ asset }: AvailableWorkTypesProps) {
         Configuración disponible; todavía no existen trabajos realizados.
       </p>
 
-      {availableWorkTypes.length > 0 ? (
+      {isLoading ? (
+        <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-500">
+          Cargando configuración...
+        </p>
+      ) : null}
+
+      {error ? (
+        <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          {error}
+        </p>
+      ) : null}
+
+      {!isLoading && !error && workTypes.length > 0 ? (
         <ul className="mt-3 space-y-2">
-          {availableWorkTypes.map(({ workType, source }) => (
+          {workTypes.map((workType) => (
             <li
               key={workType.id}
               className="flex items-start gap-3 rounded-lg border border-slate-200 px-3 py-2.5"
@@ -36,7 +48,7 @@ export function AvailableWorkTypes({ asset }: AvailableWorkTypesProps) {
                   {workType.name}
                 </span>
                 <span className="block text-xs text-slate-500">
-                  {source === 'ASSET'
+                  {workType.source === 'ASSET'
                     ? 'Excepción configurada para este activo'
                     : 'Habilitado por su tipo de activo'}
                 </span>
@@ -44,11 +56,13 @@ export function AvailableWorkTypes({ asset }: AvailableWorkTypesProps) {
             </li>
           ))}
         </ul>
-      ) : (
+      ) : null}
+
+      {!isLoading && !error && workTypes.length === 0 ? (
         <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-500">
           No hay tipos de trabajo habilitados para este activo.
         </p>
-      )}
+      ) : null}
     </section>
   );
 }

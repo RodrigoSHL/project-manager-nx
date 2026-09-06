@@ -3,6 +3,6 @@ export interface AssetType {
   tenantId: string;
   code: string;
   name: string;
-  description?: string;
+  description?: string | null;
   active: boolean;
 }

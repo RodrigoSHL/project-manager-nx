@@ -1,8 +1,6 @@
+import type { AssetType } from '../asset-types/models';
+import type { EffectiveWorkType, WorkType } from '../work-types/models';
 import type { Asset, Site, Tenant } from './models';
-import {
-  assetTypeCodeFromId,
-  assetTypeIdFromCode,
-} from '../asset-types/asset-type-selectors';
 
 export type AssetMutationInput = {
   code: string;
@@ -12,26 +10,6 @@ export type AssetMutationInput = {
   status: Asset['status'];
   description: string | null;
 };
-
-type LegacyAssetResponse = Omit<Asset, 'assetTypeId'> & { type: string };
-
-function toAsset(asset: LegacyAssetResponse): Asset {
-  const { type, ...fields } = asset;
-  return {
-    ...fields,
-    assetTypeId: assetTypeIdFromCode(asset.tenantId, type),
-  };
-}
-
-function toLegacyMutation(
-  tenantId: string,
-  input: Partial<AssetMutationInput>
-) {
-  const { assetTypeId, ...fields } = input;
-  return assetTypeId
-    ? { ...fields, type: assetTypeCodeFromId(tenantId, assetTypeId) }
-    : fields;
-}
 
 const baseUrl = (
   import.meta.env.VITE_INSPECTION_API_URL || '/api/inspection'
@@ -65,25 +43,53 @@ export const assetCatalogApi = {
     );
   },
 
+  listAssetTypes(tenantId: string, signal?: AbortSignal) {
+    return get<AssetType[]>(
+      `/tenants/${encodeURIComponent(tenantId)}/asset-types`,
+      signal
+    );
+  },
+
+  listWorkTypes(tenantId: string, signal?: AbortSignal) {
+    return get<WorkType[]>(
+      `/tenants/${encodeURIComponent(tenantId)}/work-types`,
+      signal
+    );
+  },
+
   listAssets(tenantId: string, siteId: string, signal?: AbortSignal) {
-    return get<LegacyAssetResponse[]>(
+    return get<Asset[]>(
       `/tenants/${encodeURIComponent(tenantId)}/sites/${encodeURIComponent(
         siteId
       )}/assets`,
       signal
-    ).then((assets) => assets.map(toAsset));
+    );
+  },
+
+  listEffectiveWorkTypes(
+    tenantId: string,
+    siteId: string,
+    assetId: string,
+    signal?: AbortSignal
+  ) {
+    return get<EffectiveWorkType[]>(
+      `/tenants/${encodeURIComponent(tenantId)}/sites/${encodeURIComponent(
+        siteId
+      )}/assets/${encodeURIComponent(assetId)}/work-types`,
+      signal
+    );
   },
 
   createAsset(tenantId: string, siteId: string, input: AssetMutationInput) {
-    return request<LegacyAssetResponse>(
+    return request<Asset>(
       `/tenants/${encodeURIComponent(tenantId)}/sites/${encodeURIComponent(
         siteId
       )}/assets`,
       {
         method: 'POST',
-        body: JSON.stringify(toLegacyMutation(tenantId, input)),
+        body: JSON.stringify(input),
       }
-    ).then(toAsset);
+    );
   },
 
   updateAsset(
@@ -92,15 +98,15 @@ export const assetCatalogApi = {
     assetId: string,
     input: Partial<AssetMutationInput>
   ) {
-    return request<LegacyAssetResponse>(
+    return request<Asset>(
       `/tenants/${encodeURIComponent(tenantId)}/sites/${encodeURIComponent(
         siteId
       )}/assets/${encodeURIComponent(assetId)}`,
       {
         method: 'PATCH',
-        body: JSON.stringify(toLegacyMutation(tenantId, input)),
+        body: JSON.stringify(input),
       }
-    ).then(toAsset);
+    );
   },
 
   deleteAsset(tenantId: string, siteId: string, assetId: string) {

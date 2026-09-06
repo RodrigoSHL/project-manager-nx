@@ -13,6 +13,7 @@ export enum AssetStatus {
 @Index('UQ_assets_id_tenant_site', ['id', 'tenantId', 'siteId'], {
   unique: true,
 })
+@Index('UQ_assets_id_tenant', ['id', 'tenantId'], { unique: true })
 @Index('IDX_assets_parent', ['parentId'])
 export class AssetEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -30,8 +31,8 @@ export class AssetEntity {
   @Column({ length: 180 })
   name!: string;
 
-  @Column({ length: 80 })
-  type!: string;
+  @Column({ name: 'asset_type_id', type: 'uuid' })
+  assetTypeId!: string;
 
   @Column({ name: 'parent_id', type: 'uuid', nullable: true })
   parentId!: string | null;

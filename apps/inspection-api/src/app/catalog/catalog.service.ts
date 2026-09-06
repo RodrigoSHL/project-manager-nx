@@ -7,8 +7,12 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { QueryFailedError, Repository } from 'typeorm';
 import { AssetEntity } from './entities/asset.entity';
+import { AssetTypeEntity } from './entities/asset-type.entity';
+import { AssetTypeWorkTypeEntity } from './entities/asset-type-work-type.entity';
+import { AssetWorkTypeEntity } from './entities/asset-work-type.entity';
 import { SiteEntity } from './entities/site.entity';
 import { TenantEntity } from './entities/tenant.entity';
+import { WorkTypeEntity } from './entities/work-type.entity';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
 
@@ -20,7 +24,15 @@ export class CatalogService {
     @InjectRepository(SiteEntity)
     private readonly sites: Repository<SiteEntity>,
     @InjectRepository(AssetEntity)
-    private readonly assets: Repository<AssetEntity>
+    private readonly assets: Repository<AssetEntity>,
+    @InjectRepository(AssetTypeEntity)
+    private readonly assetTypes: Repository<AssetTypeEntity>,
+    @InjectRepository(WorkTypeEntity)
+    private readonly workTypes: Repository<WorkTypeEntity>,
+    @InjectRepository(AssetTypeWorkTypeEntity)
+    private readonly assetTypeWorkTypes: Repository<AssetTypeWorkTypeEntity>,
+    @InjectRepository(AssetWorkTypeEntity)
+    private readonly assetWorkTypes: Repository<AssetWorkTypeEntity>
   ) {}
 
   listTenants() {
@@ -30,6 +42,22 @@ export class CatalogService {
   async listSites(tenantId: string) {
     await this.assertTenantExists(tenantId);
     return this.sites.find({
+      where: { tenantId },
+      order: { name: 'ASC' },
+    });
+  }
+
+  async listAssetTypes(tenantId: string) {
+    await this.assertTenantExists(tenantId);
+    return this.assetTypes.find({
+      where: { tenantId },
+      order: { name: 'ASC' },
+    });
+  }
+
+  async listWorkTypes(tenantId: string) {
+    await this.assertTenantExists(tenantId);
+    return this.workTypes.find({
       where: { tenantId },
       order: { name: 'ASC' },
     });
@@ -48,17 +76,57 @@ export class CatalogService {
     return this.findAssetOrFail(tenantId, siteId, assetId);
   }
 
+  async listEffectiveWorkTypes(
+    tenantId: string,
+    siteId: string,
+    assetId: string
+  ) {
+    await this.assertSiteBelongsToTenant(tenantId, siteId);
+    const asset = await this.findAssetOrFail(tenantId, siteId, assetId);
+    const [workTypes, assetRules, assetTypeRules] = await Promise.all([
+      this.workTypes.find({
+        where: { tenantId, active: true },
+        order: { name: 'ASC' },
+      }),
+      this.assetWorkTypes.find({ where: { tenantId, assetId } }),
+      this.assetTypeWorkTypes.find({
+        where: { tenantId, assetTypeId: asset.assetTypeId },
+      }),
+    ]);
+    const assetRulesByWorkType = new Map(
+      assetRules.map((rule) => [rule.workTypeId, rule])
+    );
+    const typeRulesByWorkType = new Map(
+      assetTypeRules.map((rule) => [rule.workTypeId, rule])
+    );
+
+    return workTypes.flatMap((workType) => {
+      const assetRule = assetRulesByWorkType.get(workType.id);
+      if (assetRule) {
+        return assetRule.enabled ? [{ ...workType, source: 'ASSET' }] : [];
+      }
+
+      return typeRulesByWorkType.get(workType.id)?.enabled
+        ? [{ ...workType, source: 'ASSET_TYPE' }]
+        : [];
+    });
+  }
+
   async createAsset(tenantId: string, siteId: string, dto: CreateAssetDto) {
     await this.assertSiteBelongsToTenant(tenantId, siteId);
     await this.assertParentIsInContext(tenantId, siteId, dto.parentId ?? null);
-    this.assertRootAssetType(dto.parentId ?? null, dto.type);
+    const assetType = await this.assertAssetTypeBelongsToTenant(
+      tenantId,
+      dto.assetTypeId
+    );
+    this.assertRootAssetType(dto.parentId ?? null, assetType.code);
 
     const asset = this.assets.create({
       tenantId,
       siteId,
       code: dto.code.trim(),
       name: dto.name.trim(),
-      type: dto.type.trim(),
+      assetTypeId: dto.assetTypeId,
       parentId: dto.parentId ?? null,
       status: dto.status,
       description: dto.description?.trim() || null,
@@ -77,7 +145,11 @@ export class CatalogService {
     const asset = await this.findAssetOrFail(tenantId, siteId, assetId);
     const nextParentId =
       dto.parentId === undefined ? asset.parentId : dto.parentId;
-    const nextType = dto.type === undefined ? asset.type : dto.type.trim();
+    const nextAssetTypeId = dto.assetTypeId ?? asset.assetTypeId;
+    const assetType = await this.assertAssetTypeBelongsToTenant(
+      tenantId,
+      nextAssetTypeId
+    );
 
     if (nextParentId === assetId) {
       throw new BadRequestException('An asset cannot be its own parent');
@@ -89,12 +161,12 @@ export class CatalogService {
       nextParentId ?? null,
       assetId
     );
-    this.assertRootAssetType(nextParentId ?? null, nextType);
+    this.assertRootAssetType(nextParentId ?? null, assetType.code);
 
     Object.assign(asset, {
       code: dto.code === undefined ? asset.code : dto.code.trim(),
       name: dto.name === undefined ? asset.name : dto.name.trim(),
-      type: nextType,
+      assetTypeId: nextAssetTypeId,
       parentId: nextParentId ?? null,
       status: dto.status ?? asset.status,
       description:
@@ -135,6 +207,26 @@ export class CatalogService {
     if (!exists) {
       throw new NotFoundException('Site not found in this tenant');
     }
+  }
+
+  private async assertAssetTypeBelongsToTenant(
+    tenantId: string,
+    assetTypeId: string
+  ) {
+    const assetType = await this.assetTypes.findOne({
+      where: { id: assetTypeId, tenantId },
+    });
+
+    if (!assetType) {
+      throw new BadRequestException(
+        'The asset type must belong to the selected tenant'
+      );
+    }
+    if (!assetType.active) {
+      throw new BadRequestException('The selected asset type is inactive');
+    }
+
+    return assetType;
   }
 
   private async findAssetOrFail(

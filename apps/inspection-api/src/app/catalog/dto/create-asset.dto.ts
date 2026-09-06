@@ -19,10 +19,8 @@ export class CreateAssetDto {
   @MaxLength(180)
   name!: string;
 
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(80)
-  type!: string;
+  @IsUUID('all')
+  assetTypeId!: string;
 
   @IsOptional()
   @IsUUID('all')

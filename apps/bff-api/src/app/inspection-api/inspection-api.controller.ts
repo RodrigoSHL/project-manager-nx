@@ -27,6 +27,16 @@ export class InspectionApiController {
     return this.client.listSites(tenantId);
   }
 
+  @Get('tenants/:tenantId/asset-types')
+  listAssetTypes(@Param('tenantId', new ParseUUIDPipe()) tenantId: string) {
+    return this.client.listAssetTypes(tenantId);
+  }
+
+  @Get('tenants/:tenantId/work-types')
+  listWorkTypes(@Param('tenantId', new ParseUUIDPipe()) tenantId: string) {
+    return this.client.listWorkTypes(tenantId);
+  }
+
   @Get('tenants/:tenantId/sites/:siteId/assets')
   listAssets(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
@@ -42,6 +52,15 @@ export class InspectionApiController {
     @Param('assetId', new ParseUUIDPipe()) assetId: string
   ) {
     return this.client.getAsset(tenantId, siteId, assetId);
+  }
+
+  @Get('tenants/:tenantId/sites/:siteId/assets/:assetId/work-types')
+  listEffectiveWorkTypes(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('siteId', new ParseUUIDPipe()) siteId: string,
+    @Param('assetId', new ParseUUIDPipe()) assetId: string
+  ) {
+    return this.client.listEffectiveWorkTypes(tenantId, siteId, assetId);
   }
 
   @Post('tenants/:tenantId/sites/:siteId/assets')

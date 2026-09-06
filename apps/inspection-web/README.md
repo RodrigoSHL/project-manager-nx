@@ -26,17 +26,16 @@ Abrir `http://localhost:4204`.
   búsqueda, cambio de estado y eliminación protegida cuando existen hijos.
 - Centro de Administración con rutas separadas para Activos, Tipos de activos,
   Tipos de trabajo, Sitios y Usuarios.
-- Catálogos mock/locales de tipos de activo y tipos de trabajo, aislados por
-  tenant y disponibles en modo de solo lectura.
-- Relación local entre tipos de activo y tipos de trabajo, con excepciones por
-  activo. La ficha del activo muestra la lista efectiva permitida.
+- Catálogos de tipos de activo y tipos de trabajo conectados al BFF, aislados
+  por tenant y disponibles en modo de solo lectura.
+- Relaciones persistidas entre tipos de activo y tipos de trabajo, con
+  excepciones por activo. La API calcula la lista efectiva que muestra la ficha.
 - Componentes reutilizables `Button`, `Sheet`, `PageHeader` y `EmptyState`.
 
 No existen todavía almacenamiento local, Service Worker, sincronización,
-trabajos ni pautas reales. Los nuevos catálogos y relaciones son mocks del
-frontend. El formulario de activos existente sí persiste sus cambios a través
-de la API y PostgreSQL; un adaptador temporal convierte `assetTypeId` al campo
-`type` que aún espera esa API, sin modificar el backend en esta etapa.
+trabajos ni pautas reales. Los catálogos y relaciones sí se almacenan en
+PostgreSQL. El formulario de activos envía `assetTypeId` a la API y todavía no
+existe una pantalla para modificar las reglas de habilitación.
 
 ## Estructura
 
@@ -49,12 +48,12 @@ src/
 ├── features/     # Código agrupado por módulo funcional
 │   ├── assets/       # Cliente BFF, modelos, formularios, árbol y detalle
 │   ├── asset-types/  # Modelo y consultas del catálogo de tipos de activo
-│   └── work-types/   # Modelos, resolución de reglas y componentes de lectura
+│   ├── catalogs/     # Carga remota de catálogos administrativos
+│   └── work-types/   # Modelos y componentes de tipos de trabajo permitidos
 ├── components/   # Componentes visuales reutilizables
 │   └── ui/       # Primitives compatibles con shadcn/ui
 ├── lib/          # Funciones pequeñas compartidas
 ├── assets/       # Imágenes o archivos estáticos futuros
-├── mocks/        # Catálogos y relaciones locales de esta etapa
 ├── main.tsx      # Punto de entrada de React
 └── styles.css    # TailwindCSS y estilos globales mínimos
 ```

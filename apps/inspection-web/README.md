@@ -24,6 +24,8 @@ Abrir `http://localhost:4204`.
 - Páginas visuales para Trabajos y Hallazgos.
 - Administración jerárquica de activos con árbol, alta contextual, edición,
   búsqueda, cambio de estado y eliminación protegida cuando existen hijos.
+- Centro de Administración con rutas separadas para Activos, Tipos de activos,
+  Sitios y Usuarios.
 - Componentes reutilizables `Button`, `Sheet`, `PageHeader` y `EmptyState`.
 
 No existen todavía almacenamiento local, Service Worker, sincronización,

@@ -14,7 +14,6 @@ import {
   Search,
   Trash2,
 } from 'lucide-react';
-import { PageHeader } from '../components/page-header';
 import { Button } from '../components/ui/button';
 import type { AssetAdminForm as AssetAdminFormValues } from '../features/assets/asset-admin-schema';
 import {
@@ -35,7 +34,7 @@ const statusClasses: Record<Asset['status'], string> = {
   INACTIVE: 'bg-slate-100 text-slate-600 ring-slate-500/20',
 };
 
-export function AdminPage() {
+export function AdminAssetsPage() {
   const admin = useAssetAdministration();
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -147,10 +146,13 @@ export function AdminPage() {
 
   return (
     <>
-      <PageHeader
-        title="Administración de activos"
-        description="Organiza las subestaciones y sus componentes directamente desde el árbol del sitio."
-      />
+      <header className="mb-6">
+        <h2 className="text-xl font-semibold text-slate-950">Activos</h2>
+        <p className="mt-2 max-w-2xl text-sm text-slate-600">
+          Organiza las subestaciones y sus componentes directamente desde el
+          árbol del sitio.
+        </p>
+      </header>
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
         <div className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">

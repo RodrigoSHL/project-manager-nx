@@ -22,8 +22,8 @@ Abrir `http://localhost:4204`.
 - Módulo de Activos conectado al BFF, con selector de tenant y sitio, árbol jerárquico, búsqueda y detalle.
 - Datos iniciales para 2 tenants, 4 sitios y más de 15 activos por tenant, almacenados en PostgreSQL.
 - Páginas visuales para Trabajos y Hallazgos.
-- Administración de activos con alta, edición, búsqueda, cambio de estado,
-  jerarquía por activo padre y eliminación protegida cuando existen hijos.
+- Administración jerárquica de activos con árbol, alta contextual, edición,
+  búsqueda, cambio de estado y eliminación protegida cuando existen hijos.
 - Componentes reutilizables `Button`, `Sheet`, `PageHeader` y `EmptyState`.
 
 No existen todavía almacenamiento local, Service Worker, sincronización,

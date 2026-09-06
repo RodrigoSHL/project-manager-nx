@@ -12,6 +12,7 @@ import type { Asset } from '../models';
 type AssetAdminFormProps = {
   asset: Asset | null;
   assets: Asset[];
+  initialParentId?: string | null;
   isSubmitting: boolean;
   onCancel: () => void;
   onSubmit: (form: AssetAdminForm) => Promise<void>;
@@ -26,6 +27,7 @@ const statusOptions: Array<{ value: Asset['status']; label: string }> = [
 export function AssetAdminForm({
   asset,
   assets,
+  initialParentId = null,
   isSubmitting,
   onCancel,
   onSubmit,
@@ -34,9 +36,17 @@ export function AssetAdminForm({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setForm(asset ? assetToAdminForm(asset) : emptyAssetAdminForm);
+    setForm(
+      asset
+        ? assetToAdminForm(asset)
+        : {
+            ...emptyAssetAdminForm,
+            parentId: initialParentId,
+            type: initialParentId ? '' : 'SUBSTATION',
+          }
+    );
     setError(null);
-  }, [asset]);
+  }, [asset, initialParentId]);
 
   const assetTypes = useMemo(
     () =>
@@ -74,14 +84,41 @@ export function AssetAdminForm({
     }
   }
 
-  const availableParents = assets.filter((item) => item.id !== asset?.id);
+  const unavailableParentIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (!asset) return ids;
+
+    ids.add(asset.id);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const item of assets) {
+        if (item.parentId && ids.has(item.parentId) && !ids.has(item.id)) {
+          ids.add(item.id);
+          changed = true;
+        }
+      }
+    }
+    return ids;
+  }, [asset, assets]);
+  const availableParents = assets.filter(
+    (item) => !unavailableParentIds.has(item.id)
+  );
+  const isParentLocked = !asset && Boolean(initialParentId);
+  const initialParent = initialParentId
+    ? assets.find((item) => item.id === initialParentId)
+    : null;
 
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="font-semibold text-slate-950">
-            {asset ? 'Editar activo' : 'Nuevo activo'}
+            {asset
+              ? 'Editar activo'
+              : initialParent
+              ? `Agregar activo a ${initialParent.code}`
+              : 'Nueva subestación'}
           </h2>
           <p className="mt-1 text-sm text-slate-500">
             Los activos raíz deben ser subestaciones. Los demás se vinculan a un
@@ -163,6 +200,7 @@ export function AssetAdminForm({
             onChange={(event) =>
               updateField('parentId', event.target.value || null)
             }
+            disabled={isParentLocked}
             className="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
           >
             <option value="">Sin padre · nodo raíz</option>
@@ -172,6 +210,11 @@ export function AssetAdminForm({
               </option>
             ))}
           </select>
+          {isParentLocked && initialParent ? (
+            <span className="mt-1 block text-xs font-normal text-slate-500">
+              Se agregará dentro de {initialParent.name}.
+            </span>
+          ) : null}
         </label>
 
         <label className="text-sm font-medium text-slate-700 md:col-span-2">

@@ -12,12 +12,13 @@ export function useAssetAdministration() {
     setIsMutating(true);
     setMutationError(null);
     try {
-      await assetCatalogApi.createAsset(
+      const createdAsset = await assetCatalogApi.createAsset(
         catalog.tenantId,
         catalog.siteId,
         input
       );
       catalog.refreshAssets();
+      return createdAsset;
     } catch (error) {
       setMutationError(errorMessage(error));
       throw error;
@@ -31,13 +32,14 @@ export function useAssetAdministration() {
     setIsMutating(true);
     setMutationError(null);
     try {
-      await assetCatalogApi.updateAsset(
+      const updatedAsset = await assetCatalogApi.updateAsset(
         catalog.tenantId,
         catalog.siteId,
         assetId,
         input
       );
       catalog.refreshAssets();
+      return updatedAsset;
     } catch (error) {
       setMutationError(errorMessage(error));
       throw error;
@@ -51,12 +53,13 @@ export function useAssetAdministration() {
     setIsMutating(true);
     setMutationError(null);
     try {
-      await assetCatalogApi.deleteAsset(
+      const result = await assetCatalogApi.deleteAsset(
         catalog.tenantId,
         catalog.siteId,
         assetId
       );
       catalog.refreshAssets();
+      return result;
     } catch (error) {
       setMutationError(errorMessage(error));
       throw error;

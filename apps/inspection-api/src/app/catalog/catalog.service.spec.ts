@@ -1,7 +1,12 @@
-import { NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { CatalogService } from './catalog.service';
-import { AssetEntity } from './entities/asset.entity';
+import { CreateAssetDto } from './dto/create-asset.dto';
+import { AssetEntity, AssetStatus } from './entities/asset.entity';
 import { SiteEntity } from './entities/site.entity';
 import { TenantEntity } from './entities/tenant.entity';
 
@@ -16,7 +21,10 @@ describe('CatalogService tenant isolation', () => {
     Pick<Repository<SiteEntity>, 'find' | 'exist'>
   >;
   let assetRepository: jest.Mocked<
-    Pick<Repository<AssetEntity>, 'find' | 'findOne'>
+    Pick<
+      Repository<AssetEntity>,
+      'find' | 'findOne' | 'create' | 'save' | 'remove'
+    >
   >;
   let service: CatalogService;
 
@@ -32,6 +40,9 @@ describe('CatalogService tenant isolation', () => {
     assetRepository = {
       find: jest.fn(),
       findOne: jest.fn(),
+      create: jest.fn(),
+      save: jest.fn(),
+      remove: jest.fn(),
     };
     service = new CatalogService(
       tenantRepository as unknown as Repository<TenantEntity>,
@@ -74,5 +85,64 @@ describe('CatalogService tenant isolation', () => {
     expect(assetRepository.findOne).toHaveBeenCalledWith({
       where: { id: assetId, tenantId, siteId },
     });
+  });
+
+  it('creates a root asset only as a substation', async () => {
+    siteRepository.exist.mockResolvedValue(true);
+    const dto: CreateAssetDto = {
+      code: 'SE-NEW',
+      name: 'Nueva subestación',
+      type: 'SUBSTATION',
+      parentId: null,
+      status: AssetStatus.ACTIVE,
+      description: null,
+    };
+    const created = { ...dto, tenantId, siteId, id: assetId } as AssetEntity;
+    assetRepository.create.mockReturnValue(created);
+    assetRepository.save.mockResolvedValue(created);
+
+    await expect(service.createAsset(tenantId, siteId, dto)).resolves.toBe(
+      created
+    );
+    expect(assetRepository.create).toHaveBeenCalledWith({
+      tenantId,
+      siteId,
+      code: 'SE-NEW',
+      name: 'Nueva subestación',
+      type: 'SUBSTATION',
+      parentId: null,
+      status: AssetStatus.ACTIVE,
+      description: null,
+    });
+  });
+
+  it('rejects a parent from another tenant or site', async () => {
+    siteRepository.exist.mockResolvedValue(true);
+    assetRepository.findOne.mockResolvedValue(null);
+    const dto: CreateAssetDto = {
+      code: 'TR-NEW',
+      name: 'Nuevo transformador',
+      type: 'POWER_TRANSFORMER',
+      parentId: assetId,
+      status: AssetStatus.ACTIVE,
+      description: null,
+    };
+
+    await expect(
+      service.createAsset(tenantId, siteId, dto)
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(assetRepository.create).not.toHaveBeenCalled();
+  });
+
+  it('prevents deleting an asset that has children', async () => {
+    siteRepository.exist.mockResolvedValue(true);
+    assetRepository.findOne
+      .mockResolvedValueOnce({ id: assetId } as AssetEntity)
+      .mockResolvedValueOnce({ id: 'child-id' } as AssetEntity);
+
+    await expect(
+      service.deleteAsset(tenantId, siteId, assetId)
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(assetRepository.remove).not.toHaveBeenCalled();
   });
 });

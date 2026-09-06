@@ -20,11 +20,16 @@ GET /api/tenants
 GET /api/tenants/:tenantId/sites
 GET /api/tenants/:tenantId/sites/:siteId/assets
 GET /api/tenants/:tenantId/sites/:siteId/assets/:assetId
+POST /api/tenants/:tenantId/sites/:siteId/assets
+PATCH /api/tenants/:tenantId/sites/:siteId/assets/:assetId
+DELETE /api/tenants/:tenantId/sites/:siteId/assets/:assetId
 ```
 
-El BFF publica el mismo catálogo bajo `/api/inspection`. La API exige siempre
-`tenantId` y `siteId` para consultar activos. La base también impide relacionar
-un sitio o activo padre con un tenant diferente.
+El BFF publica el mismo catálogo y sus mutaciones bajo `/api/inspection`. La
+API exige siempre `tenantId` y `siteId` para consultar o modificar activos. La
+base también impide relacionar un sitio o activo padre con un tenant diferente.
+Los nodos raíz deben ser subestaciones, no se pueden crear ciclos y un activo
+con hijos no se puede eliminar.
 
 La autenticación multi-tenant todavía no forma parte de este módulo. Cuando se
 implemente, el BFF deberá obtener el tenant permitido desde la sesión y no desde

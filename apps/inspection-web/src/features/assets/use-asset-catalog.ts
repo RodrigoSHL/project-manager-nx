@@ -16,6 +16,7 @@ export function useAssetCatalog() {
   const [siteId, setSiteId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
+  const [assetRefreshKey, setAssetRefreshKey] = useState(0);
   const [loadingTenants, setLoadingTenants] = useState(true);
   const [loadingSites, setLoadingSites] = useState(false);
   const [loadingAssets, setLoadingAssets] = useState(false);
@@ -86,7 +87,7 @@ export function useAssetCatalog() {
       });
 
     return () => controller.abort();
-  }, [retryKey, siteId, tenantId]);
+  }, [assetRefreshKey, retryKey, siteId, tenantId]);
 
   function selectTenant(nextTenantId: string) {
     setTenantId(nextTenantId);
@@ -105,6 +106,7 @@ export function useAssetCatalog() {
     error,
     isLoading: loadingTenants || loadingSites || loadingAssets,
     retry: () => setRetryKey((current) => current + 1),
+    refreshAssets: () => setAssetRefreshKey((current) => current + 1),
     selectSite,
     selectTenant,
     siteId,

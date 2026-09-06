@@ -7,6 +7,7 @@ Esqueleto visual de una aplicación para gestión de subestaciones y activos.
 Desde la raíz del monorepo:
 
 ```bash
+docker compose -f docker-compose.prod.yml up -d --build postgres inspection-api bff-api
 npx nx serve inspection-web
 ```
 
@@ -20,11 +21,14 @@ Abrir `http://localhost:4204`.
 - Dashboard con valores escritos directamente en el frontend.
 - Módulo de Activos conectado al BFF, con selector de tenant y sitio, árbol jerárquico, búsqueda y detalle.
 - Datos iniciales para 2 tenants, 4 sitios y más de 15 activos por tenant, almacenados en PostgreSQL.
-- Páginas vacías para Trabajos, Hallazgos y Administración.
+- Páginas visuales para Trabajos y Hallazgos.
+- Administración de activos con alta, edición, búsqueda, cambio de estado,
+  jerarquía por activo padre y eliminación protegida cuando existen hijos.
 - Componentes reutilizables `Button`, `Sheet`, `PageHeader` y `EmptyState`.
 
-No existen almacenamiento local, Service Worker, sincronización, trabajos,
-pautas, hallazgos ni formularios reales.
+No existen todavía almacenamiento local, Service Worker, sincronización,
+trabajos ni pautas reales. El formulario de activos sí persiste sus cambios a
+través de la API y PostgreSQL.
 
 ## Estructura
 
@@ -35,7 +39,7 @@ src/
 ├── layouts/      # Estructura compartida: sidebar, cabecera y contenido
 ├── pages/        # Una pantalla por ruta
 ├── features/     # Código agrupado por módulo funcional
-│   └── assets/   # Modelos, datos mock, filtros, árbol y detalle de activos
+│   └── assets/   # Cliente BFF, modelos, formularios, árbol y detalle
 ├── components/   # Componentes visuales reutilizables
 │   └── ui/       # Primitives compatibles con shadcn/ui
 ├── lib/          # Funciones pequeñas compartidas
@@ -45,4 +49,5 @@ src/
 ```
 
 El login se guarda solamente en memoria con `useState`. Al refrescar el
-navegador se vuelve a `/login`; esto es intencional en esta primera etapa.
+navegador se vuelve a `/login`; esto sigue siendo un acceso simulado, sin
+autenticación multi-tenant real.

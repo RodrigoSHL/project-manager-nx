@@ -36,4 +36,30 @@ describe('InspectionApiClient', () => {
       ServiceUnavailableException
     );
   });
+
+  it('forwards asset mutations as JSON', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ id: 'asset-1' }), { status: 200 })
+    );
+    const client = new InspectionApiClient();
+    const payload = {
+      code: 'TR-NEW',
+      name: 'Transformador nuevo',
+      type: 'POWER_TRANSFORMER',
+      parentId: null,
+      status: 'ACTIVE' as const,
+      description: null,
+    };
+
+    await client.createAsset('tenant-1', 'site-1', payload);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://inspection-api.test/api/tenants/tenant-1/sites/site-1/assets',
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  });
 });

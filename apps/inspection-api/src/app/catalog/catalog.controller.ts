@@ -1,5 +1,16 @@
-import { Controller, Get, Param, ParseUUIDPipe } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { CatalogService } from './catalog.service';
+import { CreateAssetDto } from './dto/create-asset.dto';
+import { UpdateAssetDto } from './dto/update-asset.dto';
 
 @Controller('tenants')
 export class CatalogController {
@@ -23,6 +34,15 @@ export class CatalogController {
     return this.catalogService.listAssets(tenantId, siteId);
   }
 
+  @Post(':tenantId/sites/:siteId/assets')
+  createAsset(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('siteId', new ParseUUIDPipe()) siteId: string,
+    @Body() dto: CreateAssetDto
+  ) {
+    return this.catalogService.createAsset(tenantId, siteId, dto);
+  }
+
   @Get(':tenantId/sites/:siteId/assets/:assetId')
   getAsset(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
@@ -30,5 +50,24 @@ export class CatalogController {
     @Param('assetId', new ParseUUIDPipe()) assetId: string
   ) {
     return this.catalogService.getAsset(tenantId, siteId, assetId);
+  }
+
+  @Patch(':tenantId/sites/:siteId/assets/:assetId')
+  updateAsset(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('siteId', new ParseUUIDPipe()) siteId: string,
+    @Param('assetId', new ParseUUIDPipe()) assetId: string,
+    @Body() dto: UpdateAssetDto
+  ) {
+    return this.catalogService.updateAsset(tenantId, siteId, assetId, dto);
+  }
+
+  @Delete(':tenantId/sites/:siteId/assets/:assetId')
+  deleteAsset(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('siteId', new ParseUUIDPipe()) siteId: string,
+    @Param('assetId', new ParseUUIDPipe()) assetId: string
+  ) {
+    return this.catalogService.deleteAsset(tenantId, siteId, assetId);
   }
 }

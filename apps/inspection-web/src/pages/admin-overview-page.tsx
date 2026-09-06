@@ -1,4 +1,11 @@
-import { ArrowRight, Building2, MapPinned, Shapes, Users } from 'lucide-react';
+import {
+  ArrowRight,
+  Building2,
+  MapPinned,
+  Shapes,
+  Users,
+  Wrench,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const sections = [
@@ -16,7 +23,15 @@ const sections = [
     description:
       'Define los tipos, nombres e iconos utilizados por los activos.',
     icon: Shapes,
-    status: 'Próximamente',
+    status: 'Disponible',
+  },
+  {
+    to: '/admin/work-types',
+    title: 'Tipos de trabajo',
+    description:
+      'Consulta las clases de trabajo que pueden habilitarse para los activos.',
+    icon: Wrench,
+    status: 'Disponible',
   },
   {
     to: '/admin/sites',

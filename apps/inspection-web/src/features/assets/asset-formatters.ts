@@ -12,14 +12,6 @@ const siteTypeLabels: Record<Site['type'], string> = {
   SITE: 'Faena / Sitio',
 };
 
-export function formatAssetType(type: string) {
-  return type
-    .toLowerCase()
-    .split('_')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}
-
 export function formatAssetStatus(status: Asset['status']) {
   return statusLabels[status];
 }

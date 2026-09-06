@@ -1,13 +1,37 @@
 import type { Asset, Site, Tenant } from './models';
+import {
+  assetTypeCodeFromId,
+  assetTypeIdFromCode,
+} from '../asset-types/asset-type-selectors';
 
 export type AssetMutationInput = {
   code: string;
   name: string;
-  type: string;
+  assetTypeId: string;
   parentId: string | null;
   status: Asset['status'];
   description: string | null;
 };
+
+type LegacyAssetResponse = Omit<Asset, 'assetTypeId'> & { type: string };
+
+function toAsset(asset: LegacyAssetResponse): Asset {
+  const { type, ...fields } = asset;
+  return {
+    ...fields,
+    assetTypeId: assetTypeIdFromCode(asset.tenantId, type),
+  };
+}
+
+function toLegacyMutation(
+  tenantId: string,
+  input: Partial<AssetMutationInput>
+) {
+  const { assetTypeId, ...fields } = input;
+  return assetTypeId
+    ? { ...fields, type: assetTypeCodeFromId(tenantId, assetTypeId) }
+    : fields;
+}
 
 const baseUrl = (
   import.meta.env.VITE_INSPECTION_API_URL || '/api/inspection'
@@ -42,24 +66,24 @@ export const assetCatalogApi = {
   },
 
   listAssets(tenantId: string, siteId: string, signal?: AbortSignal) {
-    return get<Asset[]>(
+    return get<LegacyAssetResponse[]>(
       `/tenants/${encodeURIComponent(tenantId)}/sites/${encodeURIComponent(
         siteId
       )}/assets`,
       signal
-    );
+    ).then((assets) => assets.map(toAsset));
   },
 
   createAsset(tenantId: string, siteId: string, input: AssetMutationInput) {
-    return request<Asset>(
+    return request<LegacyAssetResponse>(
       `/tenants/${encodeURIComponent(tenantId)}/sites/${encodeURIComponent(
         siteId
       )}/assets`,
       {
         method: 'POST',
-        body: JSON.stringify(input),
+        body: JSON.stringify(toLegacyMutation(tenantId, input)),
       }
-    );
+    ).then(toAsset);
   },
 
   updateAsset(
@@ -68,15 +92,15 @@ export const assetCatalogApi = {
     assetId: string,
     input: Partial<AssetMutationInput>
   ) {
-    return request<Asset>(
+    return request<LegacyAssetResponse>(
       `/tenants/${encodeURIComponent(tenantId)}/sites/${encodeURIComponent(
         siteId
       )}/assets/${encodeURIComponent(assetId)}`,
       {
         method: 'PATCH',
-        body: JSON.stringify(input),
+        body: JSON.stringify(toLegacyMutation(tenantId, input)),
       }
-    );
+    ).then(toAsset);
   },
 
   deleteAsset(tenantId: string, siteId: string, assetId: string) {

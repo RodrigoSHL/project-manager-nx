@@ -18,7 +18,7 @@ export interface Asset {
   siteId: string;
   code: string;
   name: string;
-  type: string;
+  assetTypeId: string;
   parentId: string | null;
   status: 'ACTIVE' | 'OUT_OF_SERVICE' | 'INACTIVE';
   description?: string | null;

@@ -1,9 +1,10 @@
 import { Box, Building2, MapPin } from 'lucide-react';
 import {
-  formatAssetStatus,
-  formatAssetType,
-  formatSiteType,
-} from '../asset-formatters';
+  findAssetType,
+  isSubstationAsset,
+} from '../../asset-types/asset-type-selectors';
+import { AvailableWorkTypes } from '../../work-types/components/available-work-types';
+import { formatAssetStatus, formatSiteType } from '../asset-formatters';
 import type { Asset, Site, Tenant } from '../models';
 
 type AssetDetailProps = {
@@ -38,11 +39,14 @@ export function AssetDetail({ asset, parent, tenant, site }: AssetDetailProps) {
     );
   }
 
+  const assetType = findAssetType(asset.tenantId, asset.assetTypeId);
+  const isSubstation = isSubstationAsset(asset);
+
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-24">
       <div className="flex items-start justify-between gap-4">
         <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-slate-900 text-white">
-          {asset.type === 'SUBSTATION' ? (
+          {isSubstation ? (
             <Building2 className="size-5" />
           ) : (
             <Box className="size-5" />
@@ -64,7 +68,7 @@ export function AssetDetail({ asset, parent, tenant, site }: AssetDetailProps) {
         {asset.name}
       </h2>
       <p className="mt-1 text-sm text-slate-500">
-        {formatAssetType(asset.type)}
+        {assetType?.name ?? 'Tipo de activo no disponible'}
       </p>
 
       <dl className="mt-6 divide-y divide-slate-100 border-y border-slate-100 text-sm">
@@ -98,6 +102,8 @@ export function AssetDetail({ asset, parent, tenant, site }: AssetDetailProps) {
           {asset.description ?? 'Este activo aún no tiene una descripción.'}
         </p>
       </div>
+
+      <AvailableWorkTypes asset={asset} />
     </section>
   );
 }

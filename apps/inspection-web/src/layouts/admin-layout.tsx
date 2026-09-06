@@ -1,4 +1,11 @@
-import { Building2, LayoutGrid, MapPinned, Shapes, Users } from 'lucide-react';
+import {
+  Building2,
+  LayoutGrid,
+  MapPinned,
+  Shapes,
+  Users,
+  Wrench,
+} from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { cn } from '../lib/utils';
 
@@ -6,6 +13,7 @@ const adminNavigation = [
   { to: '/admin', label: 'Resumen', icon: LayoutGrid, end: true },
   { to: '/admin/assets', label: 'Activos', icon: Building2 },
   { to: '/admin/asset-types', label: 'Tipos de activos', icon: Shapes },
+  { to: '/admin/work-types', label: 'Tipos de trabajo', icon: Wrench },
   { to: '/admin/sites', label: 'Sitios', icon: MapPinned },
   { to: '/admin/users', label: 'Usuarios', icon: Users },
 ];

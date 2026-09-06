@@ -1,9 +1,11 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { MapPinned, Shapes, Users } from 'lucide-react';
+import { MapPinned, Users } from 'lucide-react';
 import { AdminLayout } from '../layouts/admin-layout';
 import { AppLayout } from '../layouts/app-layout';
 import { AdminOverviewPage } from '../pages/admin-overview-page';
 import { AdminAssetsPage } from '../pages/admin-assets-page';
+import { AdminAssetTypesPage } from '../pages/admin-asset-types-page';
+import { AdminWorkTypesPage } from '../pages/admin-work-types-page';
 import { AdminPlaceholderPage } from '../pages/admin-placeholder-page';
 import { AssetsPage } from '../pages/assets-page';
 import { DashboardPage } from '../pages/dashboard-page';
@@ -41,16 +43,8 @@ export function AppRoutes({
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminOverviewPage />} />
           <Route path="assets" element={<AdminAssetsPage />} />
-          <Route
-            path="asset-types"
-            element={
-              <AdminPlaceholderPage
-                title="Tipos de activos"
-                description="Catálogo de tipos, nombres e iconos disponibles."
-                icon={Shapes}
-              />
-            }
-          />
+          <Route path="asset-types" element={<AdminAssetTypesPage />} />
+          <Route path="work-types" element={<AdminWorkTypesPage />} />
           <Route
             path="sites"
             element={

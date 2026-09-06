@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { formatAssetStatus } from '../asset-formatters';
+import { isSubstationAsset } from '../../asset-types/asset-type-selectors';
 import type { Asset } from '../models';
 
 type AssetTreeProps = {
@@ -75,7 +76,8 @@ function AssetTreeNode({
   const hasChildren = children.length > 0;
   const isExpanded = searchQuery.trim().length > 0 || expandedIds.has(asset.id);
   const isSelected = selectedAssetId === asset.id;
-  const Icon = asset.type === 'SUBSTATION' ? Building2 : Box;
+  const isSubstation = isSubstationAsset(asset);
+  const Icon = isSubstation ? Building2 : Box;
 
   return (
     <li>
@@ -120,7 +122,7 @@ function AssetTreeNode({
           <span
             className={cn(
               'grid size-8 shrink-0 place-items-center rounded-md',
-              asset.type === 'SUBSTATION'
+              isSubstation
                 ? 'bg-slate-900 text-white'
                 : 'bg-slate-100 text-slate-600'
             )}

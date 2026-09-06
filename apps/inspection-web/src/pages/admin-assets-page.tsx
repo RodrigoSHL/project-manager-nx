@@ -15,16 +15,21 @@ import {
   Trash2,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import {
+  findAssetType,
+  isSubstationAsset,
+  listAssetTypesByTenant,
+} from '../features/asset-types/asset-type-selectors';
 import type { AssetAdminForm as AssetAdminFormValues } from '../features/assets/asset-admin-schema';
 import {
   formatAssetStatus,
-  formatAssetType,
   formatSiteType,
 } from '../features/assets/asset-formatters';
 import { AssetAdminForm } from '../features/assets/components/asset-admin-form';
 import { AssetTree } from '../features/assets/components/asset-tree';
 import type { Asset } from '../features/assets/models';
 import { useAssetAdministration } from '../features/assets/use-asset-administration';
+import { AvailableWorkTypes } from '../features/work-types/components/available-work-types';
 
 type EditorMode = 'detail' | 'create-root' | 'create-child' | 'edit';
 
@@ -70,6 +75,13 @@ export function AdminAssetsPage() {
   const selectedAsset = admin.assets.find(
     (asset) => asset.id === selectedAssetId
   );
+  const assetTypes = useMemo(
+    () => listAssetTypesByTenant(admin.tenantId),
+    [admin.tenantId]
+  );
+  const selectedAssetType = selectedAsset
+    ? findAssetType(selectedAsset.tenantId, selectedAsset.assetTypeId)
+    : undefined;
   const assetsById = useMemo(
     () => new Map(admin.assets.map((asset) => [asset.id, asset])),
     [admin.assets]
@@ -309,6 +321,7 @@ export function AdminAssetsPage() {
             <AssetAdminForm
               asset={editorMode === 'edit' ? selectedAsset ?? null : null}
               assets={admin.assets}
+              assetTypes={assetTypes}
               initialParentId={
                 editorMode === 'create-child' ? selectedAssetId : null
               }
@@ -321,12 +334,12 @@ export function AdminAssetsPage() {
               <div className="flex items-start justify-between gap-4">
                 <span
                   className={`grid size-12 shrink-0 place-items-center rounded-xl ${
-                    selectedAsset.type === 'SUBSTATION'
+                    isSubstationAsset(selectedAsset)
                       ? 'bg-slate-950 text-white'
                       : 'bg-slate-100 text-slate-700'
                   }`}
                 >
-                  {selectedAsset.type === 'SUBSTATION' ? (
+                  {isSubstationAsset(selectedAsset) ? (
                     <Building2 className="size-6" />
                   ) : (
                     <Box className="size-6" />
@@ -348,7 +361,7 @@ export function AdminAssetsPage() {
                 {selectedAsset.name}
               </h2>
               <p className="mt-1 text-sm text-slate-500">
-                {formatAssetType(selectedAsset.type)}
+                {selectedAssetType?.name ?? 'Tipo de activo no disponible'}
               </p>
 
               <div className="mt-5 flex flex-wrap items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
@@ -400,6 +413,8 @@ export function AdminAssetsPage() {
                 {selectedAsset.description ??
                   'Este activo todavía no tiene una descripción.'}
               </p>
+
+              <AvailableWorkTypes asset={selectedAsset} />
 
               <div className="mt-6 grid gap-2 sm:grid-cols-2">
                 <Button

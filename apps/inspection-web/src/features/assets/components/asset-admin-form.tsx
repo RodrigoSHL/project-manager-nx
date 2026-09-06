@@ -7,11 +7,13 @@ import {
   emptyAssetAdminForm,
   type AssetAdminForm,
 } from '../asset-admin-schema';
+import type { AssetType } from '../../asset-types/models';
 import type { Asset } from '../models';
 
 type AssetAdminFormProps = {
   asset: Asset | null;
   assets: Asset[];
+  assetTypes: AssetType[];
   initialParentId?: string | null;
   isSubmitting: boolean;
   onCancel: () => void;
@@ -27,6 +29,7 @@ const statusOptions: Array<{ value: Asset['status']; label: string }> = [
 export function AssetAdminForm({
   asset,
   assets,
+  assetTypes,
   initialParentId = null,
   isSubmitting,
   onCancel,
@@ -36,25 +39,25 @@ export function AssetAdminForm({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const substationType = assetTypes.find(
+      (item) => item.code === 'SUBSTATION' && item.active
+    );
+    const firstChildType = assetTypes.find(
+      (item) => item.code !== 'SUBSTATION' && item.active
+    );
     setForm(
       asset
         ? assetToAdminForm(asset)
         : {
             ...emptyAssetAdminForm,
             parentId: initialParentId,
-            type: initialParentId ? '' : 'SUBSTATION',
+            assetTypeId: initialParentId
+              ? firstChildType?.id ?? ''
+              : substationType?.id ?? '',
           }
     );
     setError(null);
-  }, [asset, initialParentId]);
-
-  const assetTypes = useMemo(
-    () =>
-      Array.from(
-        new Set(['SUBSTATION', ...assets.map((item) => item.type)])
-      ).sort(),
-    [assets]
-  );
+  }, [asset, assetTypes, initialParentId]);
 
   function updateField<K extends keyof AssetAdminForm>(
     field: K,
@@ -68,7 +71,6 @@ export function AssetAdminForm({
     const result = assetAdminSchema.safeParse({
       ...form,
       description: form.description?.trim() || null,
-      type: form.type.trim().toUpperCase(),
     });
 
     if (!result.success) {
@@ -161,19 +163,21 @@ export function AssetAdminForm({
 
         <label className="text-sm font-medium text-slate-700">
           Tipo de activo
-          <input
+          <select
             required
-            list="asset-type-options"
-            value={form.type}
-            onChange={(event) => updateField('type', event.target.value)}
-            className="mt-2 h-11 w-full rounded-lg border border-slate-300 px-3 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-            maxLength={80}
-          />
-          <datalist id="asset-type-options">
-            {assetTypes.map((type) => (
-              <option key={type} value={type} />
-            ))}
-          </datalist>
+            value={form.assetTypeId}
+            onChange={(event) => updateField('assetTypeId', event.target.value)}
+            className="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+          >
+            <option value="">Selecciona un tipo</option>
+            {assetTypes
+              .filter((item) => item.active)
+              .map((assetType) => (
+                <option key={assetType.id} value={assetType.id}>
+                  {assetType.code} · {assetType.name}
+                </option>
+              ))}
+          </select>
         </label>
 
         <label className="text-sm font-medium text-slate-700">

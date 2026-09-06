@@ -18,13 +18,13 @@ Abrir `http://localhost:4204`.
 - Layout responsive con sidebar en escritorio y menú lateral en móvil.
 - Navegación con React Router.
 - Dashboard con valores escritos directamente en el frontend.
-- Módulo de Activos con selector de tenant y sitio, árbol jerárquico, búsqueda y detalle.
-- Datos mock para 2 tenants, 4 sitios y más de 15 activos por tenant.
+- Módulo de Activos conectado al BFF, con selector de tenant y sitio, árbol jerárquico, búsqueda y detalle.
+- Datos iniciales para 2 tenants, 4 sitios y más de 15 activos por tenant, almacenados en PostgreSQL.
 - Páginas vacías para Trabajos, Hallazgos y Administración.
 - Componentes reutilizables `Button`, `Sheet`, `PageHeader` y `EmptyState`.
 
-No existen backend, base de datos, almacenamiento local, llamadas HTTP,
-Service Worker, sincronización, trabajos, pautas, hallazgos ni formularios reales.
+No existen almacenamiento local, Service Worker, sincronización, trabajos,
+pautas, hallazgos ni formularios reales.
 
 ## Estructura
 

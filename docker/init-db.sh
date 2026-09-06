@@ -29,3 +29,7 @@ fi
 if [ -n "$FILES_DB_NAME" ] && [ "$FILES_DB_NAME" != "$POSTGRES_DB" ]; then
   create_db_if_missing "$FILES_DB_NAME"
 fi
+
+if [ -n "$INSPECTION_DB_NAME" ] && [ "$INSPECTION_DB_NAME" != "$POSTGRES_DB" ]; then
+  create_db_if_missing "$INSPECTION_DB_NAME"
+fi

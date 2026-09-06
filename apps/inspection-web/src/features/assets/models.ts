@@ -21,5 +21,5 @@ export interface Asset {
   type: string;
   parentId: string | null;
   status: 'ACTIVE' | 'OUT_OF_SERVICE' | 'INACTIVE';
-  description?: string;
+  description?: string | null;
 }

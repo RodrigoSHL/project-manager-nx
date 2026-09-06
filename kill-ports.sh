@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PORTS=(3000 3001 3002 3003 4200 4201 4202 4203 4204)
+PORTS=(3000 3001 3002 3003 3004 3005 4200 4201 4202 4203 4204)
 
 echo "🔍 Buscando procesos en puertos: ${PORTS[*]}"
 

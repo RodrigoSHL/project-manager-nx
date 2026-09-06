@@ -1,18 +1,4 @@
-import type { Asset, Site } from './models';
-
-export function getSitesForTenant(sites: Site[], tenantId: string) {
-  return sites.filter((site) => site.tenantId === tenantId);
-}
-
-export function getAssetsForContext(
-  assets: Asset[],
-  tenantId: string,
-  siteId: string
-) {
-  return assets.filter(
-    (asset) => asset.tenantId === tenantId && asset.siteId === siteId
-  );
-}
+import type { Asset } from './models';
 
 export function getRootAssetIds(assets: Asset[]) {
   return assets

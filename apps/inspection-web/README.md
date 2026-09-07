@@ -2,6 +2,9 @@
 
 Esqueleto visual de una aplicación para gestión de subestaciones y activos.
 
+Las reglas funcionales y técnicas vigentes se mantienen en
+[`docs/INSPECTION_RULES.md`](../../docs/INSPECTION_RULES.md).
+
 ## Ejecutar
 
 Desde la raíz del monorepo:

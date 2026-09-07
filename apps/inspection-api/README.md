@@ -3,6 +3,9 @@
 API NestJS para la estructura organizacional y el catálogo de activos de
 GridAssets.
 
+Las reglas funcionales y técnicas vigentes se mantienen en
+[`docs/INSPECTION_RULES.md`](../../docs/INSPECTION_RULES.md).
+
 ## Contrato local
 
 - Puerto: `3005`

@@ -7,10 +7,14 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
 } from '@nestjs/common';
 import { CatalogService } from './catalog.service';
 import { CreateAssetDto } from './dto/create-asset.dto';
+import { CreateCatalogItemDto } from './dto/create-catalog-item.dto';
+import { SetWorkTypeRuleDto } from './dto/set-work-type-rule.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
+import { UpdateCatalogItemDto } from './dto/update-catalog-item.dto';
 
 @Controller('tenants')
 export class CatalogController {
@@ -31,9 +35,77 @@ export class CatalogController {
     return this.catalogService.listAssetTypes(tenantId);
   }
 
+  @Post(':tenantId/asset-types')
+  createAssetType(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Body() dto: CreateCatalogItemDto
+  ) {
+    return this.catalogService.createAssetType(tenantId, dto);
+  }
+
+  @Patch(':tenantId/asset-types/:assetTypeId')
+  updateAssetType(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('assetTypeId', new ParseUUIDPipe()) assetTypeId: string,
+    @Body() dto: UpdateCatalogItemDto
+  ) {
+    return this.catalogService.updateAssetType(tenantId, assetTypeId, dto);
+  }
+
+  @Get(':tenantId/asset-types/:assetTypeId/work-types')
+  listAssetTypeWorkTypes(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('assetTypeId', new ParseUUIDPipe()) assetTypeId: string
+  ) {
+    return this.catalogService.listAssetTypeWorkTypes(tenantId, assetTypeId);
+  }
+
+  @Put(':tenantId/asset-types/:assetTypeId/work-types/:workTypeId')
+  associateAssetTypeWorkType(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('assetTypeId', new ParseUUIDPipe()) assetTypeId: string,
+    @Param('workTypeId', new ParseUUIDPipe()) workTypeId: string
+  ) {
+    return this.catalogService.associateAssetTypeWorkType(
+      tenantId,
+      assetTypeId,
+      workTypeId
+    );
+  }
+
+  @Delete(':tenantId/asset-types/:assetTypeId/work-types/:workTypeId')
+  disassociateAssetTypeWorkType(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('assetTypeId', new ParseUUIDPipe()) assetTypeId: string,
+    @Param('workTypeId', new ParseUUIDPipe()) workTypeId: string
+  ) {
+    return this.catalogService.disassociateAssetTypeWorkType(
+      tenantId,
+      assetTypeId,
+      workTypeId
+    );
+  }
+
   @Get(':tenantId/work-types')
   listWorkTypes(@Param('tenantId', new ParseUUIDPipe()) tenantId: string) {
     return this.catalogService.listWorkTypes(tenantId);
+  }
+
+  @Post(':tenantId/work-types')
+  createWorkType(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Body() dto: CreateCatalogItemDto
+  ) {
+    return this.catalogService.createWorkType(tenantId, dto);
+  }
+
+  @Patch(':tenantId/work-types/:workTypeId')
+  updateWorkType(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('workTypeId', new ParseUUIDPipe()) workTypeId: string,
+    @Body() dto: UpdateCatalogItemDto
+  ) {
+    return this.catalogService.updateWorkType(tenantId, workTypeId, dto);
   }
 
   @Get(':tenantId/sites/:siteId/assets')
@@ -72,6 +144,55 @@ export class CatalogController {
       tenantId,
       siteId,
       assetId
+    );
+  }
+
+  @Get(':tenantId/sites/:siteId/assets/:assetId/work-type-configurations')
+  listAssetWorkTypeConfigurations(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('siteId', new ParseUUIDPipe()) siteId: string,
+    @Param('assetId', new ParseUUIDPipe()) assetId: string
+  ) {
+    return this.catalogService.listAssetWorkTypeConfigurations(
+      tenantId,
+      siteId,
+      assetId
+    );
+  }
+
+  @Put(
+    ':tenantId/sites/:siteId/assets/:assetId/work-type-configurations/:workTypeId'
+  )
+  setAssetWorkTypeOverride(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('siteId', new ParseUUIDPipe()) siteId: string,
+    @Param('assetId', new ParseUUIDPipe()) assetId: string,
+    @Param('workTypeId', new ParseUUIDPipe()) workTypeId: string,
+    @Body() dto: SetWorkTypeRuleDto
+  ) {
+    return this.catalogService.setAssetWorkTypeOverride(
+      tenantId,
+      siteId,
+      assetId,
+      workTypeId,
+      dto.enabled
+    );
+  }
+
+  @Delete(
+    ':tenantId/sites/:siteId/assets/:assetId/work-type-configurations/:workTypeId'
+  )
+  clearAssetWorkTypeOverride(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('siteId', new ParseUUIDPipe()) siteId: string,
+    @Param('assetId', new ParseUUIDPipe()) assetId: string,
+    @Param('workTypeId', new ParseUUIDPipe()) workTypeId: string
+  ) {
+    return this.catalogService.clearAssetWorkTypeOverride(
+      tenantId,
+      siteId,
+      assetId,
+      workTypeId
     );
   }
 

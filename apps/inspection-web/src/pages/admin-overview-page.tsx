@@ -21,7 +21,7 @@ const sections = [
     to: '/admin/asset-types',
     title: 'Tipos de activos',
     description:
-      'Define los tipos, nombres e iconos utilizados por los activos.',
+      'Define las clases de equipo y los trabajos permitidos para cada una.',
     icon: Shapes,
     status: 'Disponible',
   },
@@ -29,7 +29,7 @@ const sections = [
     to: '/admin/work-types',
     title: 'Tipos de trabajo',
     description:
-      'Consulta las clases de trabajo que pueden habilitarse para los activos.',
+      'Crea y administra las clases de trabajo disponibles en cada empresa.',
     icon: Wrench,
     status: 'Disponible',
   },

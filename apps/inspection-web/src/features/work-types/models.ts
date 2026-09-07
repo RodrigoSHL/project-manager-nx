@@ -26,3 +26,14 @@ export interface AssetWorkType {
 export interface EffectiveWorkType extends WorkType {
   source: 'ASSET' | 'ASSET_TYPE';
 }
+
+export interface AssetTypeWorkTypeOption extends WorkType {
+  associated: boolean;
+}
+
+export interface AssetWorkTypeConfiguration extends WorkType {
+  typeEnabled: boolean;
+  override: boolean | null;
+  effectiveEnabled: boolean;
+  source: 'ASSET' | 'ASSET_TYPE' | 'NONE';
+}

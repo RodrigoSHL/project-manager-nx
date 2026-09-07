@@ -13,6 +13,13 @@ export type AssetMutationPayload = {
   description?: string | null;
 };
 
+export type CatalogMutationPayload = {
+  code?: string;
+  name?: string;
+  description?: string | null;
+  active?: boolean;
+};
+
 @Injectable()
 export class InspectionApiClient {
   private readonly baseUrl = this.resolveBaseUrl();
@@ -29,8 +36,89 @@ export class InspectionApiClient {
     return this.get(`/tenants/${encodeURIComponent(tenantId)}/asset-types`);
   }
 
+  createAssetType(tenantId: string, payload: Required<CatalogMutationPayload>) {
+    return this.request(
+      `/tenants/${encodeURIComponent(tenantId)}/asset-types`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    );
+  }
+
+  updateAssetType(
+    tenantId: string,
+    assetTypeId: string,
+    payload: CatalogMutationPayload
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(
+        tenantId
+      )}/asset-types/${encodeURIComponent(assetTypeId)}`,
+      { method: 'PATCH', body: JSON.stringify(payload) }
+    );
+  }
+
+  listAssetTypeWorkTypes(tenantId: string, assetTypeId: string) {
+    return this.get(
+      `/tenants/${encodeURIComponent(
+        tenantId
+      )}/asset-types/${encodeURIComponent(assetTypeId)}/work-types`
+    );
+  }
+
+  associateAssetTypeWorkType(
+    tenantId: string,
+    assetTypeId: string,
+    workTypeId: string
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(
+        tenantId
+      )}/asset-types/${encodeURIComponent(
+        assetTypeId
+      )}/work-types/${encodeURIComponent(workTypeId)}`,
+      { method: 'PUT' }
+    );
+  }
+
+  disassociateAssetTypeWorkType(
+    tenantId: string,
+    assetTypeId: string,
+    workTypeId: string
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(
+        tenantId
+      )}/asset-types/${encodeURIComponent(
+        assetTypeId
+      )}/work-types/${encodeURIComponent(workTypeId)}`,
+      { method: 'DELETE' }
+    );
+  }
+
   listWorkTypes(tenantId: string) {
     return this.get(`/tenants/${encodeURIComponent(tenantId)}/work-types`);
+  }
+
+  createWorkType(tenantId: string, payload: Required<CatalogMutationPayload>) {
+    return this.request(`/tenants/${encodeURIComponent(tenantId)}/work-types`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  updateWorkType(
+    tenantId: string,
+    workTypeId: string,
+    payload: CatalogMutationPayload
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(tenantId)}/work-types/${encodeURIComponent(
+        workTypeId
+      )}`,
+      { method: 'PATCH', body: JSON.stringify(payload) }
+    );
   }
 
   listAssets(tenantId: string, siteId: string) {
@@ -54,6 +142,51 @@ export class InspectionApiClient {
       `/tenants/${encodeURIComponent(tenantId)}/sites/${encodeURIComponent(
         siteId
       )}/assets/${encodeURIComponent(assetId)}/work-types`
+    );
+  }
+
+  listAssetWorkTypeConfigurations(
+    tenantId: string,
+    siteId: string,
+    assetId: string
+  ) {
+    return this.get(
+      `/tenants/${encodeURIComponent(tenantId)}/sites/${encodeURIComponent(
+        siteId
+      )}/assets/${encodeURIComponent(assetId)}/work-type-configurations`
+    );
+  }
+
+  setAssetWorkTypeOverride(
+    tenantId: string,
+    siteId: string,
+    assetId: string,
+    workTypeId: string,
+    enabled: boolean
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(tenantId)}/sites/${encodeURIComponent(
+        siteId
+      )}/assets/${encodeURIComponent(
+        assetId
+      )}/work-type-configurations/${encodeURIComponent(workTypeId)}`,
+      { method: 'PUT', body: JSON.stringify({ enabled }) }
+    );
+  }
+
+  clearAssetWorkTypeOverride(
+    tenantId: string,
+    siteId: string,
+    assetId: string,
+    workTypeId: string
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(tenantId)}/sites/${encodeURIComponent(
+        siteId
+      )}/assets/${encodeURIComponent(
+        assetId
+      )}/work-type-configurations/${encodeURIComponent(workTypeId)}`,
+      { method: 'DELETE' }
     );
   }
 
@@ -112,10 +245,16 @@ export class InspectionApiClient {
       const requestInit = Object.keys(init).length
         ? {
             ...init,
-            headers: {
-              ...(init.body ? { 'Content-Type': 'application/json' } : {}),
-              ...init.headers,
-            },
+            ...(init.body || init.headers
+              ? {
+                  headers: {
+                    ...(init.body
+                      ? { 'Content-Type': 'application/json' }
+                      : {}),
+                    ...init.headers,
+                  },
+                }
+              : {}),
           }
         : undefined;
       response = requestInit

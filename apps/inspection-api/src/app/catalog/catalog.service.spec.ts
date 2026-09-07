@@ -32,14 +32,22 @@ describe('CatalogService tenant isolation', () => {
     >
   >;
   let assetTypeRepository: jest.Mocked<
-    Pick<Repository<AssetTypeEntity>, 'find' | 'findOne'>
+    Pick<Repository<AssetTypeEntity>, 'find' | 'findOne' | 'create' | 'save'>
   >;
-  let workTypeRepository: jest.Mocked<Pick<Repository<WorkTypeEntity>, 'find'>>;
+  let workTypeRepository: jest.Mocked<
+    Pick<Repository<WorkTypeEntity>, 'find' | 'findOne' | 'create' | 'save'>
+  >;
   let assetTypeWorkTypeRepository: jest.Mocked<
-    Pick<Repository<AssetTypeWorkTypeEntity>, 'find'>
+    Pick<
+      Repository<AssetTypeWorkTypeEntity>,
+      'find' | 'findOne' | 'create' | 'save' | 'delete'
+    >
   >;
   let assetWorkTypeRepository: jest.Mocked<
-    Pick<Repository<AssetWorkTypeEntity>, 'find'>
+    Pick<
+      Repository<AssetWorkTypeEntity>,
+      'find' | 'findOne' | 'create' | 'save' | 'delete'
+    >
   >;
   let service: CatalogService;
 
@@ -62,10 +70,29 @@ describe('CatalogService tenant isolation', () => {
     assetTypeRepository = {
       find: jest.fn(),
       findOne: jest.fn(),
+      create: jest.fn(),
+      save: jest.fn(),
     };
-    workTypeRepository = { find: jest.fn() };
-    assetTypeWorkTypeRepository = { find: jest.fn() };
-    assetWorkTypeRepository = { find: jest.fn() };
+    workTypeRepository = {
+      find: jest.fn(),
+      findOne: jest.fn(),
+      create: jest.fn(),
+      save: jest.fn(),
+    };
+    assetTypeWorkTypeRepository = {
+      find: jest.fn(),
+      findOne: jest.fn(),
+      create: jest.fn(),
+      save: jest.fn(),
+      delete: jest.fn(),
+    };
+    assetWorkTypeRepository = {
+      find: jest.fn(),
+      findOne: jest.fn(),
+      create: jest.fn(),
+      save: jest.fn(),
+      delete: jest.fn(),
+    };
     service = new CatalogService(
       tenantRepository as unknown as Repository<TenantEntity>,
       siteRepository as unknown as Repository<SiteEntity>,
@@ -244,6 +271,95 @@ describe('CatalogService tenant isolation', () => {
     });
     expect(assetTypeWorkTypeRepository.find).toHaveBeenCalledWith({
       where: { tenantId, assetTypeId },
+    });
+  });
+
+  it('creates a tenant-scoped work type and normalizes its code', async () => {
+    tenantRepository.exist.mockResolvedValue(true);
+    const created = {
+      id: '5bd2a420-f07a-43be-8d26-36d1b1ff4607',
+      tenantId,
+      code: 'OIL_ANALYSIS',
+      name: 'Análisis de aceite',
+      description: null,
+      active: true,
+    } as WorkTypeEntity;
+    workTypeRepository.create.mockReturnValue(created);
+    workTypeRepository.save.mockResolvedValue(created);
+
+    await expect(
+      service.createWorkType(tenantId, {
+        code: 'oil-analysis',
+        name: ' Análisis de aceite ',
+        description: null,
+        active: true,
+      })
+    ).resolves.toBe(created);
+    expect(workTypeRepository.create).toHaveBeenCalledWith({
+      tenantId,
+      code: 'OIL_ANALYSIS',
+      name: 'Análisis de aceite',
+      description: null,
+      active: true,
+    });
+  });
+
+  it('rejects an association with a work type from another tenant', async () => {
+    assetTypeRepository.findOne.mockResolvedValue({
+      id: assetTypeId,
+      tenantId,
+      active: true,
+    } as AssetTypeEntity);
+    workTypeRepository.findOne.mockResolvedValue(null);
+
+    await expect(
+      service.associateAssetTypeWorkType(
+        tenantId,
+        assetTypeId,
+        'bbdd797b-41b4-41fd-912a-c97037e5eef1'
+      )
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(assetTypeWorkTypeRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('creates an asset-specific blocking override', async () => {
+    const workTypeId = 'bbdd797b-41b4-41fd-912a-c97037e5eef1';
+    siteRepository.exist.mockResolvedValue(true);
+    assetRepository.findOne.mockResolvedValue({
+      id: assetId,
+      tenantId,
+      siteId,
+      assetTypeId,
+    } as AssetEntity);
+    workTypeRepository.findOne.mockResolvedValue({
+      id: workTypeId,
+      tenantId,
+      active: true,
+    } as WorkTypeEntity);
+    const rule = {
+      tenantId,
+      assetId,
+      workTypeId,
+      enabled: false,
+    } as AssetWorkTypeEntity;
+    assetWorkTypeRepository.findOne.mockResolvedValue(null);
+    assetWorkTypeRepository.create.mockReturnValue(rule);
+    assetWorkTypeRepository.save.mockResolvedValue(rule);
+
+    await expect(
+      service.setAssetWorkTypeOverride(
+        tenantId,
+        siteId,
+        assetId,
+        workTypeId,
+        false
+      )
+    ).resolves.toEqual({ assetId, workTypeId, override: false });
+    expect(assetWorkTypeRepository.create).toHaveBeenCalledWith({
+      tenantId,
+      assetId,
+      workTypeId,
+      enabled: false,
     });
   });
 

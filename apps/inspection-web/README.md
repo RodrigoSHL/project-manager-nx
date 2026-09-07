@@ -7,11 +7,19 @@ Esqueleto visual de una aplicación para gestión de subestaciones y activos.
 Desde la raíz del monorepo:
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build postgres inspection-api bff-api
+npm install
+docker compose up -d postgres
+npx nx serve inspection-api
+npx nx serve bff-api
 npx nx serve inspection-web
 ```
 
 Abrir `http://localhost:4204`.
+
+Los tres comandos `nx serve` deben permanecer ejecutándose, cada uno en su
+propia terminal. En desarrollo, `docker-compose.yml` publica PostgreSQL en
+`localhost:5432`. `docker-compose.prod.yml` mantiene la base y las APIs dentro
+de la red privada de Docker y no debe mezclarse con procesos Nx locales.
 
 ## Alcance actual
 
@@ -26,16 +34,17 @@ Abrir `http://localhost:4204`.
   búsqueda, cambio de estado y eliminación protegida cuando existen hijos.
 - Centro de Administración con rutas separadas para Activos, Tipos de activos,
   Tipos de trabajo, Sitios y Usuarios.
-- Catálogos de tipos de activo y tipos de trabajo conectados al BFF, aislados
-  por tenant y disponibles en modo de solo lectura.
+- Mantenedores de tipos de activo y tipos de trabajo conectados al BFF, con
+  creación, edición y activación/desactivación aisladas por tenant.
 - Relaciones persistidas entre tipos de activo y tipos de trabajo, con
-  excepciones por activo. La API calcula la lista efectiva que muestra la ficha.
+  asociación y desasociación desde Administración.
+- Excepciones por activo con tres opciones: heredar, permitir o bloquear. La API
+  calcula la lista efectiva que muestra la ficha.
 - Componentes reutilizables `Button`, `Sheet`, `PageHeader` y `EmptyState`.
 
 No existen todavía almacenamiento local, Service Worker, sincronización,
 trabajos ni pautas reales. Los catálogos y relaciones sí se almacenan en
-PostgreSQL. El formulario de activos envía `assetTypeId` a la API y todavía no
-existe una pantalla para modificar las reglas de habilitación.
+PostgreSQL. El formulario de activos envía `assetTypeId` a la API.
 
 ## Estructura
 

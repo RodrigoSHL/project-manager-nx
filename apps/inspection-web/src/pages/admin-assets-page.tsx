@@ -29,6 +29,7 @@ import { AssetTree } from '../features/assets/components/asset-tree';
 import type { Asset } from '../features/assets/models';
 import { useAssetAdministration } from '../features/assets/use-asset-administration';
 import { AvailableWorkTypes } from '../features/work-types/components/available-work-types';
+import { AssetWorkTypeConfigurationPanel } from '../features/work-types/components/asset-work-type-configuration-panel';
 
 type EditorMode = 'detail' | 'create-root' | 'create-child' | 'edit';
 
@@ -44,12 +45,14 @@ export function AdminAssetsPage() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [editorMode, setEditorMode] = useState<EditorMode>('detail');
+  const [workTypeConfigVersion, setWorkTypeConfigVersion] = useState(0);
 
   useEffect(() => {
     setSelectedAssetId(null);
     setExpandedIds(new Set());
     setSearchQuery('');
     setEditorMode('detail');
+    setWorkTypeConfigVersion(0);
   }, [admin.tenantId, admin.siteId]);
 
   useEffect(() => {
@@ -410,7 +413,16 @@ export function AdminAssetsPage() {
                   'Este activo todavía no tiene una descripción.'}
               </p>
 
-              <AvailableWorkTypes asset={selectedAsset} />
+              <AvailableWorkTypes
+                key={`${selectedAsset.id}:${workTypeConfigVersion}`}
+                asset={selectedAsset}
+              />
+              <AssetWorkTypeConfigurationPanel
+                asset={selectedAsset}
+                onChange={() =>
+                  setWorkTypeConfigVersion((current) => current + 1)
+                }
+              />
 
               <div className="mt-6 grid gap-2 sm:grid-cols-2">
                 <Button

@@ -12,6 +12,21 @@ GridAssets.
 - Sincronización automática de esquema: desactivada; todos los cambios usan
   migraciones.
 
+## Desarrollo local
+
+Desde la raíz del monorepo:
+
+```bash
+docker compose up -d postgres
+npx nx serve inspection-api
+```
+
+El Compose de desarrollo publica PostgreSQL en `localhost:5432`. La API carga
+las credenciales generales desde `.env`, usa `inspection_db` como base
+predeterminada y ejecuta migraciones cuando
+`INSPECTION_MIGRATIONS_RUN=true`. El Compose de producción no publica ese
+puerto porque sus servicios se comunican por la red privada de Docker.
+
 ## Endpoints internos
 
 ```text
@@ -19,10 +34,20 @@ GET /api/health
 GET /api/tenants
 GET /api/tenants/:tenantId/sites
 GET /api/tenants/:tenantId/asset-types
+POST /api/tenants/:tenantId/asset-types
+PATCH /api/tenants/:tenantId/asset-types/:assetTypeId
+GET /api/tenants/:tenantId/asset-types/:assetTypeId/work-types
+PUT /api/tenants/:tenantId/asset-types/:assetTypeId/work-types/:workTypeId
+DELETE /api/tenants/:tenantId/asset-types/:assetTypeId/work-types/:workTypeId
 GET /api/tenants/:tenantId/work-types
+POST /api/tenants/:tenantId/work-types
+PATCH /api/tenants/:tenantId/work-types/:workTypeId
 GET /api/tenants/:tenantId/sites/:siteId/assets
 GET /api/tenants/:tenantId/sites/:siteId/assets/:assetId
 GET /api/tenants/:tenantId/sites/:siteId/assets/:assetId/work-types
+GET /api/tenants/:tenantId/sites/:siteId/assets/:assetId/work-type-configurations
+PUT /api/tenants/:tenantId/sites/:siteId/assets/:assetId/work-type-configurations/:workTypeId
+DELETE /api/tenants/:tenantId/sites/:siteId/assets/:assetId/work-type-configurations/:workTypeId
 POST /api/tenants/:tenantId/sites/:siteId/assets
 PATCH /api/tenants/:tenantId/sites/:siteId/assets/:assetId
 DELETE /api/tenants/:tenantId/sites/:siteId/assets/:assetId
@@ -37,6 +62,13 @@ su tipo al calcular los trabajos permitidos. Los nodos raíz deben ser
 subestaciones, no se pueden crear ciclos y un activo con hijos no se puede
 eliminar.
 
+Asociar un trabajo a un tipo de activo crea la regla heredada para todos sus
+equipos; desasociarlo elimina esa regla. En un activo concreto, `PUT` guarda una
+excepción `enabled: true|false` y `DELETE` la elimina para volver a heredar. Un
+tipo de catálogo se retira mediante `PATCH active=false`, conservando sus
+referencias. `SUBSTATION` permanece activo y con su código protegido porque
+identifica los nodos raíz.
+
 La autenticación multi-tenant todavía no forma parte de este módulo. Cuando se
 implemente, el BFF deberá obtener el tenant permitido desde la sesión y no desde
 una selección libre del navegador.
@@ -45,5 +77,4 @@ una selección libre del navegador.
 
 - Obtener `tenantId` desde una sesión autenticada y validar sus permisos en el
   BFF.
-- Agregar CRUD para tipos y reglas cuando el módulo visual lo necesite.
 - Incorporar auditoría de cambios antes de habilitar mutaciones en producción.

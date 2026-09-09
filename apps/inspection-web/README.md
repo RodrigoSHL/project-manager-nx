@@ -47,12 +47,16 @@ de la red privada de Docker y no debe mezclarse con procesos Nx locales.
   CRUD, filtros, opciones digitales y asociación N:M con tipos de activo.
 - Ficha de activo con conceptos disponibles resueltos desde su tipo, todavía
   sin captura de valores.
+- Constructor básico de plantillas dentro de Tipos de trabajo, con secciones,
+  tareas, referencias a conceptos, orden mediante botones y vista previa
+  dinámica. Las plantillas son mock y viven solamente durante la sesión.
 - Componentes reutilizables `Button`, `Sheet`, `PageHeader` y `EmptyState`.
 
 No existen todavía almacenamiento local, Service Worker, sincronización,
-trabajos ni pautas reales. Los catálogos de activos, trabajos y conceptos se
-almacenan en PostgreSQL a través de `inspection-api` y el BFF. El formulario de
-activos envía `assetTypeId` a la API.
+trabajos ni pautas reales. Los catálogos de activos, tipos de trabajo y
+conceptos se almacenan en PostgreSQL a través de `inspection-api` y el BFF. Las
+plantillas de formulario de esta iteración se mantienen en memoria: al
+refrescar el navegador vuelven a sus datos mock iniciales.
 
 ## Estructura
 
@@ -67,6 +71,7 @@ src/
 │   ├── asset-types/  # Modelo y consultas del catálogo de tipos de activo
 │   ├── catalogs/     # Carga remota de catálogos administrativos
 │   ├── concepts/     # Cliente BFF, modelos, caché UI y componentes de conceptos
+│   ├── form-templates/ # Modelos, mocks, estado UI, editor y vista previa
 │   └── work-types/   # Modelos y componentes de tipos de trabajo permitidos
 ├── components/   # Componentes visuales reutilizables
 │   └── ui/       # Primitives compatibles con shadcn/ui

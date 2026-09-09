@@ -32,6 +32,11 @@ flowchart TD
   ATC[Conceptos asociados al tipo] --> AT
   C[Concepto reutilizable] --> ATC
   CO[Opciones digitales] --> C
+  WT --> FT[Plantilla de formulario]
+  FT --> FS[Sección ordenada]
+  FS --> FI[Elemento ordenado]
+  FI --> C
+  FI --> TK[Tarea configurable]
 ```
 
 Un `Site` organiza geográficamente los activos. No es un activo. El árbol de
@@ -279,6 +284,52 @@ activo.
 El activo, el tipo de activo, el tipo de trabajo y sus relaciones deben
 pertenecer al mismo `tenantId`.
 
+### Plantillas de formulario
+
+#### RN-FOR-001 — La plantilla configura un tipo de trabajo
+
+Un `FormTemplate` describe la estructura que se usará en una ejecución futura
+de un `WorkType`. La plantilla no es un trabajo realizado y no contiene
+respuestas. En esta etapa cada tipo de trabajo admite una sola plantilla.
+
+#### RN-FOR-002 — La versión queda registrada sin automatización
+
+Toda plantilla contiene `version`. Los datos iniciales y las plantillas nuevas
+usan la versión 1. Todavía no se clonan versiones ni se conserva un historial
+cuando se edita.
+
+#### RN-FOR-003 — El formulario se organiza mediante órdenes explícitos
+
+Las secciones se ordenan por `FormSection.order`. Dentro de cada sección, los
+elementos se ordenan por `FormItem.order`. Subir, bajar o eliminar un registro
+mantiene órdenes consecutivos dentro de su grupo.
+
+#### RN-FOR-004 — Un elemento es una tarea o una referencia a concepto
+
+Un elemento `TASK` guarda el título de una actividad configurable. Un elemento
+`CONCEPT` guarda el `conceptId` de una definición ya existente. No se copia el
+nombre, tipo, unidad ni las opciones del concepto dentro del formulario.
+
+#### RN-FOR-005 — Los conceptos se renderizan según su definición
+
+La vista previa representa un concepto `ANALOG` con un campo numérico y su
+unidad, un `DIGITAL` con sus opciones activas, y un `TEXT` con un área de texto.
+Los conceptos `HIDDEN` no aparecen en la vista previa normal. Ningún control
+guarda respuestas en esta etapa.
+
+#### RN-FOR-006 — El selector recomienda conceptos compatibles
+
+Para un tipo de trabajo se buscan los tipos de activo que lo tienen asociado.
+El selector muestra primero los conceptos activos relacionados con esos tipos
+de activo. Si no existe una compatibilidad suficiente, muestra como alternativa
+el catálogo activo del tenant. Esta preferencia ayuda a elegir; no crea una
+restricción de dominio nueva.
+
+#### RN-FOR-007 — La configuración no cruza empresas
+
+La plantilla, sus secciones, sus elementos, el tipo de trabajo y cualquier
+concepto referenciado deben compartir el mismo `tenantId`.
+
 ## Reglas de programación vigentes
 
 ### RP-API-001 — La API aplica las reglas de negocio
@@ -329,11 +380,24 @@ que necesita la interfaz. Los datos se cargan y modifican mediante el BFF; la
 fuente de verdad es PostgreSQL. Recargar la aplicación vuelve a consultar el
 servidor y conserva los cambios.
 
-### RP-API-001 — Conceptos se escriben de forma transaccional
+### RP-API-004 — Conceptos se escriben de forma transaccional
 
 Crear o editar un concepto y sus opciones digitales ocurre dentro de una sola
 transacción. Si una opción no puede guardarse, tampoco queda guardado un cambio
 parcial del concepto.
+
+### RP-FE-004 — Las plantillas son datos mock en memoria
+
+`FormTemplateCatalogProvider` concentra el estado temporal y valida el tenant
+antes de cada cambio. Las páginas consumen el catálogo mediante un hook y no
+acceden a una base de datos. Recargar la aplicación restaura los dos formularios
+mock iniciales.
+
+### RP-FE-005 — El orden pertenece a su contenedor
+
+El orden de una sección solo se compara con secciones de la misma plantilla.
+El orden de un elemento solo se compara con elementos de la misma sección.
+Mover o eliminar datos de un tenant no modifica los registros de otro.
 
 ## Decisiones pendientes
 
@@ -346,6 +410,9 @@ Estas ideas todavía no son reglas implementadas:
   cuando ya existan trabajos e historial.
 - Definir qué ocurre con trabajos existentes al desactivar su tipo.
 - Crear trabajos reales, pautas, hallazgos, mediciones y adjuntos.
+- Persistir y versionar plantillas en el backend.
+- Crear ejecuciones y respuestas a partir de una versión inmutable de la
+  plantilla.
 - Diseñar persistencia local, funcionamiento offline y sincronización.
 
 ## Plantilla para agregar una regla
@@ -370,3 +437,4 @@ Ejemplo válido o inválido, si ayuda a entenderla.
 | 2026-09-07 | Documento inicial con tenants, sitios, jerarquía de activos, catálogos y herencia de tipos de trabajo. |
 | 2026-09-09 | Se agregan conceptos, opciones digitales y su asociación N:M con tipos de activo.                      |
 | 2026-09-09 | Conceptos y asociaciones se conectan al BFF, inspection-api y PostgreSQL.                              |
+| 2026-09-09 | Se agrega el constructor mock de plantillas, secciones, tareas, conceptos y vista previa.              |

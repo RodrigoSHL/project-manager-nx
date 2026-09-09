@@ -29,6 +29,12 @@ Project web:
 http://localhost
 ```
 
+Atom Dev Landing:
+
+```text
+https://atomdev.cl
+```
+
 Jira web:
 
 ```text

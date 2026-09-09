@@ -30,6 +30,7 @@ import type { Asset } from '../features/assets/models';
 import { useAssetAdministration } from '../features/assets/use-asset-administration';
 import { AvailableWorkTypes } from '../features/work-types/components/available-work-types';
 import { AssetWorkTypeConfigurationPanel } from '../features/work-types/components/asset-work-type-configuration-panel';
+import { AvailableConcepts } from '../features/concepts/components/available-concepts';
 
 type EditorMode = 'detail' | 'create-root' | 'create-child' | 'edit';
 
@@ -416,6 +417,10 @@ export function AdminAssetsPage() {
               <AvailableWorkTypes
                 key={`${selectedAsset.id}:${workTypeConfigVersion}`}
                 asset={selectedAsset}
+              />
+              <AvailableConcepts
+                asset={selectedAsset}
+                assetTypes={admin.assetTypes}
               />
               <AssetWorkTypeConfigurationPanel
                 asset={selectedAsset}

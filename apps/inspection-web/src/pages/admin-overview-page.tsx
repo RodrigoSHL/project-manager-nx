@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  BookOpenText,
   Building2,
   MapPinned,
   Shapes,
@@ -31,6 +32,14 @@ const sections = [
     description:
       'Crea y administra las clases de trabajo disponibles en cada empresa.',
     icon: Wrench,
+    status: 'Disponible',
+  },
+  {
+    to: '/admin/concepts',
+    title: 'Conceptos',
+    description:
+      'Define variables, estados y características reutilizables por tipo de activo.',
+    icon: BookOpenText,
     status: 'Disponible',
   },
   {

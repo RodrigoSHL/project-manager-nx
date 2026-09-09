@@ -29,6 +29,9 @@ flowchart TD
   WT[Tipo de trabajo] --> ATWT
   AWT[Excepción de un activo] --> A2
   WT --> AWT
+  ATC[Conceptos asociados al tipo] --> AT
+  C[Concepto reutilizable] --> ATC
+  CO[Opciones digitales] --> C
 ```
 
 Un `Site` organiza geográficamente los activos. No es un activo. El árbol de
@@ -156,6 +159,55 @@ Retirar un tipo de trabajo cambia `active` a `false` y conserva sus relaciones
 históricas. Un tipo de trabajo inactivo nunca aparece como trabajo efectivo
 disponible.
 
+### Conceptos
+
+#### RN-CON-001 — Un concepto es una definición reutilizable
+
+Un concepto describe un dato, variable, estado o característica que podrá
+utilizarse posteriormente. No representa una respuesta, medición ni inspección
+ejecutada.
+
+#### RN-CON-002 — Cada concepto tiene un tipo
+
+- `ANALOG` representa un valor numérico y puede indicar una unidad.
+- `DIGITAL` representa una lista cerrada de opciones.
+- `TEXT` representa texto libre futuro.
+- `HIDDEN` queda disponible para configuración futura, sin comportamiento
+  especial en esta etapa.
+
+#### RN-CON-003 — Las opciones pertenecen a conceptos digitales
+
+Un concepto `DIGITAL` necesita al menos una opción. Cada `ConceptOption` define
+un valor interno, una etiqueta visible, un orden y un estado. Los conceptos de
+otros tipos no conservan opciones.
+
+#### RN-CON-004 — Conceptos y tipos de activo tienen una relación N:M
+
+Un tipo de activo puede utilizar muchos conceptos y un concepto puede
+reutilizarse en muchos tipos de activo. `AssetTypeConcept` representa cada
+asociación sin duplicar la definición del concepto.
+
+#### RN-CON-005 — El activo obtiene los conceptos desde su tipo
+
+Un activo no se relaciona directamente con conceptos. La lista disponible se
+resuelve mediante `Asset.assetTypeId → AssetTypeConcept → Concept` y solo
+incluye conceptos y relaciones activas.
+
+#### RN-CON-006 — Los conceptos se retiran mediante estado
+
+Un concepto no se elimina físicamente desde la interfaz. Cambiar `active` a
+`false` lo retira de las listas disponibles y conserva su configuración local.
+
+#### RN-CON-007 — El código es único por tenant
+
+Dos conceptos de la misma empresa no pueden compartir código. Los códigos se
+normalizan a mayúsculas y guiones bajos.
+
+#### RN-CON-008 — Las relaciones no cruzan tenants
+
+`Concept`, `ConceptOption`, `AssetType` y `AssetTypeConcept` deben pertenecer al
+mismo `tenantId` para poder relacionarse.
+
 ### Trabajos permitidos y herencia
 
 #### RN-TRA-001 — El tipo de activo define la regla general
@@ -269,6 +321,12 @@ inventa una regla distinta.
 Cambiar el tenant en un selector solo cambia el contexto visual actual. Cuando
 exista autenticación, el BFF obtendrá los tenants permitidos desde la sesión.
 
+### RP-FE-003 — Conceptos utiliza un mock compartido en memoria
+
+En esta etapa, un contexto React mantiene conceptos, opciones y asociaciones
+durante la sesión. No usa endpoints, PostgreSQL, `localStorage` ni IndexedDB.
+Recargar o cerrar la aplicación restaura los datos mock iniciales.
+
 ## Decisiones pendientes
 
 Estas ideas todavía no son reglas implementadas:
@@ -280,6 +338,8 @@ Estas ideas todavía no son reglas implementadas:
   cuando ya existan trabajos e historial.
 - Definir qué ocurre con trabajos existentes al desactivar su tipo.
 - Crear trabajos reales, pautas, hallazgos, mediciones y adjuntos.
+- Conectar conceptos, opciones y asociaciones a la API y PostgreSQL cuando se
+  autorice su persistencia.
 - Diseñar persistencia local, funcionamiento offline y sincronización.
 
 ## Plantilla para agregar una regla
@@ -302,3 +362,4 @@ Ejemplo válido o inválido, si ayuda a entenderla.
 | Fecha      | Cambio                                                                                                 |
 | ---------- | ------------------------------------------------------------------------------------------------------ |
 | 2026-09-07 | Documento inicial con tenants, sitios, jerarquía de activos, catálogos y herencia de tipos de trabajo. |
+| 2026-09-09 | Se agregan conceptos, opciones digitales y su asociación N:M local con tipos de activo.                |

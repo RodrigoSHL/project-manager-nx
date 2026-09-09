@@ -6,6 +6,7 @@ import { AdminOverviewPage } from '../pages/admin-overview-page';
 import { AdminAssetsPage } from '../pages/admin-assets-page';
 import { AdminAssetTypesPage } from '../pages/admin-asset-types-page';
 import { AdminWorkTypesPage } from '../pages/admin-work-types-page';
+import { AdminConceptsPage } from '../pages/admin-concepts-page';
 import { AdminPlaceholderPage } from '../pages/admin-placeholder-page';
 import { AssetsPage } from '../pages/assets-page';
 import { DashboardPage } from '../pages/dashboard-page';
@@ -45,6 +46,7 @@ export function AppRoutes({
           <Route path="assets" element={<AdminAssetsPage />} />
           <Route path="asset-types" element={<AdminAssetTypesPage />} />
           <Route path="work-types" element={<AdminWorkTypesPage />} />
+          <Route path="concepts" element={<AdminConceptsPage />} />
           <Route
             path="sites"
             element={

@@ -4,6 +4,7 @@ import {
   isSubstationAsset,
 } from '../../asset-types/asset-type-selectors';
 import { AvailableWorkTypes } from '../../work-types/components/available-work-types';
+import { AvailableConcepts } from '../../concepts/components/available-concepts';
 import type { AssetType } from '../../asset-types/models';
 import { formatAssetStatus, formatSiteType } from '../asset-formatters';
 import type { Asset, Site, Tenant } from '../models';
@@ -112,6 +113,7 @@ export function AssetDetail({
       </div>
 
       <AvailableWorkTypes asset={asset} />
+      <AvailableConcepts asset={asset} assetTypes={assetTypes} />
     </section>
   );
 }

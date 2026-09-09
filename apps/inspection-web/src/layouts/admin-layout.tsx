@@ -1,5 +1,6 @@
 import {
   Building2,
+  BookOpenText,
   LayoutGrid,
   MapPinned,
   Shapes,
@@ -14,6 +15,7 @@ const adminNavigation = [
   { to: '/admin/assets', label: 'Activos', icon: Building2 },
   { to: '/admin/asset-types', label: 'Tipos de activos', icon: Shapes },
   { to: '/admin/work-types', label: 'Tipos de trabajo', icon: Wrench },
+  { to: '/admin/concepts', label: 'Conceptos', icon: BookOpenText },
   { to: '/admin/sites', label: 'Sitios', icon: MapPinned },
   { to: '/admin/users', label: 'Usuarios', icon: Users },
 ];

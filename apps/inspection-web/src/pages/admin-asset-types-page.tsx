@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, LoaderCircle, Plus, Search } from 'lucide-react';
+import {
+  AlertCircle,
+  BookOpenText,
+  LoaderCircle,
+  Plus,
+  Search,
+  Wrench,
+} from 'lucide-react';
 import { CatalogItemForm } from '../components/catalog-item-form';
 import { CatalogList } from '../components/catalog-list';
 import { CatalogTenantSelector } from '../components/catalog-tenant-selector';
@@ -8,12 +15,17 @@ import type { AssetType } from '../features/asset-types/models';
 import type { CatalogItemFormValue } from '../features/catalogs/catalog-item-schema';
 import { useReferenceCatalog } from '../features/catalogs/use-reference-catalog';
 import { AssetTypeWorkTypesPanel } from '../features/work-types/components/asset-type-work-types-panel';
+import { AssetTypeConceptsPanel } from '../features/concepts/components/asset-type-concepts-panel';
+
+type ConfigurationTab = 'work-types' | 'concepts';
 
 export function AdminAssetTypesPage() {
   const catalog = useReferenceCatalog();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editing, setEditing] = useState<AssetType | null | undefined>();
   const [searchQuery, setSearchQuery] = useState('');
+  const [configurationTab, setConfigurationTab] =
+    useState<ConfigurationTab>('work-types');
 
   useEffect(() => {
     setSelectedId((current) =>
@@ -57,8 +69,8 @@ export function AdminAssetTypesPage() {
             Tipos de activos
           </h2>
           <p className="mt-2 max-w-2xl text-sm text-slate-600">
-            Crea las clases de equipos y define qué tipos de trabajo heredan sus
-            activos.
+            Crea las clases de equipos y define sus trabajos y conceptos
+            disponibles.
           </p>
         </div>
         <Button type="button" onClick={() => setEditing(null)}>
@@ -172,15 +184,48 @@ export function AdminAssetTypesPage() {
 
           {selected ? (
             <div className="min-w-0 lg:sticky lg:top-24">
-              <AssetTypeWorkTypesPanel
-                tenantId={catalog.tenantId}
-                assetType={selected}
-                workTypes={catalog.workTypes}
-              />
+              <div className="mb-3 grid grid-cols-2 gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setConfigurationTab('work-types')}
+                  className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium transition ${
+                    configurationTab === 'work-types'
+                      ? 'bg-slate-950 text-white'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <Wrench className="size-4" /> Trabajos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfigurationTab('concepts')}
+                  className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium transition ${
+                    configurationTab === 'concepts'
+                      ? 'bg-slate-950 text-white'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <BookOpenText className="size-4" /> Conceptos
+                </button>
+              </div>
+
+              {configurationTab === 'work-types' ? (
+                <AssetTypeWorkTypesPanel
+                  tenantId={catalog.tenantId}
+                  assetType={selected}
+                  workTypes={catalog.workTypes}
+                />
+              ) : (
+                <AssetTypeConceptsPanel
+                  tenantId={catalog.tenantId}
+                  assetType={selected}
+                  assetTypes={catalog.assetTypes}
+                />
+              )}
             </div>
           ) : (
             <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
-              Selecciona un tipo de activo para configurar sus trabajos.
+              Selecciona un tipo de activo para configurar sus relaciones.
             </div>
           )}
         </div>

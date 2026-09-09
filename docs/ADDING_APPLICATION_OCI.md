@@ -29,7 +29,7 @@ Navegador
 
 | Dominio | Aplicación |
 |---|---|
-| `atomdev.cl`, `www.atomdev.cl` | redirección a Projects |
+| `atomdev.cl`, `www.atomdev.cl` | Atom Dev Landing |
 | `projects.atomdev.cl` | Project Web |
 | `jira.atomdev.cl` | Jira Web |
 | `travel.atomdev.cl` | Travel Planner |

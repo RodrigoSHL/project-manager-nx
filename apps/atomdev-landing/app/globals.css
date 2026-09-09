@@ -1,0 +1,155 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  /* ── Atom Dev Colour System ──────────────────────────────────────────── */
+  /* Background: deep navy-black */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-turquoise: var(--turquoise);
+  --color-turquoise-dim: var(--turquoise-dim);
+  --color-pink: var(--pink);
+  --color-pink-dim: var(--pink-dim);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+
+  /* ── Fonts ───────────────────────────────────────────────────────────── */
+  --font-sans: 'Inter', 'Inter Fallback';
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+:root {
+  color-scheme: dark;
+  /* Core palette – always dark */
+  --background: oklch(0.09 0.015 240);          /* ~#07090f deep navy-black */
+  --foreground: oklch(0.93 0.01 240);           /* soft white */
+  --card: oklch(0.13 0.018 240 / 0.7);          /* translucent glass */
+  --card-foreground: oklch(0.93 0.01 240);
+  --popover: oklch(0.13 0.018 240);
+  --popover-foreground: oklch(0.93 0.01 240);
+  /* Turquoise neon – primary */
+  --primary: oklch(0.82 0.18 190);              /* #22d3ee-ish neon turquoise */
+  --primary-foreground: oklch(0.09 0.015 240);
+  /* Pink neon – secondary */
+  --secondary: oklch(0.75 0.22 340);            /* #f472b6-ish neon pink */
+  --secondary-foreground: oklch(0.09 0.015 240);
+  /* Neutrals */
+  --muted: oklch(0.18 0.012 240);
+  --muted-foreground: oklch(0.6 0.015 240);
+  --accent: oklch(0.82 0.18 190 / 0.12);        /* turquoise glass */
+  --accent-foreground: oklch(0.82 0.18 190);
+  --destructive: oklch(0.65 0.22 27);
+  --border: oklch(1 0 0 / 0.08);
+  --input: oklch(1 0 0 / 0.1);
+  --ring: oklch(0.82 0.18 190 / 0.5);
+  --radius: 0.75rem;
+  /* Custom brand tokens */
+  --turquoise: oklch(0.82 0.18 190);
+  --turquoise-dim: oklch(0.82 0.18 190 / 0.15);
+  --pink: oklch(0.75 0.22 340);
+  --pink-dim: oklch(0.75 0.22 340 / 0.15);
+}
+
+/* Atom Dev is always dark – no light variant */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    box-sizing: border-box;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    overflow-x: hidden;
+  }
+  ::selection {
+    background: oklch(0.82 0.18 190 / 0.3);
+    color: oklch(0.93 0.01 240);
+  }
+}
+
+/* ── Neon glow utility classes ──────────────────────────────────────────── */
+@layer utilities {
+  .glow-turquoise {
+    box-shadow: 0 0 20px oklch(0.82 0.18 190 / 0.35),
+                0 0 60px oklch(0.82 0.18 190 / 0.15);
+  }
+  .glow-pink {
+    box-shadow: 0 0 20px oklch(0.75 0.22 340 / 0.35),
+                0 0 60px oklch(0.75 0.22 340 / 0.15);
+  }
+  .text-glow-turquoise {
+    text-shadow: 0 0 20px oklch(0.82 0.18 190 / 0.6);
+  }
+  .text-glow-pink {
+    text-shadow: 0 0 20px oklch(0.75 0.22 340 / 0.6);
+  }
+  .glass {
+    background: oklch(0.13 0.018 240 / 0.6);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid oklch(1 0 0 / 0.07);
+  }
+  .glass-hover:hover {
+    background: oklch(0.15 0.02 240 / 0.75);
+    border-color: oklch(0.82 0.18 190 / 0.3);
+  }
+  .grid-bg {
+    background-image:
+      linear-gradient(oklch(1 0 0 / 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(1 0 0 / 0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+  .border-turquoise-glow {
+    border-color: oklch(0.82 0.18 190 / 0.5);
+    box-shadow: 0 0 12px oklch(0.82 0.18 190 / 0.2);
+  }
+  .border-pink-glow {
+    border-color: oklch(0.75 0.22 340 / 0.5);
+    box-shadow: 0 0 12px oklch(0.75 0.22 340 / 0.2);
+  }
+}
+
+/* ── Scrollbar ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: oklch(0.09 0.015 240); }
+::-webkit-scrollbar-thumb {
+  background: oklch(0.82 0.18 190 / 0.3);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.82 0.18 190 / 0.6);
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

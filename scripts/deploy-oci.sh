@@ -40,6 +40,7 @@ CANONICAL_SERVICES=(
   project-web
   jira-web
   travel-planner-app
+  atomdev-landing
   caddy
 )
 
@@ -171,7 +172,7 @@ resolve_services() {
       raw_services="user-api,travel-planner-api,files-api,bff-api"
       ;;
     platform-full)
-      raw_services="project-api,user-api,travel-planner-api,files-api,bff-api,project-web,jira-web,travel-planner-app"
+      raw_services="project-api,user-api,travel-planner-api,files-api,bff-api,project-web,jira-web,travel-planner-app,atomdev-landing"
       ;;
     custom)
       raw_services="$CUSTOM_SERVICES"
@@ -710,7 +711,8 @@ verify_external() {
   expect_http_status TRAVEL_TRIPS_WITHOUT_JWT https://travel.atomdev.cl/api/trips 401
   expect_http_status PROJECTS_ROOT https://projects.atomdev.cl/ 200
   expect_http_status JIRA_ROOT https://jira.atomdev.cl/ 200
-  expect_http_status ATOMDEV_REDIRECT https://atomdev.cl/ 301,302,307,308
+  expect_http_status ATOMDEV_ROOT https://atomdev.cl/ 200
+  expect_http_status ATOMDEV_WWW https://www.atomdev.cl/ 200
 
   local server_header
   server_header=$(curl -sSI --max-time 30 https://travel.atomdev.cl/ \

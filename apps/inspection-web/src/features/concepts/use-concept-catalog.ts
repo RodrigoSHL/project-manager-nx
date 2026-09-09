@@ -7,8 +7,8 @@ export function useConceptCatalog(tenantId: string, assetTypes: AssetType[]) {
   const store = useConceptCatalogStore();
 
   useEffect(() => {
-    store.ensureTenant(tenantId, assetTypes);
-  }, [assetTypes, store.ensureTenant, tenantId]);
+    void store.ensureTenant(tenantId);
+  }, [store.ensureTenant, tenantId]);
 
   const concepts = useMemo(
     () =>
@@ -38,7 +38,7 @@ export function useConceptCatalog(tenantId: string, assetTypes: AssetType[]) {
   }
 
   function setConceptActive(conceptId: string, active: boolean) {
-    store.setConceptActive(tenantId, conceptId, active);
+    return store.setConceptActive(tenantId, conceptId, active);
   }
 
   function setAssetTypeAssociation(
@@ -46,7 +46,12 @@ export function useConceptCatalog(tenantId: string, assetTypes: AssetType[]) {
     conceptId: string,
     associated: boolean
   ) {
-    store.setAssetTypeAssociation(tenantId, assetType, conceptId, associated);
+    return store.setAssetTypeAssociation(
+      tenantId,
+      assetType,
+      conceptId,
+      associated
+    );
   }
 
   function listAvailableForAssetType(assetTypeId: string): AvailableConcept[] {
@@ -80,6 +85,9 @@ export function useConceptCatalog(tenantId: string, assetTypes: AssetType[]) {
     createConcept,
     listAvailableForAssetType,
     options,
+    error: store.errors[tenantId] ?? null,
+    isLoading: store.loadingTenantIds.includes(tenantId),
+    retry: () => store.retryTenant(tenantId),
     setAssetTypeAssociation,
     setConceptActive,
     updateConcept,

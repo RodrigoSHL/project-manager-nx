@@ -1,21 +1,15 @@
-import type { AssetType } from '../asset-types/models';
-import type {
-  AssetTypeConcept,
-  Concept,
-  ConceptOption,
-  ConceptType,
-} from './models';
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 type ConceptDefinition = {
   code: string;
   name: string;
   description: string;
-  type: ConceptType;
+  type: 'ANALOG' | 'DIGITAL' | 'TEXT' | 'HIDDEN';
   unit?: string;
   options?: Array<{ value: string; label: string }>;
 };
 
-const conceptDefinitions: ConceptDefinition[] = [
+const concepts: ConceptDefinition[] = [
   {
     code: 'TEMP_AMBIENTE',
     name: 'Temperatura ambiente',
@@ -136,7 +130,7 @@ const conceptDefinitions: ConceptDefinition[] = [
   },
 ];
 
-const conceptsByAssetTypeCode: Record<string, string[]> = {
+const conceptsByAssetType: Record<string, string[]> = {
   POWER_TRANSFORMER: [
     'TEMP_AMBIENTE',
     'TEMP_ACEITE',
@@ -172,64 +166,63 @@ const conceptsByAssetTypeCode: Record<string, string[]> = {
   ],
 };
 
-export type ConceptSeed = {
-  concepts: Concept[];
-  options: ConceptOption[];
-  assetTypeConcepts: AssetTypeConcept[];
-};
+export class SeedConceptCatalogs1799100500000 implements MigrationInterface {
+  name = 'SeedConceptCatalogs1799100500000';
 
-export function createConceptSeed(
-  tenantId: string,
-  assetTypes: AssetType[]
-): ConceptSeed {
-  const concepts = conceptDefinitions.map<Concept>((definition) => ({
-    id: crypto.randomUUID(),
-    tenantId,
-    code: definition.code,
-    name: definition.name,
-    description: definition.description,
-    type: definition.type,
-    unit: definition.unit ?? null,
-    active: true,
-  }));
-  const conceptByCode = new Map(
-    concepts.map((concept) => [concept.code, concept])
-  );
-  const definitionByCode = new Map(
-    conceptDefinitions.map((definition) => [definition.code, definition])
-  );
-  const options = concepts.flatMap<ConceptOption>((concept) =>
-    (definitionByCode.get(concept.code)?.options ?? []).map(
-      (option, index) => ({
-        id: crypto.randomUUID(),
-        tenantId,
-        conceptId: concept.id,
-        value: option.value,
-        label: option.label,
-        order: index + 1,
-        active: true,
-      })
-    )
-  );
-  const assetTypeConcepts = assetTypes.flatMap<AssetTypeConcept>((assetType) =>
-    (conceptsByAssetTypeCode[assetType.code] ?? []).flatMap(
-      (conceptCode, index) => {
-        const concept = conceptByCode.get(conceptCode);
-        return concept
-          ? [
-              {
-                id: crypto.randomUUID(),
-                tenantId,
-                assetTypeId: assetType.id,
-                conceptId: concept.id,
-                order: index + 1,
-                active: true,
-              },
-            ]
-          : [];
+  async up(queryRunner: QueryRunner): Promise<void> {
+    for (const concept of concepts) {
+      await queryRunner.query(
+        `INSERT INTO "concepts" ("id", "tenant_id", "code", "name", "description", "type", "unit", "active")
+         SELECT uuid_generate_v5(uuid_ns_url(), 'https://gridassets.local/concept/' || "id"::text || '/' || $1),
+                "id", $1, $2, $3, $4::"concept_type_enum", $5, true
+         FROM "tenants"
+         ON CONFLICT ("tenant_id", "code") DO UPDATE SET
+           "name" = EXCLUDED."name", "description" = EXCLUDED."description",
+           "type" = EXCLUDED."type", "unit" = EXCLUDED."unit", "active" = true`,
+        [
+          concept.code,
+          concept.name,
+          concept.description,
+          concept.type,
+          concept.unit ?? null,
+        ]
+      );
+
+      for (const [index, option] of (concept.options ?? []).entries()) {
+        await queryRunner.query(
+          `INSERT INTO "concept_options" ("id", "tenant_id", "concept_id", "value", "label", "sort_order", "active")
+           SELECT uuid_generate_v5(uuid_ns_url(), 'https://gridassets.local/concept-option/' || concept."tenant_id"::text || '/' || $1 || '/' || $2),
+                  concept."tenant_id", concept."id", $2, $3, $4, true
+           FROM "concepts" AS concept WHERE concept."code" = $1
+           ON CONFLICT ("tenant_id", "concept_id", "value") DO UPDATE SET
+             "label" = EXCLUDED."label", "sort_order" = EXCLUDED."sort_order", "active" = true`,
+          [concept.code, option.value, option.label, index + 1]
+        );
       }
-    )
-  );
+    }
 
-  return { concepts, options, assetTypeConcepts };
+    for (const [assetTypeCode, conceptCodes] of Object.entries(
+      conceptsByAssetType
+    )) {
+      for (const [index, conceptCode] of conceptCodes.entries()) {
+        await queryRunner.query(
+          `INSERT INTO "asset_type_concepts" ("id", "tenant_id", "asset_type_id", "concept_id", "sort_order", "active")
+           SELECT uuid_generate_v5(uuid_ns_url(), 'https://gridassets.local/asset-type-concept/' || asset_type."tenant_id"::text || '/' || $1 || '/' || $2),
+                  asset_type."tenant_id", asset_type."id", concept."id", $3, true
+           FROM "asset_types" AS asset_type
+           INNER JOIN "concepts" AS concept ON concept."tenant_id" = asset_type."tenant_id" AND concept."code" = $2
+           WHERE asset_type."code" = $1
+           ON CONFLICT ("tenant_id", "asset_type_id", "concept_id") DO UPDATE SET
+             "sort_order" = EXCLUDED."sort_order", "active" = true`,
+          [assetTypeCode, conceptCode, index + 1]
+        );
+      }
+    }
+  }
+
+  async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`DELETE FROM "asset_type_concepts"`);
+    await queryRunner.query(`DELETE FROM "concept_options"`);
+    await queryRunner.query(`DELETE FROM "concepts"`);
+  }
 }

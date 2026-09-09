@@ -43,17 +43,16 @@ de la red privada de Docker y no debe mezclarse con procesos Nx locales.
   asociación y desasociación desde Administración.
 - Excepciones por activo con tres opciones: heredar, permitir o bloquear. La API
   calcula la lista efectiva que muestra la ficha.
-- Catálogo mock de 15 conceptos por tenant, con CRUD local, filtros, opciones
-  digitales y asociación N:M con tipos de activo.
+- Catálogo de 15 conceptos iniciales por tenant persistido en PostgreSQL, con
+  CRUD, filtros, opciones digitales y asociación N:M con tipos de activo.
 - Ficha de activo con conceptos disponibles resueltos desde su tipo, todavía
   sin captura de valores.
 - Componentes reutilizables `Button`, `Sheet`, `PageHeader` y `EmptyState`.
 
 No existen todavía almacenamiento local, Service Worker, sincronización,
-trabajos ni pautas reales. Los catálogos de activos y trabajos se almacenan en
-PostgreSQL. Los conceptos de esta etapa viven únicamente en memoria y se
-restauran al recargar el navegador. El formulario de activos envía
-`assetTypeId` a la API.
+trabajos ni pautas reales. Los catálogos de activos, trabajos y conceptos se
+almacenan en PostgreSQL a través de `inspection-api` y el BFF. El formulario de
+activos envía `assetTypeId` a la API.
 
 ## Estructura
 
@@ -67,7 +66,7 @@ src/
 │   ├── assets/       # Cliente BFF, modelos, formularios, árbol y detalle
 │   ├── asset-types/  # Modelo y consultas del catálogo de tipos de activo
 │   ├── catalogs/     # Carga remota de catálogos administrativos
-│   ├── concepts/     # Modelos, mock, CRUD y asociaciones locales de conceptos
+│   ├── concepts/     # Cliente BFF, modelos, caché UI y componentes de conceptos
 │   └── work-types/   # Modelos y componentes de tipos de trabajo permitidos
 ├── components/   # Componentes visuales reutilizables
 │   └── ui/       # Primitives compatibles con shadcn/ui

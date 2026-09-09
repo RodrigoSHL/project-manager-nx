@@ -3,12 +3,12 @@ import {
   useCallback,
   useContext,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
 import type { AssetType } from '../asset-types/models';
-import { normalizeConceptCode } from './concept-schema';
-import { createConceptSeed } from './mock-concepts';
+import { conceptApi, type ConceptWithOptions } from './concept-api';
 import type {
   AssetTypeConcept,
   Concept,
@@ -17,35 +17,43 @@ import type {
 } from './models';
 
 type ConceptCatalogState = {
-  seededTenantIds: string[];
+  loadedTenantIds: string[];
+  loadingTenantIds: string[];
+  errors: Record<string, string | undefined>;
   concepts: Concept[];
   options: ConceptOption[];
   assetTypeConcepts: AssetTypeConcept[];
 };
 
 type ConceptCatalogContextValue = ConceptCatalogState & {
-  ensureTenant: (tenantId: string, assetTypes: AssetType[]) => void;
-  createConcept: (tenantId: string, value: ConceptFormValue) => Concept;
+  ensureTenant: (tenantId: string) => Promise<void>;
+  retryTenant: (tenantId: string) => Promise<void>;
+  createConcept: (
+    tenantId: string,
+    value: ConceptFormValue
+  ) => Promise<Concept>;
   updateConcept: (
     tenantId: string,
     conceptId: string,
     value: ConceptFormValue
-  ) => Concept;
+  ) => Promise<Concept>;
   setConceptActive: (
     tenantId: string,
     conceptId: string,
     active: boolean
-  ) => void;
+  ) => Promise<void>;
   setAssetTypeAssociation: (
     tenantId: string,
     assetType: AssetType,
     conceptId: string,
     associated: boolean
-  ) => void;
+  ) => Promise<void>;
 };
 
 const emptyState: ConceptCatalogState = {
-  seededTenantIds: [],
+  loadedTenantIds: [],
+  loadingTenantIds: [],
+  errors: {},
   concepts: [],
   options: [],
   assetTypeConcepts: [],
@@ -55,156 +63,168 @@ const ConceptCatalogContext = createContext<ConceptCatalogContextValue | null>(
   null
 );
 
+function messageFrom(error: unknown) {
+  return error instanceof Error
+    ? error.message
+    : 'No fue posible cargar los conceptos.';
+}
+
 export function ConceptCatalogProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<ConceptCatalogState>(emptyState);
+  const requestedTenantIds = useRef(new Set<string>());
+
+  const loadTenant = useCallback(async (tenantId: string) => {
+    if (!tenantId || requestedTenantIds.current.has(tenantId)) return;
+    requestedTenantIds.current.add(tenantId);
+    setState((current) => ({
+      ...current,
+      loadingTenantIds: [...current.loadingTenantIds, tenantId],
+      errors: { ...current.errors, [tenantId]: undefined },
+    }));
+
+    try {
+      const [conceptsWithOptions, relations] = await Promise.all([
+        conceptApi.listConcepts(tenantId),
+        conceptApi.listAssetTypeConcepts(tenantId),
+      ]);
+      setState((current) => ({
+        ...current,
+        loadedTenantIds: current.loadedTenantIds.includes(tenantId)
+          ? current.loadedTenantIds
+          : [...current.loadedTenantIds, tenantId],
+        loadingTenantIds: current.loadingTenantIds.filter(
+          (id) => id !== tenantId
+        ),
+        concepts: [
+          ...current.concepts.filter((item) => item.tenantId !== tenantId),
+          ...conceptsWithOptions.map(toConcept),
+        ],
+        options: [
+          ...current.options.filter((item) => item.tenantId !== tenantId),
+          ...conceptsWithOptions.flatMap((concept) => concept.options),
+        ],
+        assetTypeConcepts: [
+          ...current.assetTypeConcepts.filter(
+            (item) => item.tenantId !== tenantId
+          ),
+          ...relations,
+        ],
+      }));
+    } catch (error) {
+      requestedTenantIds.current.delete(tenantId);
+      setState((current) => ({
+        ...current,
+        loadingTenantIds: current.loadingTenantIds.filter(
+          (id) => id !== tenantId
+        ),
+        errors: { ...current.errors, [tenantId]: messageFrom(error) },
+      }));
+    }
+  }, []);
 
   const ensureTenant = useCallback(
-    (tenantId: string, assetTypes: AssetType[]) => {
-      if (!tenantId || assetTypes.length === 0) return;
-      setState((current) => {
-        if (current.seededTenantIds.includes(tenantId)) return current;
-        const tenantAssetTypes = assetTypes.filter(
-          (assetType) => assetType.tenantId === tenantId
-        );
-        const seed = createConceptSeed(tenantId, tenantAssetTypes);
-        return {
-          seededTenantIds: [...current.seededTenantIds, tenantId],
-          concepts: [...current.concepts, ...seed.concepts],
-          options: [...current.options, ...seed.options],
-          assetTypeConcepts: [
-            ...current.assetTypeConcepts,
-            ...seed.assetTypeConcepts,
-          ],
-        };
-      });
-    },
-    []
+    async (tenantId: string) => loadTenant(tenantId),
+    [loadTenant]
   );
 
-  const createConcept = useCallback(
-    (tenantId: string, value: ConceptFormValue) => {
-      const code = normalizeConceptCode(value.code);
-      if (
-        state.concepts.some(
-          (item) => item.tenantId === tenantId && item.code === code
-        )
-      ) {
-        throw new Error('Ya existe un concepto con ese código en la empresa.');
-      }
-      const concept: Concept = {
-        id: crypto.randomUUID(),
-        tenantId,
-        code,
-        name: value.name.trim(),
-        description: value.description?.trim() || null,
-        type: value.type,
-        unit: value.type === 'ANALOG' ? value.unit?.trim() || null : null,
-        active: value.active,
-      };
-
-      setState((current) => {
-        return {
-          ...current,
-          concepts: [...current.concepts, concept],
-          options: [
-            ...current.options,
-            ...createOptions(tenantId, concept.id, value),
-          ],
-        };
-      });
-
-      return concept;
+  const retryTenant = useCallback(
+    async (tenantId: string) => {
+      requestedTenantIds.current.delete(tenantId);
+      await loadTenant(tenantId);
     },
-    [state.concepts]
+    [loadTenant]
+  );
+
+  const replaceConcept = useCallback((saved: ConceptWithOptions) => {
+    const { options, ...concept } = saved;
+    setState((current) => ({
+      ...current,
+      concepts: [
+        ...current.concepts.filter(
+          (item) => item.id !== concept.id || item.tenantId !== concept.tenantId
+        ),
+        concept,
+      ],
+      options: [
+        ...current.options.filter(
+          (item) =>
+            item.conceptId !== concept.id || item.tenantId !== concept.tenantId
+        ),
+        ...options,
+      ],
+    }));
+    return concept;
+  }, []);
+
+  const createConcept = useCallback(
+    async (tenantId: string, value: ConceptFormValue) =>
+      replaceConcept(await conceptApi.createConcept(tenantId, value)),
+    [replaceConcept]
   );
 
   const updateConcept = useCallback(
-    (tenantId: string, conceptId: string, value: ConceptFormValue) => {
-      const code = normalizeConceptCode(value.code);
-      const existing = state.concepts.find(
-        (item) => item.id === conceptId && item.tenantId === tenantId
-      );
-      if (!existing) {
-        throw new Error('El concepto no pertenece a la empresa seleccionada.');
-      }
-      if (
-        state.concepts.some(
-          (item) =>
-            item.tenantId === tenantId &&
-            item.id !== conceptId &&
-            item.code === code
-        )
-      ) {
-        throw new Error('Ya existe un concepto con ese código en la empresa.');
-      }
-      const updated: Concept = {
-        ...existing,
-        code,
-        name: value.name.trim(),
-        description: value.description?.trim() || null,
-        type: value.type,
-        unit: value.type === 'ANALOG' ? value.unit?.trim() || null : null,
-        active: value.active,
-      };
-
-      setState((current) => {
-        return {
-          ...current,
-          concepts: current.concepts.map((item) =>
-            item.id === conceptId ? updated : item
-          ),
-          options: [
-            ...current.options.filter(
-              (option) =>
-                option.conceptId !== conceptId || option.tenantId !== tenantId
-            ),
-            ...createOptions(tenantId, conceptId, value),
-          ],
-        };
-      });
-
-      return updated;
-    },
-    [state.concepts]
+    async (tenantId: string, conceptId: string, value: ConceptFormValue) =>
+      replaceConcept(
+        await conceptApi.updateConcept(tenantId, conceptId, value)
+      ),
+    [replaceConcept]
   );
 
   const setConceptActive = useCallback(
-    (tenantId: string, conceptId: string, active: boolean) => {
-      const exists = state.concepts.some(
-        (item) => item.id === conceptId && item.tenantId === tenantId
-      );
-      if (!exists) {
-        throw new Error('El concepto no pertenece a la empresa seleccionada.');
-      }
-      setState((current) => {
-        return {
+    async (tenantId: string, conceptId: string, active: boolean) => {
+      try {
+        replaceConcept(
+          await conceptApi.updateConcept(tenantId, conceptId, { active })
+        );
+        setState((current) => ({
           ...current,
-          concepts: current.concepts.map((item) =>
-            item.id === conceptId && item.tenantId === tenantId
-              ? { ...item, active }
-              : item
-          ),
-        };
-      });
+          errors: { ...current.errors, [tenantId]: undefined },
+        }));
+      } catch (error) {
+        setState((current) => ({
+          ...current,
+          errors: { ...current.errors, [tenantId]: messageFrom(error) },
+        }));
+        throw error;
+      }
     },
-    [state.concepts]
+    [replaceConcept]
   );
 
   const setAssetTypeAssociation = useCallback(
-    (
+    async (
       tenantId: string,
       assetType: AssetType,
       conceptId: string,
       associated: boolean
     ) => {
-      const concept = state.concepts.find(
-        (item) => item.id === conceptId && item.tenantId === tenantId
-      );
-      if (!concept || assetType.tenantId !== tenantId) {
+      if (assetType.tenantId !== tenantId) {
         throw new Error(
-          'El tipo de activo y el concepto deben pertenecer a la misma empresa.'
+          'El tipo de activo debe pertenecer a la empresa seleccionada.'
         );
       }
+      let saved: AssetTypeConcept;
+      try {
+        saved = associated
+          ? await conceptApi.associateAssetTypeConcept(
+              tenantId,
+              assetType.id,
+              conceptId
+            )
+          : await conceptApi.disassociateAssetTypeConcept(
+              tenantId,
+              assetType.id,
+              conceptId
+            );
+      } catch (error) {
+        setState((current) => ({
+          ...current,
+          errors: { ...current.errors, [tenantId]: messageFrom(error) },
+        }));
+        throw error;
+      }
+      const normalized: AssetTypeConcept = { ...saved, active: associated };
+
       setState((current) => {
         const existing = current.assetTypeConcepts.find(
           (relation) =>
@@ -212,44 +232,18 @@ export function ConceptCatalogProvider({ children }: { children: ReactNode }) {
             relation.assetTypeId === assetType.id &&
             relation.conceptId === conceptId
         );
-
-        if (existing) {
-          return {
-            ...current,
-            assetTypeConcepts: current.assetTypeConcepts.map((relation) =>
-              relation.id === existing.id
-                ? { ...relation, active: associated }
-                : relation
-            ),
-          };
-        }
-
-        if (!associated) return current;
-        const order =
-          current.assetTypeConcepts.filter(
-            (relation) =>
-              relation.tenantId === tenantId &&
-              relation.assetTypeId === assetType.id &&
-              relation.active
-          ).length + 1;
-
         return {
           ...current,
-          assetTypeConcepts: [
-            ...current.assetTypeConcepts,
-            {
-              id: crypto.randomUUID(),
-              tenantId,
-              assetTypeId: assetType.id,
-              conceptId,
-              order,
-              active: true,
-            },
-          ],
+          errors: { ...current.errors, [tenantId]: undefined },
+          assetTypeConcepts: existing
+            ? current.assetTypeConcepts.map((relation) =>
+                relation.id === existing.id ? normalized : relation
+              )
+            : [...current.assetTypeConcepts, normalized],
         };
       });
     },
-    [state.concepts]
+    []
   );
 
   const value = useMemo<ConceptCatalogContextValue>(
@@ -257,6 +251,7 @@ export function ConceptCatalogProvider({ children }: { children: ReactNode }) {
       ...state,
       createConcept,
       ensureTenant,
+      retryTenant,
       setAssetTypeAssociation,
       setConceptActive,
       updateConcept,
@@ -264,6 +259,7 @@ export function ConceptCatalogProvider({ children }: { children: ReactNode }) {
     [
       createConcept,
       ensureTenant,
+      retryTenant,
       setAssetTypeAssociation,
       setConceptActive,
       state,
@@ -288,19 +284,15 @@ export function useConceptCatalogStore() {
   return context;
 }
 
-function createOptions(
-  tenantId: string,
-  conceptId: string,
-  value: ConceptFormValue
-): ConceptOption[] {
-  if (value.type !== 'DIGITAL') return [];
-  return value.options.map((option) => ({
-    id: crypto.randomUUID(),
-    tenantId,
-    conceptId,
-    value: normalizeConceptCode(option.value),
-    label: option.label.trim(),
-    order: option.order,
-    active: option.active,
-  }));
+function toConcept(value: ConceptWithOptions): Concept {
+  return {
+    id: value.id,
+    tenantId: value.tenantId,
+    code: value.code,
+    name: value.name,
+    description: value.description,
+    type: value.type,
+    unit: value.unit,
+    active: value.active,
+  };
 }

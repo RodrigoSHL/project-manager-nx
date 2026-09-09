@@ -15,6 +15,8 @@ import { CreateCatalogItemDto } from './dto/create-catalog-item.dto';
 import { SetWorkTypeRuleDto } from './dto/set-work-type-rule.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
 import { UpdateCatalogItemDto } from './dto/update-catalog-item.dto';
+import { CreateConceptDto } from './dto/create-concept.dto';
+import { UpdateConceptDto } from './dto/update-concept.dto';
 
 @Controller('tenants')
 export class CatalogController {
@@ -108,6 +110,61 @@ export class CatalogController {
     return this.catalogService.updateWorkType(tenantId, workTypeId, dto);
   }
 
+  @Get(':tenantId/concepts')
+  listConcepts(@Param('tenantId', new ParseUUIDPipe()) tenantId: string) {
+    return this.catalogService.listConcepts(tenantId);
+  }
+
+  @Post(':tenantId/concepts')
+  createConcept(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Body() dto: CreateConceptDto
+  ) {
+    return this.catalogService.createConcept(tenantId, dto);
+  }
+
+  @Patch(':tenantId/concepts/:conceptId')
+  updateConcept(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('conceptId', new ParseUUIDPipe()) conceptId: string,
+    @Body() dto: UpdateConceptDto
+  ) {
+    return this.catalogService.updateConcept(tenantId, conceptId, dto);
+  }
+
+  @Get(':tenantId/asset-type-concepts')
+  listAssetTypeConcepts(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string
+  ) {
+    return this.catalogService.listAssetTypeConcepts(tenantId);
+  }
+
+  @Put(':tenantId/asset-types/:assetTypeId/concepts/:conceptId')
+  associateAssetTypeConcept(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('assetTypeId', new ParseUUIDPipe()) assetTypeId: string,
+    @Param('conceptId', new ParseUUIDPipe()) conceptId: string
+  ) {
+    return this.catalogService.associateAssetTypeConcept(
+      tenantId,
+      assetTypeId,
+      conceptId
+    );
+  }
+
+  @Delete(':tenantId/asset-types/:assetTypeId/concepts/:conceptId')
+  disassociateAssetTypeConcept(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('assetTypeId', new ParseUUIDPipe()) assetTypeId: string,
+    @Param('conceptId', new ParseUUIDPipe()) conceptId: string
+  ) {
+    return this.catalogService.disassociateAssetTypeConcept(
+      tenantId,
+      assetTypeId,
+      conceptId
+    );
+  }
+
   @Get(':tenantId/sites/:siteId/assets')
   listAssets(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
@@ -145,6 +202,15 @@ export class CatalogController {
       siteId,
       assetId
     );
+  }
+
+  @Get(':tenantId/sites/:siteId/assets/:assetId/concepts')
+  listEffectiveConcepts(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('siteId', new ParseUUIDPipe()) siteId: string,
+    @Param('assetId', new ParseUUIDPipe()) assetId: string
+  ) {
+    return this.catalogService.listEffectiveConcepts(tenantId, siteId, assetId);
   }
 
   @Get(':tenantId/sites/:siteId/assets/:assetId/work-type-configurations')

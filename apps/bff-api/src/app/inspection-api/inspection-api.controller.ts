@@ -12,6 +12,7 @@ import {
 import {
   AssetMutationPayload,
   CatalogMutationPayload,
+  ConceptMutationPayload,
   InspectionApiClient,
 } from './inspection-api.client';
 
@@ -107,6 +108,61 @@ export class InspectionApiController {
     return this.client.updateWorkType(tenantId, workTypeId, payload);
   }
 
+  @Get('tenants/:tenantId/concepts')
+  listConcepts(@Param('tenantId', new ParseUUIDPipe()) tenantId: string) {
+    return this.client.listConcepts(tenantId);
+  }
+
+  @Post('tenants/:tenantId/concepts')
+  createConcept(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Body() payload: Required<ConceptMutationPayload>
+  ) {
+    return this.client.createConcept(tenantId, payload);
+  }
+
+  @Patch('tenants/:tenantId/concepts/:conceptId')
+  updateConcept(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('conceptId', new ParseUUIDPipe()) conceptId: string,
+    @Body() payload: ConceptMutationPayload
+  ) {
+    return this.client.updateConcept(tenantId, conceptId, payload);
+  }
+
+  @Get('tenants/:tenantId/asset-type-concepts')
+  listAssetTypeConcepts(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string
+  ) {
+    return this.client.listAssetTypeConcepts(tenantId);
+  }
+
+  @Put('tenants/:tenantId/asset-types/:assetTypeId/concepts/:conceptId')
+  associateAssetTypeConcept(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('assetTypeId', new ParseUUIDPipe()) assetTypeId: string,
+    @Param('conceptId', new ParseUUIDPipe()) conceptId: string
+  ) {
+    return this.client.associateAssetTypeConcept(
+      tenantId,
+      assetTypeId,
+      conceptId
+    );
+  }
+
+  @Delete('tenants/:tenantId/asset-types/:assetTypeId/concepts/:conceptId')
+  disassociateAssetTypeConcept(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('assetTypeId', new ParseUUIDPipe()) assetTypeId: string,
+    @Param('conceptId', new ParseUUIDPipe()) conceptId: string
+  ) {
+    return this.client.disassociateAssetTypeConcept(
+      tenantId,
+      assetTypeId,
+      conceptId
+    );
+  }
+
   @Get('tenants/:tenantId/sites/:siteId/assets')
   listAssets(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
@@ -131,6 +187,15 @@ export class InspectionApiController {
     @Param('assetId', new ParseUUIDPipe()) assetId: string
   ) {
     return this.client.listEffectiveWorkTypes(tenantId, siteId, assetId);
+  }
+
+  @Get('tenants/:tenantId/sites/:siteId/assets/:assetId/concepts')
+  listEffectiveConcepts(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('siteId', new ParseUUIDPipe()) siteId: string,
+    @Param('assetId', new ParseUUIDPipe()) assetId: string
+  ) {
+    return this.client.listEffectiveConcepts(tenantId, siteId, assetId);
   }
 
   @Get(

@@ -3,6 +3,8 @@ import { CreateInspectionCatalog1799100000000 } from '../../migrations/179910000
 import { SeedInspectionCatalog1799100100000 } from '../../migrations/1799100100000-SeedInspectionCatalog';
 import { CreateAssetWorkTypeCatalogs1799100200000 } from '../../migrations/1799100200000-CreateAssetWorkTypeCatalogs';
 import { SeedAssetWorkTypeCatalogs1799100300000 } from '../../migrations/1799100300000-SeedAssetWorkTypeCatalogs';
+import { CreateConceptCatalogs1799100400000 } from '../../migrations/1799100400000-CreateConceptCatalogs';
+import { SeedConceptCatalogs1799100500000 } from '../../migrations/1799100500000-SeedConceptCatalogs';
 import { AssetEntity } from '../catalog/entities/asset.entity';
 import { AssetTypeEntity } from '../catalog/entities/asset-type.entity';
 import { AssetTypeWorkTypeEntity } from '../catalog/entities/asset-type-work-type.entity';
@@ -10,6 +12,9 @@ import { AssetWorkTypeEntity } from '../catalog/entities/asset-work-type.entity'
 import { SiteEntity } from '../catalog/entities/site.entity';
 import { TenantEntity } from '../catalog/entities/tenant.entity';
 import { WorkTypeEntity } from '../catalog/entities/work-type.entity';
+import { ConceptEntity } from '../catalog/entities/concept.entity';
+import { ConceptOptionEntity } from '../catalog/entities/concept-option.entity';
+import { AssetTypeConceptEntity } from '../catalog/entities/asset-type-concept.entity';
 
 export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
   type: 'postgres',
@@ -35,12 +40,17 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     WorkTypeEntity,
     AssetTypeWorkTypeEntity,
     AssetWorkTypeEntity,
+    ConceptEntity,
+    ConceptOptionEntity,
+    AssetTypeConceptEntity,
   ],
   migrations: [
     CreateInspectionCatalog1799100000000,
     SeedInspectionCatalog1799100100000,
     CreateAssetWorkTypeCatalogs1799100200000,
     SeedAssetWorkTypeCatalogs1799100300000,
+    CreateConceptCatalogs1799100400000,
+    SeedConceptCatalogs1799100500000,
   ],
   migrationsRun: process.env.INSPECTION_MIGRATIONS_RUN === 'true',
   synchronize: false,

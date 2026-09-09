@@ -196,7 +196,8 @@ incluye conceptos y relaciones activas.
 #### RN-CON-006 — Los conceptos se retiran mediante estado
 
 Un concepto no se elimina físicamente desde la interfaz. Cambiar `active` a
-`false` lo retira de las listas disponibles y conserva su configuración local.
+`false` lo retira de las listas disponibles y conserva su configuración en la
+base de datos.
 
 #### RN-CON-007 — El código es único por tenant
 
@@ -321,11 +322,18 @@ inventa una regla distinta.
 Cambiar el tenant en un selector solo cambia el contexto visual actual. Cuando
 exista autenticación, el BFF obtendrá los tenants permitidos desde la sesión.
 
-### RP-FE-003 — Conceptos utiliza un mock compartido en memoria
+### RP-FE-003 — Conceptos utiliza el backend como fuente de verdad
 
-En esta etapa, un contexto React mantiene conceptos, opciones y asociaciones
-durante la sesión. No usa endpoints, PostgreSQL, `localStorage` ni IndexedDB.
-Recargar o cerrar la aplicación restaura los datos mock iniciales.
+El contexto React mantiene una caché de los conceptos, opciones y asociaciones
+que necesita la interfaz. Los datos se cargan y modifican mediante el BFF; la
+fuente de verdad es PostgreSQL. Recargar la aplicación vuelve a consultar el
+servidor y conserva los cambios.
+
+### RP-API-001 — Conceptos se escriben de forma transaccional
+
+Crear o editar un concepto y sus opciones digitales ocurre dentro de una sola
+transacción. Si una opción no puede guardarse, tampoco queda guardado un cambio
+parcial del concepto.
 
 ## Decisiones pendientes
 
@@ -338,8 +346,6 @@ Estas ideas todavía no son reglas implementadas:
   cuando ya existan trabajos e historial.
 - Definir qué ocurre con trabajos existentes al desactivar su tipo.
 - Crear trabajos reales, pautas, hallazgos, mediciones y adjuntos.
-- Conectar conceptos, opciones y asociaciones a la API y PostgreSQL cuando se
-  autorice su persistencia.
 - Diseñar persistencia local, funcionamiento offline y sincronización.
 
 ## Plantilla para agregar una regla
@@ -362,4 +368,5 @@ Ejemplo válido o inválido, si ayuda a entenderla.
 | Fecha      | Cambio                                                                                                 |
 | ---------- | ------------------------------------------------------------------------------------------------------ |
 | 2026-09-07 | Documento inicial con tenants, sitios, jerarquía de activos, catálogos y herencia de tipos de trabajo. |
-| 2026-09-09 | Se agregan conceptos, opciones digitales y su asociación N:M local con tipos de activo.                |
+| 2026-09-09 | Se agregan conceptos, opciones digitales y su asociación N:M con tipos de activo.                      |
+| 2026-09-09 | Conceptos y asociaciones se conectan al BFF, inspection-api y PostgreSQL.                              |

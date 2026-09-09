@@ -13,7 +13,7 @@ export function AvailableConcepts({
   asset,
   assetTypes,
 }: AvailableConceptsProps) {
-  const { listAvailableForAssetType } = useConceptCatalog(
+  const { error, isLoading, listAvailableForAssetType } = useConceptCatalog(
     asset.tenantId,
     assetTypes
   );
@@ -32,7 +32,15 @@ export function AvailableConcepts({
         registrados.
       </p>
 
-      {concepts.length === 0 ? (
+      {isLoading ? (
+        <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-500">
+          Cargando conceptos...
+        </p>
+      ) : error ? (
+        <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          {error}
+        </p>
+      ) : concepts.length === 0 ? (
         <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-500">
           Este tipo de activo no tiene conceptos asociados.
         </p>

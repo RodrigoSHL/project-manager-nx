@@ -103,6 +103,37 @@ describe('InspectionApiClient', () => {
     );
   });
 
+  it('forwards concept catalog requests and associations', async () => {
+    fetchMock.mockImplementation(async () =>
+      Promise.resolve(
+        new Response(JSON.stringify({ saved: true }), { status: 200 })
+      )
+    );
+    const client = new InspectionApiClient();
+
+    await client.listConcepts('tenant-1');
+    await client.listAssetTypeConcepts('tenant-1');
+    await client.associateAssetTypeConcept(
+      'tenant-1',
+      'asset-type-1',
+      'concept-1'
+    );
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'http://inspection-api.test/api/tenants/tenant-1/concepts'
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'http://inspection-api.test/api/tenants/tenant-1/asset-type-concepts'
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      'http://inspection-api.test/api/tenants/tenant-1/asset-types/asset-type-1/concepts/concept-1',
+      { method: 'PUT' }
+    );
+  });
+
   it('reports when inspection-api is unavailable', async () => {
     fetchMock.mockRejectedValue(new Error('connection refused'));
     const client = new InspectionApiClient();

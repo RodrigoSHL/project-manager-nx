@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
+import { DataSource, QueryFailedError, Repository } from 'typeorm';
 import { AssetEntity } from './entities/asset.entity';
 import { AssetTypeEntity } from './entities/asset-type.entity';
 import { AssetTypeWorkTypeEntity } from './entities/asset-type-work-type.entity';
@@ -17,6 +17,11 @@ import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
 import { CreateCatalogItemDto } from './dto/create-catalog-item.dto';
 import { UpdateCatalogItemDto } from './dto/update-catalog-item.dto';
+import { CreateConceptDto, ConceptOptionDto } from './dto/create-concept.dto';
+import { UpdateConceptDto } from './dto/update-concept.dto';
+import { AssetTypeConceptEntity } from './entities/asset-type-concept.entity';
+import { ConceptEntity, ConceptType } from './entities/concept.entity';
+import { ConceptOptionEntity } from './entities/concept-option.entity';
 
 @Injectable()
 export class CatalogService {
@@ -34,7 +39,14 @@ export class CatalogService {
     @InjectRepository(AssetTypeWorkTypeEntity)
     private readonly assetTypeWorkTypes: Repository<AssetTypeWorkTypeEntity>,
     @InjectRepository(AssetWorkTypeEntity)
-    private readonly assetWorkTypes: Repository<AssetWorkTypeEntity>
+    private readonly assetWorkTypes: Repository<AssetWorkTypeEntity>,
+    @InjectRepository(ConceptEntity)
+    private readonly concepts: Repository<ConceptEntity>,
+    @InjectRepository(ConceptOptionEntity)
+    private readonly conceptOptions: Repository<ConceptOptionEntity>,
+    @InjectRepository(AssetTypeConceptEntity)
+    private readonly assetTypeConcepts: Repository<AssetTypeConceptEntity>,
+    private readonly dataSource: DataSource
   ) {}
 
   listTenants() {
@@ -209,6 +221,218 @@ export class CatalogService {
     });
 
     return this.saveWorkType(workType);
+  }
+
+  async listConcepts(tenantId: string) {
+    await this.assertTenantExists(tenantId);
+    const [concepts, options] = await Promise.all([
+      this.concepts.find({ where: { tenantId }, order: { name: 'ASC' } }),
+      this.conceptOptions.find({
+        where: { tenantId },
+        order: { conceptId: 'ASC', order: 'ASC' },
+      }),
+    ]);
+
+    const optionsByConcept = new Map<string, ConceptOptionEntity[]>();
+    for (const option of options) {
+      const current = optionsByConcept.get(option.conceptId) ?? [];
+      current.push(option);
+      optionsByConcept.set(option.conceptId, current);
+    }
+
+    return concepts.map((concept) => ({
+      ...concept,
+      options: optionsByConcept.get(concept.id) ?? [],
+    }));
+  }
+
+  async createConcept(tenantId: string, dto: CreateConceptDto) {
+    await this.assertTenantExists(tenantId);
+    const options = this.normalizeConceptOptions(dto.type, dto.options);
+
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+        const conceptRepository = manager.getRepository(ConceptEntity);
+        const optionRepository = manager.getRepository(ConceptOptionEntity);
+        const concept = conceptRepository.create({
+          tenantId,
+          code: this.normalizeCatalogCode(dto.code),
+          name: dto.name.trim(),
+          description: dto.description?.trim() || null,
+          type: dto.type,
+          unit:
+            dto.type === ConceptType.ANALOG ? dto.unit?.trim() || null : null,
+          active: dto.active ?? true,
+        });
+        const saved = await conceptRepository.save(concept);
+        const savedOptions = await optionRepository.save(
+          options.map((option) =>
+            optionRepository.create({
+              ...option,
+              tenantId,
+              conceptId: saved.id,
+            })
+          )
+        );
+        return { ...saved, options: savedOptions };
+      });
+    } catch (error) {
+      this.handleConceptWriteError(error);
+    }
+  }
+
+  async updateConcept(
+    tenantId: string,
+    conceptId: string,
+    dto: UpdateConceptDto
+  ) {
+    await this.assertTenantExists(tenantId);
+    const existing = await this.findConceptOrFail(tenantId, conceptId);
+    const currentOptions = await this.conceptOptions.find({
+      where: { tenantId, conceptId },
+      order: { order: 'ASC' },
+    });
+    const nextType = dto.type ?? existing.type;
+    const shouldReplaceOptions =
+      dto.options !== undefined || nextType !== existing.type;
+    const inputOptions =
+      dto.options ??
+      currentOptions.map(({ value, label, order, active }) => ({
+        value,
+        label,
+        order,
+        active,
+      }));
+    const options = this.normalizeConceptOptions(nextType, inputOptions);
+
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+        const conceptRepository = manager.getRepository(ConceptEntity);
+        const optionRepository = manager.getRepository(ConceptOptionEntity);
+        Object.assign(existing, {
+          code:
+            dto.code === undefined
+              ? existing.code
+              : this.normalizeCatalogCode(dto.code),
+          name: dto.name === undefined ? existing.name : dto.name.trim(),
+          description:
+            dto.description === undefined
+              ? existing.description
+              : dto.description?.trim() || null,
+          type: nextType,
+          unit:
+            nextType === ConceptType.ANALOG
+              ? dto.unit === undefined
+                ? existing.unit
+                : dto.unit?.trim() || null
+              : null,
+          active: dto.active ?? existing.active,
+        });
+        const saved = await conceptRepository.save(existing);
+        let savedOptions = currentOptions;
+        if (shouldReplaceOptions) {
+          const existingIdByValue = new Map(
+            currentOptions.map((option) => [option.value, option.id])
+          );
+          await optionRepository.delete({ tenantId, conceptId });
+          savedOptions = await optionRepository.save(
+            options.map((option) =>
+              optionRepository.create({
+                id: existingIdByValue.get(option.value),
+                ...option,
+                tenantId,
+                conceptId,
+              })
+            )
+          );
+        }
+        return { ...saved, options: savedOptions };
+      });
+    } catch (error) {
+      this.handleConceptWriteError(error);
+    }
+  }
+
+  async listAssetTypeConcepts(tenantId: string) {
+    await this.assertTenantExists(tenantId);
+    return this.assetTypeConcepts.find({
+      where: { tenantId },
+      order: { assetTypeId: 'ASC', order: 'ASC' },
+    });
+  }
+
+  async associateAssetTypeConcept(
+    tenantId: string,
+    assetTypeId: string,
+    conceptId: string
+  ) {
+    const [assetType, concept] = await Promise.all([
+      this.findActiveAssetTypeOrFail(tenantId, assetTypeId),
+      this.findActiveConceptOrFail(tenantId, conceptId),
+    ]);
+    let relation = await this.assetTypeConcepts.findOne({
+      where: { tenantId, assetTypeId: assetType.id, conceptId: concept.id },
+    });
+
+    if (relation) {
+      relation.active = true;
+    } else {
+      const count = await this.assetTypeConcepts.count({
+        where: { tenantId, assetTypeId, active: true },
+      });
+      relation = this.assetTypeConcepts.create({
+        tenantId,
+        assetTypeId,
+        conceptId,
+        order: count + 1,
+        active: true,
+      });
+    }
+
+    return this.assetTypeConcepts.save(relation);
+  }
+
+  async disassociateAssetTypeConcept(
+    tenantId: string,
+    assetTypeId: string,
+    conceptId: string
+  ) {
+    await Promise.all([
+      this.findAssetTypeOrFail(tenantId, assetTypeId),
+      this.findConceptOrFail(tenantId, conceptId),
+    ]);
+    const relation = await this.assetTypeConcepts.findOne({
+      where: { tenantId, assetTypeId, conceptId },
+    });
+    if (!relation) {
+      return { assetTypeId, conceptId, associated: false };
+    }
+    relation.active = false;
+    await this.assetTypeConcepts.save(relation);
+    return { ...relation, associated: false };
+  }
+
+  async listEffectiveConcepts(
+    tenantId: string,
+    siteId: string,
+    assetId: string
+  ) {
+    await this.assertSiteBelongsToTenant(tenantId, siteId);
+    const asset = await this.findAssetOrFail(tenantId, siteId, assetId);
+    const relations = await this.assetTypeConcepts.find({
+      where: { tenantId, assetTypeId: asset.assetTypeId, active: true },
+      order: { order: 'ASC' },
+    });
+    if (relations.length === 0) return [];
+
+    const available = await this.listConcepts(tenantId);
+    const byId = new Map(available.map((concept) => [concept.id, concept]));
+    return relations.flatMap((relation) => {
+      const concept = byId.get(relation.conceptId);
+      return concept?.active
+        ? [{ ...concept, relationOrder: relation.order }]
+        : [];
+    });
   }
 
   async listAssets(tenantId: string, siteId: string) {
@@ -501,6 +725,24 @@ export class CatalogService {
     return workType;
   }
 
+  private async findConceptOrFail(tenantId: string, conceptId: string) {
+    const concept = await this.concepts.findOne({
+      where: { id: conceptId, tenantId },
+    });
+    if (!concept) {
+      throw new NotFoundException('Concept not found in this tenant');
+    }
+    return concept;
+  }
+
+  private async findActiveConceptOrFail(tenantId: string, conceptId: string) {
+    const concept = await this.findConceptOrFail(tenantId, conceptId);
+    if (!concept.active) {
+      throw new BadRequestException('The selected concept is inactive');
+    }
+    return concept;
+  }
+
   private async findAssetOrFail(
     tenantId: string,
     siteId: string,
@@ -606,6 +848,41 @@ export class CatalogService {
       throw new BadRequestException('Code is required');
     }
     return normalized;
+  }
+
+  private normalizeConceptOptions(
+    type: ConceptType,
+    options: ConceptOptionDto[]
+  ) {
+    if (type !== ConceptType.DIGITAL) return [];
+    if (options.length === 0) {
+      throw new BadRequestException(
+        'A DIGITAL concept requires at least one option'
+      );
+    }
+
+    const normalized = options.map((option) => ({
+      value: this.normalizeCatalogCode(option.value),
+      label: option.label.trim(),
+      order: option.order,
+      active: option.active ?? true,
+    }));
+    if (
+      new Set(normalized.map((option) => option.value)).size !==
+      normalized.length
+    ) {
+      throw new BadRequestException('Concept option values must be unique');
+    }
+    return normalized;
+  }
+
+  private handleConceptWriteError(error: unknown): never {
+    if (this.isUniqueViolation(error)) {
+      throw new ConflictException(
+        'A concept or option with this code already exists in this tenant'
+      );
+    }
+    throw error;
   }
 
   private isUniqueViolation(error: unknown) {

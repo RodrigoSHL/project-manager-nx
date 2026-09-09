@@ -14,8 +14,13 @@ export function AssetTypeConceptsPanel({
   assetType,
   assetTypes,
 }: AssetTypeConceptsPanelProps) {
-  const { concepts, assetTypeConcepts, setAssetTypeAssociation } =
-    useConceptCatalog(tenantId, assetTypes);
+  const {
+    concepts,
+    assetTypeConcepts,
+    error,
+    isLoading,
+    setAssetTypeAssociation,
+  } = useConceptCatalog(tenantId, assetTypes);
   const associatedIds = new Set(
     assetTypeConcepts
       .filter(
@@ -49,6 +54,16 @@ export function AssetTypeConceptsPanel({
       </header>
 
       <div className="min-w-0 p-3 sm:p-4 lg:flex-1 lg:overflow-y-auto">
+        {error ? (
+          <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+            {error}
+          </p>
+        ) : null}
+        {isLoading ? (
+          <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">
+            Cargando conceptos...
+          </p>
+        ) : null}
         <div className="divide-y divide-slate-100">
           {concepts.map((concept) => {
             const associated = associatedIds.has(concept.id);
@@ -66,11 +81,11 @@ export function AssetTypeConceptsPanel({
                   checked={associated}
                   disabled={cannotAssociate}
                   onChange={(event) =>
-                    setAssetTypeAssociation(
+                    void setAssetTypeAssociation(
                       assetType,
                       concept.id,
                       event.target.checked
-                    )
+                    ).catch(() => undefined)
                   }
                   className="size-4 accent-slate-950"
                 />

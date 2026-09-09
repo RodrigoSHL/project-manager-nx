@@ -9,6 +9,9 @@ import { AssetTypeWorkTypeEntity } from './entities/asset-type-work-type.entity'
 import { AssetWorkTypeEntity } from './entities/asset-work-type.entity';
 import { SiteEntity } from './entities/site.entity';
 import { TenantEntity } from './entities/tenant.entity';
+import { ConceptEntity } from './entities/concept.entity';
+import { ConceptOptionEntity } from './entities/concept-option.entity';
+import { AssetTypeConceptEntity } from './entities/asset-type-concept.entity';
 
 @Module({
   imports: [
@@ -20,6 +23,9 @@ import { TenantEntity } from './entities/tenant.entity';
       WorkTypeEntity,
       AssetTypeWorkTypeEntity,
       AssetWorkTypeEntity,
+      ConceptEntity,
+      ConceptOptionEntity,
+      AssetTypeConceptEntity,
     ]),
   ],
   controllers: [CatalogController],

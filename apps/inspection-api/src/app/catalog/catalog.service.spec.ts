@@ -3,7 +3,7 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { CatalogService } from './catalog.service';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { AssetEntity, AssetStatus } from './entities/asset.entity';
@@ -13,6 +13,9 @@ import { AssetWorkTypeEntity } from './entities/asset-work-type.entity';
 import { SiteEntity } from './entities/site.entity';
 import { TenantEntity } from './entities/tenant.entity';
 import { WorkTypeEntity } from './entities/work-type.entity';
+import { ConceptEntity } from './entities/concept.entity';
+import { ConceptOptionEntity } from './entities/concept-option.entity';
+import { AssetTypeConceptEntity } from './entities/asset-type-concept.entity';
 
 describe('CatalogService tenant isolation', () => {
   const tenantId = 'f1ee65d1-95bc-5ae4-95d5-f8fb3818f737';
@@ -47,6 +50,18 @@ describe('CatalogService tenant isolation', () => {
     Pick<
       Repository<AssetWorkTypeEntity>,
       'find' | 'findOne' | 'create' | 'save' | 'delete'
+    >
+  >;
+  let conceptRepository: jest.Mocked<
+    Pick<Repository<ConceptEntity>, 'find' | 'findOne'>
+  >;
+  let conceptOptionRepository: jest.Mocked<
+    Pick<Repository<ConceptOptionEntity>, 'find'>
+  >;
+  let assetTypeConceptRepository: jest.Mocked<
+    Pick<
+      Repository<AssetTypeConceptEntity>,
+      'find' | 'findOne' | 'count' | 'create' | 'save'
     >
   >;
   let service: CatalogService;
@@ -93,6 +108,20 @@ describe('CatalogService tenant isolation', () => {
       save: jest.fn(),
       delete: jest.fn(),
     };
+    conceptRepository = {
+      find: jest.fn(),
+      findOne: jest.fn(),
+    };
+    conceptOptionRepository = {
+      find: jest.fn(),
+    };
+    assetTypeConceptRepository = {
+      find: jest.fn(),
+      findOne: jest.fn(),
+      count: jest.fn(),
+      create: jest.fn(),
+      save: jest.fn(),
+    };
     service = new CatalogService(
       tenantRepository as unknown as Repository<TenantEntity>,
       siteRepository as unknown as Repository<SiteEntity>,
@@ -100,8 +129,43 @@ describe('CatalogService tenant isolation', () => {
       assetTypeRepository as unknown as Repository<AssetTypeEntity>,
       workTypeRepository as unknown as Repository<WorkTypeEntity>,
       assetTypeWorkTypeRepository as unknown as Repository<AssetTypeWorkTypeEntity>,
-      assetWorkTypeRepository as unknown as Repository<AssetWorkTypeEntity>
+      assetWorkTypeRepository as unknown as Repository<AssetWorkTypeEntity>,
+      conceptRepository as unknown as Repository<ConceptEntity>,
+      conceptOptionRepository as unknown as Repository<ConceptOptionEntity>,
+      assetTypeConceptRepository as unknown as Repository<AssetTypeConceptEntity>,
+      {} as DataSource
     );
+  });
+
+  it('lists concepts and options only for the requested tenant', async () => {
+    const conceptId = '7bc82434-a111-4db6-b37e-f771945cadde';
+    tenantRepository.exist.mockResolvedValue(true);
+    conceptRepository.find.mockResolvedValue([
+      { id: conceptId, tenantId, name: 'Temperatura' } as ConceptEntity,
+    ]);
+    conceptOptionRepository.find.mockResolvedValue([
+      {
+        id: 'e5ad4279-2c3b-47b7-995c-eb7a4c20db68',
+        tenantId,
+        conceptId,
+        value: 'NORMAL',
+        label: 'Normal',
+        order: 1,
+        active: true,
+      } as ConceptOptionEntity,
+    ]);
+
+    const result = await service.listConcepts(tenantId);
+
+    expect(conceptRepository.find).toHaveBeenCalledWith({
+      where: { tenantId },
+      order: { name: 'ASC' },
+    });
+    expect(conceptOptionRepository.find).toHaveBeenCalledWith({
+      where: { tenantId },
+      order: { conceptId: 'ASC', order: 'ASC' },
+    });
+    expect(result[0].options).toHaveLength(1);
   });
 
   it('queries assets using both tenantId and siteId', async () => {

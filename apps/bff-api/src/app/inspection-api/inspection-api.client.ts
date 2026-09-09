@@ -20,6 +20,21 @@ export type CatalogMutationPayload = {
   active?: boolean;
 };
 
+export type ConceptMutationPayload = {
+  code?: string;
+  name?: string;
+  description?: string | null;
+  type?: 'ANALOG' | 'DIGITAL' | 'TEXT' | 'HIDDEN';
+  unit?: string | null;
+  active?: boolean;
+  options?: Array<{
+    value: string;
+    label: string;
+    order: number;
+    active?: boolean;
+  }>;
+};
+
 @Injectable()
 export class InspectionApiClient {
   private readonly baseUrl = this.resolveBaseUrl();
@@ -118,6 +133,74 @@ export class InspectionApiClient {
         workTypeId
       )}`,
       { method: 'PATCH', body: JSON.stringify(payload) }
+    );
+  }
+
+  listConcepts(tenantId: string) {
+    return this.get(`/tenants/${encodeURIComponent(tenantId)}/concepts`);
+  }
+
+  createConcept(tenantId: string, payload: Required<ConceptMutationPayload>) {
+    return this.request(`/tenants/${encodeURIComponent(tenantId)}/concepts`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  updateConcept(
+    tenantId: string,
+    conceptId: string,
+    payload: ConceptMutationPayload
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(tenantId)}/concepts/${encodeURIComponent(
+        conceptId
+      )}`,
+      { method: 'PATCH', body: JSON.stringify(payload) }
+    );
+  }
+
+  listAssetTypeConcepts(tenantId: string) {
+    return this.get(
+      `/tenants/${encodeURIComponent(tenantId)}/asset-type-concepts`
+    );
+  }
+
+  associateAssetTypeConcept(
+    tenantId: string,
+    assetTypeId: string,
+    conceptId: string
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(
+        tenantId
+      )}/asset-types/${encodeURIComponent(
+        assetTypeId
+      )}/concepts/${encodeURIComponent(conceptId)}`,
+      { method: 'PUT' }
+    );
+  }
+
+  disassociateAssetTypeConcept(
+    tenantId: string,
+    assetTypeId: string,
+    conceptId: string
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(
+        tenantId
+      )}/asset-types/${encodeURIComponent(
+        assetTypeId
+      )}/concepts/${encodeURIComponent(conceptId)}`,
+      { method: 'DELETE' }
+    );
+  }
+
+  listEffectiveConcepts(tenantId: string, siteId: string, assetId: string) {
+    return this.get(
+      `/tenants/${encodeURIComponent(tenantId)}/sites/${encodeURIComponent(
+        siteId
+      )}/assets/${encodeURIComponent(assetId)}/concepts`
     );
   }
 

@@ -45,9 +45,16 @@ DELETE /api/tenants/:tenantId/asset-types/:assetTypeId/work-types/:workTypeId
 GET /api/tenants/:tenantId/work-types
 POST /api/tenants/:tenantId/work-types
 PATCH /api/tenants/:tenantId/work-types/:workTypeId
+GET /api/tenants/:tenantId/concepts
+POST /api/tenants/:tenantId/concepts
+PATCH /api/tenants/:tenantId/concepts/:conceptId
+GET /api/tenants/:tenantId/asset-type-concepts
+PUT /api/tenants/:tenantId/asset-types/:assetTypeId/concepts/:conceptId
+DELETE /api/tenants/:tenantId/asset-types/:assetTypeId/concepts/:conceptId
 GET /api/tenants/:tenantId/sites/:siteId/assets
 GET /api/tenants/:tenantId/sites/:siteId/assets/:assetId
 GET /api/tenants/:tenantId/sites/:siteId/assets/:assetId/work-types
+GET /api/tenants/:tenantId/sites/:siteId/assets/:assetId/concepts
 GET /api/tenants/:tenantId/sites/:siteId/assets/:assetId/work-type-configurations
 PUT /api/tenants/:tenantId/sites/:siteId/assets/:assetId/work-type-configurations/:workTypeId
 DELETE /api/tenants/:tenantId/sites/:siteId/assets/:assetId/work-type-configurations/:workTypeId
@@ -71,6 +78,12 @@ excepción `enabled: true|false` y `DELETE` la elimina para volver a heredar. Un
 tipo de catálogo se retira mediante `PATCH active=false`, conservando sus
 referencias. `SUBSTATION` permanece activo y con su código protegido porque
 identifica los nodos raíz.
+
+Los conceptos, sus opciones digitales y la relación N:M con tipos de activo se
+almacenan en `concepts`, `concept_options` y `asset_type_concepts`. Crear o
+editar un concepto reemplaza sus opciones dentro de una transacción. Las
+claves foráneas compuestas exigen que concepto, opción y tipo de activo tengan
+el mismo `tenant_id`.
 
 La autenticación multi-tenant todavía no forma parte de este módulo. Cuando se
 implemente, el BFF deberá obtener el tenant permitido desde la sesión y no desde

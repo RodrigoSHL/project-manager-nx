@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  BookOpenText,
+  AlertCircle,
+  Database,
+  LoaderCircle,
   Pencil,
   Plus,
   Power,
@@ -57,9 +59,9 @@ export function AdminConceptsPage() {
     });
   }, [activeFilter, conceptCatalog.concepts, searchQuery, typeFilter]);
 
-  function saveConcept(value: ConceptFormValue) {
-    if (editing) conceptCatalog.updateConcept(editing.id, value);
-    else conceptCatalog.createConcept(value);
+  async function saveConcept(value: ConceptFormValue) {
+    if (editing) await conceptCatalog.updateConcept(editing.id, value);
+    else await conceptCatalog.createConcept(value);
     setEditing(undefined);
   }
 
@@ -85,10 +87,21 @@ export function AdminConceptsPage() {
           onChange={referenceCatalog.selectTenant}
         />
         <p className="mt-3 text-xs text-slate-500">
-          Mock local de esta sesión. Los conceptos nunca se mezclan entre
-          empresas.
+          Los conceptos se guardan en PostgreSQL y permanecen aislados por
+          empresa.
         </p>
       </div>
+
+      {conceptCatalog.error ? (
+        <div className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <span className="flex items-center gap-2">
+            <AlertCircle className="size-5" /> {conceptCatalog.error}
+          </span>
+          <Button variant="outline" onClick={() => void conceptCatalog.retry()}>
+            Reintentar
+          </Button>
+        </div>
+      ) : null}
 
       {editing !== undefined ? (
         <div className="mt-5">
@@ -113,8 +126,8 @@ export function AdminConceptsPage() {
                 registros visibles
               </p>
             </div>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800">
-              <BookOpenText className="size-3.5" /> Mock local
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-800">
+              <Database className="size-3.5" /> PostgreSQL
             </span>
           </div>
 
@@ -174,7 +187,11 @@ export function AdminConceptsPage() {
           <span className="text-right">Acciones</span>
         </div>
 
-        {filteredConcepts.length === 0 ? (
+        {conceptCatalog.isLoading ? (
+          <div className="grid min-h-40 place-items-center">
+            <LoaderCircle className="size-6 animate-spin text-slate-500" />
+          </div>
+        ) : filteredConcepts.length === 0 ? (
           <p className="p-8 text-center text-sm text-slate-500">
             No hay conceptos que coincidan con los filtros.
           </p>
@@ -242,10 +259,9 @@ export function AdminConceptsPage() {
                       } ${concept.name}`}
                       title={concept.active ? 'Desactivar' : 'Activar'}
                       onClick={() =>
-                        conceptCatalog.setConceptActive(
-                          concept.id,
-                          !concept.active
-                        )
+                        void conceptCatalog
+                          .setConceptActive(concept.id, !concept.active)
+                          .catch(() => undefined)
                       }
                     >
                       {concept.active ? <Power /> : <RotateCcw />}

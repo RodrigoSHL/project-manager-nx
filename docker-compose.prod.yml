@@ -226,6 +226,17 @@ services:
       bff-api:
         condition: service_healthy
 
+  atomdev-landing:
+    build:
+      context: .
+      dockerfile: Dockerfile.next
+      args:
+        APP: atomdev-landing
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
@@ -250,6 +261,8 @@ services:
       jira-web:
         condition: service_started
       travel-planner-app:
+        condition: service_started
+      atomdev-landing:
         condition: service_started
 
 volumes:

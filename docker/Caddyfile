@@ -34,8 +34,16 @@
   }
 }
 
+(atomdev_landing) {
+  encode gzip
+
+  handle {
+    reverse_proxy atomdev-landing:3000
+  }
+}
+
 atomdev.cl, www.atomdev.cl {
-  redir https://projects.atomdev.cl{uri} permanent
+  import atomdev_landing
 }
 
 projects.atomdev.cl {

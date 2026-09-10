@@ -13,6 +13,8 @@ import { DashboardPage } from '../pages/dashboard-page';
 import { FindingsPage } from '../pages/findings-page';
 import { LoginPage } from '../pages/login-page';
 import { WorksPage } from '../pages/works-page';
+import { NewWorkPage } from '../pages/new-work-page';
+import { WorkDetailPage } from '../pages/work-detail-page';
 
 type AppRoutesProps = {
   isAuthenticated: boolean;
@@ -40,6 +42,8 @@ export function AppRoutes({
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/assets" element={<AssetsPage />} />
         <Route path="/works" element={<WorksPage />} />
+        <Route path="/works/new" element={<NewWorkPage />} />
+        <Route path="/works/:id" element={<WorkDetailPage />} />
         <Route path="/findings" element={<FindingsPage />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminOverviewPage />} />

@@ -1,4 +1,6 @@
-import { Box, Building2, MapPin } from 'lucide-react';
+import { Box, Building2, MapPin, Plus } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Button } from '../../../components/ui/button';
 import {
   findAssetType,
   isSubstationAsset,
@@ -8,6 +10,7 @@ import { AvailableConcepts } from '../../concepts/components/available-concepts'
 import type { AssetType } from '../../asset-types/models';
 import { formatAssetStatus, formatSiteType } from '../asset-formatters';
 import type { Asset, Site, Tenant } from '../models';
+import { AssetWorkList } from '../../works/components/asset-work-list';
 
 type AssetDetailProps = {
   asset: Asset | null;
@@ -112,8 +115,17 @@ export function AssetDetail({
         </p>
       </div>
 
+      <Button asChild className="mt-5 w-full">
+        <Link
+          to={`/works/new?tenantId=${asset.tenantId}&siteId=${asset.siteId}&assetId=${asset.id}`}
+        >
+          <Plus /> Nuevo trabajo
+        </Link>
+      </Button>
+
       <AvailableWorkTypes asset={asset} />
       <AvailableConcepts asset={asset} assetTypes={assetTypes} />
+      <AssetWorkList asset={asset} />
     </section>
   );
 }

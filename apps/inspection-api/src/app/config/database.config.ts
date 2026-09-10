@@ -20,6 +20,11 @@ import { FormSectionEntity } from '../form-templates/entities/form-section.entit
 import { FormItemEntity } from '../form-templates/entities/form-item.entity';
 import { CreateFormTemplates1799100600000 } from '../../migrations/1799100600000-CreateFormTemplates';
 import { SeedFormTemplates1799100700000 } from '../../migrations/1799100700000-SeedFormTemplates';
+import { CreateWorks1799100800000 } from '../../migrations/1799100800000-CreateWorks';
+import { SeedWorks1799100900000 } from '../../migrations/1799100900000-SeedWorks';
+import { ConceptResponseEntity } from '../works/entities/concept-response.entity';
+import { TaskCompletionEntity } from '../works/entities/task-completion.entity';
+import { WorkEntity } from '../works/entities/work.entity';
 
 export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
   type: 'postgres',
@@ -51,6 +56,9 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     FormTemplateEntity,
     FormSectionEntity,
     FormItemEntity,
+    WorkEntity,
+    ConceptResponseEntity,
+    TaskCompletionEntity,
   ],
   migrations: [
     CreateInspectionCatalog1799100000000,
@@ -61,6 +69,8 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     SeedConceptCatalogs1799100500000,
     CreateFormTemplates1799100600000,
     SeedFormTemplates1799100700000,
+    CreateWorks1799100800000,
+    SeedWorks1799100900000,
   ],
   migrationsRun: process.env.INSPECTION_MIGRATIONS_RUN === 'true',
   synchronize: false,

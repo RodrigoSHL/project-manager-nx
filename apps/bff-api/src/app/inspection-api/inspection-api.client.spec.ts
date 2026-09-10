@@ -213,4 +213,44 @@ describe('InspectionApiClient', () => {
       }
     );
   });
+
+  it('forwards work creation and responses to inspection-api', async () => {
+    fetchMock.mockImplementation(
+      async () => new Response(JSON.stringify({ saved: true }), { status: 200 })
+    );
+    const client = new InspectionApiClient();
+    const work = {
+      workTypeId: 'work-type-1',
+      title: 'Inspección visual T1',
+      executionDate: '2026-09-10',
+      responsible: 'Juan Pérez',
+      status: 'DRAFT' as const,
+    };
+    const responses = {
+      responses: [{ formItemId: 'item-1', valueNumber: 71 }],
+      taskCompletions: [{ formItemId: 'task-1', completed: true }],
+    };
+
+    await client.createWork('tenant-1', 'site-1', 'asset-1', work);
+    await client.saveWorkResponses('tenant-1', 'work-1', responses);
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'http://inspection-api.test/api/tenants/tenant-1/sites/site-1/assets/asset-1/works',
+      {
+        method: 'POST',
+        body: JSON.stringify(work),
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'http://inspection-api.test/api/tenants/tenant-1/works/work-1/responses',
+      {
+        method: 'PUT',
+        body: JSON.stringify(responses),
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  });
 });

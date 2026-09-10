@@ -54,12 +54,92 @@ export type FormItemMutationPayload = {
   required?: boolean;
 };
 
+export type WorkMutationPayload = {
+  workTypeId: string;
+  title: string;
+  executionDate: string;
+  responsible: string;
+  company?: string;
+  status: 'DRAFT' | 'IN_PROGRESS';
+  notes?: string;
+};
+
+export type WorkResponsesPayload = {
+  responses: Array<{
+    formItemId: string;
+    valueNumber?: number;
+    valueText?: string;
+    selectedOptionId?: string;
+  }>;
+  taskCompletions: Array<{
+    formItemId: string;
+    completed: boolean;
+  }>;
+};
+
 @Injectable()
 export class InspectionApiClient {
   private readonly baseUrl = this.resolveBaseUrl();
 
   listTenants() {
     return this.get('/tenants');
+  }
+
+  listWorks(tenantId: string) {
+    return this.get(`/tenants/${encodeURIComponent(tenantId)}/works`);
+  }
+
+  getWork(tenantId: string, workId: string) {
+    return this.get(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}`
+    );
+  }
+
+  createWork(
+    tenantId: string,
+    siteId: string,
+    assetId: string,
+    payload: WorkMutationPayload
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(tenantId)}/sites/${encodeURIComponent(
+        siteId
+      )}/assets/${encodeURIComponent(assetId)}/works`,
+      { method: 'POST', body: JSON.stringify(payload) }
+    );
+  }
+
+  saveWorkResponses(
+    tenantId: string,
+    workId: string,
+    payload: WorkResponsesPayload
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/responses`,
+      { method: 'PUT', body: JSON.stringify(payload) }
+    );
+  }
+
+  startWork(tenantId: string, workId: string) {
+    return this.request(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/status`,
+      { method: 'PATCH', body: JSON.stringify({ status: 'IN_PROGRESS' }) }
+    );
+  }
+
+  finishWork(tenantId: string, workId: string, payload: WorkResponsesPayload) {
+    return this.request(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/finish`,
+      { method: 'POST', body: JSON.stringify(payload) }
+    );
   }
 
   listSites(tenantId: string) {

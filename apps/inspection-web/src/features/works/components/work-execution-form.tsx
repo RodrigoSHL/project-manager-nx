@@ -15,9 +15,9 @@ type WorkExecutionFormProps = {
   snapshot: WorkTemplateSnapshot;
   responses: ConceptResponse[];
   taskCompletions: TaskCompletion[];
-  onSave: (values: Record<string, WorkItemValue>) => void;
-  onStart: () => void;
-  onFinish: (values: Record<string, WorkItemValue>) => FinishResult;
+  onSave: (values: Record<string, WorkItemValue>) => Promise<void>;
+  onStart: () => Promise<void>;
+  onFinish: (values: Record<string, WorkItemValue>) => Promise<FinishResult>;
 };
 
 export function WorkExecutionForm({
@@ -32,6 +32,7 @@ export function WorkExecutionForm({
   const [values, setValues] = useState<Record<string, WorkItemValue>>({});
   const [notice, setNotice] = useState<string | null>(null);
   const [finishError, setFinishError] = useState<FinishResult | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const initializedWorkId = useRef<string | null>(null);
   const readonly = work.status === 'FINISHED' || work.status === 'REVIEWED';
 
@@ -68,20 +69,50 @@ export function WorkExecutionForm({
     setFinishError(null);
   }
 
-  function save() {
-    onSave(values);
+  async function run(action: () => Promise<void>, success: string) {
+    setIsSaving(true);
     setFinishError(null);
-    setNotice('Borrador guardado en esta sesión.');
+    try {
+      await action();
+      setNotice(success);
+    } catch (error) {
+      setNotice(null);
+      setFinishError({
+        ok: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : 'No fue posible guardar los cambios.',
+        missingLabels: [],
+      });
+    } finally {
+      setIsSaving(false);
+    }
   }
 
-  function finish() {
-    const result = onFinish(values);
-    if (result.ok) {
-      setFinishError(null);
-      setNotice('Trabajo finalizado correctamente.');
-    } else {
-      setFinishError(result);
+  async function finish() {
+    setIsSaving(true);
+    try {
+      const result = await onFinish(values);
+      if (result.ok) {
+        setFinishError(null);
+        setNotice('Trabajo finalizado correctamente.');
+      } else {
+        setFinishError(result);
+        setNotice(null);
+      }
+    } catch (error) {
+      setFinishError({
+        ok: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : 'No fue posible finalizar el trabajo.',
+        missingLabels: [],
+      });
       setNotice(null);
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -251,17 +282,37 @@ export function WorkExecutionForm({
         ) : null}
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           {work.status === 'DRAFT' ? (
-            <Button type="button" onClick={onStart}>
+            <Button
+              type="button"
+              disabled={isSaving}
+              onClick={() =>
+                void run(onStart, 'Trabajo iniciado correctamente.')
+              }
+            >
               Iniciar trabajo
             </Button>
           ) : null}
           {!readonly ? (
-            <Button type="button" variant="outline" onClick={save}>
-              Guardar borrador
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isSaving}
+              onClick={() =>
+                void run(
+                  () => onSave(values),
+                  'Borrador guardado en la base de datos.'
+                )
+              }
+            >
+              {isSaving ? 'Guardando...' : 'Guardar borrador'}
             </Button>
           ) : null}
           {work.status === 'IN_PROGRESS' ? (
-            <Button type="button" onClick={finish}>
+            <Button
+              type="button"
+              disabled={isSaving}
+              onClick={() => void finish()}
+            >
               Finalizar trabajo
             </Button>
           ) : null}

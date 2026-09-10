@@ -30,5 +30,6 @@ import { AssetTypeConceptEntity } from './entities/asset-type-concept.entity';
   ],
   controllers: [CatalogController],
   providers: [CatalogService],
+  exports: [CatalogService],
 })
 export class CatalogModule {}

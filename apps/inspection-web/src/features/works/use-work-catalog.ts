@@ -18,6 +18,7 @@ export function useWorkCatalog(tenantId: string) {
       snapshots: store.snapshots.filter((item) => item.tenantId === tenantId),
       catalog: store.catalogs[tenantId],
       isLoading: store.loadingTenantIds.includes(tenantId),
+      isMutating: store.mutatingTenantIds.includes(tenantId),
       error: store.errors[tenantId] ?? null,
       retry: () => store.retryTenant(tenantId),
       createWork: store.createWork,

@@ -61,6 +61,12 @@ DELETE /api/tenants/:tenantId/sites/:siteId/assets/:assetId/work-type-configurat
 POST /api/tenants/:tenantId/sites/:siteId/assets
 PATCH /api/tenants/:tenantId/sites/:siteId/assets/:assetId
 DELETE /api/tenants/:tenantId/sites/:siteId/assets/:assetId
+GET /api/tenants/:tenantId/works
+GET /api/tenants/:tenantId/works/:workId
+POST /api/tenants/:tenantId/sites/:siteId/assets/:assetId/works
+PUT /api/tenants/:tenantId/works/:workId/responses
+PATCH /api/tenants/:tenantId/works/:workId/status
+POST /api/tenants/:tenantId/works/:workId/finish
 ```
 
 El BFF publica el mismo catálogo y sus mutaciones bajo `/api/inspection`. La
@@ -84,6 +90,12 @@ almacenan en `concepts`, `concept_options` y `asset_type_concepts`. Crear o
 editar un concepto reemplaza sus opciones dentro de una transacción. Las
 claves foráneas compuestas exigen que concepto, opción y tipo de activo tengan
 el mismo `tenant_id`.
+
+Los trabajos se almacenan en `works`, sus valores en `concept_responses` y las
+tareas marcadas en `task_completions`. Al crear un trabajo, la API guarda un
+snapshot JSONB de la plantilla para que su ejecución no cambie si después se
+edita el catálogo. La API valida las transiciones `DRAFT → IN_PROGRESS →
+FINISHED` y exige los elementos obligatorios al finalizar.
 
 La autenticación multi-tenant todavía no forma parte de este módulo. Cuando se
 implemente, el BFF deberá obtener el tenant permitido desde la sesión y no desde

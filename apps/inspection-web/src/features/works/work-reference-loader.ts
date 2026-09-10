@@ -10,7 +10,7 @@ import { conceptApi } from '../concepts/concept-api';
 import { formTemplateApi } from '../form-templates/form-template-api';
 import type { WorkReferenceCatalog } from './models';
 
-export type WorkSeedCatalog = WorkReferenceCatalog & {
+export type WorkReferenceData = WorkReferenceCatalog & {
   templates: FormTemplate[];
   sections: FormSection[];
   items: FormItem[];
@@ -19,9 +19,9 @@ export type WorkSeedCatalog = WorkReferenceCatalog & {
   workTypesByAssetType: Record<string, AssetTypeWorkTypeOption[]>;
 };
 
-export async function loadWorkSeedCatalog(
+export async function loadWorkReferenceCatalog(
   tenantId: string
-): Promise<WorkSeedCatalog> {
+): Promise<WorkReferenceData> {
   const [sites, assetTypes, workTypes, formCatalog, conceptsWithOptions] =
     await Promise.all([
       assetCatalogApi.listSites(tenantId),

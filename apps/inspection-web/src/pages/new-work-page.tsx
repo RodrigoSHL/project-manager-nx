@@ -157,7 +157,7 @@ function NewWorkForm({ asset, siteName }: { asset: Asset; siteName: string }) {
       </Link>
       <PageHeader
         title="Nuevo trabajo"
-        description="Crea una ejecución real sobre el activo seleccionado. Se guardará solo durante esta sesión."
+        description="Crea una ejecución real sobre el activo seleccionado y guárdala en la base de datos."
       />
       <form
         onSubmit={submit}

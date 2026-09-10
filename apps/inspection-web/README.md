@@ -1,4 +1,4 @@
-# GridAssets — etapa 2
+# GridAssets
 
 Esqueleto visual de una aplicación para gestión de subestaciones y activos.
 
@@ -32,7 +32,9 @@ de la red privada de Docker y no debe mezclarse con procesos Nx locales.
 - Dashboard con valores escritos directamente en el frontend.
 - Módulo de Activos conectado al BFF, con selector de tenant y sitio, árbol jerárquico, búsqueda y detalle.
 - Datos iniciales para 2 tenants, 4 sitios y más de 15 activos por tenant, almacenados en PostgreSQL.
-- Páginas visuales para Trabajos y Hallazgos.
+- Módulo de Trabajos conectado al BFF, con creación desde un activo, filtros,
+  captura parcial, inicio y finalización validada.
+- Página visual para Hallazgos.
 - Administración jerárquica de activos con árbol, alta contextual, edición,
   búsqueda, cambio de estado y eliminación protegida cuando existen hijos.
 - Centro de Administración con rutas separadas para Activos, Tipos de activos,
@@ -53,10 +55,9 @@ de la red privada de Docker y no debe mezclarse con procesos Nx locales.
 - Componentes reutilizables `Button`, `Sheet`, `PageHeader` y `EmptyState`.
 
 No existen todavía almacenamiento local, Service Worker, sincronización,
-trabajos ni pautas reales. Los catálogos de activos, tipos de trabajo y
-conceptos se almacenan en PostgreSQL a través de `inspection-api` y el BFF. Las
-plantillas, secciones y elementos también se conservan al refrescar el
-navegador. Todavía no existen ejecuciones ni respuestas de formularios.
+hallazgos ni pautas reales. Los catálogos, plantillas, trabajos y respuestas se
+almacenan en PostgreSQL a través de `inspection-api` y el BFF, por lo que se
+conservan al refrescar el navegador.
 
 ## Estructura
 
@@ -72,7 +73,8 @@ src/
 │   ├── catalogs/     # Carga remota de catálogos administrativos
 │   ├── concepts/     # Cliente BFF, modelos, caché UI y componentes de conceptos
 │   ├── form-templates/ # Cliente BFF, modelos, caché UI, editor y vista previa
-│   └── work-types/   # Modelos y componentes de tipos de trabajo permitidos
+│   ├── work-types/   # Modelos y componentes de tipos de trabajo permitidos
+│   └── works/        # Cliente BFF, ejecución de formularios y caché de pantalla
 ├── components/   # Componentes visuales reutilizables
 │   └── ui/       # Primitives compatibles con shadcn/ui
 ├── lib/          # Funciones pequeñas compartidas

@@ -17,6 +17,8 @@ import {
   FormSectionMutationPayload,
   FormTemplateMutationPayload,
   InspectionApiClient,
+  WorkMutationPayload,
+  WorkResponsesPayload,
 } from './inspection-api.client';
 
 @Controller('api/inspection')
@@ -26,6 +28,55 @@ export class InspectionApiController {
   @Get('tenants')
   listTenants() {
     return this.client.listTenants();
+  }
+
+  @Get('tenants/:tenantId/works')
+  listWorks(@Param('tenantId', new ParseUUIDPipe()) tenantId: string) {
+    return this.client.listWorks(tenantId);
+  }
+
+  @Get('tenants/:tenantId/works/:workId')
+  getWork(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('workId', new ParseUUIDPipe()) workId: string
+  ) {
+    return this.client.getWork(tenantId, workId);
+  }
+
+  @Post('tenants/:tenantId/sites/:siteId/assets/:assetId/works')
+  createWork(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('siteId', new ParseUUIDPipe()) siteId: string,
+    @Param('assetId', new ParseUUIDPipe()) assetId: string,
+    @Body() payload: WorkMutationPayload
+  ) {
+    return this.client.createWork(tenantId, siteId, assetId, payload);
+  }
+
+  @Put('tenants/:tenantId/works/:workId/responses')
+  saveWorkResponses(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('workId', new ParseUUIDPipe()) workId: string,
+    @Body() payload: WorkResponsesPayload
+  ) {
+    return this.client.saveWorkResponses(tenantId, workId, payload);
+  }
+
+  @Patch('tenants/:tenantId/works/:workId/status')
+  startWork(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('workId', new ParseUUIDPipe()) workId: string
+  ) {
+    return this.client.startWork(tenantId, workId);
+  }
+
+  @Post('tenants/:tenantId/works/:workId/finish')
+  finishWork(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('workId', new ParseUUIDPipe()) workId: string,
+    @Body() payload: WorkResponsesPayload
+  ) {
+    return this.client.finishWork(tenantId, workId, payload);
   }
 
   @Get('tenants/:tenantId/sites')

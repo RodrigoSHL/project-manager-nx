@@ -65,7 +65,7 @@ export function WorksPage() {
     <>
       <PageHeader
         title="Trabajos"
-        description="Ejecuciones reales de formularios sobre activos. Los cambios de esta fase duran mientras la aplicación permanezca abierta."
+        description="Ejecuciones reales de formularios sobre activos, persistidas para continuar su avance más adelante."
       />
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">

@@ -18,9 +18,7 @@ export function AssetWorkList({ asset }: { asset: Asset }) {
         <h3 className="font-semibold text-slate-900">Trabajos</h3>
       </div>
       {isLoading ? (
-        <p className="mt-3 text-sm text-slate-500">
-          Cargando trabajos locales...
-        </p>
+        <p className="mt-3 text-sm text-slate-500">Cargando trabajos...</p>
       ) : assetWorks.length === 0 ? (
         <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-500">
           Este activo todavía no tiene trabajos.

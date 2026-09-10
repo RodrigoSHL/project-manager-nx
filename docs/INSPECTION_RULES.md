@@ -37,6 +37,11 @@ flowchart TD
   FS --> FI[Elemento ordenado]
   FI --> C
   FI --> TK[Tarea configurable]
+  A2 --> W[Trabajo ejecutado]
+  WT --> W
+  FT --> W
+  W --> CR[Respuesta de concepto]
+  W --> TC[Tarea completada]
 ```
 
 Un `Site` organiza geográficamente los activos. No es un activo. El árbol de
@@ -330,6 +335,51 @@ restricción de dominio nueva.
 La plantilla, sus secciones, sus elementos, el tipo de trabajo y cualquier
 concepto referenciado deben compartir el mismo `tenantId`.
 
+### Ejecución de trabajos
+
+#### RN-EJE-001 — Un trabajo ejecuta un tipo sobre un activo
+
+Un `Work` registra la ejecución real de un `WorkType` sobre un `Asset`. El
+activo, sitio, tipo de trabajo y plantilla deben estar activos, habilitados y
+pertenecer al mismo `tenantId`.
+
+#### RN-EJE-002 — La plantilla queda congelada al crear el trabajo
+
+Al crear un trabajo se guardan `formTemplateId`, `formTemplateVersion` y una
+copia completa de sus secciones, elementos, conceptos y opciones en
+`formSnapshot`. Los cambios posteriores del catálogo no modifican el
+formulario histórico del trabajo.
+
+#### RN-EJE-003 — Cada tipo de concepto usa un solo campo de respuesta
+
+Una `ConceptResponse` guarda exactamente uno de estos valores: `valueNumber`
+para conceptos `ANALOG`, `selectedOptionId` para conceptos `DIGITAL` o
+`valueText` para conceptos `TEXT`. Los conceptos `HIDDEN` no admiten captura.
+
+#### RN-EJE-004 — El borrador puede quedar incompleto
+
+Guardar respuestas no exige completar los elementos obligatorios. Esto permite
+continuar posteriormente un trabajo en estado `DRAFT` o `IN_PROGRESS`.
+
+#### RN-EJE-005 — Los estados avanzan en un orden definido
+
+Las transiciones implementadas son `DRAFT → IN_PROGRESS → FINISHED`.
+`REVIEWED` existe en el modelo, pero su transición y las reglas de supervisión
+siguen pendientes.
+
+#### RN-EJE-006 — Finalizar exige completar los elementos obligatorios
+
+Un trabajo solo puede finalizarse desde `IN_PROGRESS`. Antes de cambiar a
+`FINISHED`, la API comprueba las respuestas de concepto y tareas obligatorias
+contra el snapshot e informa las etiquetas que faltan. Las respuestas parciales
+recibidas se conservan aunque la finalización sea rechazada.
+
+#### RN-EJE-007 — Las respuestas pertenecen al contexto del trabajo
+
+El cliente identifica el elemento del snapshot y envía su valor. La API deriva
+el `conceptId`, valida el tipo y las opciones desde ese snapshot, y nunca acepta
+que el cliente asocie una respuesta con un concepto arbitrario.
+
 ## Reglas de programación vigentes
 
 ### RP-API-001 — La API aplica las reglas de negocio
@@ -419,6 +469,31 @@ o sección de otro tenant. Restricciones únicas evitan repetir versiones y
 posiciones, y una restricción `CHECK` garantiza que una tarea tenga título y un
 elemento de concepto tenga `conceptId`.
 
+### RP-API-007 — Works es un módulo de dominio separado
+
+`WorksModule` concentra los DTOs, entidades, controlador y servicio de
+ejecución. El servicio consulta el catálogo para validar el activo, el trabajo
+permitido y la plantilla antes de crear un registro.
+
+### RP-DB-005 — Los trabajos y respuestas se persisten en PostgreSQL
+
+`works` contiene la cabecera y el snapshot JSONB; `concept_responses` contiene
+los valores capturados; `task_completions` contiene el estado de las tareas.
+Las claves foráneas compuestas de `works` refuerzan el aislamiento por tenant y
+sitio. Una respuesta solo puede pertenecer a un trabajo del mismo tenant.
+
+### RP-API-008 — Reemplazar respuestas es transaccional
+
+Cada guardado compara el conjunto recibido con lo almacenado y crea, actualiza
+o elimina respuestas y tareas dentro de una transacción. El formulario no queda
+parcialmente reemplazado si una escritura falla.
+
+### RP-FE-006 — La interfaz de trabajos usa el BFF
+
+El contexto React mantiene una caché temporal para renderizar la pantalla, pero
+las lecturas y mutaciones se realizan mediante `/api/inspection`. Después de
+crear, guardar, iniciar o finalizar, la interfaz vuelve a consultar PostgreSQL.
+
 ## Decisiones pendientes
 
 Estas ideas todavía no son reglas implementadas:
@@ -428,11 +503,10 @@ Estas ideas todavía no son reglas implementadas:
 - Registrar quién creó, modificó, activó o desactivó un registro.
 - Definir si los activos se eliminan físicamente o se retiran mediante estado
   cuando ya existan trabajos e historial.
-- Definir qué ocurre con trabajos existentes al desactivar su tipo.
-- Crear trabajos reales, pautas, hallazgos, mediciones y adjuntos.
+- Definir qué operaciones se permiten sobre trabajos existentes al desactivar
+  su tipo.
+- Crear pautas, hallazgos, mediciones y adjuntos.
 - Implementar creación automática de nuevas versiones inmutables de una
-  plantilla.
-- Crear ejecuciones y respuestas a partir de una versión inmutable de la
   plantilla.
 - Diseñar persistencia local, funcionamiento offline y sincronización.
 
@@ -460,3 +534,4 @@ Ejemplo válido o inválido, si ayuda a entenderla.
 | 2026-09-09 | Conceptos y asociaciones se conectan al BFF, inspection-api y PostgreSQL.                              |
 | 2026-09-09 | Se agrega el constructor mock de plantillas, secciones, tareas, conceptos y vista previa.              |
 | 2026-09-09 | Plantillas, secciones, elementos y su orden se conectan al BFF, inspection-api y PostgreSQL.           |
+| 2026-09-10 | Trabajos, snapshots, respuestas y tareas completadas se conectan al BFF, API y PostgreSQL.             |

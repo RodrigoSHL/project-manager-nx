@@ -106,7 +106,10 @@ export function WorkTypeFormTemplatePanel({
   }
 
   return (
-    <section className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <section
+      aria-busy={catalog.isMutating}
+      className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+    >
       <header className="border-b border-slate-200 p-4 sm:p-5">
         <div className="flex min-w-0 items-start gap-3">
           <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-700">
@@ -142,9 +145,10 @@ export function WorkTypeFormTemplatePanel({
           editor?.kind === 'template' ? (
             <FormTemplateForm
               onCancel={() => setEditor(null)}
-              onSubmit={(input) => {
-                catalog.createTemplate(workType, input);
-                setEditor(null);
+              onSubmit={async (input) => {
+                if (await catalog.createTemplate(workType, input)) {
+                  setEditor(null);
+                }
               }}
             />
           ) : (
@@ -203,9 +207,10 @@ export function WorkTypeFormTemplatePanel({
                 <FormTemplateForm
                   template={template}
                   onCancel={() => setEditor(null)}
-                  onSubmit={(input) => {
-                    catalog.updateTemplate(template.id, input);
-                    setEditor(null);
+                  onSubmit={async (input) => {
+                    if (await catalog.updateTemplate(template.id, input)) {
+                      setEditor(null);
+                    }
                   }}
                 />
               </div>
@@ -247,10 +252,14 @@ export function WorkTypeFormTemplatePanel({
                           disableUp={sectionIndex === 0}
                           disableDown={sectionIndex === sections.length - 1}
                           onUp={() =>
-                            catalog.moveSection(template.id, section.id, -1)
+                            void catalog.moveSection(
+                              template.id,
+                              section.id,
+                              -1
+                            )
                           }
                           onDown={() =>
-                            catalog.moveSection(template.id, section.id, 1)
+                            void catalog.moveSection(template.id, section.id, 1)
                           }
                         />
                         <Button
@@ -281,7 +290,7 @@ export function WorkTypeFormTemplatePanel({
                                 `¿Eliminar la sección ${section.title} y sus elementos?`
                               )
                             ) {
-                              catalog.deleteSection(section.id);
+                              void catalog.deleteSection(section.id);
                             }
                           }}
                         >
@@ -296,9 +305,12 @@ export function WorkTypeFormTemplatePanel({
                         <FormSectionForm
                           section={section}
                           onCancel={() => setEditor(null)}
-                          onSubmit={(input) => {
-                            catalog.updateSection(section.id, input);
-                            setEditor(null);
+                          onSubmit={async (input) => {
+                            if (
+                              await catalog.updateSection(section.id, input)
+                            ) {
+                              setEditor(null);
+                            }
                           }}
                         />
                       </div>
@@ -317,9 +329,11 @@ export function WorkTypeFormTemplatePanel({
                           concept={conceptById.get(item.conceptId ?? '')}
                           disableUp={itemIndex === 0}
                           disableDown={itemIndex === sectionItems.length - 1}
-                          onUp={() => catalog.moveItem(section.id, item.id, -1)}
+                          onUp={() =>
+                            void catalog.moveItem(section.id, item.id, -1)
+                          }
                           onDown={() =>
-                            catalog.moveItem(section.id, item.id, 1)
+                            void catalog.moveItem(section.id, item.id, 1)
                           }
                           onEdit={() =>
                             setEditor({
@@ -329,7 +343,7 @@ export function WorkTypeFormTemplatePanel({
                             })
                           }
                           onDelete={() =>
-                            catalog.deleteItem(section.id, item.id)
+                            void catalog.deleteItem(section.id, item.id)
                           }
                         />
                       ))}
@@ -347,13 +361,22 @@ export function WorkTypeFormTemplatePanel({
                           usesFallback={compatibleConcepts.usesFallback}
                           conceptsLoading={compatibleConcepts.isLoading}
                           onCancel={() => setEditor(null)}
-                          onSubmit={(input) => {
+                          onSubmit={async (input) => {
+                            let saved: boolean;
                             if (editor.itemId) {
-                              catalog.updateItem(editor.itemId, input);
+                              saved = await catalog.updateItem(
+                                editor.itemId,
+                                input
+                              );
                             } else {
-                              catalog.createItem(section.id, input);
+                              saved = await catalog.createItem(
+                                section.id,
+                                input
+                              );
                             }
-                            setEditor(null);
+                            if (saved) {
+                              setEditor(null);
+                            }
                           }}
                         />
                       </div>
@@ -377,9 +400,10 @@ export function WorkTypeFormTemplatePanel({
               {editor?.kind === 'section' && !editor.sectionId ? (
                 <FormSectionForm
                   onCancel={() => setEditor(null)}
-                  onSubmit={(input) => {
-                    catalog.createSection(template.id, input);
-                    setEditor(null);
+                  onSubmit={async (input) => {
+                    if (await catalog.createSection(template.id, input)) {
+                      setEditor(null);
+                    }
                   }}
                 />
               ) : (

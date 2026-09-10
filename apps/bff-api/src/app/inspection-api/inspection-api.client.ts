@@ -35,6 +35,25 @@ export type ConceptMutationPayload = {
   }>;
 };
 
+export type FormTemplateMutationPayload = {
+  name?: string;
+  description?: string | null;
+  active?: boolean;
+};
+
+export type FormSectionMutationPayload = {
+  title?: string;
+  description?: string | null;
+};
+
+export type FormItemMutationPayload = {
+  type?: 'CONCEPT' | 'TASK';
+  title?: string | null;
+  description?: string | null;
+  conceptId?: string | null;
+  required?: boolean;
+};
+
 @Injectable()
 export class InspectionApiClient {
   private readonly baseUrl = this.resolveBaseUrl();
@@ -133,6 +152,128 @@ export class InspectionApiClient {
         workTypeId
       )}`,
       { method: 'PATCH', body: JSON.stringify(payload) }
+    );
+  }
+
+  listFormTemplates(tenantId: string) {
+    return this.get(`/tenants/${encodeURIComponent(tenantId)}/form-templates`);
+  }
+
+  createFormTemplate(
+    tenantId: string,
+    workTypeId: string,
+    payload: FormTemplateMutationPayload
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(tenantId)}/work-types/${encodeURIComponent(
+        workTypeId
+      )}/form-template`,
+      { method: 'POST', body: JSON.stringify(payload) }
+    );
+  }
+
+  updateFormTemplate(
+    tenantId: string,
+    templateId: string,
+    payload: FormTemplateMutationPayload
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(
+        tenantId
+      )}/form-templates/${encodeURIComponent(templateId)}`,
+      { method: 'PATCH', body: JSON.stringify(payload) }
+    );
+  }
+
+  createFormSection(
+    tenantId: string,
+    templateId: string,
+    payload: FormSectionMutationPayload
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(
+        tenantId
+      )}/form-templates/${encodeURIComponent(templateId)}/sections`,
+      { method: 'POST', body: JSON.stringify(payload) }
+    );
+  }
+
+  updateFormSection(
+    tenantId: string,
+    sectionId: string,
+    payload: FormSectionMutationPayload
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(
+        tenantId
+      )}/form-sections/${encodeURIComponent(sectionId)}`,
+      { method: 'PATCH', body: JSON.stringify(payload) }
+    );
+  }
+
+  deleteFormSection(tenantId: string, sectionId: string) {
+    return this.request(
+      `/tenants/${encodeURIComponent(
+        tenantId
+      )}/form-sections/${encodeURIComponent(sectionId)}`,
+      { method: 'DELETE' }
+    );
+  }
+
+  reorderFormSections(
+    tenantId: string,
+    templateId: string,
+    orderedIds: string[]
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(
+        tenantId
+      )}/form-templates/${encodeURIComponent(templateId)}/section-order`,
+      { method: 'PUT', body: JSON.stringify({ orderedIds }) }
+    );
+  }
+
+  createFormItem(
+    tenantId: string,
+    sectionId: string,
+    payload: FormItemMutationPayload
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(
+        tenantId
+      )}/form-sections/${encodeURIComponent(sectionId)}/items`,
+      { method: 'POST', body: JSON.stringify(payload) }
+    );
+  }
+
+  updateFormItem(
+    tenantId: string,
+    itemId: string,
+    payload: FormItemMutationPayload
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(tenantId)}/form-items/${encodeURIComponent(
+        itemId
+      )}`,
+      { method: 'PATCH', body: JSON.stringify(payload) }
+    );
+  }
+
+  deleteFormItem(tenantId: string, itemId: string) {
+    return this.request(
+      `/tenants/${encodeURIComponent(tenantId)}/form-items/${encodeURIComponent(
+        itemId
+      )}`,
+      { method: 'DELETE' }
+    );
+  }
+
+  reorderFormItems(tenantId: string, sectionId: string, orderedIds: string[]) {
+    return this.request(
+      `/tenants/${encodeURIComponent(
+        tenantId
+      )}/form-sections/${encodeURIComponent(sectionId)}/item-order`,
+      { method: 'PUT', body: JSON.stringify({ orderedIds }) }
     );
   }
 

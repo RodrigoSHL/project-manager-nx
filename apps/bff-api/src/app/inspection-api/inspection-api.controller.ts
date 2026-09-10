@@ -13,6 +13,9 @@ import {
   AssetMutationPayload,
   CatalogMutationPayload,
   ConceptMutationPayload,
+  FormItemMutationPayload,
+  FormSectionMutationPayload,
+  FormTemplateMutationPayload,
   InspectionApiClient,
 } from './inspection-api.client';
 
@@ -106,6 +109,107 @@ export class InspectionApiController {
     @Body() payload: CatalogMutationPayload
   ) {
     return this.client.updateWorkType(tenantId, workTypeId, payload);
+  }
+
+  @Get('tenants/:tenantId/form-templates')
+  listFormTemplates(@Param('tenantId', new ParseUUIDPipe()) tenantId: string) {
+    return this.client.listFormTemplates(tenantId);
+  }
+
+  @Post('tenants/:tenantId/work-types/:workTypeId/form-template')
+  createFormTemplate(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('workTypeId', new ParseUUIDPipe()) workTypeId: string,
+    @Body() payload: FormTemplateMutationPayload
+  ) {
+    return this.client.createFormTemplate(tenantId, workTypeId, payload);
+  }
+
+  @Patch('tenants/:tenantId/form-templates/:templateId')
+  updateFormTemplate(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('templateId', new ParseUUIDPipe()) templateId: string,
+    @Body() payload: FormTemplateMutationPayload
+  ) {
+    return this.client.updateFormTemplate(tenantId, templateId, payload);
+  }
+
+  @Post('tenants/:tenantId/form-templates/:templateId/sections')
+  createFormSection(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('templateId', new ParseUUIDPipe()) templateId: string,
+    @Body() payload: FormSectionMutationPayload
+  ) {
+    return this.client.createFormSection(tenantId, templateId, payload);
+  }
+
+  @Patch('tenants/:tenantId/form-sections/:sectionId')
+  updateFormSection(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('sectionId', new ParseUUIDPipe()) sectionId: string,
+    @Body() payload: FormSectionMutationPayload
+  ) {
+    return this.client.updateFormSection(tenantId, sectionId, payload);
+  }
+
+  @Delete('tenants/:tenantId/form-sections/:sectionId')
+  deleteFormSection(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('sectionId', new ParseUUIDPipe()) sectionId: string
+  ) {
+    return this.client.deleteFormSection(tenantId, sectionId);
+  }
+
+  @Put('tenants/:tenantId/form-templates/:templateId/section-order')
+  reorderFormSections(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('templateId', new ParseUUIDPipe()) templateId: string,
+    @Body() payload: { orderedIds: string[] }
+  ) {
+    return this.client.reorderFormSections(
+      tenantId,
+      templateId,
+      payload.orderedIds
+    );
+  }
+
+  @Post('tenants/:tenantId/form-sections/:sectionId/items')
+  createFormItem(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('sectionId', new ParseUUIDPipe()) sectionId: string,
+    @Body() payload: FormItemMutationPayload
+  ) {
+    return this.client.createFormItem(tenantId, sectionId, payload);
+  }
+
+  @Patch('tenants/:tenantId/form-items/:itemId')
+  updateFormItem(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('itemId', new ParseUUIDPipe()) itemId: string,
+    @Body() payload: FormItemMutationPayload
+  ) {
+    return this.client.updateFormItem(tenantId, itemId, payload);
+  }
+
+  @Delete('tenants/:tenantId/form-items/:itemId')
+  deleteFormItem(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('itemId', new ParseUUIDPipe()) itemId: string
+  ) {
+    return this.client.deleteFormItem(tenantId, itemId);
+  }
+
+  @Put('tenants/:tenantId/form-sections/:sectionId/item-order')
+  reorderFormItems(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('sectionId', new ParseUUIDPipe()) sectionId: string,
+    @Body() payload: { orderedIds: string[] }
+  ) {
+    return this.client.reorderFormItems(
+      tenantId,
+      sectionId,
+      payload.orderedIds
+    );
   }
 
   @Get('tenants/:tenantId/concepts')

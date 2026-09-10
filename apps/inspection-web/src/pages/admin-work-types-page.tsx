@@ -23,11 +23,7 @@ export function AdminWorkTypesPage() {
     catalog.tenantId,
     catalog.assetTypes
   );
-  const formCatalog = useFormTemplateCatalog(
-    catalog.tenantId,
-    catalog.workTypes,
-    conceptCatalog.concepts
-  );
+  const formCatalog = useFormTemplateCatalog(catalog.tenantId);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editing, setEditing] = useState<WorkType | null | undefined>();
   const [searchQuery, setSearchQuery] = useState('');
@@ -90,28 +86,33 @@ export function AdminWorkTypesPage() {
           onChange={catalog.selectTenant}
         />
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-          <span>Tipos de trabajo y conceptos: PostgreSQL.</span>
-          <span aria-hidden="true">·</span>
-          <span className="inline-flex items-center gap-1 font-medium text-amber-700">
-            <ClipboardList className="size-3.5" /> Plantillas: mock durante esta
-            sesión.
+          <span>Tipos de trabajo, conceptos y plantillas: PostgreSQL.</span>
+          <span className="inline-flex items-center gap-1 font-medium text-emerald-700">
+            <ClipboardList className="size-3.5" /> Los cambios quedan guardados.
           </span>
         </div>
       </div>
 
-      {catalog.error || catalog.mutationError || conceptCatalog.error ? (
+      {catalog.error ||
+      catalog.mutationError ||
+      conceptCatalog.error ||
+      formCatalog.error ? (
         <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           <div className="flex items-center gap-2">
             <AlertCircle className="size-5" />{' '}
-            {catalog.mutationError ?? catalog.error ?? conceptCatalog.error}
+            {catalog.mutationError ??
+              catalog.error ??
+              conceptCatalog.error ??
+              formCatalog.error}
           </div>
-          {catalog.error || conceptCatalog.error ? (
+          {catalog.error || conceptCatalog.error || formCatalog.error ? (
             <Button
               variant="outline"
               className="mt-3"
               onClick={() => {
                 catalog.retry();
                 void conceptCatalog.retry();
+                void formCatalog.retry();
               }}
             >
               Reintentar
@@ -132,7 +133,9 @@ export function AdminWorkTypesPage() {
         </div>
       ) : null}
 
-      {catalog.isLoading || conceptCatalog.isLoading ? (
+      {catalog.isLoading ||
+      conceptCatalog.isLoading ||
+      formCatalog.isLoading ? (
         <div className="mt-5 grid min-h-48 place-items-center rounded-xl border border-slate-200 bg-white">
           <LoaderCircle className="size-7 animate-spin text-slate-500" />
         </div>
@@ -141,7 +144,9 @@ export function AdminWorkTypesPage() {
       {!catalog.isLoading &&
       !catalog.error &&
       !conceptCatalog.isLoading &&
-      !conceptCatalog.error ? (
+      !conceptCatalog.error &&
+      !formCatalog.isLoading &&
+      !formCatalog.error ? (
         <div className="mt-5 grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(18rem,0.7fr)_minmax(28rem,1.3fr)]">
           <section className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm lg:sticky lg:top-24 lg:flex lg:max-h-[calc(100vh-7rem)] lg:flex-col">
             <div className="shrink-0 border-b border-slate-200 p-3 sm:p-4">

@@ -7,9 +7,11 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { Concept } from '../concepts/models';
 import type { WorkType } from '../work-types/models';
-import { createFormTemplateSeed } from './mock-form-templates';
+import {
+  formTemplateApi,
+  type FormTemplateCatalogResponse,
+} from './form-template-api';
 import type {
   FormItem,
   FormItemInput,
@@ -20,68 +22,69 @@ import type {
 } from './models';
 
 type FormTemplateCatalogState = {
-  seededTenantIds: string[];
+  loadedTenantIds: string[];
+  loadingTenantIds: string[];
+  mutatingTenantIds: string[];
+  errors: Record<string, string | undefined>;
   templates: FormTemplate[];
   sections: FormSection[];
   items: FormItem[];
 };
 
 type FormTemplateCatalogValue = FormTemplateCatalogState & {
-  ensureTenant: (
-    tenantId: string,
-    workTypes: WorkType[],
-    concepts: Concept[]
-  ) => void;
+  ensureTenant: (tenantId: string) => Promise<void>;
+  retryTenant: (tenantId: string) => Promise<void>;
   createTemplate: (
     tenantId: string,
     workType: WorkType,
     input: FormTemplateInput
-  ) => FormTemplate;
+  ) => Promise<boolean>;
   updateTemplate: (
     tenantId: string,
     templateId: string,
     input: FormTemplateInput
-  ) => FormTemplate;
+  ) => Promise<boolean>;
   createSection: (
     tenantId: string,
     templateId: string,
     input: FormSectionInput
-  ) => FormSection;
+  ) => Promise<boolean>;
   updateSection: (
     tenantId: string,
     sectionId: string,
     input: FormSectionInput
-  ) => FormSection;
-  deleteSection: (tenantId: string, sectionId: string) => void;
+  ) => Promise<boolean>;
+  deleteSection: (tenantId: string, sectionId: string) => Promise<boolean>;
   moveSection: (
     tenantId: string,
     templateId: string,
     sectionId: string,
     direction: -1 | 1
-  ) => void;
+  ) => Promise<boolean>;
   createItem: (
     tenantId: string,
     sectionId: string,
-    input: FormItemInput,
-    concepts: Concept[]
-  ) => FormItem;
+    input: FormItemInput
+  ) => Promise<boolean>;
   updateItem: (
     tenantId: string,
     itemId: string,
-    input: FormItemInput,
-    concepts: Concept[]
-  ) => FormItem;
-  deleteItem: (tenantId: string, sectionId: string, itemId: string) => void;
+    input: FormItemInput
+  ) => Promise<boolean>;
+  deleteItem: (tenantId: string, itemId: string) => Promise<boolean>;
   moveItem: (
     tenantId: string,
     sectionId: string,
     itemId: string,
     direction: -1 | 1
-  ) => void;
+  ) => Promise<boolean>;
 };
 
 const emptyState: FormTemplateCatalogState = {
-  seededTenantIds: [],
+  loadedTenantIds: [],
+  loadingTenantIds: [],
+  mutatingTenantIds: [],
+  errors: {},
   templates: [],
   sections: [],
   items: [],
@@ -90,6 +93,12 @@ const emptyState: FormTemplateCatalogState = {
 const FormTemplateCatalogContext =
   createContext<FormTemplateCatalogValue | null>(null);
 
+function messageFrom(error: unknown) {
+  return error instanceof Error
+    ? error.message
+    : 'No fue posible cargar los formularios.';
+}
+
 export function FormTemplateCatalogProvider({
   children,
 }: {
@@ -97,154 +106,145 @@ export function FormTemplateCatalogProvider({
 }) {
   const [state, setState] = useState<FormTemplateCatalogState>(emptyState);
   const stateRef = useRef(state);
+  const requestedTenantIds = useRef(new Set<string>());
   stateRef.current = state;
 
-  const ensureTenant = useCallback(
-    (tenantId: string, workTypes: WorkType[], concepts: Concept[]) => {
-      if (!tenantId || workTypes.length === 0 || concepts.length === 0) return;
-      setState((current) => {
-        if (current.seededTenantIds.includes(tenantId)) return current;
-        const seed = createFormTemplateSeed(tenantId, workTypes, concepts);
-        return {
-          seededTenantIds: [...current.seededTenantIds, tenantId],
-          templates: [...current.templates, ...seed.templates],
-          sections: [...current.sections, ...seed.sections],
-          items: [...current.items, ...seed.items],
-        };
-      });
+  const replaceTenant = useCallback(
+    (tenantId: string, catalog: FormTemplateCatalogResponse) => {
+      setState((current) => ({
+        ...current,
+        loadedTenantIds: current.loadedTenantIds.includes(tenantId)
+          ? current.loadedTenantIds
+          : [...current.loadedTenantIds, tenantId],
+        loadingTenantIds: current.loadingTenantIds.filter(
+          (id) => id !== tenantId
+        ),
+        errors: { ...current.errors, [tenantId]: undefined },
+        templates: [
+          ...current.templates.filter((item) => item.tenantId !== tenantId),
+          ...catalog.templates,
+        ],
+        sections: [
+          ...current.sections.filter((item) => item.tenantId !== tenantId),
+          ...catalog.sections,
+        ],
+        items: [
+          ...current.items.filter((item) => item.tenantId !== tenantId),
+          ...catalog.items,
+        ],
+      }));
     },
     []
+  );
+
+  const loadTenant = useCallback(
+    async (tenantId: string) => {
+      if (!tenantId || requestedTenantIds.current.has(tenantId)) return;
+      requestedTenantIds.current.add(tenantId);
+      setState((current) => ({
+        ...current,
+        loadingTenantIds: current.loadingTenantIds.includes(tenantId)
+          ? current.loadingTenantIds
+          : [...current.loadingTenantIds, tenantId],
+        errors: { ...current.errors, [tenantId]: undefined },
+      }));
+      try {
+        replaceTenant(tenantId, await formTemplateApi.list(tenantId));
+      } catch (error) {
+        requestedTenantIds.current.delete(tenantId);
+        setState((current) => ({
+          ...current,
+          loadingTenantIds: current.loadingTenantIds.filter(
+            (id) => id !== tenantId
+          ),
+          errors: { ...current.errors, [tenantId]: messageFrom(error) },
+        }));
+      }
+    },
+    [replaceTenant]
+  );
+
+  const retryTenant = useCallback(
+    async (tenantId: string) => {
+      requestedTenantIds.current.delete(tenantId);
+      await loadTenant(tenantId);
+    },
+    [loadTenant]
+  );
+
+  const runMutation = useCallback(
+    async (tenantId: string, action: () => Promise<unknown>) => {
+      if (stateRef.current.mutatingTenantIds.includes(tenantId)) return false;
+      setState((current) => ({
+        ...current,
+        mutatingTenantIds: [...current.mutatingTenantIds, tenantId],
+        errors: { ...current.errors, [tenantId]: undefined },
+      }));
+      try {
+        await action();
+        replaceTenant(tenantId, await formTemplateApi.list(tenantId));
+        setState((current) => ({
+          ...current,
+          mutatingTenantIds: current.mutatingTenantIds.filter(
+            (id) => id !== tenantId
+          ),
+        }));
+        return true;
+      } catch (error) {
+        setState((current) => ({
+          ...current,
+          mutatingTenantIds: current.mutatingTenantIds.filter(
+            (id) => id !== tenantId
+          ),
+          errors: { ...current.errors, [tenantId]: messageFrom(error) },
+        }));
+        return false;
+      }
+    },
+    [replaceTenant]
   );
 
   const createTemplate = useCallback(
     (tenantId: string, workType: WorkType, input: FormTemplateInput) => {
-      if (workType.tenantId !== tenantId) {
-        throw new Error('El tipo de trabajo pertenece a otra empresa.');
-      }
-      if (
-        stateRef.current.templates.some(
-          (item) =>
-            item.tenantId === tenantId && item.workTypeId === workType.id
-        )
-      ) {
-        throw new Error(
-          'Este tipo de trabajo ya tiene una plantilla configurada.'
-        );
-      }
-      const template: FormTemplate = {
-        id: crypto.randomUUID(),
-        tenantId,
-        workTypeId: workType.id,
-        name: input.name.trim(),
-        description: input.description?.trim() || null,
-        version: 1,
-        active: input.active,
-      };
-      setState((current) => ({
-        ...current,
-        templates: [...current.templates, template],
-      }));
-      return template;
+      if (workType.tenantId !== tenantId) return Promise.resolve(false);
+      return runMutation(tenantId, () =>
+        formTemplateApi.createTemplate(tenantId, workType.id, input)
+      );
     },
-    []
+    [runMutation]
   );
 
   const updateTemplate = useCallback(
-    (tenantId: string, templateId: string, input: FormTemplateInput) => {
-      const existing = stateRef.current.templates.find(
-        (template) =>
-          template.id === templateId && template.tenantId === tenantId
-      );
-      if (!existing) throw new Error('La plantilla pertenece a otra empresa.');
-      const updated: FormTemplate = {
-        ...existing,
-        name: input.name.trim(),
-        description: input.description?.trim() || null,
-        active: input.active,
-      };
-      setState((current) => ({
-        ...current,
-        templates: current.templates.map((template) =>
-          template.id === templateId && template.tenantId === tenantId
-            ? updated
-            : template
-        ),
-      }));
-      return updated;
-    },
-    []
+    (tenantId: string, templateId: string, input: FormTemplateInput) =>
+      runMutation(tenantId, () =>
+        formTemplateApi.updateTemplate(tenantId, templateId, input)
+      ),
+    [runMutation]
   );
 
   const createSection = useCallback(
-    (tenantId: string, templateId: string, input: FormSectionInput) => {
-      assertTemplate(stateRef.current.templates, tenantId, templateId);
-      const section: FormSection = {
-        id: crypto.randomUUID(),
-        tenantId,
-        formTemplateId: templateId,
-        title: input.title.trim(),
-        description: input.description?.trim() || null,
-        order:
-          stateRef.current.sections.filter(
-            (item) =>
-              item.tenantId === tenantId && item.formTemplateId === templateId
-          ).length + 1,
-      };
-      setState((current) => ({
-        ...current,
-        sections: [...current.sections, section],
-      }));
-      return section;
-    },
-    []
+    (tenantId: string, templateId: string, input: FormSectionInput) =>
+      runMutation(tenantId, () =>
+        formTemplateApi.createSection(tenantId, templateId, input)
+      ),
+    [runMutation]
   );
 
   const updateSection = useCallback(
-    (tenantId: string, sectionId: string, input: FormSectionInput) => {
-      const existing = stateRef.current.sections.find(
-        (section) => section.id === sectionId && section.tenantId === tenantId
-      );
-      if (!existing) throw new Error('La sección pertenece a otra empresa.');
-      const updated: FormSection = {
-        ...existing,
-        title: input.title.trim(),
-        description: input.description?.trim() || null,
-      };
-      setState((current) => ({
-        ...current,
-        sections: current.sections.map((section) =>
-          section.id === sectionId && section.tenantId === tenantId
-            ? updated
-            : section
-        ),
-      }));
-      return updated;
-    },
-    []
+    (tenantId: string, sectionId: string, input: FormSectionInput) =>
+      runMutation(tenantId, () =>
+        formTemplateApi.updateSection(tenantId, sectionId, input)
+      ),
+    [runMutation]
   );
 
-  const deleteSection = useCallback((tenantId: string, sectionId: string) => {
-    const existing = stateRef.current.sections.find(
-      (item) => item.id === sectionId && item.tenantId === tenantId
-    );
-    if (!existing) throw new Error('La sección pertenece a otra empresa.');
-    setState((current) => {
-      const remainingSections = current.sections.filter(
-        (item) => item.id !== sectionId
-      );
-      return {
-        ...current,
-        sections: normalizeSectionOrders(
-          remainingSections,
-          tenantId,
-          existing.formTemplateId
-        ),
-        items: current.items.filter(
-          (item) => item.sectionId !== sectionId || item.tenantId !== tenantId
-        ),
-      };
-    });
-  }, []);
+  const deleteSection = useCallback(
+    (tenantId: string, sectionId: string) =>
+      runMutation(tenantId, () =>
+        formTemplateApi.deleteSection(tenantId, sectionId)
+      ),
+    [runMutation]
+  );
 
   const moveSection = useCallback(
     (
@@ -253,103 +253,41 @@ export function FormTemplateCatalogProvider({
       sectionId: string,
       direction: -1 | 1
     ) => {
-      setState((current) => ({
-        ...current,
-        sections: moveOrdered(
-          current.sections,
+      const group = stateRef.current.sections
+        .filter(
           (item) =>
-            item.tenantId === tenantId && item.formTemplateId === templateId,
-          sectionId,
-          direction
-        ),
-      }));
+            item.tenantId === tenantId && item.formTemplateId === templateId
+        )
+        .sort(byOrder);
+      const orderedIds = moveIds(group, sectionId, direction);
+      if (!orderedIds) return Promise.resolve(false);
+      return runMutation(tenantId, () =>
+        formTemplateApi.reorderSections(tenantId, templateId, orderedIds)
+      );
     },
-    []
+    [runMutation]
   );
 
   const createItem = useCallback(
-    (
-      tenantId: string,
-      sectionId: string,
-      input: FormItemInput,
-      concepts: Concept[]
-    ) => {
-      assertConceptInput(tenantId, input, concepts);
-      assertSection(stateRef.current.sections, tenantId, sectionId);
-      const item: FormItem = {
-        id: crypto.randomUUID(),
-        tenantId,
-        sectionId,
-        type: input.type,
-        order:
-          stateRef.current.items.filter(
-            (candidate) =>
-              candidate.tenantId === tenantId &&
-              candidate.sectionId === sectionId
-          ).length + 1,
-        title: input.type === 'TASK' ? input.title?.trim() || null : null,
-        description: input.description?.trim() || null,
-        conceptId: input.type === 'CONCEPT' ? input.conceptId : null,
-        required: input.required,
-      };
-      setState((current) => ({
-        ...current,
-        items: [...current.items, item],
-      }));
-      return item;
-    },
-    []
+    (tenantId: string, sectionId: string, input: FormItemInput) =>
+      runMutation(tenantId, () =>
+        formTemplateApi.createItem(tenantId, sectionId, input)
+      ),
+    [runMutation]
   );
 
   const updateItem = useCallback(
-    (
-      tenantId: string,
-      itemId: string,
-      input: FormItemInput,
-      concepts: Concept[]
-    ) => {
-      assertConceptInput(tenantId, input, concepts);
-      const existing = stateRef.current.items.find(
-        (item) => item.id === itemId && item.tenantId === tenantId
-      );
-      if (!existing) throw new Error('El elemento pertenece a otra empresa.');
-      const updated: FormItem = {
-        ...existing,
-        type: input.type,
-        title: input.type === 'TASK' ? input.title?.trim() || null : null,
-        description: input.description?.trim() || null,
-        conceptId: input.type === 'CONCEPT' ? input.conceptId : null,
-        required: input.required,
-      };
-      setState((current) => ({
-        ...current,
-        items: current.items.map((item) =>
-          item.id === itemId && item.tenantId === tenantId ? updated : item
-        ),
-      }));
-      return updated;
-    },
-    []
+    (tenantId: string, itemId: string, input: FormItemInput) =>
+      runMutation(tenantId, () =>
+        formTemplateApi.updateItem(tenantId, itemId, input)
+      ),
+    [runMutation]
   );
 
   const deleteItem = useCallback(
-    (tenantId: string, sectionId: string, itemId: string) => {
-      const exists = stateRef.current.items.some(
-        (item) => item.id === itemId && item.tenantId === tenantId
-      );
-      if (!exists) throw new Error('El elemento pertenece a otra empresa.');
-      setState((current) => {
-        return {
-          ...current,
-          items: normalizeItemOrders(
-            current.items.filter((item) => item.id !== itemId),
-            tenantId,
-            sectionId
-          ),
-        };
-      });
-    },
-    []
+    (tenantId: string, itemId: string) =>
+      runMutation(tenantId, () => formTemplateApi.deleteItem(tenantId, itemId)),
+    [runMutation]
   );
 
   const moveItem = useCallback(
@@ -359,23 +297,25 @@ export function FormTemplateCatalogProvider({
       itemId: string,
       direction: -1 | 1
     ) => {
-      setState((current) => ({
-        ...current,
-        items: moveOrdered(
-          current.items,
-          (item) => item.tenantId === tenantId && item.sectionId === sectionId,
-          itemId,
-          direction
-        ),
-      }));
+      const group = stateRef.current.items
+        .filter(
+          (item) => item.tenantId === tenantId && item.sectionId === sectionId
+        )
+        .sort(byOrder);
+      const orderedIds = moveIds(group, itemId, direction);
+      if (!orderedIds) return Promise.resolve(false);
+      return runMutation(tenantId, () =>
+        formTemplateApi.reorderItems(tenantId, sectionId, orderedIds)
+      );
     },
-    []
+    [runMutation]
   );
 
   const value = useMemo<FormTemplateCatalogValue>(
     () => ({
       ...state,
-      ensureTenant,
+      ensureTenant: loadTenant,
+      retryTenant,
       createTemplate,
       updateTemplate,
       createSection,
@@ -393,9 +333,10 @@ export function FormTemplateCatalogProvider({
       createTemplate,
       deleteItem,
       deleteSection,
-      ensureTenant,
+      loadTenant,
       moveItem,
       moveSection,
+      retryTenant,
       state,
       updateItem,
       updateSection,
@@ -420,102 +361,17 @@ export function useFormTemplateCatalogStore() {
   return context;
 }
 
-function assertTemplate(
-  templates: FormTemplate[],
-  tenantId: string,
-  templateId: string
-) {
-  if (
-    !templates.some(
-      (template) => template.id === templateId && template.tenantId === tenantId
-    )
-  ) {
-    throw new Error('La plantilla pertenece a otra empresa.');
-  }
-}
-
-function assertSection(
-  sections: FormSection[],
-  tenantId: string,
-  sectionId: string
-) {
-  if (
-    !sections.some(
-      (section) => section.id === sectionId && section.tenantId === tenantId
-    )
-  ) {
-    throw new Error('La sección pertenece a otra empresa.');
-  }
-}
-
-function assertConceptInput(
-  tenantId: string,
-  input: FormItemInput,
-  concepts: Concept[]
-) {
-  if (input.type === 'TASK') return;
-  const concept = concepts.find(
-    (item) => item.id === input.conceptId && item.tenantId === tenantId
-  );
-  if (!concept) throw new Error('El concepto pertenece a otra empresa.');
-}
-
-function moveOrdered<T extends { id: string; order: number }>(
-  allItems: T[],
-  belongsToGroup: (item: T) => boolean,
+function moveIds<T extends { id: string }>(
+  items: T[],
   itemId: string,
   direction: -1 | 1
 ) {
-  const group = allItems.filter(belongsToGroup).sort(byOrder);
-  const index = group.findIndex((item) => item.id === itemId);
-  const targetIndex = index + direction;
-  if (index < 0 || targetIndex < 0 || targetIndex >= group.length) {
-    return allItems;
-  }
-  const current = group[index];
-  const target = group[targetIndex];
-  return allItems.map((item) => {
-    if (item.id === current.id) return { ...item, order: target.order };
-    if (item.id === target.id) return { ...item, order: current.order };
-    return item;
-  });
-}
-
-function normalizeSectionOrders(
-  sections: FormSection[],
-  tenantId: string,
-  templateId: string
-) {
-  const orderedIds = sections
-    .filter(
-      (section) =>
-        section.tenantId === tenantId && section.formTemplateId === templateId
-    )
-    .sort(byOrder)
-    .map((section) => section.id);
-  const orderById = new Map(orderedIds.map((id, index) => [id, index + 1]));
-  return sections.map((section) => ({
-    ...section,
-    order: orderById.get(section.id) ?? section.order,
-  }));
-}
-
-function normalizeItemOrders(
-  items: FormItem[],
-  tenantId: string,
-  sectionId: string
-) {
-  const orderedIds = items
-    .filter(
-      (item) => item.tenantId === tenantId && item.sectionId === sectionId
-    )
-    .sort(byOrder)
-    .map((item) => item.id);
-  const orderById = new Map(orderedIds.map((id, index) => [id, index + 1]));
-  return items.map((item) => ({
-    ...item,
-    order: orderById.get(item.id) ?? item.order,
-  }));
+  const ids = items.map((item) => item.id);
+  const index = ids.indexOf(itemId);
+  const target = index + direction;
+  if (index < 0 || target < 0 || target >= ids.length) return null;
+  [ids[index], ids[target]] = [ids[target], ids[index]];
+  return ids;
 }
 
 function byOrder(a: { order: number }, b: { order: number }) {

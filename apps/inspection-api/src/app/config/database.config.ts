@@ -15,6 +15,11 @@ import { WorkTypeEntity } from '../catalog/entities/work-type.entity';
 import { ConceptEntity } from '../catalog/entities/concept.entity';
 import { ConceptOptionEntity } from '../catalog/entities/concept-option.entity';
 import { AssetTypeConceptEntity } from '../catalog/entities/asset-type-concept.entity';
+import { FormTemplateEntity } from '../form-templates/entities/form-template.entity';
+import { FormSectionEntity } from '../form-templates/entities/form-section.entity';
+import { FormItemEntity } from '../form-templates/entities/form-item.entity';
+import { CreateFormTemplates1799100600000 } from '../../migrations/1799100600000-CreateFormTemplates';
+import { SeedFormTemplates1799100700000 } from '../../migrations/1799100700000-SeedFormTemplates';
 
 export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
   type: 'postgres',
@@ -43,6 +48,9 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     ConceptEntity,
     ConceptOptionEntity,
     AssetTypeConceptEntity,
+    FormTemplateEntity,
+    FormSectionEntity,
+    FormItemEntity,
   ],
   migrations: [
     CreateInspectionCatalog1799100000000,
@@ -51,6 +59,8 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     SeedAssetWorkTypeCatalogs1799100300000,
     CreateConceptCatalogs1799100400000,
     SeedConceptCatalogs1799100500000,
+    CreateFormTemplates1799100600000,
+    SeedFormTemplates1799100700000,
   ],
   migrationsRun: process.env.INSPECTION_MIGRATIONS_RUN === 'true',
   synchronize: false,

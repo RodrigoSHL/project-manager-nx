@@ -134,6 +134,51 @@ describe('InspectionApiClient', () => {
     );
   });
 
+  it('forwards form template mutations and ordering as JSON', async () => {
+    fetchMock.mockImplementation(async () =>
+      Promise.resolve(
+        new Response(JSON.stringify({ saved: true }), { status: 200 })
+      )
+    );
+    const client = new InspectionApiClient();
+
+    await client.listFormTemplates('tenant-1');
+    await client.createFormTemplate('tenant-1', 'work-type-1', {
+      name: 'Formulario preventivo',
+      active: true,
+    });
+    await client.reorderFormSections('tenant-1', 'template-1', [
+      'section-2',
+      'section-1',
+    ]);
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'http://inspection-api.test/api/tenants/tenant-1/form-templates'
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'http://inspection-api.test/api/tenants/tenant-1/work-types/work-type-1/form-template',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          name: 'Formulario preventivo',
+          active: true,
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      'http://inspection-api.test/api/tenants/tenant-1/form-templates/template-1/section-order',
+      {
+        method: 'PUT',
+        body: JSON.stringify({ orderedIds: ['section-2', 'section-1'] }),
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  });
+
   it('reports when inspection-api is unavailable', async () => {
     fetchMock.mockRejectedValue(new Error('connection refused'));
     const client = new InspectionApiClient();

@@ -386,18 +386,38 @@ Crear o editar un concepto y sus opciones digitales ocurre dentro de una sola
 transacción. Si una opción no puede guardarse, tampoco queda guardado un cambio
 parcial del concepto.
 
-### RP-FE-004 — Las plantillas son datos mock en memoria
+### RP-FE-004 — PostgreSQL es la fuente de verdad de las plantillas
 
-`FormTemplateCatalogProvider` concentra el estado temporal y valida el tenant
-antes de cada cambio. Las páginas consumen el catálogo mediante un hook y no
-acceden a una base de datos. Recargar la aplicación restaura los dos formularios
-mock iniciales.
+`FormTemplateCatalogProvider` mantiene una caché de interfaz separada por
+tenant. Toda lectura o modificación pasa por el BFF y `inspection-api`; después
+de una mutación, el frontend vuelve a consultar PostgreSQL. Recargar la
+aplicación conserva los cambios.
 
 ### RP-FE-005 — El orden pertenece a su contenedor
 
 El orden de una sección solo se compara con secciones de la misma plantilla.
 El orden de un elemento solo se compara con elementos de la misma sección.
 Mover o eliminar datos de un tenant no modifica los registros de otro.
+
+### RP-API-005 — Plantillas usa un módulo de dominio separado
+
+`FormTemplatesModule` contiene los DTOs, el servicio y las entidades de
+plantillas. El servicio valida que WorkType, Concept, plantilla, sección e ítem
+pertenezcan al tenant recibido antes de modificarlos.
+
+### RP-API-006 — El orden se modifica de forma transaccional
+
+Las operaciones de reordenamiento reciben todos los UUID del mismo contenedor,
+validan que no falte ni se repita ninguno y actualizan sus posiciones dentro de
+una transacción. Eliminar una sección elimina sus elementos y normaliza los
+órdenes restantes.
+
+### RP-DB-004 — La base refuerza las relaciones del formulario
+
+Claves foráneas compuestas impiden referenciar un WorkType, Concept, plantilla
+o sección de otro tenant. Restricciones únicas evitan repetir versiones y
+posiciones, y una restricción `CHECK` garantiza que una tarea tenga título y un
+elemento de concepto tenga `conceptId`.
 
 ## Decisiones pendientes
 
@@ -410,7 +430,8 @@ Estas ideas todavía no son reglas implementadas:
   cuando ya existan trabajos e historial.
 - Definir qué ocurre con trabajos existentes al desactivar su tipo.
 - Crear trabajos reales, pautas, hallazgos, mediciones y adjuntos.
-- Persistir y versionar plantillas en el backend.
+- Implementar creación automática de nuevas versiones inmutables de una
+  plantilla.
 - Crear ejecuciones y respuestas a partir de una versión inmutable de la
   plantilla.
 - Diseñar persistencia local, funcionamiento offline y sincronización.
@@ -438,3 +459,4 @@ Ejemplo válido o inválido, si ayuda a entenderla.
 | 2026-09-09 | Se agregan conceptos, opciones digitales y su asociación N:M con tipos de activo.                      |
 | 2026-09-09 | Conceptos y asociaciones se conectan al BFF, inspection-api y PostgreSQL.                              |
 | 2026-09-09 | Se agrega el constructor mock de plantillas, secciones, tareas, conceptos y vista previa.              |
+| 2026-09-09 | Plantillas, secciones, elementos y su orden se conectan al BFF, inspection-api y PostgreSQL.           |

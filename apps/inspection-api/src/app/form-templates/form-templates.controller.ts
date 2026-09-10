@@ -8,7 +8,9 @@ import {
   Patch,
   Post,
   Put,
+  UseGuards,
 } from '@nestjs/common';
+import { ActiveTenantGuard } from '../catalog/guards/active-tenant.guard';
 import { CreateFormItemDto } from './dto/create-form-item.dto';
 import { CreateFormSectionDto } from './dto/create-form-section.dto';
 import { CreateFormTemplateDto } from './dto/create-form-template.dto';
@@ -19,6 +21,7 @@ import { UpdateFormTemplateDto } from './dto/update-form-template.dto';
 import { FormTemplatesService } from './form-templates.service';
 
 @Controller('tenants/:tenantId')
+@UseGuards(ActiveTenantGuard)
 export class FormTemplatesController {
   constructor(private readonly formTemplates: FormTemplatesService) {}
 

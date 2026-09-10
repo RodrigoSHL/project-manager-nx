@@ -20,6 +20,12 @@ export type CatalogMutationPayload = {
   active?: boolean;
 };
 
+export type TenantMutationPayload = {
+  code?: string;
+  name?: string;
+  active?: boolean;
+};
+
 export type ConceptMutationPayload = {
   code?: string;
   name?: string;
@@ -83,6 +89,28 @@ export class InspectionApiClient {
 
   listTenants() {
     return this.get('/tenants');
+  }
+
+  listPlatformTenants() {
+    return this.get('/platform/tenants');
+  }
+
+  getPlatformTenant(tenantId: string) {
+    return this.get(`/platform/tenants/${encodeURIComponent(tenantId)}`);
+  }
+
+  createPlatformTenant(payload: Required<TenantMutationPayload>) {
+    return this.request('/platform/tenants', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  updatePlatformTenant(tenantId: string, payload: TenantMutationPayload) {
+    return this.request(`/platform/tenants/${encodeURIComponent(tenantId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
   }
 
   listWorks(tenantId: string) {

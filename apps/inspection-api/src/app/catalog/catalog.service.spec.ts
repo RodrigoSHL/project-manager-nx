@@ -137,6 +137,17 @@ describe('CatalogService tenant isolation', () => {
     );
   });
 
+  it('exposes only active tenants to operational selectors', async () => {
+    tenantRepository.find.mockResolvedValue([]);
+
+    await service.listTenants();
+
+    expect(tenantRepository.find).toHaveBeenCalledWith({
+      where: { active: true },
+      order: { name: 'ASC' },
+    });
+  });
+
   it('lists concepts and options only for the requested tenant', async () => {
     const conceptId = '7bc82434-a111-4db6-b37e-f771945cadde';
     tenantRepository.exist.mockResolvedValue(true);

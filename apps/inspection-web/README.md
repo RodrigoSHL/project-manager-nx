@@ -12,6 +12,7 @@ Desde la raíz del monorepo:
 ```bash
 npm install
 docker compose up -d postgres
+npx nx serve user-api
 npx nx serve inspection-api
 npx nx serve bff-api
 npx nx serve inspection-web
@@ -19,8 +20,9 @@ npx nx serve inspection-web
 
 Abrir `http://localhost:4204`.
 
-Los tres comandos `nx serve` deben permanecer ejecutándose, cada uno en su
-propia terminal. En desarrollo, `docker-compose.yml` publica PostgreSQL en
+Los cuatro comandos `nx serve` deben permanecer ejecutándose, cada uno en su
+propia terminal. `user-api` es necesario para autenticar el acceso a la
+administración de plataforma. En desarrollo, `docker-compose.yml` publica PostgreSQL en
 `localhost:5432`. `docker-compose.prod.yml` mantiene la base y las APIs dentro
 de la red privada de Docker y no debe mezclarse con procesos Nx locales.
 
@@ -34,6 +36,8 @@ de la red privada de Docker y no debe mezclarse con procesos Nx locales.
 - Datos iniciales para 2 tenants, 4 sitios y más de 15 activos por tenant, almacenados en PostgreSQL.
 - Módulo de Trabajos conectado al BFF, con creación desde un activo, filtros,
   captura parcial, inicio y finalización validada.
+- Administración global de clientes en `/platform/tenants`, con login JWT,
+  listado, búsqueda, creación, edición, activación y métricas de uso.
 - Página visual para Hallazgos.
 - Administración jerárquica de activos con árbol, alta contextual, edición,
   búsqueda, cambio de estado y eliminación protegida cuando existen hijos.
@@ -73,6 +77,7 @@ src/
 │   ├── catalogs/     # Carga remota de catálogos administrativos
 │   ├── concepts/     # Cliente BFF, modelos, caché UI y componentes de conceptos
 │   ├── form-templates/ # Cliente BFF, modelos, caché UI, editor y vista previa
+│   ├── platform/     # Autenticación global, cliente BFF y gestión de tenants
 │   ├── work-types/   # Modelos y componentes de tipos de trabajo permitidos
 │   └── works/        # Cliente BFF, ejecución de formularios y caché de pantalla
 ├── components/   # Componentes visuales reutilizables

@@ -7,13 +7,16 @@ import {
   Patch,
   Post,
   Put,
+  UseGuards,
 } from '@nestjs/common';
+import { ActiveTenantGuard } from '../catalog/guards/active-tenant.guard';
 import { CreateWorkDto } from './dto/create-work.dto';
 import { SaveWorkResponsesDto } from './dto/save-work-responses.dto';
 import { UpdateWorkStatusDto } from './dto/update-work-status.dto';
 import { WorksService } from './works.service';
 
 @Controller('tenants/:tenantId')
+@UseGuards(ActiveTenantGuard)
 export class WorksController {
   constructor(private readonly works: WorksService) {}
 

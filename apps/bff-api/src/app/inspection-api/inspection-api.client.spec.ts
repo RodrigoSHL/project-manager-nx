@@ -253,4 +253,43 @@ describe('InspectionApiClient', () => {
       }
     );
   });
+
+  it('forwards platform tenant administration to inspection-api', async () => {
+    fetchMock.mockImplementation(
+      async () => new Response(JSON.stringify({ saved: true }), { status: 200 })
+    );
+    const client = new InspectionApiClient();
+    const tenant = {
+      code: 'MINERA_NUEVA',
+      name: 'Minera Nueva',
+      active: true,
+    };
+
+    await client.listPlatformTenants();
+    await client.createPlatformTenant(tenant);
+    await client.updatePlatformTenant('tenant-1', { active: false });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'http://inspection-api.test/api/platform/tenants'
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'http://inspection-api.test/api/platform/tenants',
+      {
+        method: 'POST',
+        body: JSON.stringify(tenant),
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      'http://inspection-api.test/api/platform/tenants/tenant-1',
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ active: false }),
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  });
 });

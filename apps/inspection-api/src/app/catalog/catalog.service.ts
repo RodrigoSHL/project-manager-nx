@@ -50,7 +50,10 @@ export class CatalogService {
   ) {}
 
   listTenants() {
-    return this.tenants.find({ order: { name: 'ASC' } });
+    return this.tenants.find({
+      where: { active: true },
+      order: { name: 'ASC' },
+    });
   }
 
   async listSites(tenantId: string) {
@@ -652,7 +655,9 @@ export class CatalogService {
   }
 
   private async assertTenantExists(tenantId: string) {
-    if (!(await this.tenants.exist({ where: { id: tenantId } }))) {
+    if (
+      !(await this.tenants.exist({ where: { id: tenantId, active: true } }))
+    ) {
       throw new NotFoundException('Tenant not found');
     }
   }

@@ -15,6 +15,10 @@ import { LoginPage } from '../pages/login-page';
 import { WorksPage } from '../pages/works-page';
 import { NewWorkPage } from '../pages/new-work-page';
 import { WorkDetailPage } from '../pages/work-detail-page';
+import { PlatformLayout } from '../layouts/platform-layout';
+import { PlatformLoginPage } from '../pages/platform-login-page';
+import { PlatformTenantsPage } from '../pages/platform-tenants-page';
+import { usePlatformAuth } from '../features/platform/platform-auth-context';
 
 type AppRoutesProps = {
   isAuthenticated: boolean;
@@ -27,53 +31,71 @@ export function AppRoutes({
   onLogin,
   onLogout,
 }: AppRoutesProps) {
-  if (!isAuthenticated) {
-    return (
-      <Routes>
-        <Route path="/login" element={<LoginPage onLogin={onLogin} />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    );
-  }
+  const platformAuth = usePlatformAuth();
 
   return (
     <Routes>
-      <Route element={<AppLayout onLogout={onLogout} />}>
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/assets" element={<AssetsPage />} />
-        <Route path="/works" element={<WorksPage />} />
-        <Route path="/works/new" element={<NewWorkPage />} />
-        <Route path="/works/:id" element={<WorkDetailPage />} />
-        <Route path="/findings" element={<FindingsPage />} />
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminOverviewPage />} />
-          <Route path="assets" element={<AdminAssetsPage />} />
-          <Route path="asset-types" element={<AdminAssetTypesPage />} />
-          <Route path="work-types" element={<AdminWorkTypesPage />} />
-          <Route path="concepts" element={<AdminConceptsPage />} />
-          <Route
-            path="sites"
-            element={
-              <AdminPlaceholderPage
-                title="Sitios y faenas"
-                description="Ubicaciones organizacionales de cada tenant."
-                icon={MapPinned}
-              />
-            }
-          />
-          <Route
-            path="users"
-            element={
-              <AdminPlaceholderPage
-                title="Usuarios y permisos"
-                description="Personas, roles y accesos del sistema."
-                icon={Users}
-              />
-            }
-          />
-        </Route>
+      <Route path="/platform/login" element={<PlatformLoginPage />} />
+      <Route
+        path="/platform"
+        element={
+          platformAuth.isAuthenticated ? (
+            <PlatformLayout />
+          ) : (
+            <Navigate to="/platform/login" replace />
+          )
+        }
+      >
+        <Route index element={<Navigate to="tenants" replace />} />
+        <Route path="tenants" element={<PlatformTenantsPage />} />
       </Route>
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+
+      {isAuthenticated ? (
+        <Route element={<AppLayout onLogout={onLogout} />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/assets" element={<AssetsPage />} />
+          <Route path="/works" element={<WorksPage />} />
+          <Route path="/works/new" element={<NewWorkPage />} />
+          <Route path="/works/:id" element={<WorkDetailPage />} />
+          <Route path="/findings" element={<FindingsPage />} />
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminOverviewPage />} />
+            <Route path="assets" element={<AdminAssetsPage />} />
+            <Route path="asset-types" element={<AdminAssetTypesPage />} />
+            <Route path="work-types" element={<AdminWorkTypesPage />} />
+            <Route path="concepts" element={<AdminConceptsPage />} />
+            <Route
+              path="sites"
+              element={
+                <AdminPlaceholderPage
+                  title="Sitios y faenas"
+                  description="Ubicaciones organizacionales de cada tenant."
+                  icon={MapPinned}
+                />
+              }
+            />
+            <Route
+              path="users"
+              element={
+                <AdminPlaceholderPage
+                  title="Usuarios y permisos"
+                  description="Personas, roles y accesos del sistema."
+                  icon={Users}
+                />
+              }
+            />
+          </Route>
+        </Route>
+      ) : (
+        <Route path="/login" element={<LoginPage onLogin={onLogin} />} />
+      )}
+
+      <Route
+        path="*"
+        element={
+          <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />
+        }
+      />
     </Routes>
   );
 }

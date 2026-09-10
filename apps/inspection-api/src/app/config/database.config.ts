@@ -22,6 +22,7 @@ import { CreateFormTemplates1799100600000 } from '../../migrations/1799100600000
 import { SeedFormTemplates1799100700000 } from '../../migrations/1799100700000-SeedFormTemplates';
 import { CreateWorks1799100800000 } from '../../migrations/1799100800000-CreateWorks';
 import { SeedWorks1799100900000 } from '../../migrations/1799100900000-SeedWorks';
+import { ExtendTenantsForPlatformAdministration1799101000000 } from '../../migrations/1799101000000-ExtendTenantsForPlatformAdministration';
 import { ConceptResponseEntity } from '../works/entities/concept-response.entity';
 import { TaskCompletionEntity } from '../works/entities/task-completion.entity';
 import { WorkEntity } from '../works/entities/work.entity';
@@ -71,6 +72,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     SeedFormTemplates1799100700000,
     CreateWorks1799100800000,
     SeedWorks1799100900000,
+    ExtendTenantsForPlatformAdministration1799101000000,
   ],
   migrationsRun: process.env.INSPECTION_MIGRATIONS_RUN === 'true',
   synchronize: false,

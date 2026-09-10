@@ -7,6 +7,7 @@ import {
   LogOut,
   Menu,
   Settings,
+  ShieldCheck,
   Zap,
 } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
@@ -64,6 +65,18 @@ function SidebarContent({
             {label}
           </NavLink>
         ))}
+
+        <p className="mt-5 border-t border-white/10 px-3 pt-4 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-slate-500">
+          Control global
+        </p>
+        <NavLink
+          to="/platform/tenants"
+          onClick={onNavigate}
+          className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+        >
+          <ShieldCheck className="size-5" />
+          Administrar clientes
+        </NavLink>
       </nav>
 
       <div className="border-t border-white/10 p-3">

@@ -67,6 +67,10 @@ POST /api/tenants/:tenantId/sites/:siteId/assets/:assetId/works
 PUT /api/tenants/:tenantId/works/:workId/responses
 PATCH /api/tenants/:tenantId/works/:workId/status
 POST /api/tenants/:tenantId/works/:workId/finish
+GET /api/platform/tenants
+GET /api/platform/tenants/:tenantId
+POST /api/platform/tenants
+PATCH /api/platform/tenants/:tenantId
 ```
 
 El BFF publica el mismo catálogo y sus mutaciones bajo `/api/inspection`. La
@@ -96,6 +100,11 @@ tareas marcadas en `task_completions`. Al crear un trabajo, la API guarda un
 snapshot JSONB de la plantilla para que su ejecución no cambie si después se
 edita el catálogo. La API valida las transiciones `DRAFT → IN_PROGRESS →
 FINISHED` y exige los elementos obligatorios al finalizar.
+
+La administración global de clientes utiliza las rutas internas
+`/api/platform/tenants`. El BFF las publica como `/api/platform/tenants` y
+exige un JWT con rol global `admin`. Desactivar un tenant conserva sus datos,
+pero lo retira del catálogo operativo y bloquea sus operaciones de dominio.
 
 La autenticación multi-tenant todavía no forma parte de este módulo. Cuando se
 implemente, el BFF deberá obtener el tenant permitido desde la sesión y no desde

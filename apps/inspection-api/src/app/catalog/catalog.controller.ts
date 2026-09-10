@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Put,
+  UseGuards,
 } from '@nestjs/common';
 import { CatalogService } from './catalog.service';
 import { CreateAssetDto } from './dto/create-asset.dto';
@@ -17,8 +18,10 @@ import { UpdateAssetDto } from './dto/update-asset.dto';
 import { UpdateCatalogItemDto } from './dto/update-catalog-item.dto';
 import { CreateConceptDto } from './dto/create-concept.dto';
 import { UpdateConceptDto } from './dto/update-concept.dto';
+import { ActiveTenantGuard } from './guards/active-tenant.guard';
 
 @Controller('tenants')
+@UseGuards(ActiveTenantGuard)
 export class CatalogController {
   constructor(private readonly catalogService: CatalogService) {}
 

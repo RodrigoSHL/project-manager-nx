@@ -50,6 +50,37 @@ necesarios.
 
 ## Reglas de negocio vigentes
 
+### Administración de plataforma
+
+#### RN-PLA-001 — Los clientes se administran fuera del contexto operativo
+
+La administración de clientes usa el área `/platform`. No depende del tenant
+seleccionado en las pantallas de operación y puede consultar todos los tenants.
+
+#### RN-PLA-002 — Solo un administrador global administra clientes
+
+Los endpoints públicos `/api/platform/*` requieren una sesión JWT válida con
+el rol global `admin`. En el modelo actual este rol representa al administrador
+de plataforma; los futuros administradores de tenant tendrán un permiso
+diferente.
+
+#### RN-PLA-003 — Crear un cliente no inventa su configuración
+
+Un tenant nuevo se crea sin sitios, activos, trabajos ni catálogos copiados. Su
+configuración operativa se realiza explícitamente después del alta.
+
+#### RN-PLA-004 — Desactivar conserva los datos
+
+Un tenant inactivo deja de aparecer en los selectores operativos y sus rutas de
+dominio rechazan nuevas operaciones. Sus sitios, activos, configuraciones y
+trabajos permanecen almacenados y vuelven a estar disponibles si se reactiva.
+
+#### RN-PLA-005 — El código identifica al cliente globalmente
+
+Cada tenant tiene un `code` único en toda la plataforma. El código usa
+mayúsculas, números y guiones bajos; el nombre visible puede modificarse sin
+cambiar su UUID.
+
 ### Tenants y aislamiento de datos
 
 #### RN-TEN-001 — Todo dato tiene un tenant propietario
@@ -494,12 +525,30 @@ El contexto React mantiene una caché temporal para renderizar la pantalla, pero
 las lecturas y mutaciones se realizan mediante `/api/inspection`. Después de
 crear, guardar, iniciar o finalizar, la interfaz vuelve a consultar PostgreSQL.
 
+### RP-SEC-001 — El BFF protege el control global
+
+`PlatformAdminController` aplica `JwtAuthGuard` y `RolesGuard` a toda la clase.
+La ruta interna de `inspection-api` no se publica en producción; el navegador
+solo accede a ella a través del BFF.
+
+### RP-FE-007 — La sesión de plataforma está separada
+
+El login operativo continúa simulado. `/platform/login` valida credenciales
+reales mediante el BFF, comprueba el rol global y conserva el JWT durante la
+sesión de la pestaña. Migrar el token a una cookie HttpOnly segura queda
+pendiente antes de producción.
+
 ## Decisiones pendientes
 
 Estas ideas todavía no son reglas implementadas:
 
 - Obtener el tenant autorizado desde una sesión autenticada.
 - Definir roles y permisos para administrar catálogos y activos.
+- Separar el rol global `admin` en un permiso explícito `platform_admin` cuando
+  existan administradores propios de cada tenant.
+- Reemplazar el JWT de `sessionStorage` por una cookie HttpOnly, Secure y
+  SameSite cuando la autenticación de GridAssets pase a producción.
+- Incorporar auditoría de altas, cambios de estado y modificaciones de tenants.
 - Registrar quién creó, modificó, activó o desactivó un registro.
 - Definir si los activos se eliminan físicamente o se retiran mediante estado
   cuando ya existan trabajos e historial.
@@ -535,3 +584,4 @@ Ejemplo válido o inválido, si ayuda a entenderla.
 | 2026-09-09 | Se agrega el constructor mock de plantillas, secciones, tareas, conceptos y vista previa.              |
 | 2026-09-09 | Plantillas, secciones, elementos y su orden se conectan al BFF, inspection-api y PostgreSQL.           |
 | 2026-09-10 | Trabajos, snapshots, respuestas y tareas completadas se conectan al BFF, API y PostgreSQL.             |
+| 2026-09-10 | Se agrega la administración global de clientes con acceso JWT, estado y métricas operativas.           |

@@ -12,6 +12,7 @@ import { TenantEntity } from './entities/tenant.entity';
 import { ConceptEntity } from './entities/concept.entity';
 import { ConceptOptionEntity } from './entities/concept-option.entity';
 import { AssetTypeConceptEntity } from './entities/asset-type-concept.entity';
+import { ActiveTenantGuard } from './guards/active-tenant.guard';
 
 @Module({
   imports: [
@@ -29,7 +30,7 @@ import { AssetTypeConceptEntity } from './entities/asset-type-concept.entity';
     ]),
   ],
   controllers: [CatalogController],
-  providers: [CatalogService],
-  exports: [CatalogService],
+  providers: [CatalogService, ActiveTenantGuard],
+  exports: [CatalogService, ActiveTenantGuard],
 })
 export class CatalogModule {}

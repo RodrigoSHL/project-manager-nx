@@ -441,6 +441,19 @@ El cliente identifica el elemento del snapshot y envía su valor. La API deriva
 el `conceptId`, valida el tipo y las opciones desde ese snapshot, y nunca acepta
 que el cliente asocie una respuesta con un concepto arbitrario.
 
+#### RN-EJE-008 — Cada elemento admite información adicional opcional
+
+Una tarea o concepto del snapshot puede tener un comentario de revisión de
+hasta 2000 caracteres y una o varias fotografías. El comentario y las fotos no
+reemplazan el valor principal ni satisfacen por sí solos un elemento
+obligatorio.
+
+#### RN-EJE-009 — La evidencia respeta el estado del trabajo
+
+Las fotografías se pueden agregar o eliminar solamente mientras el trabajo
+está en `DRAFT` o `IN_PROGRESS`. En trabajos `FINISHED` o `REVIEWED` permanecen
+visibles como evidencia, pero no se pueden modificar.
+
 ## Reglas de programación vigentes
 
 ### RP-API-001 — La API aplica las reglas de negocio
@@ -573,6 +586,27 @@ el cierre de sesión. El JWT se adjunta en todas las llamadas a
 una membresía activa antes de reenviar una petición con `tenantId`. La lista de
 tenants también se filtra en el BFF según el usuario autenticado.
 
+### RP-DB-006 — Los comentarios pertenecen al elemento del snapshot
+
+`work_item_annotations` guarda como máximo un comentario por tenant, trabajo y
+elemento del formulario. La API valida el `formItemId` contra el snapshot del
+trabajo y reemplaza las anotaciones junto con las respuestas dentro de la misma
+transacción.
+
+### RP-FILE-001 — Las fotografías usan el servicio común de archivos
+
+El contenido y los metadatos físicos se guardan mediante `files-api` bajo la
+aplicación `inspection-web`, propietario `work` y categoría
+`work-item-photo`. Los metadatos incluyen `tenantId`, `formItemId` y el usuario
+que realizó la carga.
+
+### RP-SEC-003 — El BFF autoriza cada fotografía de inspección
+
+Antes de listar, cargar, descargar o eliminar una foto, el BFF valida la
+membresía del usuario, la pertenencia del trabajo al tenant y la presencia del
+elemento en su snapshot. También bloquea cargas y eliminaciones en trabajos
+cerrados.
+
 ## Decisiones pendientes
 
 Estas ideas todavía no son reglas implementadas:
@@ -587,7 +621,7 @@ Estas ideas todavía no son reglas implementadas:
   cuando ya existan trabajos e historial.
 - Definir qué operaciones se permiten sobre trabajos existentes al desactivar
   su tipo.
-- Crear pautas, hallazgos, mediciones y adjuntos.
+- Crear pautas, hallazgos, mediciones y adjuntos generales fuera del formulario.
 - Implementar creación automática de nuevas versiones inmutables de una
   plantilla.
 - Diseñar persistencia local, funcionamiento offline y sincronización.
@@ -619,3 +653,4 @@ Ejemplo válido o inválido, si ayuda a entenderla.
 | 2026-09-10 | Trabajos, snapshots, respuestas y tareas completadas se conectan al BFF, API y PostgreSQL.             |
 | 2026-09-10 | Se agrega la administración global de clientes con acceso JWT, estado y métricas operativas.           |
 | 2026-09-10 | Se unifica el login real y se agrega autorización por membresía de tenant en frontend y BFF.           |
+| 2026-09-11 | Cada elemento ejecutado admite comentario opcional y fotografías protegidas por tenant y trabajo.      |

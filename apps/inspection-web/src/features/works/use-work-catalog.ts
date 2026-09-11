@@ -15,6 +15,9 @@ export function useWorkCatalog(tenantId: string) {
       taskCompletions: store.taskCompletions.filter(
         (item) => item.tenantId === tenantId
       ),
+      annotations: store.annotations.filter(
+        (item) => item.tenantId === tenantId
+      ),
       snapshots: store.snapshots.filter((item) => item.tenantId === tenantId),
       catalog: store.catalogs[tenantId],
       isLoading: store.loadingTenantIds.includes(tenantId),

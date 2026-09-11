@@ -229,6 +229,7 @@ describe('InspectionApiClient', () => {
     const responses = {
       responses: [{ formItemId: 'item-1', valueNumber: 71 }],
       taskCompletions: [{ formItemId: 'task-1', completed: true }],
+      annotations: [{ formItemId: 'item-1', comment: 'Temperatura estable.' }],
     };
 
     await client.createWork('tenant-1', 'site-1', 'asset-1', work);

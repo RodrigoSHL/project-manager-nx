@@ -45,6 +45,34 @@ export interface TaskCompletion {
   updatedAt: string;
 }
 
+export interface WorkItemAnnotation {
+  id: string;
+  tenantId: string;
+  workId: string;
+  formItemId: string;
+  comment: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkItemPhoto {
+  id: string;
+  application: 'inspection-web';
+  ownerType: 'work';
+  ownerId: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  metadata: {
+    category: 'work-item-photo';
+    tenantId: string;
+    formItemId: string;
+    uploadedBy?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface WorkConceptOptionSnapshot {
   id: string;
   label: string;
@@ -115,7 +143,10 @@ export type ResponseValue = Pick<
   'valueNumber' | 'valueText' | 'selectedOptionId'
 >;
 
-export type WorkItemValue = ResponseValue & { completed?: boolean };
+export type WorkItemValue = ResponseValue & {
+  completed?: boolean;
+  comment?: string;
+};
 
 export type FinishResult =
   | { ok: true }

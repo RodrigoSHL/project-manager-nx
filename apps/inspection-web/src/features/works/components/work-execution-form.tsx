@@ -6,15 +6,27 @@ import type {
   FinishResult,
   TaskCompletion,
   Work,
+  WorkItemAnnotation,
   WorkItemValue,
   WorkTemplateSnapshot,
 } from '../models';
+import {
+  deleteWorkPhoto,
+  listWorkPhotos,
+  loadWorkPhotoUrl,
+  uploadWorkPhoto,
+} from '../work-photo-api';
+import {
+  WorkItemAdditionalInfo,
+  type WorkItemPhotoPreview,
+} from './work-item-additional-info';
 
 type WorkExecutionFormProps = {
   work: Work;
   snapshot: WorkTemplateSnapshot;
   responses: ConceptResponse[];
   taskCompletions: TaskCompletion[];
+  annotations: WorkItemAnnotation[];
   onSave: (values: Record<string, WorkItemValue>) => Promise<void>;
   onStart: () => Promise<void>;
   onFinish: (values: Record<string, WorkItemValue>) => Promise<FinishResult>;
@@ -25,6 +37,7 @@ export function WorkExecutionForm({
   snapshot,
   responses,
   taskCompletions,
+  annotations,
   onSave,
   onStart,
   onFinish,
@@ -33,40 +46,146 @@ export function WorkExecutionForm({
   const [notice, setNotice] = useState<string | null>(null);
   const [finishError, setFinishError] = useState<FinishResult | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [photos, setPhotos] = useState<WorkItemPhotoPreview[]>([]);
+  const [photoBusyItems, setPhotoBusyItems] = useState<string[]>([]);
+  const [photoErrors, setPhotoErrors] = useState<Record<string, string>>({});
   const initializedWorkId = useRef<string | null>(null);
+  const previewUrls = useRef(new Set<string>());
   const readonly = work.status === 'FINISHED' || work.status === 'REVIEWED';
 
   useEffect(() => {
     if (initializedWorkId.current === work.id) return;
     initializedWorkId.current = work.id;
-    setValues({
-      ...Object.fromEntries(
-        responses
-          .filter((response) => response.workId === work.id)
-          .map((response) => [
-            response.formItemId,
-            {
-              valueNumber: response.valueNumber,
-              valueText: response.valueText,
-              selectedOptionId: response.selectedOptionId,
-            },
-          ])
-      ),
-      ...Object.fromEntries(
-        taskCompletions
-          .filter(
-            (completion) =>
-              completion.workId === work.id && completion.completed
-          )
-          .map((completion) => [completion.formItemId, { completed: true }])
-      ),
-    });
-  }, [responses, taskCompletions, work.id]);
+    const next: Record<string, WorkItemValue> = {};
+    for (const response of responses.filter(
+      (item) => item.workId === work.id
+    )) {
+      next[response.formItemId] = {
+        ...next[response.formItemId],
+        valueNumber: response.valueNumber,
+        valueText: response.valueText,
+        selectedOptionId: response.selectedOptionId,
+      };
+    }
+    for (const completion of taskCompletions.filter(
+      (item) => item.workId === work.id
+    )) {
+      next[completion.formItemId] = {
+        ...next[completion.formItemId],
+        completed: completion.completed,
+      };
+    }
+    for (const annotation of annotations.filter(
+      (item) => item.workId === work.id
+    )) {
+      next[annotation.formItemId] = {
+        ...next[annotation.formItemId],
+        comment: annotation.comment,
+      };
+    }
+    setValues(next);
+  }, [annotations, responses, taskCompletions, work.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const workPreviewUrls = new Set<string>();
+    previewUrls.current = workPreviewUrls;
+    async function loadPhotos() {
+      try {
+        const records = await listWorkPhotos(work.tenantId, work.id);
+        const loaded = await Promise.allSettled(
+          records.map(async (photo) => ({
+            ...photo,
+            previewUrl: await loadWorkPhotoUrl(photo.id),
+          }))
+        );
+        if (cancelled) {
+          loaded.forEach((result) => {
+            if (result.status === 'fulfilled') {
+              URL.revokeObjectURL(result.value.previewUrl);
+            }
+          });
+          return;
+        }
+        const available = loaded.flatMap((result) =>
+          result.status === 'fulfilled' ? [result.value] : []
+        );
+        available.forEach((photo) => workPreviewUrls.add(photo.previewUrl));
+        setPhotos(available);
+        if (available.length !== records.length) {
+          setPhotoErrors((current) => ({
+            ...current,
+            general: 'Algunas fotografías no se pudieron cargar.',
+          }));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setPhotoErrors((current) => ({
+            ...current,
+            general: messageFrom(error),
+          }));
+        }
+      }
+    }
+    void loadPhotos();
+    return () => {
+      cancelled = true;
+      workPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+      workPreviewUrls.clear();
+    };
+  }, [work.id, work.tenantId]);
 
   function update(itemId: string, value: WorkItemValue) {
-    setValues((current) => ({ ...current, [itemId]: value }));
+    setValues((current) => ({
+      ...current,
+      [itemId]: { ...current[itemId], ...value },
+    }));
     setNotice(null);
     setFinishError(null);
+  }
+
+  async function uploadPhotos(itemId: string, files: File[]) {
+    setPhotoBusyItems((current) => [...new Set([...current, itemId])]);
+    setPhotoErrors((current) => ({ ...current, [itemId]: '' }));
+    try {
+      for (const file of files) {
+        const photo = await uploadWorkPhoto(
+          work.tenantId,
+          work.id,
+          itemId,
+          file
+        );
+        const previewUrl = await loadWorkPhotoUrl(photo.id);
+        previewUrls.current.add(previewUrl);
+        setPhotos((current) => [...current, { ...photo, previewUrl }]);
+      }
+    } catch (error) {
+      setPhotoErrors((current) => ({
+        ...current,
+        [itemId]: messageFrom(error),
+      }));
+    } finally {
+      setPhotoBusyItems((current) => current.filter((id) => id !== itemId));
+    }
+  }
+
+  async function removePhoto(photo: WorkItemPhotoPreview) {
+    const itemId = photo.metadata.formItemId;
+    setPhotoBusyItems((current) => [...new Set([...current, itemId])]);
+    setPhotoErrors((current) => ({ ...current, [itemId]: '' }));
+    try {
+      await deleteWorkPhoto(photo.id);
+      URL.revokeObjectURL(photo.previewUrl);
+      previewUrls.current.delete(photo.previewUrl);
+      setPhotos((current) => current.filter((item) => item.id !== photo.id));
+    } catch (error) {
+      setPhotoErrors((current) => ({
+        ...current,
+        [itemId]: messageFrom(error),
+      }));
+    } finally {
+      setPhotoBusyItems((current) => current.filter((id) => id !== itemId));
+    }
   }
 
   async function run(action: () => Promise<void>, success: string) {
@@ -133,6 +252,11 @@ export function WorkExecutionForm({
       </header>
 
       <div className="grid gap-8 p-4 sm:p-6">
+        {photoErrors.general ? (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            {photoErrors.general}
+          </p>
+        ) : null}
         {snapshot.sections.map((section) => {
           const visibleItems = section.items.filter(
             (item) => item.type === 'TASK' || item.concept?.type !== 'HIDDEN'
@@ -156,37 +280,59 @@ export function WorkExecutionForm({
                 {visibleItems.map((item) => {
                   if (item.type === 'TASK') {
                     return (
-                      <label
+                      <div
                         key={item.id}
-                        className="flex gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4"
+                        className="rounded-lg border border-slate-200 bg-slate-50 p-4"
                       >
-                        <input
-                          type="checkbox"
-                          checked={values[item.id]?.completed ?? false}
-                          disabled={readonly}
-                          onChange={(event) =>
-                            update(item.id, { completed: event.target.checked })
+                        <label className="flex gap-3">
+                          <input
+                            type="checkbox"
+                            checked={values[item.id]?.completed ?? false}
+                            disabled={readonly}
+                            onChange={(event) =>
+                              update(item.id, {
+                                completed: event.target.checked,
+                              })
+                            }
+                            className="mt-0.5 size-5 shrink-0"
+                          />
+                          <div>
+                            <p className="text-sm font-medium text-slate-800">
+                              {item.title ?? 'Actividad'}
+                              {item.required ? ' *' : ''}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {item.description ??
+                                'Confirma la ejecución de esta actividad.'}
+                            </p>
+                          </div>
+                        </label>
+                        <WorkItemAdditionalInfo
+                          itemId={item.id}
+                          comment={values[item.id]?.comment ?? ''}
+                          photos={photos.filter(
+                            (photo) => photo.metadata.formItemId === item.id
+                          )}
+                          readonly={readonly}
+                          busy={photoBusyItems.includes(item.id)}
+                          error={photoErrors[item.id]}
+                          onCommentChange={(comment) =>
+                            update(item.id, { comment })
                           }
-                          className="mt-0.5 size-5 shrink-0"
+                          onUpload={uploadPhotos}
+                          onDelete={removePhoto}
                         />
-                        <div>
-                          <p className="text-sm font-medium text-slate-800">
-                            {item.title ?? 'Actividad'}
-                            {item.required ? ' *' : ''}
-                          </p>
-                          <p className="mt-1 text-xs text-slate-500">
-                            {item.description ??
-                              'Confirma la ejecución de esta actividad.'}
-                          </p>
-                        </div>
-                      </label>
+                      </div>
                     );
                   }
                   const concept = item.concept;
                   if (!concept) return null;
                   const value = values[item.id] ?? {};
                   return (
-                    <fieldset key={item.id} disabled={readonly}>
+                    <fieldset
+                      key={item.id}
+                      className="min-w-0 rounded-lg border border-slate-200 p-4"
+                    >
                       <legend className="text-sm font-semibold text-slate-800">
                         {concept.name}
                         {item.required ? ' *' : ''}
@@ -200,6 +346,7 @@ export function WorkExecutionForm({
                         <div className="mt-2 flex items-center gap-2">
                           <input
                             type="number"
+                            disabled={readonly}
                             value={value.valueNumber ?? ''}
                             onChange={(event) =>
                               update(item.id, {
@@ -227,6 +374,7 @@ export function WorkExecutionForm({
                             >
                               <input
                                 type="radio"
+                                disabled={readonly}
                                 name={item.id}
                                 checked={value.selectedOptionId === option.id}
                                 onChange={() =>
@@ -243,6 +391,7 @@ export function WorkExecutionForm({
                       {concept.type === 'TEXT' ? (
                         <textarea
                           rows={3}
+                          disabled={readonly}
                           value={value.valueText ?? ''}
                           onChange={(event) =>
                             update(item.id, { valueText: event.target.value })
@@ -250,6 +399,21 @@ export function WorkExecutionForm({
                           className="mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-50"
                         />
                       ) : null}
+                      <WorkItemAdditionalInfo
+                        itemId={item.id}
+                        comment={value.comment ?? ''}
+                        photos={photos.filter(
+                          (photo) => photo.metadata.formItemId === item.id
+                        )}
+                        readonly={readonly}
+                        busy={photoBusyItems.includes(item.id)}
+                        error={photoErrors[item.id]}
+                        onCommentChange={(comment) =>
+                          update(item.id, { comment })
+                        }
+                        onUpload={uploadPhotos}
+                        onDelete={removePhoto}
+                      />
                     </fieldset>
                   );
                 })}
@@ -325,4 +489,10 @@ export function WorkExecutionForm({
       </footer>
     </section>
   );
+}
+
+function messageFrom(error: unknown) {
+  return error instanceof Error
+    ? error.message
+    : 'No fue posible completar la operación.';
 }

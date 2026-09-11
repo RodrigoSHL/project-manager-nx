@@ -18,6 +18,7 @@ import type {
   FinishResult,
   TaskCompletion,
   Work,
+  WorkItemAnnotation,
   WorkItemValue,
   WorkTemplateSnapshot,
 } from './models';
@@ -26,6 +27,7 @@ type WorkCatalogState = {
   works: Work[];
   responses: ConceptResponse[];
   taskCompletions: TaskCompletion[];
+  annotations: WorkItemAnnotation[];
   snapshots: WorkTemplateSnapshot[];
   catalogs: Record<string, WorkReferenceData | undefined>;
   loadedTenantIds: string[];
@@ -55,6 +57,7 @@ const initialState: WorkCatalogState = {
   works: [],
   responses: [],
   taskCompletions: [],
+  annotations: [],
   snapshots: [],
   catalogs: {},
   loadedTenantIds: [],
@@ -92,6 +95,10 @@ export function WorkCatalogProvider({ children }: { children: ReactNode }) {
             (item) => item.tenantId !== tenantId
           ),
           ...data.taskCompletions,
+        ],
+        annotations: [
+          ...current.annotations.filter((item) => item.tenantId !== tenantId),
+          ...data.annotations,
         ],
         snapshots: [
           ...current.snapshots.filter((item) => item.tenantId !== tenantId),

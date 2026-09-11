@@ -106,6 +106,12 @@ snapshot JSONB de la plantilla para que su ejecución no cambie si después se
 edita el catálogo. La API valida las transiciones `DRAFT → IN_PROGRESS →
 FINISHED` y exige los elementos obligatorios al finalizar.
 
+Los comentarios opcionales de cada tarea o concepto se almacenan en
+`work_item_annotations`, validados contra el snapshot y reemplazados en la
+misma transacción que las respuestas. Las fotografías usan el `files-api`
+común mediante el BFF; se identifican por trabajo y `formItemId`, por lo que el
+binario no se guarda dentro de `inspection_db`.
+
 La administración global de clientes utiliza las rutas internas
 `/api/platform/tenants`. El BFF las publica como `/api/platform/tenants` y
 exige un JWT con rol global `admin`. Desactivar un tenant conserva sus datos,

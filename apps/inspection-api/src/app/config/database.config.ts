@@ -28,6 +28,8 @@ import { ConceptResponseEntity } from '../works/entities/concept-response.entity
 import { TaskCompletionEntity } from '../works/entities/task-completion.entity';
 import { WorkEntity } from '../works/entities/work.entity';
 import { TenantMembershipEntity } from '../platform/entities/tenant-membership.entity';
+import { WorkItemAnnotationEntity } from '../works/entities/work-item-annotation.entity';
+import { CreateWorkItemAnnotations1799101200000 } from '../../migrations/1799101200000-CreateWorkItemAnnotations';
 
 export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
   type: 'postgres',
@@ -63,6 +65,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     ConceptResponseEntity,
     TaskCompletionEntity,
     TenantMembershipEntity,
+    WorkItemAnnotationEntity,
   ],
   migrations: [
     CreateInspectionCatalog1799100000000,
@@ -77,6 +80,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     SeedWorks1799100900000,
     ExtendTenantsForPlatformAdministration1799101000000,
     CreateTenantMemberships1799101100000,
+    CreateWorkItemAnnotations1799101200000,
   ],
   migrationsRun: process.env.INSPECTION_MIGRATIONS_RUN === 'true',
   synchronize: false,

@@ -10,6 +10,7 @@ import { FormTemplateEntity } from '../form-templates/entities/form-template.ent
 import { ConceptResponseEntity } from './entities/concept-response.entity';
 import { TaskCompletionEntity } from './entities/task-completion.entity';
 import { WorkEntity } from './entities/work.entity';
+import { WorkItemAnnotationEntity } from './entities/work-item-annotation.entity';
 import { WorksController } from './works.controller';
 import { WorksService } from './works.service';
 
@@ -20,6 +21,7 @@ import { WorksService } from './works.service';
       WorkEntity,
       ConceptResponseEntity,
       TaskCompletionEntity,
+      WorkItemAnnotationEntity,
       FormTemplateEntity,
       FormSectionEntity,
       FormItemEntity,

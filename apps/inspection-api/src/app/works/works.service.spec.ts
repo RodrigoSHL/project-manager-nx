@@ -6,6 +6,7 @@ import { FormItemType } from '../form-templates/entities/form-item.entity';
 import type { FormTemplateEntity } from '../form-templates/entities/form-template.entity';
 import type { ConceptResponseEntity } from './entities/concept-response.entity';
 import type { TaskCompletionEntity } from './entities/task-completion.entity';
+import type { WorkItemAnnotationEntity } from './entities/work-item-annotation.entity';
 import { WorkEntity, WorkStatus } from './entities/work.entity';
 import { WorksService } from './works.service';
 
@@ -15,6 +16,12 @@ describe('WorksService', () => {
   let works: jest.Mocked<
     Pick<Repository<WorkEntity>, 'findOne' | 'save' | 'create' | 'update'>
   >;
+  let annotationRepository: {
+    find: jest.Mock;
+    delete: jest.Mock;
+    save: jest.Mock;
+    create: jest.Mock;
+  };
   let service: WorksService;
 
   beforeEach(() => {
@@ -38,12 +45,18 @@ describe('WorksService', () => {
       save: jest.fn().mockResolvedValue([]),
       create: jest.fn((value) => value),
     };
+    annotationRepository = {
+      find: jest.fn().mockResolvedValue([]),
+      delete: jest.fn().mockResolvedValue({}),
+      save: jest.fn().mockResolvedValue([]),
+      create: jest.fn((value) => value),
+    };
     const manager = {
-      getRepository: jest.fn((entity) =>
-        entity.name === 'ConceptResponseEntity'
-          ? responseRepository
-          : taskRepository
-      ),
+      getRepository: jest.fn((entity) => {
+        if (entity.name === 'ConceptResponseEntity') return responseRepository;
+        if (entity.name === 'TaskCompletionEntity') return taskRepository;
+        return annotationRepository;
+      }),
     } as unknown as EntityManager;
     const dataSource = {
       transaction: jest.fn(async (action) => action(manager)),
@@ -57,6 +70,7 @@ describe('WorksService', () => {
       works as unknown as Repository<WorkEntity>,
       responseRepository as unknown as Repository<ConceptResponseEntity>,
       taskRepository as unknown as Repository<TaskCompletionEntity>,
+      annotationRepository as unknown as Repository<WorkItemAnnotationEntity>,
       {} as Repository<FormTemplateEntity>,
       {} as never,
       {} as never,
@@ -110,6 +124,7 @@ describe('WorksService', () => {
       service.finish(tenantId, workId, {
         responses: [],
         taskCompletions: [],
+        annotations: [],
       })
     ).rejects.toMatchObject({
       response: expect.objectContaining({
@@ -117,6 +132,36 @@ describe('WorksService', () => {
       }),
     });
     expect(works.save).not.toHaveBeenCalled();
+  });
+
+  it('stores a trimmed optional comment for any snapshot item', async () => {
+    const work = createWork(WorkStatus.IN_PROGRESS);
+    const itemId = '3ed4c1d6-fae1-4a7f-a47d-7f1bcb4579b1';
+    work.formSnapshot.sections[0].items = [
+      {
+        id: itemId,
+        type: FormItemType.TASK,
+        order: 1,
+        title: 'Revisar gabinete',
+        required: false,
+      },
+    ];
+    works.findOne.mockResolvedValue(work);
+
+    await service.saveResponses(tenantId, workId, {
+      responses: [],
+      taskCompletions: [],
+      annotations: [{ formItemId: itemId, comment: '  Requiere limpieza.  ' }],
+    });
+
+    expect(annotationRepository.save).toHaveBeenCalledWith([
+      expect.objectContaining({
+        tenantId,
+        workId,
+        formItemId: itemId,
+        comment: 'Requiere limpieza.',
+      }),
+    ]);
   });
 
   it('rejects status changes for an already finished work', async () => {

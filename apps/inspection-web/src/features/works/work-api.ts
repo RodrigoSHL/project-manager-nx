@@ -3,6 +3,7 @@ import type {
   CreateWorkInput,
   TaskCompletion,
   Work,
+  WorkItemAnnotation,
   WorkItemValue,
   WorkTemplateSnapshot,
 } from './models';
@@ -12,6 +13,7 @@ export type WorkCatalogResponse = {
   works: Work[];
   responses: ConceptResponse[];
   taskCompletions: TaskCompletion[];
+  annotations: WorkItemAnnotation[];
   snapshots: WorkTemplateSnapshot[];
 };
 
@@ -23,6 +25,7 @@ export type WorkResponsesPayload = {
     selectedOptionId?: string;
   }>;
   taskCompletions: Array<{ formItemId: string; completed: boolean }>;
+  annotations: Array<{ formItemId: string; comment: string }>;
 };
 
 export class WorkApiError extends Error {
@@ -90,8 +93,15 @@ export function toWorkResponsesPayload(
 ): WorkResponsesPayload {
   const responses: WorkResponsesPayload['responses'] = [];
   const taskCompletions: WorkResponsesPayload['taskCompletions'] = [];
+  const annotations: WorkResponsesPayload['annotations'] = [];
   for (const item of snapshot.sections.flatMap((section) => section.items)) {
     const value = values[item.id];
+    if (value?.comment?.trim()) {
+      annotations.push({
+        formItemId: item.id,
+        comment: value.comment.trim(),
+      });
+    }
     if (item.type === 'TASK') {
       if (value) {
         taskCompletions.push({
@@ -119,7 +129,7 @@ export function toWorkResponsesPayload(
       });
     }
   }
-  return { responses, taskCompletions };
+  return { responses, taskCompletions, annotations };
 }
 
 async function request<T = unknown>(

@@ -114,6 +114,7 @@ export function WorkDetailPage() {
         snapshot={snapshot}
         responses={catalog.responses}
         taskCompletions={catalog.taskCompletions}
+        annotations={catalog.annotations}
         onSave={(values) => catalog.saveResponses(tenantId, work.id, values)}
         onStart={() => catalog.startWork(tenantId, work.id)}
         onFinish={(values) => catalog.finishWork(tenantId, work.id, values)}

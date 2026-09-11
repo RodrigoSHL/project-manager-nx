@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  MaxLength,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -34,6 +35,15 @@ export class TaskCompletionValueDto {
   completed!: boolean;
 }
 
+export class WorkItemAnnotationValueDto {
+  @IsUUID()
+  formItemId!: string;
+
+  @IsString()
+  @MaxLength(2000)
+  comment!: string;
+}
+
 export class SaveWorkResponsesDto {
   @IsArray()
   @ValidateNested({ each: true })
@@ -44,4 +54,9 @@ export class SaveWorkResponsesDto {
   @ValidateNested({ each: true })
   @Type(() => TaskCompletionValueDto)
   taskCompletions: TaskCompletionValueDto[] = [];
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => WorkItemAnnotationValueDto)
+  annotations: WorkItemAnnotationValueDto[] = [];
 }

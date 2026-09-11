@@ -88,6 +88,10 @@ export type WorkResponsesPayload = {
     formItemId: string;
     completed: boolean;
   }>;
+  annotations: Array<{
+    formItemId: string;
+    comment: string;
+  }>;
 };
 
 @Injectable()

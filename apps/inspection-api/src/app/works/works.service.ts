@@ -21,10 +21,12 @@ import {
   ConceptResponseValueDto,
   SaveWorkResponsesDto,
   TaskCompletionValueDto,
+  WorkItemAnnotationValueDto,
 } from './dto/save-work-responses.dto';
 import { ConceptResponseEntity } from './entities/concept-response.entity';
 import { TaskCompletionEntity } from './entities/task-completion.entity';
 import { WorkEntity, WorkStatus } from './entities/work.entity';
+import { WorkItemAnnotationEntity } from './entities/work-item-annotation.entity';
 import type {
   WorkFormItemSnapshot,
   WorkTemplateSnapshot,
@@ -33,6 +35,7 @@ import type {
 type NormalizedWorkResponses = {
   responses: Array<ConceptResponseValueDto & { conceptId: string }>;
   taskCompletions: TaskCompletionValueDto[];
+  annotations: WorkItemAnnotationValueDto[];
 };
 
 @Injectable()
@@ -45,6 +48,8 @@ export class WorksService {
     private readonly responses: Repository<ConceptResponseEntity>,
     @InjectRepository(TaskCompletionEntity)
     private readonly taskCompletions: Repository<TaskCompletionEntity>,
+    @InjectRepository(WorkItemAnnotationEntity)
+    private readonly annotations: Repository<WorkItemAnnotationEntity>,
     @InjectRepository(FormTemplateEntity)
     private readonly templates: Repository<FormTemplateEntity>,
     @InjectRepository(FormSectionEntity)
@@ -60,33 +65,37 @@ export class WorksService {
 
   async list(tenantId: string) {
     await this.catalog.listSites(tenantId);
-    const [works, responses, taskCompletions] = await Promise.all([
+    const [works, responses, taskCompletions, annotations] = await Promise.all([
       this.works.find({
         where: { tenantId },
         order: { executionDate: 'DESC', createdAt: 'DESC' },
       }),
       this.responses.find({ where: { tenantId } }),
       this.taskCompletions.find({ where: { tenantId } }),
+      this.annotations.find({ where: { tenantId } }),
     ]);
     return {
       works: works.map((work) => this.toPublicWork(work)),
       responses,
       taskCompletions,
+      annotations,
       snapshots: works.map((work) => work.formSnapshot),
     };
   }
 
   async getById(tenantId: string, workId: string) {
     const work = await this.findWorkOrFail(tenantId, workId);
-    const [responses, taskCompletions] = await Promise.all([
+    const [responses, taskCompletions, annotations] = await Promise.all([
       this.responses.find({ where: { tenantId, workId } }),
       this.taskCompletions.find({ where: { tenantId, workId } }),
+      this.annotations.find({ where: { tenantId, workId } }),
     ]);
     return {
       work: this.toPublicWork(work),
       snapshot: work.formSnapshot,
       responses,
       taskCompletions,
+      annotations,
     };
   }
 
@@ -220,19 +229,28 @@ export class WorksService {
     await this.dataSource.transaction(async (manager) => {
       const responseRepository = manager.getRepository(ConceptResponseEntity);
       const taskRepository = manager.getRepository(TaskCompletionEntity);
-      const [existingResponses, existingTasks] = await Promise.all([
-        responseRepository.find({ where: { tenantId, workId } }),
-        taskRepository.find({ where: { tenantId, workId } }),
-      ]);
+      const annotationRepository = manager.getRepository(
+        WorkItemAnnotationEntity
+      );
+      const [existingResponses, existingTasks, existingAnnotations] =
+        await Promise.all([
+          responseRepository.find({ where: { tenantId, workId } }),
+          taskRepository.find({ where: { tenantId, workId } }),
+          annotationRepository.find({ where: { tenantId, workId } }),
+        ]);
       const responseByItem = new Map(
         existingResponses.map((item) => [item.formItemId, item])
       );
       const taskByItem = new Map(
         existingTasks.map((item) => [item.formItemId, item])
       );
+      const annotationByItem = new Map(
+        existingAnnotations.map((item) => [item.formItemId, item])
+      );
       await Promise.all([
         responseRepository.delete({ tenantId, workId }),
         taskRepository.delete({ tenantId, workId }),
+        annotationRepository.delete({ tenantId, workId }),
       ]);
       if (dto.responses.length > 0) {
         await responseRepository.save(
@@ -267,6 +285,21 @@ export class WorksService {
           })
         );
       }
+      if (dto.annotations.length > 0) {
+        await annotationRepository.save(
+          dto.annotations.map((value) => {
+            const previous = annotationByItem.get(value.formItemId);
+            return annotationRepository.create({
+              id: previous?.id,
+              tenantId,
+              workId,
+              formItemId: value.formItemId,
+              comment: value.comment,
+              createdAt: previous?.createdAt,
+            });
+          })
+        );
+      }
     });
   }
 
@@ -281,6 +314,7 @@ export class WorksService {
     );
     this.assertUniqueItemIds(dto.responses, 'response');
     this.assertUniqueItemIds(dto.taskCompletions, 'task completion');
+    this.assertUniqueItemIds(dto.annotations, 'annotation');
     const responses = dto.responses.map((value) => {
       const item = items.get(value.formItemId);
       if (item?.type !== FormItemType.CONCEPT || !item.concept) {
@@ -300,7 +334,16 @@ export class WorksService {
       }
       return value;
     });
-    return { responses, taskCompletions };
+    const annotations = dto.annotations.flatMap((value) => {
+      if (!items.has(value.formItemId)) {
+        throw new BadRequestException(
+          'Annotation item is not present in the work snapshot'
+        );
+      }
+      const comment = value.comment.trim();
+      return comment ? [{ formItemId: value.formItemId, comment }] : [];
+    });
+    return { responses, taskCompletions, annotations };
   }
 
   private normalizeConceptValue(
@@ -331,7 +374,11 @@ export class WorksService {
   }
 
   private assertUniqueItemIds(
-    values: Array<ConceptResponseValueDto | TaskCompletionValueDto>,
+    values: Array<
+      | ConceptResponseValueDto
+      | TaskCompletionValueDto
+      | WorkItemAnnotationValueDto
+    >,
     label: string
   ) {
     const ids = values.map((value) => value.formItemId);

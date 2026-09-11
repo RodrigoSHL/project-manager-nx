@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Tenant Auth Flow'
+  short_description: 'Login y aislamiento tenant de extremo a extremo'
+  default_prompt: 'Usa $tenant-auth-flow para implementar login, autorización por tenant, BFF, API, base de datos y frontend en esta aplicación.'

@@ -22,6 +22,8 @@ import { UpdateConceptDto } from './dto/update-concept.dto';
 import { AssetTypeConceptEntity } from './entities/asset-type-concept.entity';
 import { ConceptEntity, ConceptType } from './entities/concept.entity';
 import { ConceptOptionEntity } from './entities/concept-option.entity';
+import { CreateSiteDto } from './dto/create-site.dto';
+import { UpdateSiteDto } from './dto/update-site.dto';
 
 @Injectable()
 export class CatalogService {
@@ -62,6 +64,36 @@ export class CatalogService {
       where: { tenantId },
       order: { name: 'ASC' },
     });
+  }
+
+  async createSite(tenantId: string, dto: CreateSiteDto) {
+    await this.assertTenantExists(tenantId);
+    const site = this.sites.create({
+      tenantId,
+      code: this.normalizeCatalogCode(dto.code),
+      name: dto.name.trim(),
+      type: dto.type,
+      active: dto.active ?? true,
+    });
+
+    return this.saveSite(site);
+  }
+
+  async updateSite(tenantId: string, siteId: string, dto: UpdateSiteDto) {
+    await this.assertTenantExists(tenantId);
+    const site = await this.findSiteOrFail(tenantId, siteId);
+
+    Object.assign(site, {
+      code:
+        dto.code === undefined
+          ? site.code
+          : this.normalizeCatalogCode(dto.code),
+      name: dto.name === undefined ? site.name : dto.name.trim(),
+      type: dto.type ?? site.type,
+      active: dto.active ?? site.active,
+    });
+
+    return this.saveSite(site);
   }
 
   async listAssetTypes(tenantId: string) {
@@ -701,6 +733,16 @@ export class CatalogService {
     return assetType;
   }
 
+  private async findSiteOrFail(tenantId: string, siteId: string) {
+    const site = await this.sites.findOne({
+      where: { id: siteId, tenantId },
+    });
+    if (!site) {
+      throw new NotFoundException('Site not found in this tenant');
+    }
+    return site;
+  }
+
   private async findActiveAssetTypeOrFail(
     tenantId: string,
     assetTypeId: string
@@ -814,6 +856,19 @@ export class CatalogService {
         );
       }
 
+      throw error;
+    }
+  }
+
+  private async saveSite(site: SiteEntity) {
+    try {
+      return await this.sites.save(site);
+    } catch (error) {
+      if (this.isUniqueViolation(error)) {
+        throw new ConflictException(
+          'Another site with this code already exists in this tenant'
+        );
+      }
       throw error;
     }
   }

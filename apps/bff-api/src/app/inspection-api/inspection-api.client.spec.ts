@@ -56,6 +56,42 @@ describe('InspectionApiClient', () => {
     );
   });
 
+  it('forwards tenant-scoped site mutations as JSON', async () => {
+    fetchMock.mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ id: 'site-1' }), { status: 200 })
+    );
+    const client = new InspectionApiClient();
+    const site = {
+      code: 'MINA_NORTE',
+      name: 'Mina Norte',
+      type: 'MINE' as const,
+      active: true,
+    };
+
+    await client.createSite('tenant-1', site);
+    await client.updateSite('tenant-1', 'site-1', { active: false });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'http://inspection-api.test/api/tenants/tenant-1/sites',
+      {
+        method: 'POST',
+        body: JSON.stringify(site),
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'http://inspection-api.test/api/tenants/tenant-1/sites/site-1',
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ active: false }),
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  });
+
   it('forwards catalog associations and asset overrides', async () => {
     fetchMock.mockImplementation(async () =>
       Promise.resolve(

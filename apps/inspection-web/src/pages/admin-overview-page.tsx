@@ -47,7 +47,7 @@ const sections = [
     title: 'Sitios y faenas',
     description: 'Administra las ubicaciones que pertenecen a cada empresa.',
     icon: MapPinned,
-    status: 'Próximamente',
+    status: 'Disponible',
   },
   {
     to: '/admin/users',

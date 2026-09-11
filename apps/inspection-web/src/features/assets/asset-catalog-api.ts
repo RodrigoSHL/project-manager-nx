@@ -24,6 +24,13 @@ export type CatalogMutationInput = {
   active: boolean;
 };
 
+export type SiteMutationInput = {
+  code: string;
+  name: string;
+  type: Site['type'];
+  active: boolean;
+};
+
 const baseUrl = (
   import.meta.env.VITE_INSPECTION_API_URL || '/api/inspection'
 ).replace(/\/$/, '');
@@ -53,6 +60,26 @@ export const assetCatalogApi = {
     return get<Site[]>(
       `/tenants/${encodeURIComponent(tenantId)}/sites`,
       signal
+    );
+  },
+
+  createSite(tenantId: string, input: SiteMutationInput) {
+    return request<Site>(`/tenants/${encodeURIComponent(tenantId)}/sites`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  },
+
+  updateSite(
+    tenantId: string,
+    siteId: string,
+    input: Partial<SiteMutationInput>
+  ) {
+    return request<Site>(
+      `/tenants/${encodeURIComponent(tenantId)}/sites/${encodeURIComponent(
+        siteId
+      )}`,
+      { method: 'PATCH', body: JSON.stringify(input) }
     );
   },
 

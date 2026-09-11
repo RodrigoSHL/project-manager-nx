@@ -10,7 +10,7 @@ import { AssetEntity, AssetStatus } from './entities/asset.entity';
 import { AssetTypeEntity } from './entities/asset-type.entity';
 import { AssetTypeWorkTypeEntity } from './entities/asset-type-work-type.entity';
 import { AssetWorkTypeEntity } from './entities/asset-work-type.entity';
-import { SiteEntity } from './entities/site.entity';
+import { SiteEntity, SiteType } from './entities/site.entity';
 import { TenantEntity } from './entities/tenant.entity';
 import { WorkTypeEntity } from './entities/work-type.entity';
 import { ConceptEntity } from './entities/concept.entity';
@@ -26,7 +26,10 @@ describe('CatalogService tenant isolation', () => {
     Pick<Repository<TenantEntity>, 'find' | 'exist'>
   >;
   let siteRepository: jest.Mocked<
-    Pick<Repository<SiteEntity>, 'find' | 'exist'>
+    Pick<
+      Repository<SiteEntity>,
+      'find' | 'findOne' | 'exist' | 'create' | 'save'
+    >
   >;
   let assetRepository: jest.Mocked<
     Pick<
@@ -73,7 +76,10 @@ describe('CatalogService tenant isolation', () => {
     };
     siteRepository = {
       find: jest.fn(),
+      findOne: jest.fn(),
       exist: jest.fn(),
+      create: jest.fn(),
+      save: jest.fn(),
     };
     assetRepository = {
       find: jest.fn(),
@@ -177,6 +183,49 @@ describe('CatalogService tenant isolation', () => {
       order: { conceptId: 'ASC', order: 'ASC' },
     });
     expect(result[0].options).toHaveLength(1);
+  });
+
+  it('creates a site owned by the requested tenant', async () => {
+    tenantRepository.exist.mockResolvedValue(true);
+    const created = {
+      id: siteId,
+      tenantId,
+      code: 'MINA_NORTE',
+      name: 'Mina Norte',
+      type: SiteType.MINE,
+      active: true,
+    } as SiteEntity;
+    siteRepository.create.mockReturnValue(created);
+    siteRepository.save.mockResolvedValue(created);
+
+    await expect(
+      service.createSite(tenantId, {
+        code: 'mina-norte',
+        name: ' Mina Norte ',
+        type: SiteType.MINE,
+        active: true,
+      })
+    ).resolves.toBe(created);
+    expect(siteRepository.create).toHaveBeenCalledWith({
+      tenantId,
+      code: 'MINA_NORTE',
+      name: 'Mina Norte',
+      type: SiteType.MINE,
+      active: true,
+    });
+  });
+
+  it('does not update a site from another tenant', async () => {
+    tenantRepository.exist.mockResolvedValue(true);
+    siteRepository.findOne.mockResolvedValue(null);
+
+    await expect(
+      service.updateSite(tenantId, siteId, { name: 'Nombre alterado' })
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(siteRepository.findOne).toHaveBeenCalledWith({
+      where: { id: siteId, tenantId },
+    });
+    expect(siteRepository.save).not.toHaveBeenCalled();
   });
 
   it('queries assets using both tenantId and siteId', async () => {

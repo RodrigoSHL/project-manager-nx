@@ -14,6 +14,7 @@ import {
   Search,
   Trash2,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import {
   findAssetType,
@@ -228,6 +229,25 @@ export function AdminAssetsPage() {
             <span>
               {roots.length} subestaciones · {admin.assets.length} activos
             </span>
+          </div>
+        ) : null}
+
+        {tenant && !admin.isLoading && admin.sites.length === 0 ? (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+            <div>
+              <p className="text-sm font-medium text-amber-950">
+                Esta empresa todavía no tiene una ubicación.
+              </p>
+              <p className="mt-0.5 text-xs text-amber-800">
+                Primero crea una mina, planta o faena; después podrás agregar
+                sus subestaciones.
+              </p>
+            </div>
+            <Button asChild variant="outline">
+              <Link to="/admin/sites">
+                <MapPin /> Crear ubicación
+              </Link>
+            </Button>
           </div>
         ) : null}
       </section>

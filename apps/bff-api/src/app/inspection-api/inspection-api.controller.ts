@@ -24,6 +24,7 @@ import {
   FormSectionMutationPayload,
   FormTemplateMutationPayload,
   InspectionApiClient,
+  SiteMutationPayload,
   WorkMutationPayload,
   WorkResponsesPayload,
 } from './inspection-api.client';
@@ -93,6 +94,25 @@ export class InspectionApiController {
   @Get('tenants/:tenantId/sites')
   listSites(@Param('tenantId', new ParseUUIDPipe()) tenantId: string) {
     return this.client.listSites(tenantId);
+  }
+
+  @Post('tenants/:tenantId/sites')
+  @Roles(UserRole.ADMIN)
+  createSite(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Body() payload: Required<SiteMutationPayload>
+  ) {
+    return this.client.createSite(tenantId, payload);
+  }
+
+  @Patch('tenants/:tenantId/sites/:siteId')
+  @Roles(UserRole.ADMIN)
+  updateSite(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('siteId', new ParseUUIDPipe()) siteId: string,
+    @Body() payload: SiteMutationPayload
+  ) {
+    return this.client.updateSite(tenantId, siteId, payload);
   }
 
   @Get('tenants/:tenantId/asset-types')

@@ -36,6 +36,8 @@ puerto porque sus servicios se comunican por la red privada de Docker.
 GET /api/health
 GET /api/tenants
 GET /api/tenants/:tenantId/sites
+POST /api/tenants/:tenantId/sites
+PATCH /api/tenants/:tenantId/sites/:siteId
 GET /api/tenants/:tenantId/asset-types
 POST /api/tenants/:tenantId/asset-types
 PATCH /api/tenants/:tenantId/asset-types/:assetTypeId

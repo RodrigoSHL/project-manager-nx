@@ -143,6 +143,18 @@ Una mina, planta o faena no forma parte del árbol de activos. El sitio aporta
 el contexto geográfico mediante `siteId`; las subestaciones son las raíces del
 árbol técnico.
 
+#### RN-SIT-003 — El código de una ubicación es único dentro del tenant
+
+Dos minas, plantas o faenas de una misma empresa no pueden compartir el mismo
+`code`. El mismo código puede existir en otro tenant porque representa un
+contexto empresarial diferente.
+
+#### RN-SIT-004 — Desactivar una ubicación conserva su estructura
+
+Una ubicación puede marcarse como inactiva sin eliminar sus activos ni sus
+trabajos históricos. Reactivarla conserva el mismo UUID y no requiere
+reconstruir su árbol.
+
 ### Activos y jerarquía
 
 #### RN-ACT-001 — Todo activo pertenece a un tenant y un sitio
@@ -607,6 +619,13 @@ membresía del usuario, la pertenencia del trabajo al tenant y la presencia del
 elemento en su snapshot. También bloquea cargas y eliminaciones en trabajos
 cerrados.
 
+### RP-API-009 — Las mutaciones de sitios se resuelven dentro del tenant
+
+El BFF reserva la creación y edición de sitios para el rol global `admin`. La
+API obtiene el `tenantId` desde la ruta, comprueba que el tenant esté activo y
+busca cualquier sitio editable por la combinación `id + tenantId`. El frontend
+no puede indicar un propietario distinto dentro del cuerpo de la solicitud.
+
 ## Decisiones pendientes
 
 Estas ideas todavía no son reglas implementadas:
@@ -654,3 +673,4 @@ Ejemplo válido o inválido, si ayuda a entenderla.
 | 2026-09-10 | Se agrega la administración global de clientes con acceso JWT, estado y métricas operativas.           |
 | 2026-09-10 | Se unifica el login real y se agrega autorización por membresía de tenant en frontend y BFF.           |
 | 2026-09-11 | Cada elemento ejecutado admite comentario opcional y fotografías protegidas por tenant y trabajo.      |
+| 2026-09-11 | Minas, plantas y faenas pueden crearse y editarse desde la administración de cada tenant.              |

@@ -1,5 +1,5 @@
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
-import { MapPinned, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { AdminLayout } from '../layouts/admin-layout';
 import { AppLayout } from '../layouts/app-layout';
 import { AdminOverviewPage } from '../pages/admin-overview-page';
@@ -8,6 +8,7 @@ import { AdminAssetTypesPage } from '../pages/admin-asset-types-page';
 import { AdminWorkTypesPage } from '../pages/admin-work-types-page';
 import { AdminConceptsPage } from '../pages/admin-concepts-page';
 import { AdminPlaceholderPage } from '../pages/admin-placeholder-page';
+import { AdminSitesPage } from '../pages/admin-sites-page';
 import { AssetsPage } from '../pages/assets-page';
 import { DashboardPage } from '../pages/dashboard-page';
 import { FindingsPage } from '../pages/findings-page';
@@ -50,16 +51,7 @@ export function AppRoutes() {
                 <Route path="asset-types" element={<AdminAssetTypesPage />} />
                 <Route path="work-types" element={<AdminWorkTypesPage />} />
                 <Route path="concepts" element={<AdminConceptsPage />} />
-                <Route
-                  path="sites"
-                  element={
-                    <AdminPlaceholderPage
-                      title="Sitios y faenas"
-                      description="Ubicaciones organizacionales de cada tenant."
-                      icon={MapPinned}
-                    />
-                  }
-                />
+                <Route path="sites" element={<AdminSitesPage />} />
                 <Route
                   path="users"
                   element={

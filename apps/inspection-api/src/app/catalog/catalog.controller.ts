@@ -18,6 +18,8 @@ import { UpdateAssetDto } from './dto/update-asset.dto';
 import { UpdateCatalogItemDto } from './dto/update-catalog-item.dto';
 import { CreateConceptDto } from './dto/create-concept.dto';
 import { UpdateConceptDto } from './dto/update-concept.dto';
+import { CreateSiteDto } from './dto/create-site.dto';
+import { UpdateSiteDto } from './dto/update-site.dto';
 import { ActiveTenantGuard } from './guards/active-tenant.guard';
 
 @Controller('tenants')
@@ -33,6 +35,23 @@ export class CatalogController {
   @Get(':tenantId/sites')
   listSites(@Param('tenantId', new ParseUUIDPipe()) tenantId: string) {
     return this.catalogService.listSites(tenantId);
+  }
+
+  @Post(':tenantId/sites')
+  createSite(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Body() dto: CreateSiteDto
+  ) {
+    return this.catalogService.createSite(tenantId, dto);
+  }
+
+  @Patch(':tenantId/sites/:siteId')
+  updateSite(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('siteId', new ParseUUIDPipe()) siteId: string,
+    @Body() dto: UpdateSiteDto
+  ) {
+    return this.catalogService.updateSite(tenantId, siteId, dto);
   }
 
   @Get(':tenantId/asset-types')

@@ -20,6 +20,13 @@ export type CatalogMutationPayload = {
   active?: boolean;
 };
 
+export type SiteMutationPayload = {
+  code?: string;
+  name?: string;
+  type?: 'MINE' | 'PLANT' | 'SITE';
+  active?: boolean;
+};
+
 export type TenantMutationPayload = {
   code?: string;
   name?: string;
@@ -219,6 +226,22 @@ export class InspectionApiClient {
 
   listSites(tenantId: string) {
     return this.get(`/tenants/${encodeURIComponent(tenantId)}/sites`);
+  }
+
+  createSite(tenantId: string, payload: Required<SiteMutationPayload>) {
+    return this.request(`/tenants/${encodeURIComponent(tenantId)}/sites`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  updateSite(tenantId: string, siteId: string, payload: SiteMutationPayload) {
+    return this.request(
+      `/tenants/${encodeURIComponent(tenantId)}/sites/${encodeURIComponent(
+        siteId
+      )}`,
+      { method: 'PATCH', body: JSON.stringify(payload) }
+    );
   }
 
   listAssetTypes(tenantId: string) {

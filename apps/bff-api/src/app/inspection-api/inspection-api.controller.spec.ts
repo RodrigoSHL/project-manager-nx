@@ -29,6 +29,12 @@ describe('InspectionApiController authorization', () => {
     expect(
       Reflect.getMetadata(
         ROLES_KEY,
+        InspectionApiController.prototype.createSite
+      )
+    ).toEqual([UserRole.ADMIN]);
+    expect(
+      Reflect.getMetadata(
+        ROLES_KEY,
         InspectionApiController.prototype.createAssetType
       )
     ).toEqual([UserRole.ADMIN]);

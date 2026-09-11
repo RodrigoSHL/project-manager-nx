@@ -1,11 +1,13 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
 } from '@nestjs/common';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
@@ -36,5 +38,26 @@ export class PlatformController {
     @Body() dto: UpdateTenantDto
   ) {
     return this.platform.updateTenant(tenantId, dto);
+  }
+
+  @Get(':tenantId/memberships')
+  listMemberships(@Param('tenantId', new ParseUUIDPipe()) tenantId: string) {
+    return this.platform.listTenantMemberships(tenantId);
+  }
+
+  @Put(':tenantId/memberships/:userId')
+  grantAccess(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('userId', new ParseUUIDPipe()) userId: string
+  ) {
+    return this.platform.grantTenantAccess(tenantId, userId);
+  }
+
+  @Delete(':tenantId/memberships/:userId')
+  revokeAccess(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('userId', new ParseUUIDPipe()) userId: string
+  ) {
+    return this.platform.revokeTenantAccess(tenantId, userId);
   }
 }

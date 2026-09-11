@@ -1,4 +1,5 @@
-import type { PlatformSession, PlatformTenant, PlatformUser } from './models';
+import { authenticatedFetch } from '../auth/authenticated-fetch';
+import type { PlatformTenant, PlatformTenantUser } from './models';
 import type { PlatformTenantFormValue } from './platform-schema';
 
 export class PlatformApiError extends Error {
@@ -7,68 +8,55 @@ export class PlatformApiError extends Error {
   }
 }
 
-export const platformAuthApi = {
-  login(email: string, password: string) {
-    return request<{ access_token: string; user: PlatformUser }>(
-      '/api/auth/login',
-      {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
-      }
-    ).then(
-      ({ access_token, user }) =>
-        ({
-          accessToken: access_token,
-          user,
-        } satisfies PlatformSession)
-    );
-  },
-};
-
 export const platformTenantApi = {
-  list(accessToken: string, signal?: AbortSignal) {
+  list(signal?: AbortSignal) {
     return request<PlatformTenant[]>('/api/platform/tenants', {
-      accessToken,
       signal,
     });
   },
 
-  create(accessToken: string, input: PlatformTenantFormValue) {
+  create(input: PlatformTenantFormValue) {
     return request<PlatformTenant>('/api/platform/tenants', {
-      accessToken,
       method: 'POST',
       body: JSON.stringify(input),
     });
   },
 
-  update(
-    accessToken: string,
-    tenantId: string,
-    input: Partial<PlatformTenantFormValue>
-  ) {
+  update(tenantId: string, input: Partial<PlatformTenantFormValue>) {
     return request<PlatformTenant>(
       `/api/platform/tenants/${encodeURIComponent(tenantId)}`,
       {
-        accessToken,
         method: 'PATCH',
         body: JSON.stringify(input),
       }
     );
   },
+
+  listUsers(tenantId: string, signal?: AbortSignal) {
+    return request<PlatformTenantUser[]>(
+      `/api/platform/tenants/${encodeURIComponent(tenantId)}/users`,
+      { signal }
+    );
+  },
+
+  setUserAccess(tenantId: string, userId: string, enabled: boolean) {
+    return request(
+      `/api/platform/tenants/${encodeURIComponent(
+        tenantId
+      )}/users/${encodeURIComponent(userId)}/access`,
+      { method: enabled ? 'PUT' : 'DELETE' }
+    );
+  },
 };
 
-type PlatformRequestInit = RequestInit & { accessToken?: string };
-
-async function request<T>(path: string, init: PlatformRequestInit = {}) {
-  const { accessToken, ...requestInit } = init;
+async function request<T = unknown>(path: string, init: RequestInit = {}) {
   let response: Response;
   try {
-    response = await fetch(path, {
-      ...requestInit,
+    response = await authenticatedFetch(path, {
+      ...init,
       headers: {
-        ...(requestInit.body ? { 'Content-Type': 'application/json' } : {}),
-        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        ...requestInit.headers,
+        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+        ...init.headers,
       },
     });
   } catch {

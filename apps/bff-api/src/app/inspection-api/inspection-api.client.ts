@@ -26,6 +26,13 @@ export type TenantMutationPayload = {
   active?: boolean;
 };
 
+export type TenantMembershipResponse = {
+  id: string;
+  tenantId: string;
+  userId: string;
+  active: boolean;
+};
+
 export type ConceptMutationPayload = {
   code?: string;
   name?: string;
@@ -91,6 +98,18 @@ export class InspectionApiClient {
     return this.get('/tenants');
   }
 
+  listAccessibleTenants(userId: string) {
+    return this.get(`/access/users/${encodeURIComponent(userId)}/tenants`);
+  }
+
+  hasTenantAccess(userId: string, tenantId: string) {
+    return this.get<{ hasAccess: boolean }>(
+      `/access/users/${encodeURIComponent(userId)}/tenants/${encodeURIComponent(
+        tenantId
+      )}`
+    );
+  }
+
   listPlatformTenants() {
     return this.get('/platform/tenants');
   }
@@ -111,6 +130,30 @@ export class InspectionApiClient {
       method: 'PATCH',
       body: JSON.stringify(payload),
     });
+  }
+
+  listTenantMemberships(tenantId: string) {
+    return this.get<TenantMembershipResponse[]>(
+      `/platform/tenants/${encodeURIComponent(tenantId)}/memberships`
+    );
+  }
+
+  grantTenantAccess(tenantId: string, userId: string) {
+    return this.request(
+      `/platform/tenants/${encodeURIComponent(
+        tenantId
+      )}/memberships/${encodeURIComponent(userId)}`,
+      { method: 'PUT' }
+    );
+  }
+
+  revokeTenantAccess(tenantId: string, userId: string) {
+    return this.request(
+      `/platform/tenants/${encodeURIComponent(
+        tenantId
+      )}/memberships/${encodeURIComponent(userId)}`,
+      { method: 'DELETE' }
+    );
   }
 
   listWorks(tenantId: string) {

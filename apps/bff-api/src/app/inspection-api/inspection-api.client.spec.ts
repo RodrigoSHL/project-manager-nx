@@ -292,4 +292,29 @@ describe('InspectionApiClient', () => {
       }
     );
   });
+
+  it('forwards tenant access checks and membership changes', async () => {
+    fetchMock.mockImplementation(
+      async () => new Response(JSON.stringify({ saved: true }), { status: 200 })
+    );
+    const client = new InspectionApiClient();
+
+    await client.listAccessibleTenants('user-1');
+    await client.hasTenantAccess('user-1', 'tenant-1');
+    await client.grantTenantAccess('tenant-1', 'user-1');
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'http://inspection-api.test/api/access/users/user-1/tenants'
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'http://inspection-api.test/api/access/users/user-1/tenants/tenant-1'
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      'http://inspection-api.test/api/platform/tenants/tenant-1/memberships/user-1',
+      { method: 'PUT' }
+    );
+  });
 });

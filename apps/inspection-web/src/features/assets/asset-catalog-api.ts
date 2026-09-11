@@ -6,6 +6,7 @@ import type {
   WorkType,
 } from '../work-types/models';
 import type { Asset, Site, Tenant } from './models';
+import { authenticatedFetch } from '../auth/authenticated-fetch';
 
 export type AssetMutationInput = {
   code: string;
@@ -28,7 +29,7 @@ const baseUrl = (
 ).replace(/\/$/, '');
 
 async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(`${baseUrl}${path}`, { signal });
+  const response = await authenticatedFetch(`${baseUrl}${path}`, { signal });
 
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as {
@@ -262,7 +263,7 @@ export const assetCatalogApi = {
 };
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${baseUrl}${path}`, {
+  const response = await authenticatedFetch(`${baseUrl}${path}`, {
     ...init,
     headers: {
       ...(init.body ? { 'Content-Type': 'application/json' } : {}),

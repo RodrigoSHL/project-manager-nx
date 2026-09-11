@@ -8,22 +8,27 @@ import {
   Pencil,
   Plus,
   Search,
+  ShieldCheck,
+  UserRound,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { PlatformTenantForm } from '../features/platform/components/platform-tenant-form';
-import type { PlatformTenant } from '../features/platform/models';
+import type {
+  PlatformTenant,
+  PlatformTenantUser,
+} from '../features/platform/models';
 import {
   PlatformApiError,
   platformTenantApi,
 } from '../features/platform/platform-api';
-import { usePlatformAuth } from '../features/platform/platform-auth-context';
+import { useAuth } from '../features/auth/auth-context';
 import type { PlatformTenantFormValue } from '../features/platform/platform-schema';
 
 type PanelMode = 'detail' | 'create' | 'edit';
 
 export function PlatformTenantsPage() {
-  const auth = usePlatformAuth();
+  const auth = useAuth();
   const navigate = useNavigate();
   const [tenants, setTenants] = useState<PlatformTenant[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -32,16 +37,16 @@ export function PlatformTenantsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isMutating, setIsMutating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const accessToken = auth.session?.accessToken;
+  const [tenantUsers, setTenantUsers] = useState<PlatformTenantUser[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [mutatingUserId, setMutatingUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!accessToken) return;
     const controller = new AbortController();
     setIsLoading(true);
     setError(null);
     platformTenantApi
-      .list(accessToken, controller.signal)
+      .list(controller.signal)
       .then((items) => {
         setTenants(items);
         setSelectedId((current) =>
@@ -58,7 +63,26 @@ export function PlatformTenantsPage() {
         if (!controller.signal.aborted) setIsLoading(false);
       });
     return () => controller.abort();
-  }, [accessToken]);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedId || mode !== 'detail') {
+      setTenantUsers([]);
+      return;
+    }
+    const controller = new AbortController();
+    setIsLoadingUsers(true);
+    platformTenantApi
+      .listUsers(selectedId, controller.signal)
+      .then(setTenantUsers)
+      .catch((cause) => {
+        if (!controller.signal.aborted) handleApiError(cause);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoadingUsers(false);
+      });
+    return () => controller.abort();
+  }, [mode, selectedId]);
 
   const selected = tenants.find((tenant) => tenant.id === selectedId) ?? null;
   const filteredTenants = useMemo(() => {
@@ -77,14 +101,13 @@ export function PlatformTenantsPage() {
   );
 
   async function saveTenant(value: PlatformTenantFormValue) {
-    if (!accessToken) return;
     setIsMutating(true);
     setError(null);
     try {
       const saved =
         mode === 'edit' && selected
-          ? await platformTenantApi.update(accessToken, selected.id, value)
-          : await platformTenantApi.create(accessToken, value);
+          ? await platformTenantApi.update(selected.id, value)
+          : await platformTenantApi.create(value);
       setTenants((current) => {
         const exists = current.some((tenant) => tenant.id === saved.id);
         const next = exists
@@ -106,13 +129,30 @@ export function PlatformTenantsPage() {
     }
   }
 
+  async function updateUserAccess(user: PlatformTenantUser, enabled: boolean) {
+    if (!selected) return;
+    setMutatingUserId(user.id);
+    setError(null);
+    try {
+      await platformTenantApi.setUserAccess(selected.id, user.id, enabled);
+      setTenantUsers((current) =>
+        current.map((candidate) =>
+          candidate.id === user.id
+            ? { ...candidate, hasAccess: enabled }
+            : candidate
+        )
+      );
+    } catch (cause) {
+      handleApiError(cause);
+    } finally {
+      setMutatingUserId(null);
+    }
+  }
+
   function handleApiError(cause: unknown) {
-    if (
-      cause instanceof PlatformApiError &&
-      (cause.status === 401 || cause.status === 403)
-    ) {
+    if (cause instanceof PlatformApiError && cause.status === 401) {
       auth.logout();
-      navigate('/platform/login', { replace: true });
+      navigate('/login?redirect=/platform/tenants', { replace: true });
       return;
     }
     setError(
@@ -256,7 +296,15 @@ export function PlatformTenantsPage() {
           ) : null}
 
           {mode === 'detail' && selected ? (
-            <TenantDetail tenant={selected} onEdit={() => setMode('edit')} />
+            <div className="space-y-4">
+              <TenantDetail tenant={selected} onEdit={() => setMode('edit')} />
+              <TenantAccess
+                users={tenantUsers}
+                isLoading={isLoadingUsers}
+                mutatingUserId={mutatingUserId}
+                onChange={updateUserAccess}
+              />
+            </div>
           ) : null}
 
           {mode === 'detail' && !selected && !isLoading ? (
@@ -266,6 +314,92 @@ export function PlatformTenantsPage() {
           ) : null}
         </div>
       </div>
+    </section>
+  );
+}
+
+function TenantAccess({
+  users,
+  isLoading,
+  mutatingUserId,
+  onChange,
+}: {
+  users: PlatformTenantUser[];
+  isLoading: boolean;
+  mutatingUserId: string | null;
+  onChange: (user: PlatformTenantUser, enabled: boolean) => void;
+}) {
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start gap-3">
+        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-700">
+          <UserRound className="size-4" />
+        </span>
+        <div>
+          <h2 className="font-semibold text-slate-950">Acceso de usuarios</h2>
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            Los usuarios habilitados podrán ver y operar solamente este cliente.
+          </p>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="grid min-h-28 place-items-center">
+          <LoaderCircle className="size-6 animate-spin text-slate-400" />
+        </div>
+      ) : (
+        <div className="mt-4 divide-y divide-slate-100 border-t border-slate-100">
+          {users.map((user) => {
+            const globalAdmin = user.roles.includes('admin');
+            const enabled = globalAdmin || user.hasAccess;
+            return (
+              <div
+                key={user.id}
+                className="flex min-w-0 items-center gap-3 py-3"
+              >
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
+                  {user.name.slice(0, 1).toUpperCase()}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-slate-900">
+                    {user.name}
+                  </span>
+                  <span className="block truncate text-xs text-slate-500">
+                    {user.email}
+                  </span>
+                </span>
+                {globalAdmin ? (
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800">
+                    <ShieldCheck className="size-3" /> Global
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={mutatingUserId === user.id}
+                    onClick={() => onChange(user, !enabled)}
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition disabled:opacity-50 ${
+                      enabled
+                        ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {mutatingUserId === user.id
+                      ? 'Guardando…'
+                      : enabled
+                      ? 'Habilitado'
+                      : 'Sin acceso'}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          {!users.length ? (
+            <p className="py-5 text-center text-sm text-slate-500">
+              No hay usuarios registrados.
+            </p>
+          ) : null}
+        </div>
+      )}
     </section>
   );
 }

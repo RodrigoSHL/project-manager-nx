@@ -71,6 +71,11 @@ GET /api/platform/tenants
 GET /api/platform/tenants/:tenantId
 POST /api/platform/tenants
 PATCH /api/platform/tenants/:tenantId
+GET /api/platform/tenants/:tenantId/memberships
+PUT /api/platform/tenants/:tenantId/memberships/:userId
+DELETE /api/platform/tenants/:tenantId/memberships/:userId
+GET /api/access/users/:userId/tenants
+GET /api/access/users/:userId/tenants/:tenantId
 ```
 
 El BFF publica el mismo catálogo y sus mutaciones bajo `/api/inspection`. La
@@ -106,12 +111,13 @@ La administración global de clientes utiliza las rutas internas
 exige un JWT con rol global `admin`. Desactivar un tenant conserva sus datos,
 pero lo retira del catálogo operativo y bloquea sus operaciones de dominio.
 
-La autenticación multi-tenant todavía no forma parte de este módulo. Cuando se
-implemente, el BFF deberá obtener el tenant permitido desde la sesión y no desde
-una selección libre del navegador.
+`tenant_memberships` guarda la relación entre el UUID de un usuario de
+`user-api` y los tenants a los que puede entrar. El BFF obtiene el usuario desde
+el JWT, filtra la lista de empresas y valida la membresía en cada ruta con
+`tenantId`. El rol global `admin` omite esa comprobación y puede operar sobre
+todos los tenants activos.
 
 ## Pendiente para la siguiente iteración
 
-- Obtener `tenantId` desde una sesión autenticada y validar sus permisos en el
-  BFF.
+- Separar el rol global `admin` de un futuro rol administrador de tenant.
 - Incorporar auditoría de cambios antes de habilitar mutaciones en producción.

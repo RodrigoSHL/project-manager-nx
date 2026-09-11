@@ -10,14 +10,10 @@ export interface PlatformTenant {
   updatedAt: string;
 }
 
-export interface PlatformUser {
-  userId: string;
+export interface PlatformTenantUser {
+  id: string;
   email: string;
   name: string;
   roles: string[];
-}
-
-export interface PlatformSession {
-  accessToken: string;
-  user: PlatformUser;
+  hasAccess: boolean;
 }

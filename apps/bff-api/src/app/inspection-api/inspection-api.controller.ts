@@ -8,7 +8,14 @@ import {
   Patch,
   Post,
   Put,
+  Request,
+  UseGuards,
 } from '@nestjs/common';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { ExpressRequestWithUser } from '../auth/types/express-request-with-user';
+import { UserRole } from '../user-api/user-api.client';
 import {
   AssetMutationPayload,
   CatalogMutationPayload,
@@ -20,14 +27,18 @@ import {
   WorkMutationPayload,
   WorkResponsesPayload,
 } from './inspection-api.client';
+import { InspectionTenantAccessGuard } from './inspection-tenant-access.guard';
 
 @Controller('api/inspection')
+@UseGuards(JwtAuthGuard, InspectionTenantAccessGuard, RolesGuard)
 export class InspectionApiController {
   constructor(private readonly client: InspectionApiClient) {}
 
   @Get('tenants')
-  listTenants() {
-    return this.client.listTenants();
+  listTenants(@Request() request: ExpressRequestWithUser) {
+    return request.user.roles.includes(UserRole.ADMIN)
+      ? this.client.listTenants()
+      : this.client.listAccessibleTenants(request.user.userId);
   }
 
   @Get('tenants/:tenantId/works')
@@ -90,6 +101,7 @@ export class InspectionApiController {
   }
 
   @Post('tenants/:tenantId/asset-types')
+  @Roles(UserRole.ADMIN)
   createAssetType(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Body() payload: Required<CatalogMutationPayload>
@@ -98,6 +110,7 @@ export class InspectionApiController {
   }
 
   @Patch('tenants/:tenantId/asset-types/:assetTypeId')
+  @Roles(UserRole.ADMIN)
   updateAssetType(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Param('assetTypeId', new ParseUUIDPipe()) assetTypeId: string,
@@ -115,6 +128,7 @@ export class InspectionApiController {
   }
 
   @Put('tenants/:tenantId/asset-types/:assetTypeId/work-types/:workTypeId')
+  @Roles(UserRole.ADMIN)
   associateAssetTypeWorkType(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Param('assetTypeId', new ParseUUIDPipe()) assetTypeId: string,
@@ -128,6 +142,7 @@ export class InspectionApiController {
   }
 
   @Delete('tenants/:tenantId/asset-types/:assetTypeId/work-types/:workTypeId')
+  @Roles(UserRole.ADMIN)
   disassociateAssetTypeWorkType(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Param('assetTypeId', new ParseUUIDPipe()) assetTypeId: string,
@@ -146,6 +161,7 @@ export class InspectionApiController {
   }
 
   @Post('tenants/:tenantId/work-types')
+  @Roles(UserRole.ADMIN)
   createWorkType(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Body() payload: Required<CatalogMutationPayload>
@@ -154,6 +170,7 @@ export class InspectionApiController {
   }
 
   @Patch('tenants/:tenantId/work-types/:workTypeId')
+  @Roles(UserRole.ADMIN)
   updateWorkType(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Param('workTypeId', new ParseUUIDPipe()) workTypeId: string,
@@ -168,6 +185,7 @@ export class InspectionApiController {
   }
 
   @Post('tenants/:tenantId/work-types/:workTypeId/form-template')
+  @Roles(UserRole.ADMIN)
   createFormTemplate(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Param('workTypeId', new ParseUUIDPipe()) workTypeId: string,
@@ -177,6 +195,7 @@ export class InspectionApiController {
   }
 
   @Patch('tenants/:tenantId/form-templates/:templateId')
+  @Roles(UserRole.ADMIN)
   updateFormTemplate(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Param('templateId', new ParseUUIDPipe()) templateId: string,
@@ -186,6 +205,7 @@ export class InspectionApiController {
   }
 
   @Post('tenants/:tenantId/form-templates/:templateId/sections')
+  @Roles(UserRole.ADMIN)
   createFormSection(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Param('templateId', new ParseUUIDPipe()) templateId: string,
@@ -195,6 +215,7 @@ export class InspectionApiController {
   }
 
   @Patch('tenants/:tenantId/form-sections/:sectionId')
+  @Roles(UserRole.ADMIN)
   updateFormSection(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Param('sectionId', new ParseUUIDPipe()) sectionId: string,
@@ -204,6 +225,7 @@ export class InspectionApiController {
   }
 
   @Delete('tenants/:tenantId/form-sections/:sectionId')
+  @Roles(UserRole.ADMIN)
   deleteFormSection(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Param('sectionId', new ParseUUIDPipe()) sectionId: string
@@ -212,6 +234,7 @@ export class InspectionApiController {
   }
 
   @Put('tenants/:tenantId/form-templates/:templateId/section-order')
+  @Roles(UserRole.ADMIN)
   reorderFormSections(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Param('templateId', new ParseUUIDPipe()) templateId: string,
@@ -225,6 +248,7 @@ export class InspectionApiController {
   }
 
   @Post('tenants/:tenantId/form-sections/:sectionId/items')
+  @Roles(UserRole.ADMIN)
   createFormItem(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Param('sectionId', new ParseUUIDPipe()) sectionId: string,
@@ -234,6 +258,7 @@ export class InspectionApiController {
   }
 
   @Patch('tenants/:tenantId/form-items/:itemId')
+  @Roles(UserRole.ADMIN)
   updateFormItem(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Param('itemId', new ParseUUIDPipe()) itemId: string,
@@ -243,6 +268,7 @@ export class InspectionApiController {
   }
 
   @Delete('tenants/:tenantId/form-items/:itemId')
+  @Roles(UserRole.ADMIN)
   deleteFormItem(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Param('itemId', new ParseUUIDPipe()) itemId: string
@@ -251,6 +277,7 @@ export class InspectionApiController {
   }
 
   @Put('tenants/:tenantId/form-sections/:sectionId/item-order')
+  @Roles(UserRole.ADMIN)
   reorderFormItems(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Param('sectionId', new ParseUUIDPipe()) sectionId: string,
@@ -269,6 +296,7 @@ export class InspectionApiController {
   }
 
   @Post('tenants/:tenantId/concepts')
+  @Roles(UserRole.ADMIN)
   createConcept(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Body() payload: Required<ConceptMutationPayload>
@@ -277,6 +305,7 @@ export class InspectionApiController {
   }
 
   @Patch('tenants/:tenantId/concepts/:conceptId')
+  @Roles(UserRole.ADMIN)
   updateConcept(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Param('conceptId', new ParseUUIDPipe()) conceptId: string,
@@ -293,6 +322,7 @@ export class InspectionApiController {
   }
 
   @Put('tenants/:tenantId/asset-types/:assetTypeId/concepts/:conceptId')
+  @Roles(UserRole.ADMIN)
   associateAssetTypeConcept(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Param('assetTypeId', new ParseUUIDPipe()) assetTypeId: string,
@@ -306,6 +336,7 @@ export class InspectionApiController {
   }
 
   @Delete('tenants/:tenantId/asset-types/:assetTypeId/concepts/:conceptId')
+  @Roles(UserRole.ADMIN)
   disassociateAssetTypeConcept(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Param('assetTypeId', new ParseUUIDPipe()) assetTypeId: string,
@@ -371,6 +402,7 @@ export class InspectionApiController {
   @Put(
     'tenants/:tenantId/sites/:siteId/assets/:assetId/work-type-configurations/:workTypeId'
   )
+  @Roles(UserRole.ADMIN)
   setAssetWorkTypeOverride(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Param('siteId', new ParseUUIDPipe()) siteId: string,
@@ -390,6 +422,7 @@ export class InspectionApiController {
   @Delete(
     'tenants/:tenantId/sites/:siteId/assets/:assetId/work-type-configurations/:workTypeId'
   )
+  @Roles(UserRole.ADMIN)
   clearAssetWorkTypeOverride(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Param('siteId', new ParseUUIDPipe()) siteId: string,
@@ -405,6 +438,7 @@ export class InspectionApiController {
   }
 
   @Post('tenants/:tenantId/sites/:siteId/assets')
+  @Roles(UserRole.ADMIN)
   createAsset(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Param('siteId', new ParseUUIDPipe()) siteId: string,
@@ -414,6 +448,7 @@ export class InspectionApiController {
   }
 
   @Patch('tenants/:tenantId/sites/:siteId/assets/:assetId')
+  @Roles(UserRole.ADMIN)
   updateAsset(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Param('siteId', new ParseUUIDPipe()) siteId: string,
@@ -424,6 +459,7 @@ export class InspectionApiController {
   }
 
   @Delete('tenants/:tenantId/sites/:siteId/assets/:assetId')
+  @Roles(UserRole.ADMIN)
   deleteAsset(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Param('siteId', new ParseUUIDPipe()) siteId: string,

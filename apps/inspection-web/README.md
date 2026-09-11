@@ -21,14 +21,15 @@ npx nx serve inspection-web
 Abrir `http://localhost:4204`.
 
 Los cuatro comandos `nx serve` deben permanecer ejecutándose, cada uno en su
-propia terminal. `user-api` es necesario para autenticar el acceso a la
-administración de plataforma. En desarrollo, `docker-compose.yml` publica PostgreSQL en
+propia terminal. `user-api` autentica tanto la operación como la administración
+de plataforma. En desarrollo, `docker-compose.yml` publica PostgreSQL en
 `localhost:5432`. `docker-compose.prod.yml` mantiene la base y las APIs dentro
 de la red privada de Docker y no debe mezclarse con procesos Nx locales.
 
 ## Alcance actual
 
-- Login simulado; no valida ni persiste credenciales.
+- Login real conectado al BFF, restauración de sesión mediante
+  `/api/auth/profile` y cierre automático cuando el JWT expira.
 - Layout responsive con sidebar en escritorio y menú lateral en móvil.
 - Navegación con React Router.
 - Dashboard con valores escritos directamente en el frontend.
@@ -36,8 +37,8 @@ de la red privada de Docker y no debe mezclarse con procesos Nx locales.
 - Datos iniciales para 2 tenants, 4 sitios y más de 15 activos por tenant, almacenados en PostgreSQL.
 - Módulo de Trabajos conectado al BFF, con creación desde un activo, filtros,
   captura parcial, inicio y finalización validada.
-- Administración global de clientes en `/platform/tenants`, con login JWT,
-  listado, búsqueda, creación, edición, activación y métricas de uso.
+- Administración global de clientes en `/platform/tenants`, con listado,
+  búsqueda, creación, edición, activación, métricas y asignación de usuarios.
 - Página visual para Hallazgos.
 - Administración jerárquica de activos con árbol, alta contextual, edición,
   búsqueda, cambio de estado y eliminación protegida cuando existen hijos.
@@ -72,12 +73,13 @@ src/
 ├── layouts/      # Estructura compartida: sidebar, cabecera y contenido
 ├── pages/        # Una pantalla por ruta
 ├── features/     # Código agrupado por módulo funcional
+│   ├── auth/         # Sesión JWT compartida, perfil y cliente HTTP autenticado
 │   ├── assets/       # Cliente BFF, modelos, formularios, árbol y detalle
 │   ├── asset-types/  # Modelo y consultas del catálogo de tipos de activo
 │   ├── catalogs/     # Carga remota de catálogos administrativos
 │   ├── concepts/     # Cliente BFF, modelos, caché UI y componentes de conceptos
 │   ├── form-templates/ # Cliente BFF, modelos, caché UI, editor y vista previa
-│   ├── platform/     # Autenticación global, cliente BFF y gestión de tenants
+│   ├── platform/     # Cliente BFF y gestión global de tenants
 │   ├── work-types/   # Modelos y componentes de tipos de trabajo permitidos
 │   └── works/        # Cliente BFF, ejecución de formularios y caché de pantalla
 ├── components/   # Componentes visuales reutilizables
@@ -88,6 +90,7 @@ src/
 └── styles.css    # TailwindCSS y estilos globales mínimos
 ```
 
-El login se guarda solamente en memoria con `useState`. Al refrescar el
-navegador se vuelve a `/login`; esto sigue siendo un acceso simulado, sin
-autenticación multi-tenant real.
+El JWT sigue el patrón vigente de `project-web` y `jira-web`: se conserva en
+`localStorage`, se valida contra el BFF al refrescar y se adjunta a las llamadas
+HTTP. Un administrador global puede acceder a todos los tenants; un usuario
+normal solo recibe los tenants que tiene asignados en Control global.

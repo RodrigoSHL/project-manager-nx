@@ -15,16 +15,16 @@ import {
   SheetDescription,
   SheetTitle,
 } from '../components/ui/sheet';
-import { usePlatformAuth } from '../features/platform/platform-auth-context';
+import { useAuth } from '../features/auth/auth-context';
 
 function PlatformSidebar({ onNavigate }: { onNavigate?: () => void }) {
-  const auth = usePlatformAuth();
+  const auth = useAuth();
   const navigate = useNavigate();
 
   function logout() {
     auth.logout();
     onNavigate?.();
-    navigate('/platform/login', { replace: true });
+    navigate('/login', { replace: true });
   }
 
   return (
@@ -77,18 +77,16 @@ function PlatformSidebar({ onNavigate }: { onNavigate?: () => void }) {
       <div className="border-t border-white/10 p-3">
         <div className="mb-2 px-3 py-2">
           <p className="truncate text-sm font-medium text-white">
-            {auth.session?.user.name}
+            {auth.user?.name}
           </p>
-          <p className="truncate text-xs text-slate-400">
-            {auth.session?.user.email}
-          </p>
+          <p className="truncate text-xs text-slate-400">{auth.user?.email}</p>
         </div>
         <button
           type="button"
           onClick={logout}
           className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
         >
-          <LogOut className="size-5" /> Cerrar sesión administrativa
+          <LogOut className="size-5" /> Cerrar sesión
         </button>
       </div>
     </>

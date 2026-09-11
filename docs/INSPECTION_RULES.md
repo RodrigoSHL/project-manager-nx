@@ -19,6 +19,8 @@ commits, pruebas y revisiones de código.
 
 ```mermaid
 flowchart TD
+  U[Usuario] --> TM[Membresía de tenant]
+  TM --> T
   T[Tenant / Empresa] --> S[Site / Mina, planta o faena]
   S --> A1[Activo raíz: Subestación]
   A1 --> A2[Activo hijo]
@@ -94,11 +96,39 @@ Una operación realizada dentro de un tenant solo puede consultar o modificar
 datos de ese mismo tenant. Conocer el UUID de un dato perteneciente a otra
 empresa no permite acceder a él.
 
-#### RN-TEN-003 — El aislamiento todavía no es autenticación
+#### RN-TEN-003 — El tenant seleccionado debe estar asignado al usuario
 
-Actualmente el tenant se selecciona en la interfaz. Esto permite probar el
-modelo, pero todavía no demuestra que el usuario tenga acceso a esa empresa.
-La autenticación y autorización multi-tenant están pendientes.
+Un usuario operacional solo puede listar y consultar tenants con una membresía
+activa en `TenantMembership`. El BFF verifica esa relación para cada ruta que
+contenga `tenantId`; conocer el UUID de otro cliente no concede acceso.
+
+El rol global `admin` puede operar sobre todos los tenants activos porque
+administra la plataforma completa.
+
+#### RN-TEN-004 — Los accesos se administran desde Control global
+
+Un administrador global puede habilitar o revocar el acceso de un usuario a un
+tenant desde `/platform/tenants`. Revocar una membresía no elimina al usuario ni
+los datos operacionales del cliente.
+
+### Autenticación y autorización
+
+#### RN-AUT-001 — GridAssets utiliza una sola sesión
+
+La operación y la administración de plataforma usan el mismo login real del
+BFF. El frontend valida el JWT mediante `/api/auth/profile` al restaurar la
+aplicación y elimina la sesión cuando el servidor responde `401`.
+
+#### RN-AUT-002 — La administración global requiere `admin`
+
+Las rutas frontend `/platform` y `/admin`, los endpoints `/api/platform/*` y las
+mutaciones de configuración operacional requieren el rol global `admin`.
+
+#### RN-AUT-003 — Un miembro puede ejecutar la operación de su tenant
+
+Un usuario con rol `user` y membresía activa puede consultar la configuración,
+crear trabajos, guardar respuestas y avanzar el estado de esos trabajos dentro
+de su tenant. No puede modificar catálogos, activos ni plantillas.
 
 ### Sitios
 
@@ -531,22 +561,25 @@ crear, guardar, iniciar o finalizar, la interfaz vuelve a consultar PostgreSQL.
 La ruta interna de `inspection-api` no se publica en producción; el navegador
 solo accede a ella a través del BFF.
 
-### RP-FE-007 — La sesión de plataforma está separada
+### RP-FE-007 — GridAssets comparte una sesión autenticada
 
-El login operativo continúa simulado. `/platform/login` valida credenciales
-reales mediante el BFF, comprueba el rol global y conserva el JWT durante la
-sesión de la pestaña. Migrar el token a una cookie HttpOnly segura queda
-pendiente antes de producción.
+La operación y la plataforma comparten el login real, la validación de perfil y
+el cierre de sesión. El JWT se adjunta en todas las llamadas a
+`/api/inspection` y `/api/platform`.
+
+### RP-SEC-002 — El BFF valida el acceso al tenant
+
+`InspectionTenantAccessGuard` autoriza a administradores globales o comprueba
+una membresía activa antes de reenviar una petición con `tenantId`. La lista de
+tenants también se filtra en el BFF según el usuario autenticado.
 
 ## Decisiones pendientes
 
 Estas ideas todavía no son reglas implementadas:
 
-- Obtener el tenant autorizado desde una sesión autenticada.
-- Definir roles y permisos para administrar catálogos y activos.
 - Separar el rol global `admin` en un permiso explícito `platform_admin` cuando
   existan administradores propios de cada tenant.
-- Reemplazar el JWT de `sessionStorage` por una cookie HttpOnly, Secure y
+- Reemplazar el JWT de `localStorage` por una cookie HttpOnly, Secure y
   SameSite cuando la autenticación de GridAssets pase a producción.
 - Incorporar auditoría de altas, cambios de estado y modificaciones de tenants.
 - Registrar quién creó, modificó, activó o desactivó un registro.
@@ -585,3 +618,4 @@ Ejemplo válido o inválido, si ayuda a entenderla.
 | 2026-09-09 | Plantillas, secciones, elementos y su orden se conectan al BFF, inspection-api y PostgreSQL.           |
 | 2026-09-10 | Trabajos, snapshots, respuestas y tareas completadas se conectan al BFF, API y PostgreSQL.             |
 | 2026-09-10 | Se agrega la administración global de clientes con acceso JWT, estado y métricas operativas.           |
+| 2026-09-10 | Se unifica el login real y se agrega autorización por membresía de tenant en frontend y BFF.           |

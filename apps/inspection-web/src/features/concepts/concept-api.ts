@@ -4,6 +4,7 @@ import type {
   ConceptFormValue,
   ConceptOption,
 } from './models';
+import { authenticatedFetch } from '../auth/authenticated-fetch';
 
 export type ConceptWithOptions = Concept & { options: ConceptOption[] };
 
@@ -75,7 +76,7 @@ export const conceptApi = {
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${baseUrl}${path}`, {
+    response = await authenticatedFetch(`${baseUrl}${path}`, {
       ...init,
       headers: {
         ...(init.body ? { 'Content-Type': 'application/json' } : {}),

@@ -6,6 +6,7 @@ import type {
   WorkItemValue,
   WorkTemplateSnapshot,
 } from './models';
+import { authenticatedFetch } from '../auth/authenticated-fetch';
 
 export type WorkCatalogResponse = {
   works: Work[];
@@ -127,7 +128,7 @@ async function request<T = unknown>(
 ): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${baseUrl}${path}`, {
+    response = await authenticatedFetch(`${baseUrl}${path}`, {
       ...init,
       headers: {
         ...(init.body ? { 'Content-Type': 'application/json' } : {}),

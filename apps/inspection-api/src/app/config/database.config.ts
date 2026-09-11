@@ -23,9 +23,11 @@ import { SeedFormTemplates1799100700000 } from '../../migrations/1799100700000-S
 import { CreateWorks1799100800000 } from '../../migrations/1799100800000-CreateWorks';
 import { SeedWorks1799100900000 } from '../../migrations/1799100900000-SeedWorks';
 import { ExtendTenantsForPlatformAdministration1799101000000 } from '../../migrations/1799101000000-ExtendTenantsForPlatformAdministration';
+import { CreateTenantMemberships1799101100000 } from '../../migrations/1799101100000-CreateTenantMemberships';
 import { ConceptResponseEntity } from '../works/entities/concept-response.entity';
 import { TaskCompletionEntity } from '../works/entities/task-completion.entity';
 import { WorkEntity } from '../works/entities/work.entity';
+import { TenantMembershipEntity } from '../platform/entities/tenant-membership.entity';
 
 export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
   type: 'postgres',
@@ -60,6 +62,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     WorkEntity,
     ConceptResponseEntity,
     TaskCompletionEntity,
+    TenantMembershipEntity,
   ],
   migrations: [
     CreateInspectionCatalog1799100000000,
@@ -73,6 +76,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     CreateWorks1799100800000,
     SeedWorks1799100900000,
     ExtendTenantsForPlatformAdministration1799101000000,
+    CreateTenantMemberships1799101100000,
   ],
   migrationsRun: process.env.INSPECTION_MIGRATIONS_RUN === 'true',
   synchronize: false,

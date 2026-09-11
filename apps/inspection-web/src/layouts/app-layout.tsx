@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Button } from '../components/ui/button';
+import { useAuth } from '../features/auth/auth-context';
+import { isGlobalAdmin } from '../features/auth/auth-storage';
 import {
   Sheet,
   SheetContent,
@@ -27,14 +29,8 @@ const navigation = [
   { to: '/admin', label: 'Administración', icon: Settings },
 ];
 
-type AppLayoutProps = {
-  onLogout: () => void;
-};
-
-function SidebarContent({
-  onNavigate,
-  onLogout,
-}: AppLayoutProps & { onNavigate?: () => void }) {
+function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+  const auth = useAuth();
   return (
     <>
       <div className="flex h-16 items-center gap-3 border-b border-white/10 px-5">
@@ -48,41 +44,53 @@ function SidebarContent({
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 p-3" aria-label="Principal">
-        {navigation.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              `flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm transition-colors ${
-                isActive
-                  ? 'bg-white/10 font-medium text-white'
-                  : 'text-slate-300 hover:bg-white/5 hover:text-white'
-              }`
-            }
-          >
-            <Icon className="size-5" />
-            {label}
-          </NavLink>
-        ))}
+        {navigation
+          .filter(({ to }) => to !== '/admin' || isGlobalAdmin(auth.user))
+          .map(({ to, label, icon: Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                `flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm transition-colors ${
+                  isActive
+                    ? 'bg-white/10 font-medium text-white'
+                    : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                }`
+              }
+            >
+              <Icon className="size-5" />
+              {label}
+            </NavLink>
+          ))}
 
-        <p className="mt-5 border-t border-white/10 px-3 pt-4 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-slate-500">
-          Control global
-        </p>
-        <NavLink
-          to="/platform/tenants"
-          onClick={onNavigate}
-          className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
-        >
-          <ShieldCheck className="size-5" />
-          Administrar clientes
-        </NavLink>
+        {isGlobalAdmin(auth.user) ? (
+          <>
+            <p className="mt-5 border-t border-white/10 px-3 pt-4 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Control global
+            </p>
+            <NavLink
+              to="/platform/tenants"
+              onClick={onNavigate}
+              className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+            >
+              <ShieldCheck className="size-5" />
+              Administrar clientes
+            </NavLink>
+          </>
+        ) : null}
       </nav>
 
       <div className="border-t border-white/10 p-3">
+        <div className="mb-2 px-3 py-2">
+          <p className="truncate text-sm font-medium text-white">
+            {auth.user?.name}
+          </p>
+          <p className="truncate text-xs text-slate-400">{auth.user?.email}</p>
+        </div>
         <button
           type="button"
-          onClick={onLogout}
+          onClick={auth.logout}
           className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
         >
           <LogOut className="size-5" />
@@ -93,13 +101,13 @@ function SidebarContent({
   );
 }
 
-export function AppLayout({ onLogout }: AppLayoutProps) {
+export function AppLayout() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-950">
       <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col bg-slate-950 md:flex">
-        <SidebarContent onLogout={onLogout} />
+        <SidebarContent />
       </aside>
 
       <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
@@ -109,10 +117,7 @@ export function AppLayout({ onLogout }: AppLayoutProps) {
             Navegación entre las secciones de la aplicación
           </SheetDescription>
           <div className="flex h-full flex-col">
-            <SidebarContent
-              onLogout={onLogout}
-              onNavigate={() => setIsMenuOpen(false)}
-            />
+            <SidebarContent onNavigate={() => setIsMenuOpen(false)} />
           </div>
         </SheetContent>
       </Sheet>

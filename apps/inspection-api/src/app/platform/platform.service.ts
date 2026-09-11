@@ -11,6 +11,7 @@ import { TenantEntity } from '../catalog/entities/tenant.entity';
 import { WorkEntity } from '../works/entities/work.entity';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
+import { TenantMembershipEntity } from './entities/tenant-membership.entity';
 
 @Injectable()
 export class PlatformService {
@@ -22,7 +23,9 @@ export class PlatformService {
     @InjectRepository(AssetEntity)
     private readonly assets: Repository<AssetEntity>,
     @InjectRepository(WorkEntity)
-    private readonly works: Repository<WorkEntity>
+    private readonly works: Repository<WorkEntity>,
+    @InjectRepository(TenantMembershipEntity)
+    private readonly memberships: Repository<TenantMembershipEntity>
   ) {}
 
   async listTenants() {
@@ -53,6 +56,51 @@ export class PlatformService {
       active: dto.active ?? tenant.active,
     });
     return this.withUsage(await this.saveTenant(tenant));
+  }
+
+  async listAccessibleTenants(userId: string) {
+    const memberships = await this.memberships.find({
+      where: { userId, active: true, tenant: { active: true } },
+      relations: { tenant: true },
+      order: { tenant: { name: 'ASC' } },
+    });
+    return memberships.map(({ tenant }) => tenant);
+  }
+
+  async hasTenantAccess(userId: string, tenantId: string) {
+    return this.memberships.exists({
+      where: {
+        userId,
+        tenantId,
+        active: true,
+        tenant: { active: true },
+      },
+    });
+  }
+
+  async listTenantMemberships(tenantId: string) {
+    await this.findTenantOrFail(tenantId);
+    return this.memberships.find({
+      where: { tenantId, active: true },
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  async grantTenantAccess(tenantId: string, userId: string) {
+    await this.findTenantOrFail(tenantId);
+    const current = await this.memberships.findOne({
+      where: { tenantId, userId },
+    });
+    const membership = current
+      ? Object.assign(current, { active: true })
+      : this.memberships.create({ tenantId, userId, active: true });
+    return this.memberships.save(membership);
+  }
+
+  async revokeTenantAccess(tenantId: string, userId: string) {
+    await this.findTenantOrFail(tenantId);
+    await this.memberships.delete({ tenantId, userId });
+    return { tenantId, userId, revoked: true };
   }
 
   private async withUsage(tenant: TenantEntity) {

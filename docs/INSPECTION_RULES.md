@@ -538,6 +538,12 @@ inventa una regla distinta.
 Cambiar el tenant en un selector solo cambia el contexto visual actual. Cuando
 exista autenticación, el BFF obtendrá los tenants permitidos desde la sesión.
 
+La interfaz recuerda por usuario el último tenant seleccionado y el último
+sitio utilizado dentro de cada tenant. Estos identificadores son preferencias
+locales de navegación: siempre se validan contra las empresas y ubicaciones que
+devuelve el BFF. Si una preferencia ya no existe o el usuario perdió acceso, la
+pantalla selecciona el primer contexto disponible.
+
 ### RP-FE-003 — Conceptos utiliza el backend como fuente de verdad
 
 El contexto React mantiene una caché de los conceptos, opciones y asociaciones
@@ -756,3 +762,4 @@ Ejemplo válido o inválido, si ayuda a entenderla.
 | 2026-09-11 | Cada elemento ejecutado admite comentario opcional y fotografías protegidas por tenant y trabajo.             |
 | 2026-09-11 | Minas, plantas y faenas pueden crearse y editarse desde la administración de cada tenant.                     |
 | 2026-09-11 | Las membresías incorporan roles por tenant y autorización diferenciada para lectura, trabajo y configuración. |
+| 2026-09-13 | La navegación recuerda por usuario el último tenant y el último sitio utilizado dentro de cada tenant.        |

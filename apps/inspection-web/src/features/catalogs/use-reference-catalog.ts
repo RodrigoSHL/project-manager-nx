@@ -5,6 +5,11 @@ import {
   type CatalogMutationInput,
 } from '../assets/asset-catalog-api';
 import type { Tenant } from '../assets/models';
+import { useAuth } from '../auth/auth-context';
+import {
+  organizationSelectionStorage,
+  resolveAvailableSelection,
+} from '../tenants/organization-selection-storage';
 import type { WorkType } from '../work-types/models';
 
 function errorMessage(error: unknown) {
@@ -14,6 +19,8 @@ function errorMessage(error: unknown) {
 }
 
 export function useReferenceCatalog() {
+  const { user } = useAuth();
+  const userId = user?.userId ?? '';
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [tenantId, setTenantId] = useState('');
   const [assetTypes, setAssetTypes] = useState<AssetType[]>([]);
@@ -33,11 +40,13 @@ export function useReferenceCatalog() {
       .listAdministrableTenants(controller.signal)
       .then((data) => {
         setTenants(data);
-        setTenantId((current) =>
-          data.some((tenant) => tenant.id === current)
-            ? current
-            : data[0]?.id ?? ''
-        );
+        setTenantId((current) => {
+          return resolveAvailableSelection(
+            data,
+            current,
+            organizationSelectionStorage.getTenantId(userId)
+          );
+        });
         if (data.length === 0) setIsLoading(false);
       })
       .catch((requestError: unknown) => {
@@ -48,7 +57,7 @@ export function useReferenceCatalog() {
       });
 
     return () => controller.abort();
-  }, [retryKey]);
+  }, [retryKey, userId]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -76,6 +85,7 @@ export function useReferenceCatalog() {
   }, [retryKey, tenantId]);
 
   function selectTenant(nextTenantId: string) {
+    organizationSelectionStorage.rememberTenant(userId, nextTenantId);
     setTenantId(nextTenantId);
     setAssetTypes([]);
     setWorkTypes([]);

@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { assetCatalogApi } from './asset-catalog-api';
 import type { AssetType } from '../asset-types/models';
+import { useAuth } from '../auth/auth-context';
+import {
+  organizationSelectionStorage,
+  resolveAvailableSelection,
+} from '../tenants/organization-selection-storage';
 import type { Asset, Site, Tenant } from './models';
 
 function errorMessage(error: unknown) {
@@ -10,6 +15,8 @@ function errorMessage(error: unknown) {
 }
 
 export function useAssetCatalog(administration = false) {
+  const { user } = useAuth();
+  const userId = user?.userId ?? '';
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -35,11 +42,13 @@ export function useAssetCatalog(administration = false) {
     request
       .then((data) => {
         setTenants(data);
-        setTenantId((current) =>
-          data.some((tenant) => tenant.id === current)
-            ? current
-            : data[0]?.id ?? ''
-        );
+        setTenantId((current) => {
+          return resolveAvailableSelection(
+            data,
+            current,
+            organizationSelectionStorage.getTenantId(userId)
+          );
+        });
       })
       .catch((requestError: unknown) => {
         if (!controller.signal.aborted) setError(errorMessage(requestError));
@@ -49,7 +58,7 @@ export function useAssetCatalog(administration = false) {
       });
 
     return () => controller.abort();
-  }, [administration, retryKey]);
+  }, [administration, retryKey, userId]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -65,7 +74,13 @@ export function useAssetCatalog(administration = false) {
       .then(([siteData, assetTypeData]) => {
         setSites(siteData);
         setAssetTypes(assetTypeData);
-        setSiteId(siteData[0]?.id ?? '');
+        setSiteId((current) => {
+          return resolveAvailableSelection(
+            siteData,
+            current,
+            organizationSelectionStorage.getSiteId(userId, tenantId)
+          );
+        });
       })
       .catch((requestError: unknown) => {
         if (!controller.signal.aborted) setError(errorMessage(requestError));
@@ -75,7 +90,7 @@ export function useAssetCatalog(administration = false) {
       });
 
     return () => controller.abort();
-  }, [retryKey, tenantId]);
+  }, [retryKey, tenantId, userId]);
 
   useEffect(() => {
     if (!tenantId || !siteId) return;
@@ -98,6 +113,7 @@ export function useAssetCatalog(administration = false) {
   }, [assetRefreshKey, retryKey, siteId, tenantId]);
 
   function selectTenant(nextTenantId: string) {
+    organizationSelectionStorage.rememberTenant(userId, nextTenantId);
     setTenantId(nextTenantId);
     setSiteId('');
     setSites([]);
@@ -106,6 +122,7 @@ export function useAssetCatalog(administration = false) {
   }
 
   function selectSite(nextSiteId: string) {
+    organizationSelectionStorage.rememberSite(userId, tenantId, nextSiteId);
     setSiteId(nextSiteId);
     setAssets([]);
   }

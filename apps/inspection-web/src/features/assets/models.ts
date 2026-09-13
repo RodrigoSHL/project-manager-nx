@@ -1,6 +1,11 @@
+import type { TenantRole } from '../tenants/models';
+
 export interface Tenant {
   id: string;
   name: string;
+  code?: string;
+  active?: boolean;
+  membershipRole?: TenantRole;
 }
 
 export interface Site {

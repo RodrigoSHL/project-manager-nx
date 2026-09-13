@@ -9,7 +9,7 @@ function errorMessage(error: unknown) {
     : 'No fue posible cargar la información.';
 }
 
-export function useAssetCatalog() {
+export function useAssetCatalog(administration = false) {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -28,8 +28,11 @@ export function useAssetCatalog() {
     setLoadingTenants(true);
     setError(null);
 
-    assetCatalogApi
-      .listTenants(controller.signal)
+    const request = administration
+      ? assetCatalogApi.listAdministrableTenants(controller.signal)
+      : assetCatalogApi.listTenants(controller.signal);
+
+    request
       .then((data) => {
         setTenants(data);
         setTenantId((current) =>
@@ -46,7 +49,7 @@ export function useAssetCatalog() {
       });
 
     return () => controller.abort();
-  }, [retryKey]);
+  }, [administration, retryKey]);
 
   useEffect(() => {
     if (!tenantId) return;

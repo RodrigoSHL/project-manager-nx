@@ -111,6 +111,18 @@ Un administrador global puede habilitar o revocar el acceso de un usuario a un
 tenant desde `/platform/tenants`. Revocar una membresía no elimina al usuario ni
 los datos operacionales del cliente.
 
+Cada membresía guarda además un único rol dentro de ese tenant:
+
+- `TENANT_ADMIN`: administra la estructura y los catálogos de la empresa.
+- `SUPERVISOR`: consulta y ejecuta trabajos; queda preparado para revisar y
+  cerrar trabajos de terceros.
+- `INSPECTOR`: consulta la empresa, crea trabajos y registra su ejecución.
+- `VIEWER`: acceso de consulta, sin mutaciones.
+
+Un mismo usuario puede tener membresías en más de un tenant y un rol diferente
+en cada uno. La lista operacional contiene exclusivamente los tenants con una
+membresía activa. Si el usuario solo tiene una membresía, solo verá esa empresa.
+
 ### Autenticación y autorización
 
 #### RN-AUT-001 — GridAssets utiliza una sola sesión
@@ -121,14 +133,20 @@ aplicación y elimina la sesión cuando el servidor responde `401`.
 
 #### RN-AUT-002 — La administración global requiere `admin`
 
-Las rutas frontend `/platform` y `/admin`, los endpoints `/api/platform/*` y las
-mutaciones de configuración operacional requieren el rol global `admin`.
+La ruta frontend `/platform` y los endpoints `/api/platform/*` requieren el rol
+global `admin`. Este rol administra clientes y puede operar en todos los tenants
+activos.
 
-#### RN-AUT-003 — Un miembro puede ejecutar la operación de su tenant
+#### RN-AUT-003 — El rol de la membresía define las acciones del tenant
 
-Un usuario con rol `user` y membresía activa puede consultar la configuración,
-crear trabajos, guardar respuestas y avanzar el estado de esos trabajos dentro
-de su tenant. No puede modificar catálogos, activos ni plantillas.
+Todo miembro activo puede consultar su tenant. `INSPECTOR`, `SUPERVISOR` y
+`TENANT_ADMIN` pueden crear trabajos, guardar respuestas, cargar evidencias y
+avanzar su estado. `VIEWER` solo puede leer. `TENANT_ADMIN` también puede entrar
+a `/admin` y modificar sitios, activos, tipos, conceptos, asociaciones y
+plantillas de su empresa. El rol global `admin` conserva acceso total.
+
+La autorización se valida en el BFF para cada petición. Ocultar botones o rutas
+en React mejora la experiencia, pero no constituye una regla de seguridad.
 
 ### Sitios
 
@@ -598,6 +616,12 @@ el cierre de sesión. El JWT se adjunta en todas las llamadas a
 una membresía activa antes de reenviar una petición con `tenantId`. La lista de
 tenants también se filtra en el BFF según el usuario autenticado.
 
+Después de validar la membresía, `TenantRolesGuard` aplica el rol requerido por
+la operación. Las lecturas requieren cualquier membresía activa; las mutaciones
+de trabajos aceptan `TENANT_ADMIN`, `SUPERVISOR` o `INSPECTOR`; las mutaciones
+de configuración requieren `TENANT_ADMIN`. El administrador global omite ambas
+comprobaciones de tenant.
+
 ### RP-DB-006 — Los comentarios pertenecen al elemento del snapshot
 
 `work_item_annotations` guarda como máximo un comentario por tenant, trabajo y
@@ -617,21 +641,67 @@ que realizó la carga.
 Antes de listar, cargar, descargar o eliminar una foto, el BFF valida la
 membresía del usuario, la pertenencia del trabajo al tenant y la presencia del
 elemento en su snapshot. También bloquea cargas y eliminaciones en trabajos
-cerrados.
+cerrados. Un miembro `VIEWER` puede consultar fotografías, pero no cargar ni
+eliminar archivos.
 
 ### RP-API-009 — Las mutaciones de sitios se resuelven dentro del tenant
 
-El BFF reserva la creación y edición de sitios para el rol global `admin`. La
-API obtiene el `tenantId` desde la ruta, comprueba que el tenant esté activo y
-busca cualquier sitio editable por la combinación `id + tenantId`. El frontend
-no puede indicar un propietario distinto dentro del cuerpo de la solicitud.
+El BFF reserva la creación y edición de sitios para `TENANT_ADMIN` o el rol
+global `admin`. La API obtiene el `tenantId` desde la ruta, comprueba que el
+tenant esté activo y busca cualquier sitio editable por la combinación `id +
+tenantId`. El frontend no puede indicar un propietario distinto dentro del
+cuerpo de la solicitud.
 
 ## Decisiones pendientes
 
 Estas ideas todavía no son reglas implementadas:
 
-- Separar el rol global `admin` en un permiso explícito `platform_admin` cuando
-  existan administradores propios de cada tenant.
+### TODO — Agrupaciones organizacionales de activos
+
+Agregar una entidad `AssetGroup` para representar carpetas como
+`SE Principales`, `SE Secundarias` o cualquier otra agrupación ubicada entre un
+sitio y sus subestaciones.
+
+Modelo preliminar:
+
+```typescript
+interface AssetGroup {
+  id: string;
+  tenantId: string;
+  siteId: string;
+  code?: string;
+  name: string;
+  parentId: string | null;
+  active: boolean;
+}
+```
+
+Los activos raíz podrían incorporar `groupId: string | null` para quedar
+asociados a una agrupación. `parentId` permitiría crear grupos dentro de otros
+grupos si posteriormente fuera necesario.
+
+Reglas que deberá cumplir esta implementación:
+
+- Un grupo pertenece siempre a un único `tenantId` y `siteId`.
+- Un grupo es organizacional y no es un activo.
+- Un grupo no puede recibir trabajos, conceptos, mediciones ni inspecciones.
+- Las subestaciones continúan siendo las raíces del árbol técnico de activos.
+- La interfaz puede mezclar visualmente grupos y activos en el árbol, aunque
+  permanezcan separados en el modelo de datos.
+
+Ejemplo esperado:
+
+```text
+Tenant: GMIN
+└── Site: NNM
+    └── Grupo: SE Principales
+        ├── Subestación: S/E N°1 TAG 100-SEL-001
+        ├── Subestación: S/E Rectificadora T-8 J
+        └── Subestación: S/E T-6 QT
+```
+
+- Renombrar el rol global `admin` a un permiso explícito `platform_admin` si la
+  plataforma incorpora otros tipos de administradores globales.
 - Reemplazar el JWT de `localStorage` por una cookie HttpOnly, Secure y
   SameSite cuando la autenticación de GridAssets pase a producción.
 - Incorporar auditoría de altas, cambios de estado y modificaciones de tenants.
@@ -662,15 +732,16 @@ Ejemplo válido o inválido, si ayuda a entenderla.
 
 ## Historial
 
-| Fecha      | Cambio                                                                                                 |
-| ---------- | ------------------------------------------------------------------------------------------------------ |
-| 2026-09-07 | Documento inicial con tenants, sitios, jerarquía de activos, catálogos y herencia de tipos de trabajo. |
-| 2026-09-09 | Se agregan conceptos, opciones digitales y su asociación N:M con tipos de activo.                      |
-| 2026-09-09 | Conceptos y asociaciones se conectan al BFF, inspection-api y PostgreSQL.                              |
-| 2026-09-09 | Se agrega el constructor mock de plantillas, secciones, tareas, conceptos y vista previa.              |
-| 2026-09-09 | Plantillas, secciones, elementos y su orden se conectan al BFF, inspection-api y PostgreSQL.           |
-| 2026-09-10 | Trabajos, snapshots, respuestas y tareas completadas se conectan al BFF, API y PostgreSQL.             |
-| 2026-09-10 | Se agrega la administración global de clientes con acceso JWT, estado y métricas operativas.           |
-| 2026-09-10 | Se unifica el login real y se agrega autorización por membresía de tenant en frontend y BFF.           |
-| 2026-09-11 | Cada elemento ejecutado admite comentario opcional y fotografías protegidas por tenant y trabajo.      |
-| 2026-09-11 | Minas, plantas y faenas pueden crearse y editarse desde la administración de cada tenant.              |
+| Fecha      | Cambio                                                                                                        |
+| ---------- | ------------------------------------------------------------------------------------------------------------- |
+| 2026-09-07 | Documento inicial con tenants, sitios, jerarquía de activos, catálogos y herencia de tipos de trabajo.        |
+| 2026-09-09 | Se agregan conceptos, opciones digitales y su asociación N:M con tipos de activo.                             |
+| 2026-09-09 | Conceptos y asociaciones se conectan al BFF, inspection-api y PostgreSQL.                                     |
+| 2026-09-09 | Se agrega el constructor mock de plantillas, secciones, tareas, conceptos y vista previa.                     |
+| 2026-09-09 | Plantillas, secciones, elementos y su orden se conectan al BFF, inspection-api y PostgreSQL.                  |
+| 2026-09-10 | Trabajos, snapshots, respuestas y tareas completadas se conectan al BFF, API y PostgreSQL.                    |
+| 2026-09-10 | Se agrega la administración global de clientes con acceso JWT, estado y métricas operativas.                  |
+| 2026-09-10 | Se unifica el login real y se agrega autorización por membresía de tenant en frontend y BFF.                  |
+| 2026-09-11 | Cada elemento ejecutado admite comentario opcional y fotografías protegidas por tenant y trabajo.             |
+| 2026-09-11 | Minas, plantas y faenas pueden crearse y editarse desde la administración de cada tenant.                     |
+| 2026-09-11 | Las membresías incorporan roles por tenant y autorización diferenciada para lectura, trabajo y configuración. |

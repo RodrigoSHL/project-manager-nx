@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
+import { SetTenantMembershipDto } from './dto/set-tenant-membership.dto';
 import { PlatformService } from './platform.service';
 
 @Controller('platform/tenants')
@@ -48,9 +49,10 @@ export class PlatformController {
   @Put(':tenantId/memberships/:userId')
   grantAccess(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
-    @Param('userId', new ParseUUIDPipe()) userId: string
+    @Param('userId', new ParseUUIDPipe()) userId: string,
+    @Body() dto: SetTenantMembershipDto
   ) {
-    return this.platform.grantTenantAccess(tenantId, userId);
+    return this.platform.grantTenantAccess(tenantId, userId, dto);
   }
 
   @Delete(':tenantId/memberships/:userId')

@@ -27,7 +27,7 @@ export function useSiteAdministration() {
     setError(null);
 
     assetCatalogApi
-      .listTenants(controller.signal)
+      .listAdministrableTenants(controller.signal)
       .then((data) => {
         setTenants(data);
         setTenantId((current) =>

@@ -13,6 +13,7 @@ import { ProjectApiClient } from '../project-api/project-api.client';
 import { TravelApiClient } from '../travel-api/travel-api.client';
 import { InspectionApiClient } from '../inspection-api/inspection-api.client';
 import { UserRole } from '../user-api/user-api.client';
+import { tenantWriteRoles } from '../inspection-api/tenant-role';
 
 export interface FileRecord {
   id: string;
@@ -411,11 +412,14 @@ export class FilesApiService {
     requireEditable = false
   ) {
     if (!user.roles.includes(UserRole.ADMIN)) {
-      const { hasAccess } = await this.inspectionApi.hasTenantAccess(
+      const { hasAccess, role } = await this.inspectionApi.hasTenantAccess(
         user.userId,
         tenantId
       );
       if (!hasAccess) throw new ForbiddenException('Tenant access denied');
+      if (requireEditable && (!role || !tenantWriteRoles.includes(role))) {
+        throw new ForbiddenException('Tenant role is read-only');
+      }
     }
     const result = (await this.inspectionApi.getWork(tenantId, workId)) as {
       work: { status: string };

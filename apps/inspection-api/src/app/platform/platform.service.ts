@@ -11,7 +11,11 @@ import { TenantEntity } from '../catalog/entities/tenant.entity';
 import { WorkEntity } from '../works/entities/work.entity';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
-import { TenantMembershipEntity } from './entities/tenant-membership.entity';
+import { SetTenantMembershipDto } from './dto/set-tenant-membership.dto';
+import {
+  TenantMembershipEntity,
+  TenantRole,
+} from './entities/tenant-membership.entity';
 
 @Injectable()
 export class PlatformService {
@@ -64,11 +68,18 @@ export class PlatformService {
       relations: { tenant: true },
       order: { tenant: { name: 'ASC' } },
     });
-    return memberships.map(({ tenant }) => tenant);
+    return memberships.map(({ tenant, role }) => ({
+      ...tenant,
+      membershipRole: role,
+    }));
   }
 
   async hasTenantAccess(userId: string, tenantId: string) {
-    return this.memberships.exists({
+    return Boolean(await this.getTenantAccess(userId, tenantId));
+  }
+
+  getTenantAccess(userId: string, tenantId: string) {
+    return this.memberships.findOne({
       where: {
         userId,
         tenantId,
@@ -86,14 +97,19 @@ export class PlatformService {
     });
   }
 
-  async grantTenantAccess(tenantId: string, userId: string) {
+  async grantTenantAccess(
+    tenantId: string,
+    userId: string,
+    dto: SetTenantMembershipDto = {}
+  ) {
     await this.findTenantOrFail(tenantId);
     const current = await this.memberships.findOne({
       where: { tenantId, userId },
     });
+    const role = dto.role ?? current?.role ?? TenantRole.INSPECTOR;
     const membership = current
-      ? Object.assign(current, { active: true })
-      : this.memberships.create({ tenantId, userId, active: true });
+      ? Object.assign(current, { active: true, role })
+      : this.memberships.create({ tenantId, userId, role, active: true });
     return this.memberships.save(membership);
   }
 

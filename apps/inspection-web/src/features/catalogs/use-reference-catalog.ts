@@ -30,7 +30,7 @@ export function useReferenceCatalog() {
     setError(null);
 
     assetCatalogApi
-      .listTenants(controller.signal)
+      .listAdministrableTenants(controller.signal)
       .then((data) => {
         setTenants(data);
         setTenantId((current) =>
@@ -38,12 +38,13 @@ export function useReferenceCatalog() {
             ? current
             : data[0]?.id ?? ''
         );
+        if (data.length === 0) setIsLoading(false);
       })
       .catch((requestError: unknown) => {
-        if (!controller.signal.aborted) setError(errorMessage(requestError));
-      })
-      .finally(() => {
-        if (!controller.signal.aborted && !tenantId) setIsLoading(false);
+        if (!controller.signal.aborted) {
+          setError(errorMessage(requestError));
+          setIsLoading(false);
+        }
       });
 
     return () => controller.abort();

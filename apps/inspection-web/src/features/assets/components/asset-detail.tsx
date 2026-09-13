@@ -11,6 +11,7 @@ import type { AssetType } from '../../asset-types/models';
 import { formatAssetStatus, formatSiteType } from '../asset-formatters';
 import type { Asset, Site, Tenant } from '../models';
 import { AssetWorkList } from '../../works/components/asset-work-list';
+import { useTenantAccess } from '../../tenants/tenant-access-context';
 
 type AssetDetailProps = {
   asset: Asset | null;
@@ -33,6 +34,8 @@ export function AssetDetail({
   site,
   assetTypes,
 }: AssetDetailProps) {
+  const tenantAccess = useTenantAccess();
+
   if (!asset) {
     return (
       <section className="grid min-h-80 place-items-center rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center">
@@ -115,13 +118,15 @@ export function AssetDetail({
         </p>
       </div>
 
-      <Button asChild className="mt-5 w-full">
-        <Link
-          to={`/works/new?tenantId=${asset.tenantId}&siteId=${asset.siteId}&assetId=${asset.id}`}
-        >
-          <Plus /> Nuevo trabajo
-        </Link>
-      </Button>
+      {tenantAccess.canWriteTenant(asset.tenantId) ? (
+        <Button asChild className="mt-5 w-full">
+          <Link
+            to={`/works/new?tenantId=${asset.tenantId}&siteId=${asset.siteId}&assetId=${asset.id}`}
+          >
+            <Plus /> Nuevo trabajo
+          </Link>
+        </Button>
+      ) : null}
 
       <AvailableWorkTypes asset={asset} />
       <AvailableConcepts asset={asset} assetTypes={assetTypes} />

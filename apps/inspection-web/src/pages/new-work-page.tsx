@@ -10,6 +10,7 @@ import {
 } from '../features/works/work-schema';
 import { useWorkCatalog } from '../features/works/use-work-catalog';
 import { useEffectiveWorkTypes } from '../features/work-types/use-effective-work-types';
+import { useTenantAccess } from '../features/tenants/tenant-access-context';
 
 type FieldErrors = Partial<Record<keyof CreateWorkFormValue, string>>;
 
@@ -19,6 +20,7 @@ export function NewWorkPage() {
   const siteId = params.get('siteId') ?? '';
   const assetId = params.get('assetId') ?? '';
   const works = useWorkCatalog(tenantId);
+  const tenantAccess = useTenantAccess();
   const asset = works.catalog?.assets.find(
     (item) =>
       item.id === assetId &&
@@ -32,6 +34,18 @@ export function NewWorkPage() {
   if (!tenantId || !siteId || !assetId) {
     return (
       <InvalidNewWork message="Falta identificar la empresa, el sitio o el activo." />
+    );
+  }
+  if (tenantAccess.isLoading) {
+    return (
+      <section className="grid min-h-72 place-items-center rounded-xl border border-slate-200 bg-white">
+        <LoaderCircle className="size-8 animate-spin text-slate-500" />
+      </section>
+    );
+  }
+  if (!tenantAccess.canWriteTenant(tenantId)) {
+    return (
+      <InvalidNewWork message="Tu rol en esta empresa permite consultar, pero no crear trabajos." />
     );
   }
   if (works.error) {

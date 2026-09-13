@@ -63,6 +63,7 @@ users (user-api)                  tenants (inspection_db)
                id
                user_id
                tenant_id
+               role
                active
                created_at
                updated_at
@@ -74,15 +75,18 @@ UNIQUE (tenant_id, user_id)
 FK porque el usuario vive en otra base y otro servicio. El BFF consulta
 `user-api` antes de otorgar acceso y luego guarda el UUID externo.
 
-Una membresia no concede el rol global `admin`. Solo concede entrada al tenant.
-En el modelo actual:
+Una membresia no concede el rol global `admin`. Concede entrada al tenant y
+define las acciones permitidas dentro de él. En el modelo actual:
 
 - `admin`: administrador global de la plataforma y acceso a todos los tenants;
-- `user` con membresia: usuario operativo del tenant;
+- `TENANT_ADMIN`: administra la configuración del tenant asignado;
+- `SUPERVISOR`: consulta y ejecuta trabajos, preparado para flujos de revisión;
+- `INSPECTOR`: consulta y ejecuta trabajos;
+- `VIEWER`: solo consulta el tenant;
 - `user` sin membresia: sesion valida, sin acceso a empresas de GridAssets.
 
-Pendiente de producto: separar `platform_admin`, `tenant_admin`, supervisor,
-inspector y consulta antes de ampliar la delegacion dentro de cada empresa.
+El rol de tenant vive en `inspection_db`, no en el JWT ni en `user-api`, porque
+puede cambiar entre empresas para una misma identidad.
 
 ## Archivos de referencia
 
@@ -98,8 +102,10 @@ inspector y consulta antes de ampliar la delegacion dentro de cada empresa.
   cierra sesion y escucha su expiracion.
 - `src/pages/login-page.tsx`: login comun para operacion y control global.
 - `src/routes/app-routes.tsx`: guards de autenticacion, operacion y
-  administracion global. `/platform/login` redirige al login comun.
+  administracion por tenant y global. `/platform/login` redirige al login comun.
 - `src/app/app.tsx`: instala un solo `AuthProvider` para toda la aplicacion.
+- `src/features/tenants/tenant-access-context.tsx`: obtiene los tenants que el
+  usuario puede administrar y habilita la navegación correspondiente.
 - `src/features/platform/platform-api.ts`: cliente autenticado del control
   global.
 
@@ -116,6 +122,8 @@ ocultan navegacion segun el rol.
 - `src/app/inspection-api/inspection-tenant-access.guard.ts`: omite la
   comprobacion para `admin`; para los demas consulta la membresia usando el
   `userId` del JWT y el `tenantId` de la ruta.
+- `src/app/inspection-api/tenant-roles.guard.ts`: exige el rol local indicado
+  por `@TenantRoles(...)` después de comprobar la membresía.
 - `src/app/inspection-api/inspection-api.client.ts`: cliente de las rutas
   internas de `inspection-api`.
 - `src/app/inspection-api/platform-admin.controller.ts`: administracion de
@@ -137,6 +145,8 @@ un administrador global y solo los asignados a un usuario normal.
   por el guard del BFF.
 - `src/migrations/1799101100000-CreateTenantMemberships.ts`: tabla, indices y
   restricciones.
+- `src/migrations/1799101300000-AddTenantMembershipRoles.ts`: agrega el enum y
+  migra membresías existentes como `INSPECTOR`.
 - `src/app/config/database.config.ts`: registro de la migracion.
 
 La API sigue validando `tenantId` y `siteId` en servicios y relaciones. El guard
@@ -152,6 +162,7 @@ POST   /api/auth/login
 GET    /api/auth/profile
 
 GET    /api/inspection/tenants
+GET    /api/inspection/admin/tenants
 ...    /api/inspection/tenants/:tenantId/**
 
 GET    /api/platform/tenants
@@ -200,9 +211,14 @@ anonimo -> /api/inspection/tenants                         = 401
 admin   -> /api/platform/tenants                           = 200
 user sin membresia -> lista operativa                      = []
 admin otorga tenant A al user                              = 200
-user -> lista operativa                                    = [tenant A]
+admin asigna VIEWER al user en tenant A                    = 200
+user -> lista operativa                                    = [tenant A + VIEWER]
 user -> recurso de tenant A                                = 200
+user -> mutacion de tenant A                               = 403
 user -> recurso de tenant B                                = 403
+admin cambia el rol del user a TENANT_ADMIN                = 200
+user -> /api/inspection/admin/tenants                      = [tenant A]
+user -> mutacion de configuracion en tenant A              = 200
 admin revoca tenant A                                      = 200
 user -> recurso de tenant A                                = 403
 ```
@@ -229,15 +245,14 @@ de las aplicaciones web existentes. Antes de produccion conviene migrar a una
 cookie `HttpOnly`, `Secure` y `SameSite`, y definir renovacion, revocacion y
 caducidad de sesiones.
 
-Tambien quedan pendientes auditoria de accesos, trazabilidad de quien asigna o
-revoca membresias y roles separados para administracion global y administracion
-de cada tenant.
+Tambien quedan pendientes auditoria de accesos y trazabilidad de quien asigna,
+revoca o cambia el rol de una membresia.
 
 ## Validacion realizada en la implementacion de referencia
 
 - TypeScript, ESLint y Prettier en los tres proyectos afectados.
-- 31 pruebas en 7 suites de `inspection-api`.
-- 39 pruebas en 10 suites de `bff-api`.
+- 35 pruebas en 7 suites de `inspection-api`.
+- 49 pruebas en 11 suites de `bff-api`.
 - Builds Nx de `inspection-api`, `bff-api` e `inspection-web`.
 - Configuracion Compose, imagenes y health checks.
 - Migracion aplicada y tabla `tenant_memberships` verificada.

@@ -15,6 +15,17 @@ Las reglas funcionales y técnicas vigentes se mantienen en
 - Sincronización automática de esquema: desactivada; todos los cambios usan
   migraciones.
 
+## Acceso multi-tenant
+
+`tenant_memberships` relaciona el UUID externo de `user-api` con un tenant y
+guarda un rol local: `TENANT_ADMIN`, `SUPERVISOR`, `INSPECTOR` o `VIEWER`.
+Una identidad puede pertenecer a varios tenants sin duplicarse. El BFF obtiene
+el usuario desde el JWT, consulta esta membresía y aplica el rol antes de
+reenviar una operación.
+
+Las membresías existentes reciben `INSPECTOR` al ejecutar la migración
+`1799101300000-AddTenantMembershipRoles`.
+
 ## Desarrollo local
 
 Desde la raíz del monorepo:

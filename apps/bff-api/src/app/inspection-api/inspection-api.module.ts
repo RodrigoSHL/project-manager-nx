@@ -5,11 +5,16 @@ import { InspectionApiController } from './inspection-api.controller';
 import { PlatformAdminController } from './platform-admin.controller';
 import { InspectionTenantAccessGuard } from './inspection-tenant-access.guard';
 import { UserApiModule } from '../user-api/user-api.module';
+import { TenantRolesGuard } from './tenant-roles.guard';
 
 @Module({
   imports: [AuthModule, UserApiModule],
   controllers: [InspectionApiController, PlatformAdminController],
-  providers: [InspectionApiClient, InspectionTenantAccessGuard],
+  providers: [
+    InspectionApiClient,
+    InspectionTenantAccessGuard,
+    TenantRolesGuard,
+  ],
   exports: [InspectionApiClient],
 })
 export class InspectionApiModule {}

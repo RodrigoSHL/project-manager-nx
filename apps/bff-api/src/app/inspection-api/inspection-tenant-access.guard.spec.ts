@@ -20,7 +20,10 @@ describe('InspectionTenantAccessGuard', () => {
   });
 
   it('allows a user with an active tenant membership', async () => {
-    client.hasTenantAccess.mockResolvedValue({ hasAccess: true });
+    client.hasTenantAccess.mockResolvedValue({
+      hasAccess: true,
+      role: 'INSPECTOR',
+    });
 
     await expect(
       guard.canActivate(context([UserRole.USER], 'tenant-1'))
@@ -29,7 +32,10 @@ describe('InspectionTenantAccessGuard', () => {
   });
 
   it('rejects a user without tenant access', async () => {
-    client.hasTenantAccess.mockResolvedValue({ hasAccess: false });
+    client.hasTenantAccess.mockResolvedValue({
+      hasAccess: false,
+      role: null,
+    });
 
     await expect(
       guard.canActivate(context([UserRole.USER], 'tenant-2'))

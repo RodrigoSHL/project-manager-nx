@@ -5,7 +5,10 @@ import type { SiteEntity } from '../catalog/entities/site.entity';
 import { TenantEntity } from '../catalog/entities/tenant.entity';
 import type { WorkEntity } from '../works/entities/work.entity';
 import { PlatformService } from './platform.service';
-import type { TenantMembershipEntity } from './entities/tenant-membership.entity';
+import {
+  TenantRole,
+  type TenantMembershipEntity,
+} from './entities/tenant-membership.entity';
 
 describe('PlatformService', () => {
   const tenantId = 'b9b2ca85-d07f-48da-a895-ed99af1fd7e2';
@@ -100,10 +103,12 @@ describe('PlatformService', () => {
 
   it('returns only active tenants assigned to the user', async () => {
     const assignedTenant = tenant('MINERA_NUEVA', 'Minera Nueva');
-    memberships.find.mockResolvedValue([{ tenant: assignedTenant }]);
+    memberships.find.mockResolvedValue([
+      { tenant: assignedTenant, role: TenantRole.SUPERVISOR },
+    ]);
 
     await expect(service.listAccessibleTenants('user-1')).resolves.toEqual([
-      assignedTenant,
+      { ...assignedTenant, membershipRole: TenantRole.SUPERVISOR },
     ]);
     expect(memberships.find).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -124,6 +129,7 @@ describe('PlatformService', () => {
     expect(memberships.create).toHaveBeenCalledWith({
       tenantId,
       userId: 'user-1',
+      role: TenantRole.INSPECTOR,
       active: true,
     });
 
@@ -133,6 +139,27 @@ describe('PlatformService', () => {
     expect(memberships.delete).toHaveBeenCalledWith({
       tenantId,
       userId: 'user-1',
+    });
+  });
+
+  it('updates the role of an existing tenant membership', async () => {
+    tenants.findOne.mockResolvedValue(tenant('MINERA_NUEVA', 'Minera Nueva'));
+    const membership = {
+      tenantId,
+      userId: 'user-1',
+      role: TenantRole.INSPECTOR,
+      active: true,
+    };
+    memberships.findOne.mockResolvedValue(membership);
+
+    await service.grantTenantAccess(tenantId, 'user-1', {
+      role: TenantRole.TENANT_ADMIN,
+    });
+
+    expect(memberships.save).toHaveBeenCalledWith({
+      ...membership,
+      role: TenantRole.TENANT_ADMIN,
+      active: true,
     });
   });
 

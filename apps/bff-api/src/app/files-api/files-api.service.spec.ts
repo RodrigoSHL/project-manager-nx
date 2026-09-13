@@ -52,7 +52,9 @@ describe('FilesApiService Jira attachments', () => {
       assertProjectAccess: jest.fn().mockResolvedValue(undefined),
     };
     inspectionApi = {
-      hasTenantAccess: jest.fn().mockResolvedValue({ hasAccess: true }),
+      hasTenantAccess: jest
+        .fn()
+        .mockResolvedValue({ hasAccess: true, role: 'INSPECTOR' }),
       getWork: jest.fn().mockResolvedValue({
         work: { status: 'IN_PROGRESS' },
         snapshot: { sections: [{ items: [{ id: formItemId }] }] },
@@ -327,11 +329,41 @@ describe('FilesApiService Jira attachments', () => {
   });
 
   it('rejects a work photo when the user has no tenant membership', async () => {
-    inspectionApi.hasTenantAccess.mockResolvedValueOnce({ hasAccess: false });
+    inspectionApi.hasTenantAccess.mockResolvedValueOnce({
+      hasAccess: false,
+      role: null,
+    });
 
     await expect(
       service.upload(
         { ...file, mimetype: 'image/png', originalname: 'equipo.png' },
+        {
+          application: 'inspection-web',
+          ownerType: 'work',
+          ownerId: workId,
+          metadata: JSON.stringify({
+            category: 'work-item-photo',
+            tenantId,
+            formItemId,
+          }),
+        },
+        user
+      )
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(inspectionApi.getWork).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps work photos read-only for a viewer membership', async () => {
+    inspectionApi.hasTenantAccess.mockResolvedValueOnce({
+      hasAccess: true,
+      role: 'VIEWER',
+    });
+
+    await expect(
+      service.upload(
+        { ...file, mimetype: 'image/jpeg', originalname: 'equipo.jpg' },
         {
           application: 'inspection-web',
           ownerType: 'work',

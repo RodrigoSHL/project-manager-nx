@@ -338,7 +338,9 @@ describe('InspectionApiClient', () => {
 
     await client.listAccessibleTenants('user-1');
     await client.hasTenantAccess('user-1', 'tenant-1');
-    await client.grantTenantAccess('tenant-1', 'user-1');
+    await client.grantTenantAccess('tenant-1', 'user-1', {
+      role: 'SUPERVISOR',
+    });
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
@@ -351,7 +353,11 @@ describe('InspectionApiClient', () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       3,
       'http://inspection-api.test/api/platform/tenants/tenant-1/memberships/user-1',
-      { method: 'PUT' }
+      {
+        method: 'PUT',
+        body: JSON.stringify({ role: 'SUPERVISOR' }),
+        headers: { 'Content-Type': 'application/json' },
+      }
     );
   });
 });

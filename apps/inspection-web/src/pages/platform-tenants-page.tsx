@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
   Building2,
@@ -24,6 +24,11 @@ import {
 } from '../features/platform/platform-api';
 import { useAuth } from '../features/auth/auth-context';
 import type { PlatformTenantFormValue } from '../features/platform/platform-schema';
+import {
+  tenantRoleLabels,
+  tenantRoles,
+  type TenantRole,
+} from '../features/tenants/models';
 
 type PanelMode = 'detail' | 'create' | 'edit';
 
@@ -40,6 +45,22 @@ export function PlatformTenantsPage() {
   const [tenantUsers, setTenantUsers] = useState<PlatformTenantUser[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [mutatingUserId, setMutatingUserId] = useState<string | null>(null);
+
+  const handleApiError = useCallback(
+    (cause: unknown) => {
+      if (cause instanceof PlatformApiError && cause.status === 401) {
+        auth.logout();
+        navigate('/login?redirect=/platform/tenants', { replace: true });
+        return;
+      }
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : 'No fue posible cargar los clientes.'
+      );
+    },
+    [auth, navigate]
+  );
 
   useEffect(() => {
     const controller = new AbortController();
@@ -63,7 +84,7 @@ export function PlatformTenantsPage() {
         if (!controller.signal.aborted) setIsLoading(false);
       });
     return () => controller.abort();
-  }, []);
+  }, [handleApiError]);
 
   useEffect(() => {
     if (!selectedId || mode !== 'detail') {
@@ -82,7 +103,7 @@ export function PlatformTenantsPage() {
         if (!controller.signal.aborted) setIsLoadingUsers(false);
       });
     return () => controller.abort();
-  }, [mode, selectedId]);
+  }, [handleApiError, mode, selectedId]);
 
   const selected = tenants.find((tenant) => tenant.id === selectedId) ?? null;
   const filteredTenants = useMemo(() => {
@@ -129,16 +150,29 @@ export function PlatformTenantsPage() {
     }
   }
 
-  async function updateUserAccess(user: PlatformTenantUser, enabled: boolean) {
+  async function updateUserAccess(
+    user: PlatformTenantUser,
+    enabled: boolean,
+    role: TenantRole = user.membershipRole ?? 'INSPECTOR'
+  ) {
     if (!selected) return;
     setMutatingUserId(user.id);
     setError(null);
     try {
-      await platformTenantApi.setUserAccess(selected.id, user.id, enabled);
+      await platformTenantApi.setUserAccess(
+        selected.id,
+        user.id,
+        enabled,
+        role
+      );
       setTenantUsers((current) =>
         current.map((candidate) =>
           candidate.id === user.id
-            ? { ...candidate, hasAccess: enabled }
+            ? {
+                ...candidate,
+                hasAccess: enabled,
+                membershipRole: enabled ? role : null,
+              }
             : candidate
         )
       );
@@ -147,19 +181,6 @@ export function PlatformTenantsPage() {
     } finally {
       setMutatingUserId(null);
     }
-  }
-
-  function handleApiError(cause: unknown) {
-    if (cause instanceof PlatformApiError && cause.status === 401) {
-      auth.logout();
-      navigate('/login?redirect=/platform/tenants', { replace: true });
-      return;
-    }
-    setError(
-      cause instanceof Error
-        ? cause.message
-        : 'No fue posible cargar los clientes.'
-    );
   }
 
   return (
@@ -327,7 +348,11 @@ function TenantAccess({
   users: PlatformTenantUser[];
   isLoading: boolean;
   mutatingUserId: string | null;
-  onChange: (user: PlatformTenantUser, enabled: boolean) => void;
+  onChange: (
+    user: PlatformTenantUser,
+    enabled: boolean,
+    role?: TenantRole
+  ) => void;
 }) {
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -338,7 +363,8 @@ function TenantAccess({
         <div>
           <h2 className="font-semibold text-slate-950">Acceso de usuarios</h2>
           <p className="mt-1 text-xs leading-5 text-slate-500">
-            Los usuarios habilitados podrán ver y operar solamente este cliente.
+            Los usuarios habilitados podrán ver este cliente y tendrán las
+            acciones correspondientes al rol elegido.
           </p>
         </div>
       </div>
@@ -355,7 +381,7 @@ function TenantAccess({
             return (
               <div
                 key={user.id}
-                className="flex min-w-0 items-center gap-3 py-3"
+                className="flex min-w-0 flex-wrap items-center gap-3 py-3 sm:flex-nowrap"
               >
                 <span className="grid size-8 shrink-0 place-items-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
                   {user.name.slice(0, 1).toUpperCase()}
@@ -373,22 +399,41 @@ function TenantAccess({
                     <ShieldCheck className="size-3" /> Global
                   </span>
                 ) : (
-                  <button
-                    type="button"
-                    disabled={mutatingUserId === user.id}
-                    onClick={() => onChange(user, !enabled)}
-                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition disabled:opacity-50 ${
-                      enabled
-                        ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    {mutatingUserId === user.id
-                      ? 'Guardando…'
-                      : enabled
-                      ? 'Habilitado'
-                      : 'Sin acceso'}
-                  </button>
+                  <div className="ml-11 flex w-full flex-col items-stretch gap-2 sm:ml-0 sm:w-auto sm:shrink-0 sm:flex-row sm:items-center">
+                    <label className="min-w-0">
+                      <span className="sr-only">Rol de {user.name}</span>
+                      <select
+                        value={user.membershipRole ?? 'INSPECTOR'}
+                        disabled={!user.hasAccess || mutatingUserId === user.id}
+                        onChange={(event) =>
+                          onChange(user, true, event.target.value as TenantRole)
+                        }
+                        className="h-9 w-full rounded-lg border border-slate-300 bg-white px-2 text-xs text-slate-700 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-50 disabled:text-slate-400 sm:max-w-48"
+                      >
+                        {tenantRoles.map((role) => (
+                          <option key={role} value={role}>
+                            {tenantRoleLabels[role]}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <button
+                      type="button"
+                      disabled={mutatingUserId === user.id}
+                      onClick={() => onChange(user, !enabled)}
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition disabled:opacity-50 ${
+                        enabled
+                          ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {mutatingUserId === user.id
+                        ? 'Guardando…'
+                        : enabled
+                        ? 'Habilitado'
+                        : 'Sin acceso'}
+                    </button>
+                  </div>
                 )}
               </div>
             );

@@ -12,12 +12,14 @@ import { WorkExecutionForm } from '../features/works/components/work-execution-f
 import { WorkStatusBadge } from '../features/works/components/work-status-badge';
 import { formatWorkDate } from '../features/works/work-formatters';
 import { useWorkCatalog } from '../features/works/use-work-catalog';
+import { useTenantAccess } from '../features/tenants/tenant-access-context';
 
 export function WorkDetailPage() {
   const { id = '' } = useParams();
   const [params] = useSearchParams();
   const tenantId = params.get('tenantId') ?? '';
   const catalog = useWorkCatalog(tenantId);
+  const tenantAccess = useTenantAccess();
   const work = catalog.works.find(
     (item) => item.id === id && item.tenantId === tenantId
   );
@@ -115,6 +117,7 @@ export function WorkDetailPage() {
         responses={catalog.responses}
         taskCompletions={catalog.taskCompletions}
         annotations={catalog.annotations}
+        accessReadonly={!tenantAccess.canWriteTenant(tenantId)}
         onSave={(values) => catalog.saveResponses(tenantId, work.id, values)}
         onStart={() => catalog.startWork(tenantId, work.id)}
         onFinish={(values) => catalog.finishWork(tenantId, work.id, values)}

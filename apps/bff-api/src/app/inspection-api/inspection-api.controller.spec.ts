@@ -1,12 +1,12 @@
 import { GUARDS_METADATA } from '@nestjs/common/constants';
-import { ROLES_KEY } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
 import type { ExpressRequestWithUser } from '../auth/types/express-request-with-user';
 import { UserRole } from '../user-api/user-api.client';
 import type { InspectionApiClient } from './inspection-api.client';
 import { InspectionApiController } from './inspection-api.controller';
 import { InspectionTenantAccessGuard } from './inspection-tenant-access.guard';
+import { TENANT_ROLES_KEY } from './tenant-roles.decorator';
+import { TenantRolesGuard } from './tenant-roles.guard';
 
 describe('InspectionApiController authorization', () => {
   const client = {
@@ -22,28 +22,37 @@ describe('InspectionApiController authorization', () => {
   it('requires authentication and tenant access for operational routes', () => {
     expect(
       Reflect.getMetadata(GUARDS_METADATA, InspectionApiController)
-    ).toEqual([JwtAuthGuard, InspectionTenantAccessGuard, RolesGuard]);
+    ).toEqual([JwtAuthGuard, InspectionTenantAccessGuard, TenantRolesGuard]);
   });
 
-  it('reserves catalog mutations for a global administrator', () => {
+  it('reserves catalog mutations for a tenant administrator', () => {
     expect(
       Reflect.getMetadata(
-        ROLES_KEY,
+        TENANT_ROLES_KEY,
         InspectionApiController.prototype.createSite
       )
-    ).toEqual([UserRole.ADMIN]);
+    ).toEqual(['TENANT_ADMIN']);
     expect(
       Reflect.getMetadata(
-        ROLES_KEY,
+        TENANT_ROLES_KEY,
         InspectionApiController.prototype.createAssetType
       )
-    ).toEqual([UserRole.ADMIN]);
+    ).toEqual(['TENANT_ADMIN']);
     expect(
       Reflect.getMetadata(
-        ROLES_KEY,
+        TENANT_ROLES_KEY,
         InspectionApiController.prototype.createAsset
       )
-    ).toEqual([UserRole.ADMIN]);
+    ).toEqual(['TENANT_ADMIN']);
+  });
+
+  it('allows inspectors and supervisors to execute work mutations', () => {
+    expect(
+      Reflect.getMetadata(
+        TENANT_ROLES_KEY,
+        InspectionApiController.prototype.createWork
+      )
+    ).toEqual(['TENANT_ADMIN', 'SUPERVISOR', 'INSPECTOR']);
   });
 
   it('lists every tenant for a global administrator', () => {
@@ -56,6 +65,17 @@ describe('InspectionApiController authorization', () => {
     controller.listTenants(request([UserRole.USER]));
     expect(client.listAccessibleTenants).toHaveBeenCalledWith('user-1');
     expect(client.listTenants).not.toHaveBeenCalled();
+  });
+
+  it('lists only administrable tenants for a tenant administrator', async () => {
+    client.listAccessibleTenants.mockResolvedValue([
+      { id: 'tenant-1', membershipRole: 'TENANT_ADMIN' },
+      { id: 'tenant-2', membershipRole: 'INSPECTOR' },
+    ]);
+
+    await expect(
+      controller.listAdministrableTenants(request([UserRole.USER]))
+    ).resolves.toEqual([{ id: 'tenant-1', membershipRole: 'TENANT_ADMIN' }]);
   });
 
   function request(roles: UserRole[]): ExpressRequestWithUser {

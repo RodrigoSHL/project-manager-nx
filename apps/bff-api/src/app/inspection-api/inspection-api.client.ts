@@ -3,6 +3,7 @@ import {
   Injectable,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import type { TenantRole } from './tenant-role';
 
 export type AssetMutationPayload = {
   code?: string;
@@ -38,6 +39,24 @@ export type TenantMembershipResponse = {
   tenantId: string;
   userId: string;
   active: boolean;
+  role: TenantRole;
+};
+
+export type TenantMembershipMutationPayload = {
+  role?: TenantRole;
+};
+
+export type TenantAccessResponse = {
+  hasAccess: boolean;
+  role: TenantRole | null;
+};
+
+export type TenantResponse = {
+  id: string;
+  code: string;
+  name: string;
+  active: boolean;
+  membershipRole?: TenantRole;
 };
 
 export type ConceptMutationPayload = {
@@ -106,15 +125,17 @@ export class InspectionApiClient {
   private readonly baseUrl = this.resolveBaseUrl();
 
   listTenants() {
-    return this.get('/tenants');
+    return this.get<TenantResponse[]>('/tenants');
   }
 
   listAccessibleTenants(userId: string) {
-    return this.get(`/access/users/${encodeURIComponent(userId)}/tenants`);
+    return this.get<TenantResponse[]>(
+      `/access/users/${encodeURIComponent(userId)}/tenants`
+    );
   }
 
   hasTenantAccess(userId: string, tenantId: string) {
-    return this.get<{ hasAccess: boolean }>(
+    return this.get<TenantAccessResponse>(
       `/access/users/${encodeURIComponent(userId)}/tenants/${encodeURIComponent(
         tenantId
       )}`
@@ -149,12 +170,16 @@ export class InspectionApiClient {
     );
   }
 
-  grantTenantAccess(tenantId: string, userId: string) {
+  grantTenantAccess(
+    tenantId: string,
+    userId: string,
+    payload: TenantMembershipMutationPayload = {}
+  ) {
     return this.request(
       `/platform/tenants/${encodeURIComponent(
         tenantId
       )}/memberships/${encodeURIComponent(userId)}`,
-      { method: 'PUT' }
+      { method: 'PUT', body: JSON.stringify(payload) }
     );
   }
 

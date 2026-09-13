@@ -1,6 +1,7 @@
 import { authenticatedFetch } from '../auth/authenticated-fetch';
 import type { PlatformTenant, PlatformTenantUser } from './models';
 import type { PlatformTenantFormValue } from './platform-schema';
+import type { TenantRole } from '../tenants/models';
 
 export class PlatformApiError extends Error {
   constructor(message: string, readonly status?: number) {
@@ -39,12 +40,20 @@ export const platformTenantApi = {
     );
   },
 
-  setUserAccess(tenantId: string, userId: string, enabled: boolean) {
+  setUserAccess(
+    tenantId: string,
+    userId: string,
+    enabled: boolean,
+    role: TenantRole = 'INSPECTOR'
+  ) {
     return request(
       `/api/platform/tenants/${encodeURIComponent(
         tenantId
       )}/users/${encodeURIComponent(userId)}/access`,
-      { method: enabled ? 'PUT' : 'DELETE' }
+      {
+        method: enabled ? 'PUT' : 'DELETE',
+        body: enabled ? JSON.stringify({ role }) : undefined,
+      }
     );
   },
 };

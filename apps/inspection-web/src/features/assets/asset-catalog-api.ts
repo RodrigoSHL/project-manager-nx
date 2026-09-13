@@ -56,6 +56,10 @@ export const assetCatalogApi = {
     return get<Tenant[]>('/tenants', signal);
   },
 
+  listAdministrableTenants(signal?: AbortSignal) {
+    return get<Tenant[]>('/admin/tenants', signal);
+  },
+
   listSites(tenantId: string, signal?: AbortSignal) {
     return get<Site[]>(
       `/tenants/${encodeURIComponent(tenantId)}/sites`,

@@ -25,6 +25,7 @@ import {
 } from '../features/auth/auth-storage';
 import { Button } from '../components/ui/button';
 import type { ReactNode } from 'react';
+import { useTenantAccess } from '../features/tenants/tenant-access-context';
 
 export function AppRoutes() {
   return (
@@ -44,7 +45,7 @@ export function AppRoutes() {
             <Route path="/works/new" element={<NewWorkPage />} />
             <Route path="/works/:id" element={<WorkDetailPage />} />
             <Route path="/findings" element={<FindingsPage />} />
-            <Route element={<RequireGlobalAdmin />}>
+            <Route element={<RequireTenantAdministration />}>
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminOverviewPage />} />
                 <Route path="assets" element={<AdminAssetsPage />} />
@@ -118,6 +119,18 @@ function RequireOperationAccess() {
 function RequireGlobalAdmin() {
   const auth = useAuth();
   return isGlobalAdmin(auth.user) ? (
+    <Outlet />
+  ) : (
+    <Navigate to="/dashboard" replace />
+  );
+}
+
+function RequireTenantAdministration() {
+  const access = useTenantAccess();
+  if (access.isLoading) {
+    return <SessionMessage message="Verificando permisos del tenant…" />;
+  }
+  return access.canAdministerTenants ? (
     <Outlet />
   ) : (
     <Navigate to="/dashboard" replace />

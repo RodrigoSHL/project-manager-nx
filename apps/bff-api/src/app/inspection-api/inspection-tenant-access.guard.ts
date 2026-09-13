@@ -22,11 +22,14 @@ export class InspectionTenantAccessGuard implements CanActivate {
 
     if (!tenantId || request.user.roles.includes(UserRole.ADMIN)) return true;
 
-    const { hasAccess } = await this.client.hasTenantAccess(
+    const { hasAccess, role } = await this.client.hasTenantAccess(
       request.user.userId,
       tenantId
     );
-    if (hasAccess) return true;
+    if (hasAccess && role) {
+      request.tenantAccess = { tenantId, role };
+      return true;
+    }
 
     throw new ForbiddenException('Tenant access denied');
   }

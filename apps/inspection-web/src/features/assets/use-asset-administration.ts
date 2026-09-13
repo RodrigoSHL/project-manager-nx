@@ -3,7 +3,7 @@ import { assetCatalogApi, type AssetMutationInput } from './asset-catalog-api';
 import { useAssetCatalog } from './use-asset-catalog';
 
 export function useAssetAdministration() {
-  const catalog = useAssetCatalog();
+  const catalog = useAssetCatalog(true);
   const [isMutating, setIsMutating] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
 

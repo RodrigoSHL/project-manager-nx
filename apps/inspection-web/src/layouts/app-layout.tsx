@@ -20,6 +20,7 @@ import {
   SheetDescription,
   SheetTitle,
 } from '../components/ui/sheet';
+import { useTenantAccess } from '../features/tenants/tenant-access-context';
 
 const navigation = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -31,6 +32,7 @@ const navigation = [
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const auth = useAuth();
+  const tenantAccess = useTenantAccess();
   return (
     <>
       <div className="flex h-16 items-center gap-3 border-b border-white/10 px-5">
@@ -45,7 +47,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       <nav className="flex flex-1 flex-col gap-1 p-3" aria-label="Principal">
         {navigation
-          .filter(({ to }) => to !== '/admin' || isGlobalAdmin(auth.user))
+          .filter(
+            ({ to }) => to !== '/admin' || tenantAccess.canAdministerTenants
+          )
           .map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}

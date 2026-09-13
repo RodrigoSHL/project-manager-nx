@@ -15,8 +15,10 @@ export class TenantAccessController {
     @Param('userId', new ParseUUIDPipe()) userId: string,
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string
   ) {
+    const membership = await this.platform.getTenantAccess(userId, tenantId);
     return {
-      hasAccess: await this.platform.hasTenantAccess(userId, tenantId),
+      hasAccess: Boolean(membership),
+      role: membership?.role ?? null,
     };
   }
 }

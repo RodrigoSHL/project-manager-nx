@@ -27,6 +27,7 @@ type WorkExecutionFormProps = {
   responses: ConceptResponse[];
   taskCompletions: TaskCompletion[];
   annotations: WorkItemAnnotation[];
+  accessReadonly?: boolean;
   onSave: (values: Record<string, WorkItemValue>) => Promise<void>;
   onStart: () => Promise<void>;
   onFinish: (values: Record<string, WorkItemValue>) => Promise<FinishResult>;
@@ -38,6 +39,7 @@ export function WorkExecutionForm({
   responses,
   taskCompletions,
   annotations,
+  accessReadonly = false,
   onSave,
   onStart,
   onFinish,
@@ -51,7 +53,8 @@ export function WorkExecutionForm({
   const [photoErrors, setPhotoErrors] = useState<Record<string, string>>({});
   const initializedWorkId = useRef<string | null>(null);
   const previewUrls = useRef(new Set<string>());
-  const readonly = work.status === 'FINISHED' || work.status === 'REVIEWED';
+  const readonly =
+    accessReadonly || work.status === 'FINISHED' || work.status === 'REVIEWED';
 
   useEffect(() => {
     if (initializedWorkId.current === work.id) return;

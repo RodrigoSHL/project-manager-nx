@@ -16,6 +16,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserApiClient, UserRole } from '../user-api/user-api.client';
 import {
   InspectionApiClient,
+  TenantMembershipMutationPayload,
   TenantMutationPayload,
 } from './inspection-api.client';
 
@@ -59,20 +60,24 @@ export class PlatformAdminController {
       this.users.findAllUsers(),
       this.client.listTenantMemberships(tenantId),
     ]);
-    const memberIds = new Set(memberships.map(({ userId }) => userId));
+    const membershipByUser = new Map(
+      memberships.map((membership) => [membership.userId, membership])
+    );
     return users.map((user) => ({
       ...user,
-      hasAccess: memberIds.has(user.id),
+      hasAccess: membershipByUser.has(user.id),
+      membershipRole: membershipByUser.get(user.id)?.role ?? null,
     }));
   }
 
   @Put(':tenantId/users/:userId/access')
   async grantTenantAccess(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
-    @Param('userId', new ParseUUIDPipe()) userId: string
+    @Param('userId', new ParseUUIDPipe()) userId: string,
+    @Body() payload: TenantMembershipMutationPayload = {}
   ) {
     await this.users.findOneUser(userId);
-    return this.client.grantTenantAccess(tenantId, userId);
+    return this.client.grantTenantAccess(tenantId, userId, payload);
   }
 
   @Delete(':tenantId/users/:userId/access')

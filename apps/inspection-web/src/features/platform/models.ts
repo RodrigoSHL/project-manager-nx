@@ -1,3 +1,5 @@
+import type { TenantRole } from '../tenants/models';
+
 export interface PlatformTenant {
   id: string;
   code: string;
@@ -16,4 +18,5 @@ export interface PlatformTenantUser {
   name: string;
   roles: string[];
   hasAccess: boolean;
+  membershipRole: TenantRole | null;
 }

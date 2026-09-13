@@ -172,6 +172,22 @@ services:
       timeout: 5s
       retries: 10
 
+  inspection-web:
+    build:
+      context: .
+      dockerfile: Dockerfile.vite
+      args:
+        APP: inspection-web
+    restart: unless-stopped
+    depends_on:
+      bff-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   project-web:
     build:
       context: .
@@ -295,6 +311,8 @@ services:
         condition: service_started
       travel-planner-app:
         condition: service_started
+      inspection-web:
+        condition: service_healthy
       atomdev-landing:
         condition: service_started
 

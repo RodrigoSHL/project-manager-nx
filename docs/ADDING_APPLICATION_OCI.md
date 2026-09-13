@@ -33,6 +33,7 @@ Navegador
 | `projects.atomdev.cl` | Project Web |
 | `jira.atomdev.cl` | Jira Web |
 | `travel.atomdev.cl` | Travel Planner |
+| `inspection.atomdev.cl` | Gestión de inspecciones |
 
 OCI solo debe publicar `22`, `80` y `443`. Los APIs, PostgreSQL y puertos auxiliares permanecen internos o ligados a `127.0.0.1`.
 
@@ -376,6 +377,7 @@ También admite uso explícito:
 ```bash
 bash scripts/deploy-oci.sh --profile travel-full
 bash scripts/deploy-oci.sh --profile inspection-backend
+bash scripts/deploy-oci.sh --profile inspection-frontend
 bash scripts/deploy-oci.sh --services travel-planner-api,bff-api,travel-planner-app
 ATOMDEV_SSH_KEY=/ruta/segura/oci.key bash scripts/deploy-oci.sh --dry-run
 ```

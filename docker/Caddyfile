@@ -34,6 +34,18 @@
   }
 }
 
+(inspection_web) {
+  encode gzip
+
+  handle /api/* {
+    reverse_proxy bff-api:3000
+  }
+
+  handle {
+    reverse_proxy inspection-web:80
+  }
+}
+
 (atomdev_landing) {
   encode gzip
 
@@ -56,6 +68,10 @@ jira.atomdev.cl {
 
 travel.atomdev.cl {
   import travel_web
+}
+
+inspection.atomdev.cl {
+  import inspection_web
 }
 
 {$PROJECT_WEB_HOST} {

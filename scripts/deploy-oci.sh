@@ -38,6 +38,7 @@ CANONICAL_SERVICES=(
   files-api
   inspection-api
   bff-api
+  inspection-web
   project-web
   jira-web
   travel-planner-app
@@ -66,6 +67,7 @@ Uso:
 
 Opciones:
   --profile PERFIL       travel-full, travel-frontend, travel-backend,
+                         inspection-full, inspection-frontend,
                          inspection-backend, platform-full o custom
   --services LISTA       Servicios separados por coma; implica perfil custom
   --key RUTA             Clave privada SSH (también ATOMDEV_SSH_KEY)
@@ -137,18 +139,22 @@ select_profile_interactively() {
   printf '  1) Travel completo (User API, Travel API, Files API, BFF y frontend)\n'
   printf '  2) Solo frontend Travel\n'
   printf '  3) Backend Travel (User API, Travel API, Files API y BFF)\n'
-  printf '  4) Backend Inspection (Inspection API y BFF)\n'
-  printf '  5) Plataforma completa (APIs, BFF y frontends)\n'
-  printf '  6) Selección personalizada\n'
-  read -r -p 'Selecciona [1-6]: ' selection
+  printf '  4) Inspection completo (API, BFF, frontend y Caddy)\n'
+  printf '  5) Solo frontend Inspection y Caddy\n'
+  printf '  6) Backend Inspection (Inspection API y BFF)\n'
+  printf '  7) Plataforma completa (APIs, BFF y frontends)\n'
+  printf '  8) Selección personalizada\n'
+  read -r -p 'Selecciona [1-8]: ' selection
 
   case "$selection" in
     1) PROFILE="travel-full" ;;
     2) PROFILE="travel-frontend" ;;
     3) PROFILE="travel-backend" ;;
-    4) PROFILE="inspection-backend" ;;
-    5) PROFILE="platform-full" ;;
-    6) PROFILE="custom" ;;
+    4) PROFILE="inspection-full" ;;
+    5) PROFILE="inspection-frontend" ;;
+    6) PROFILE="inspection-backend" ;;
+    7) PROFILE="platform-full" ;;
+    8) PROFILE="custom" ;;
     *) die "Selección inválida" ;;
   esac
 }
@@ -174,11 +180,17 @@ resolve_services() {
     travel-backend)
       raw_services="user-api,travel-planner-api,files-api,bff-api"
       ;;
+    inspection-full)
+      raw_services="inspection-api,bff-api,inspection-web,caddy"
+      ;;
+    inspection-frontend)
+      raw_services="inspection-web,caddy"
+      ;;
     inspection-backend)
       raw_services="inspection-api,bff-api"
       ;;
     platform-full)
-      raw_services="project-api,user-api,travel-planner-api,files-api,inspection-api,bff-api,project-web,jira-web,travel-planner-app,atomdev-landing"
+      raw_services="project-api,user-api,travel-planner-api,files-api,inspection-api,bff-api,inspection-web,project-web,jira-web,travel-planner-app,atomdev-landing"
       ;;
     custom)
       raw_services="$CUSTOM_SERVICES"
@@ -732,6 +744,18 @@ if printf '%s\n' "${SERVICES[@]}" | grep -qx travel-planner-app; then
   fi
   printf 'PUBLIC_BUNDLE_URL_CHECK=clean\n'
 fi
+
+if printf '%s\n' "${SERVICES[@]}" | grep -qx inspection-web; then
+  INSPECTION_WEB_CONTAINER=$(docker compose --env-file .env.deploy -f docker-compose.prod.yml ps -q inspection-web)
+  docker exec "$INSPECTION_WEB_CONTAINER" wget -q --spider http://127.0.0.1/health
+  docker exec "$INSPECTION_WEB_CONTAINER" wget -q --spider http://127.0.0.1/login
+  if docker exec "$INSPECTION_WEB_CONTAINER" grep -RlE \
+    '161\.153\.194\.227|http://localhost|http://bff-api' /usr/share/nginx/html; then
+    printf 'El bundle de Inspection contiene una URL prohibida.\n' >&2
+    exit 1
+  fi
+  printf 'INSPECTION_PUBLIC_BUNDLE_URL_CHECK=clean\n'
+fi
 REMOTE
 }
 
@@ -743,6 +767,9 @@ verify_external() {
   expect_http_status TRAVEL_TRIPS_WITHOUT_JWT https://travel.atomdev.cl/api/trips 401
   expect_http_status PROJECTS_ROOT https://projects.atomdev.cl/ 200
   expect_http_status INSPECTION_WITHOUT_JWT https://projects.atomdev.cl/api/inspection/tenants 401
+  expect_http_status INSPECTION_ROOT https://inspection.atomdev.cl/ 200
+  expect_http_status INSPECTION_LOGIN https://inspection.atomdev.cl/login 200
+  expect_http_status INSPECTION_API_WITHOUT_JWT https://inspection.atomdev.cl/api/inspection/tenants 401
   expect_http_status JIRA_ROOT https://jira.atomdev.cl/ 200
   expect_http_status ATOMDEV_ROOT https://atomdev.cl/ 200
   expect_http_status ATOMDEV_WWW https://www.atomdev.cl/ 200

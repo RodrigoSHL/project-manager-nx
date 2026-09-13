@@ -375,6 +375,7 @@ También admite uso explícito:
 
 ```bash
 bash scripts/deploy-oci.sh --profile travel-full
+bash scripts/deploy-oci.sh --profile inspection-backend
 bash scripts/deploy-oci.sh --services travel-planner-api,bff-api,travel-planner-app
 ATOMDEV_SSH_KEY=/ruta/segura/oci.key bash scripts/deploy-oci.sh --dry-run
 ```

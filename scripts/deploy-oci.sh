@@ -36,6 +36,7 @@ CANONICAL_SERVICES=(
   user-api
   travel-planner-api
   files-api
+  inspection-api
   bff-api
   project-web
   jira-web
@@ -65,7 +66,7 @@ Uso:
 
 Opciones:
   --profile PERFIL       travel-full, travel-frontend, travel-backend,
-                         platform-full o custom
+                         inspection-backend, platform-full o custom
   --services LISTA       Servicios separados por coma; implica perfil custom
   --key RUTA             Clave privada SSH (también ATOMDEV_SSH_KEY)
   --dry-run              Preflight y rsync simulado; no cambia producción
@@ -136,16 +137,18 @@ select_profile_interactively() {
   printf '  1) Travel completo (User API, Travel API, Files API, BFF y frontend)\n'
   printf '  2) Solo frontend Travel\n'
   printf '  3) Backend Travel (User API, Travel API, Files API y BFF)\n'
-  printf '  4) Plataforma completa (APIs, BFF y tres frontends)\n'
-  printf '  5) Selección personalizada\n'
-  read -r -p 'Selecciona [1-5]: ' selection
+  printf '  4) Backend Inspection (Inspection API y BFF)\n'
+  printf '  5) Plataforma completa (APIs, BFF y frontends)\n'
+  printf '  6) Selección personalizada\n'
+  read -r -p 'Selecciona [1-6]: ' selection
 
   case "$selection" in
     1) PROFILE="travel-full" ;;
     2) PROFILE="travel-frontend" ;;
     3) PROFILE="travel-backend" ;;
-    4) PROFILE="platform-full" ;;
-    5) PROFILE="custom" ;;
+    4) PROFILE="inspection-backend" ;;
+    5) PROFILE="platform-full" ;;
+    6) PROFILE="custom" ;;
     *) die "Selección inválida" ;;
   esac
 }
@@ -171,8 +174,11 @@ resolve_services() {
     travel-backend)
       raw_services="user-api,travel-planner-api,files-api,bff-api"
       ;;
+    inspection-backend)
+      raw_services="inspection-api,bff-api"
+      ;;
     platform-full)
-      raw_services="project-api,user-api,travel-planner-api,files-api,bff-api,project-web,jira-web,travel-planner-app,atomdev-landing"
+      raw_services="project-api,user-api,travel-planner-api,files-api,inspection-api,bff-api,project-web,jira-web,travel-planner-app,atomdev-landing"
       ;;
     custom)
       raw_services="$CUSTOM_SERVICES"
@@ -495,6 +501,8 @@ for SERVICE in "${SERVICES[@]}"; do
   IMAGE_ID=$(docker compose --env-file .env.deploy -f docker-compose.prod.yml images -q "$SERVICE" 2>/dev/null || true)
   if [[ -n "$IMAGE_ID" ]]; then
     docker tag "$IMAGE_ID" "project-manager-nx-$SERVICE:rollback-$DEPLOY_STAMP"
+  else
+    touch "$BACKUP_DIR/no-rollback-image-$SERVICE"
   fi
 done
 
@@ -516,12 +524,17 @@ REMOTE
 }
 
 ensure_remote_databases() {
-  contains_service files-api "${SERVICES[@]}" || return 0
+  if ! contains_service files-api "${SERVICES[@]}" \
+    && ! contains_service inspection-api "${SERVICES[@]}"; then
+    return 0
+  fi
 
-  log "Comprobando la base de datos de files-api"
-  remote_bash "$REMOTE_DIR" <<'REMOTE'
+  log "Comprobando las bases de datos de los servicios seleccionados"
+  remote_bash "$REMOTE_DIR" "${SERVICES[@]}" <<'REMOTE'
 set -Eeuo pipefail
 REMOTE_DIR=$1
+shift
+SERVICES=("$@")
 cd "$REMOTE_DIR"
 
 set -a
@@ -529,24 +542,37 @@ set -a
 source .env.deploy
 set +a
 
-FILES_DATABASE=${FILES_DB_NAME:-files_db}
-[[ "$FILES_DATABASE" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] \
-  || { printf 'FILES_DB_NAME no es un identificador PostgreSQL válido.\n' >&2; exit 1; }
-
 POSTGRES_CONTAINER=$(docker compose --env-file .env.deploy -f docker-compose.prod.yml ps -q postgres)
 test -n "$POSTGRES_CONTAINER"
 
-DATABASE_EXISTS=$(docker exec "$POSTGRES_CONTAINER" sh -c \
-  'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "SELECT 1 FROM pg_database WHERE datname = '\''$1'\''"' \
-  sh "$FILES_DATABASE")
+for SERVICE in "${SERVICES[@]}"; do
+  case "$SERVICE" in
+    files-api)
+      TARGET_DATABASE=${FILES_DB_NAME:-files_db}
+      ;;
+    inspection-api)
+      TARGET_DATABASE=${INSPECTION_DB_NAME:-inspection_db}
+      ;;
+    *)
+      continue
+      ;;
+  esac
 
-if [[ "$DATABASE_EXISTS" != 1 ]]; then
-  docker exec "$POSTGRES_CONTAINER" sh -c \
-    'createdb -U "$POSTGRES_USER" "$1"' sh "$FILES_DATABASE"
-  printf 'Base de files-api creada después del backup.\n'
-else
-  printf 'Base de files-api ya existe.\n'
-fi
+  [[ "$TARGET_DATABASE" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] \
+    || { printf '%s no es un identificador PostgreSQL válido.\n' "$TARGET_DATABASE" >&2; exit 1; }
+
+  DATABASE_EXISTS=$(docker exec "$POSTGRES_CONTAINER" sh -c \
+    'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "SELECT 1 FROM pg_database WHERE datname = '\''$1'\''"' \
+    sh "$TARGET_DATABASE")
+
+  if [[ "$DATABASE_EXISTS" != 1 ]]; then
+    docker exec "$POSTGRES_CONTAINER" sh -c \
+      'createdb -U "$POSTGRES_USER" "$1"' sh "$TARGET_DATABASE"
+    printf 'Base de %s creada después del backup.\n' "$SERVICE"
+  else
+    printf 'Base de %s ya existe.\n' "$SERVICE"
+  fi
+done
 REMOTE
 }
 
@@ -626,6 +652,12 @@ for SERVICE in "${SERVICES[@]}"; do
   fi
 
   ROLLBACK_IMAGE="project-manager-nx-$SERVICE:rollback-$DEPLOY_STAMP"
+  if ! docker image inspect "$ROLLBACK_IMAGE" >/dev/null 2>&1; then
+    printf 'Sin imagen anterior para %s; se elimina el contenedor nuevo.\n' "$SERVICE" >&2
+    docker compose --env-file .env.deploy -f docker-compose.prod.yml \
+      rm -sf "$SERVICE"
+    continue
+  fi
   docker image inspect "$ROLLBACK_IMAGE" >/dev/null
   docker tag "$ROLLBACK_IMAGE" "project-manager-nx-$SERVICE:latest"
   docker compose --env-file .env.deploy -f docker-compose.prod.yml \
@@ -682,7 +714,7 @@ cd "$REMOTE_DIR"
 docker compose --env-file .env.deploy -f docker-compose.prod.yml ps
 
 BFF_CONTAINER=$(docker compose --env-file .env.deploy -f docker-compose.prod.yml ps -q bff-api)
-docker exec "$BFF_CONTAINER" node -e "Promise.all([fetch('http://127.0.0.1:3000/health'),fetch('http://127.0.0.1:3000/api/trips'),fetch('http://travel-planner-api:3003/api'),fetch('http://user-api:3001/api/health'),fetch('http://files-api:3004/api/health')]).then(r=>{console.log('BFF_HEALTH='+r[0].status);console.log('TRIPS_WITHOUT_JWT='+r[1].status);console.log('TRAVEL_UPSTREAM='+r[2].status);console.log('USER_UPSTREAM='+r[3].status);console.log('FILES_UPSTREAM='+r[4].status);if(r[0].status!==200||r[1].status!==401||r[2].status!==200||r[3].status!==200||r[4].status!==200)process.exit(1)})"
+docker exec "$BFF_CONTAINER" node -e "Promise.all([fetch('http://127.0.0.1:3000/health'),fetch('http://127.0.0.1:3000/api/trips'),fetch('http://travel-planner-api:3003/api'),fetch('http://user-api:3001/api/health'),fetch('http://files-api:3004/api/health'),fetch('http://inspection-api:3005/api/health'),fetch('http://127.0.0.1:3000/api/inspection/tenants')]).then(r=>{console.log('BFF_HEALTH='+r[0].status);console.log('TRIPS_WITHOUT_JWT='+r[1].status);console.log('TRAVEL_UPSTREAM='+r[2].status);console.log('USER_UPSTREAM='+r[3].status);console.log('FILES_UPSTREAM='+r[4].status);console.log('INSPECTION_UPSTREAM='+r[5].status);console.log('INSPECTION_WITHOUT_JWT='+r[6].status);if(r[0].status!==200||r[1].status!==401||r[2].status!==200||r[3].status!==200||r[4].status!==200||r[5].status!==200||r[6].status!==401)process.exit(1)})"
 
 for SERVICE in "${SERVICES[@]}"; do
   CONTAINER_ID=$(docker compose --env-file .env.deploy -f docker-compose.prod.yml ps -q "$SERVICE")
@@ -710,6 +742,7 @@ verify_external() {
   expect_http_status TRAVEL_PUBLIC_AUTH https://travel.atomdev.cl/api/auth/public 200
   expect_http_status TRAVEL_TRIPS_WITHOUT_JWT https://travel.atomdev.cl/api/trips 401
   expect_http_status PROJECTS_ROOT https://projects.atomdev.cl/ 200
+  expect_http_status INSPECTION_WITHOUT_JWT https://projects.atomdev.cl/api/inspection/tenants 401
   expect_http_status JIRA_ROOT https://jira.atomdev.cl/ 200
   expect_http_status ATOMDEV_ROOT https://atomdev.cl/ 200
   expect_http_status ATOMDEV_WWW https://www.atomdev.cl/ 200

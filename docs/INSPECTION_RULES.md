@@ -70,10 +70,12 @@ el rol global `admin`. En el modelo actual este rol representa al administrador
 de plataforma; los futuros administradores de tenant tendrán un permiso
 diferente.
 
-#### RN-PLA-003 — Crear un cliente no inventa su configuración
+#### RN-PLA-003 — Un cliente comienza con la estructura mínima requerida
 
-Un tenant nuevo se crea sin sitios, activos, trabajos ni catálogos copiados. Su
-configuración operativa se realiza explícitamente después del alta.
+Un tenant nuevo se crea sin sitios, activos ni trabajos. Recibe únicamente el
+tipo de activo protegido `SUBSTATION`, porque todo árbol técnico debe comenzar
+con una subestación. Los demás tipos y catálogos se configuran explícitamente
+para cada cliente.
 
 #### RN-PLA-004 — Desactivar conserva los datos
 
@@ -246,6 +248,11 @@ físicamente, porque puede estar referenciado por activos existentes.
 
 El tipo con código `SUBSTATION` no puede cambiar de código ni desactivarse,
 porque identifica las raíces válidas del árbol.
+
+#### RN-CTA-005 — Todo tenant dispone del tipo estructural `SUBSTATION`
+
+La creación de un tenant provisiona `SUBSTATION` dentro de la misma transacción.
+Una migración idempotente repara los tenants antiguos que no tengan ese tipo.
 
 ### Catálogo de tipos de trabajo
 

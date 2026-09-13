@@ -6,8 +6,10 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { QueryFailedError, Repository } from 'typeorm';
 import { AssetEntity } from '../catalog/entities/asset.entity';
+import { AssetTypeEntity } from '../catalog/entities/asset-type.entity';
 import { SiteEntity } from '../catalog/entities/site.entity';
 import { TenantEntity } from '../catalog/entities/tenant.entity';
+import { REQUIRED_SUBSTATION_ASSET_TYPE } from '../catalog/required-tenant-catalog';
 import { WorkEntity } from '../works/entities/work.entity';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
@@ -49,7 +51,21 @@ export class PlatformService {
       name: dto.name.trim(),
       active: dto.active ?? true,
     });
-    return this.withUsage(await this.saveTenant(tenant));
+    const saved = await this.tenants.manager.transaction(async (manager) => {
+      const savedTenant = await this.saveTenant(
+        tenant,
+        manager.getRepository(TenantEntity)
+      );
+      const assetTypes = manager.getRepository(AssetTypeEntity);
+      await assetTypes.save(
+        assetTypes.create({
+          tenantId: savedTenant.id,
+          ...REQUIRED_SUBSTATION_ASSET_TYPE,
+        })
+      );
+      return savedTenant;
+    });
+    return this.withUsage(saved);
   }
 
   async updateTenant(tenantId: string, dto: UpdateTenantDto) {
@@ -134,9 +150,12 @@ export class PlatformService {
     return tenant;
   }
 
-  private async saveTenant(tenant: TenantEntity) {
+  private async saveTenant(
+    tenant: TenantEntity,
+    repository: Repository<TenantEntity> = this.tenants
+  ) {
     try {
-      return await this.tenants.save(tenant);
+      return await repository.save(tenant);
     } catch (error) {
       if (
         error instanceof QueryFailedError &&

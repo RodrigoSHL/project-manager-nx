@@ -31,6 +31,7 @@ import { TenantMembershipEntity } from '../platform/entities/tenant-membership.e
 import { WorkItemAnnotationEntity } from '../works/entities/work-item-annotation.entity';
 import { CreateWorkItemAnnotations1799101200000 } from '../../migrations/1799101200000-CreateWorkItemAnnotations';
 import { AddTenantMembershipRoles1799101300000 } from '../../migrations/1799101300000-AddTenantMembershipRoles';
+import { ProvisionRequiredTenantCatalog1799101400000 } from '../../migrations/1799101400000-ProvisionRequiredTenantCatalog';
 
 export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
   type: 'postgres',
@@ -83,6 +84,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     CreateTenantMemberships1799101100000,
     CreateWorkItemAnnotations1799101200000,
     AddTenantMembershipRoles1799101300000,
+    ProvisionRequiredTenantCatalog1799101400000,
   ],
   migrationsRun: process.env.INSPECTION_MIGRATIONS_RUN === 'true',
   synchronize: false,

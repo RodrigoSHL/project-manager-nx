@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import type { Repository } from 'typeorm';
 import type { AssetEntity } from '../catalog/entities/asset.entity';
+import { AssetTypeEntity } from '../catalog/entities/asset-type.entity';
 import type { SiteEntity } from '../catalog/entities/site.entity';
 import { TenantEntity } from '../catalog/entities/tenant.entity';
 import type { WorkEntity } from '../works/entities/work.entity';
@@ -17,7 +18,9 @@ describe('PlatformService', () => {
     findOne: jest.Mock;
     create: jest.Mock;
     save: jest.Mock;
+    manager: { transaction: jest.Mock };
   };
+  let assetTypes: { create: jest.Mock; save: jest.Mock };
   let sites: { count: jest.Mock };
   let assets: { count: jest.Mock };
   let works: { count: jest.Mock };
@@ -32,11 +35,23 @@ describe('PlatformService', () => {
   let service: PlatformService;
 
   beforeEach(() => {
+    assetTypes = {
+      create: jest.fn((value) => value),
+      save: jest.fn(async (value) => value),
+    };
     tenants = {
       find: jest.fn(),
       findOne: jest.fn(),
       create: jest.fn((value) => value as TenantEntity),
       save: jest.fn(async (value) => value as TenantEntity),
+      manager: {
+        transaction: jest.fn(async (callback) =>
+          callback({
+            getRepository: (entity: unknown) =>
+              entity === AssetTypeEntity ? assetTypes : tenants,
+          })
+        ),
+      },
     };
     sites = { count: jest.fn().mockResolvedValue(2) };
     assets = { count: jest.fn().mockResolvedValue(18) };
@@ -78,6 +93,14 @@ describe('PlatformService', () => {
       name: 'Minera Nueva',
       active: true,
     });
+    expect(assetTypes.create).toHaveBeenCalledWith({
+      tenantId,
+      code: 'SUBSTATION',
+      name: 'Subestación',
+      description: 'Nodo superior del árbol de activos.',
+      active: true,
+    });
+    expect(assetTypes.save).toHaveBeenCalledTimes(1);
   });
 
   it('deactivates a tenant without deleting its operational data', async () => {

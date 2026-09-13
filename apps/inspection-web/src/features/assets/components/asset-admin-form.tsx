@@ -107,6 +107,10 @@ export function AssetAdminForm({
     (item) => !unavailableParentIds.has(item.id)
   );
   const isParentLocked = !asset && Boolean(initialParentId);
+  const isCreatingRoot = !asset && !initialParentId;
+  const substationType = assetTypes.find(
+    (item) => item.code === 'SUBSTATION' && item.active
+  );
   const initialParent = initialParentId
     ? assets.find((item) => item.id === initialParentId)
     : null;
@@ -163,21 +167,35 @@ export function AssetAdminForm({
 
         <label className="text-sm font-medium text-slate-700">
           Tipo de activo
-          <select
-            required
-            value={form.assetTypeId}
-            onChange={(event) => updateField('assetTypeId', event.target.value)}
-            className="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-          >
-            <option value="">Selecciona un tipo</option>
-            {assetTypes
-              .filter((item) => item.active)
-              .map((assetType) => (
-                <option key={assetType.id} value={assetType.id}>
-                  {assetType.code} · {assetType.name}
-                </option>
-              ))}
-          </select>
+          {isCreatingRoot ? (
+            <input
+              readOnly
+              value={
+                substationType
+                  ? `${substationType.code} · ${substationType.name}`
+                  : 'Preparando tipo Subestación…'
+              }
+              className="mt-2 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-slate-700"
+            />
+          ) : (
+            <select
+              required
+              value={form.assetTypeId}
+              onChange={(event) =>
+                updateField('assetTypeId', event.target.value)
+              }
+              className="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+            >
+              <option value="">Selecciona un tipo</option>
+              {assetTypes
+                .filter((item) => item.active)
+                .map((assetType) => (
+                  <option key={assetType.id} value={assetType.id}>
+                    {assetType.code} · {assetType.name}
+                  </option>
+                ))}
+            </select>
+          )}
         </label>
 
         <label className="text-sm font-medium text-slate-700">
@@ -243,7 +261,10 @@ export function AssetAdminForm({
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button
+            type="submit"
+            disabled={isSubmitting || (isCreatingRoot && !substationType)}
+          >
             {isSubmitting ? 'Guardando...' : 'Guardar activo'}
           </Button>
         </div>

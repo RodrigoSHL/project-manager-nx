@@ -5,6 +5,9 @@ GridAssets.
 
 Las reglas funcionales y técnicas vigentes se mantienen en
 [`docs/INSPECTION_RULES.md`](../../docs/INSPECTION_RULES.md).
+La guía detallada de usuarios, membresías, roles y flujo entre servicios está
+en
+[`docs/INSPECTION_TENANT_ACCESS.md`](../../docs/INSPECTION_TENANT_ACCESS.md).
 
 ## Contrato local
 

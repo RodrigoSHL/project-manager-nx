@@ -4,6 +4,10 @@ Este documento reúne las reglas vigentes del módulo de inspecciones y activos.
 Debe actualizarse junto con el código cuando una iteración agregue, cambie o
 elimine una regla.
 
+La explicación completa del modelo de usuarios, membresías, roles, APIs y
+archivos se encuentra en
+[INSPECTION_TENANT_ACCESS.md](./INSPECTION_TENANT_ACCESS.md).
+
 ## Cómo leer este documento
 
 - **Regla de negocio:** define qué puede ocurrir en el sistema y por qué.

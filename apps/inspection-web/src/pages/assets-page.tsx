@@ -8,6 +8,7 @@ import {
   Search,
 } from 'lucide-react';
 import { PageHeader } from '../components/page-header';
+import { SiteSelector } from '../components/site-selector';
 import { Button } from '../components/ui/button';
 import { getRootAssetIds } from '../features/assets/asset-selectors';
 import { AssetDetail } from '../features/assets/components/asset-detail';
@@ -81,24 +82,12 @@ export function AssetsPage() {
             </select>
           </label>
 
-          <label className="text-sm font-medium text-slate-700">
-            Mina / Faena / Sitio
-            <select
-              value={catalog.siteId}
-              onChange={(event) => handleSiteChange(event.target.value)}
-              disabled={catalog.sites.length === 0}
-              className="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-            >
-              {catalog.sites.length === 0 ? (
-                <option value="">Cargando ubicaciones...</option>
-              ) : null}
-              {catalog.sites.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.code} · {item.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SiteSelector
+            sites={catalog.sites}
+            siteId={catalog.siteId}
+            onChange={handleSiteChange}
+            disabled={catalog.sites.length === 0}
+          />
         </div>
 
         {tenant && site ? (

@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { inspectionDb } from '../db/inspection-db';
 import { localWorkRepository } from './local-work-repository';
+import { offlineRepository } from './offline-repository';
 
 const tenantId = 'tenant-a';
 const siteId = 'site-a';
@@ -105,6 +106,14 @@ describe('localWorkRepository', () => {
     expect(annotations[0]).toMatchObject({
       comment: 'Lectura estable',
       syncStatus: 'LOCAL_ONLY',
+    });
+    const pending = await offlineRepository.getPendingSummary();
+    expect(pending).toMatchObject({
+      total: 3,
+      localOnly: 3,
+      newWorks: 1,
+      responses: 1,
+      annotations: 1,
     });
 
     await inspectionDb.works.update(work.id, { syncStatus: 'SYNCED' });

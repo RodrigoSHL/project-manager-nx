@@ -3,6 +3,7 @@ import { Button } from '../../../components/ui/button';
 import { offlineSiteKey } from '../../../db/inspection-db';
 import { useOffline } from '../offline-context';
 import { useState } from 'react';
+import { useConnectivity } from '../../../hooks/use-connectivity';
 
 export function OfflineSiteButton({
   tenantId,
@@ -12,6 +13,7 @@ export function OfflineSiteButton({
   siteId: string;
 }) {
   const offline = useOffline();
+  const connectivity = useConnectivity();
   const [busy, setBusy] = useState(false);
   const record = offline.offlineSites.find(
     (item) => item.id === offlineSiteKey(tenantId, siteId)
@@ -30,6 +32,14 @@ export function OfflineSiteButton({
   }
 
   if (offline.mode === 'LOCAL') {
+    if (!connectivity.apiReachable) {
+      return (
+        <p className="text-sm text-slate-600">
+          Estás usando la copia guardada en este dispositivo. Los cambios se
+          conservarán localmente.
+        </p>
+      );
+    }
     return (
       <Button
         type="button"

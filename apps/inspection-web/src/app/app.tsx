@@ -5,22 +5,27 @@ import { AuthProvider } from '../features/auth/auth-context';
 import { AppRoutes } from '../routes/app-routes';
 import { TenantAccessProvider } from '../features/tenants/tenant-access-context';
 import { OfflineProvider } from '../features/offline/offline-context';
+import { ConnectivityProvider } from '../features/connectivity/connectivity-context';
+import { PwaUpdatePrompt } from '../features/pwa/pwa-update-prompt';
 
 export function App() {
   return (
-    <AuthProvider>
-      <OfflineProvider>
-        <TenantAccessProvider>
-          <ConceptCatalogProvider>
-            <FormTemplateCatalogProvider>
-              <WorkCatalogProvider>
-                <AppRoutes />
-              </WorkCatalogProvider>
-            </FormTemplateCatalogProvider>
-          </ConceptCatalogProvider>
-        </TenantAccessProvider>
-      </OfflineProvider>
-    </AuthProvider>
+    <ConnectivityProvider>
+      <AuthProvider>
+        <OfflineProvider>
+          <TenantAccessProvider>
+            <ConceptCatalogProvider>
+              <FormTemplateCatalogProvider>
+                <WorkCatalogProvider>
+                  <AppRoutes />
+                  <PwaUpdatePrompt />
+                </WorkCatalogProvider>
+              </FormTemplateCatalogProvider>
+            </ConceptCatalogProvider>
+          </TenantAccessProvider>
+        </OfflineProvider>
+      </AuthProvider>
+    </ConnectivityProvider>
   );
 }
 

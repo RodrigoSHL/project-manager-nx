@@ -27,6 +27,41 @@ export type LocalSyncStatus = 'SYNCED' | 'LOCAL_ONLY' | 'MODIFIED';
 export type OfflineSiteStatus = 'DOWNLOADING' | 'READY' | 'ERROR';
 export type DataSourceMode = 'REMOTE' | 'LOCAL';
 
+export function resolveDataSourceMode(
+  preferredMode: DataSourceMode,
+  apiReachable: boolean
+): DataSourceMode {
+  return apiReachable ? preferredMode : 'LOCAL';
+}
+
+export type PendingChangeKind =
+  | 'WORK'
+  | 'RESPONSE'
+  | 'TASK_COMPLETION'
+  | 'ANNOTATION';
+
+export interface PendingChangeItem {
+  id: string;
+  tenantId: string;
+  workId: string;
+  kind: PendingChangeKind;
+  label: string;
+  syncStatus: Exclude<LocalSyncStatus, 'SYNCED'>;
+  updatedAt: string;
+}
+
+export interface PendingSyncSummary {
+  total: number;
+  localOnly: number;
+  modified: number;
+  newWorks: number;
+  modifiedWorks: number;
+  responses: number;
+  taskCompletions: number;
+  annotations: number;
+  items: PendingChangeItem[];
+}
+
 export type LocalWork = Work & { syncStatus: LocalSyncStatus };
 export type LocalConceptResponse = ConceptResponse & {
   syncStatus: LocalSyncStatus;

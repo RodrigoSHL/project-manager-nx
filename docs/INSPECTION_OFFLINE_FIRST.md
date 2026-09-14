@@ -1,5 +1,10 @@
 # GridAssets: primera fase offline-first
 
+> Este documento conserva la primera fase como referencia. La selección
+> automática, la PWA y el modo avión se describen en
+> [INSPECTION_PWA_AIRPLANE_MODE.md](./INSPECTION_PWA_AIRPLANE_MODE.md), que
+> reemplaza las notas históricas sobre Service Worker y cambio manual de modo.
+
 > **Si estás aprendiendo esta implementación:** comienza en
 > [Guía explicada de la implementación](#guía-explicada-de-la-implementación).
 > Las primeras secciones sirven como referencia técnica rápida; la guía parte
@@ -64,8 +69,9 @@ incluso cuando el identificador principal es un UUID global.
 7. marca el sitio como `READY` con `downloadedAt`.
 
 Una descarga posterior no sobreescribe registros marcados `LOCAL_ONLY` o
-`MODIFIED`. El botón está en Activos y permite cambiar explícitamente a la
-copia local. No existe fallback automático en esta fase.
+`MODIFIED`. El botón está en Activos y permite abrir explícitamente la copia
+local. Desde la segunda fase, una API inaccesible activa esa copia de forma
+automática.
 
 ## Escritura local
 
@@ -90,10 +96,9 @@ Un trabajo finalizado o revisado sigue siendo de solo lectura en modo local.
 del almacenamiento. También permite cambiar entre origen remoto/local y
 limpiar IndexedDB en el navegador.
 
-El layout usa `useConnectivity()` únicamente como señal visual. `navigator.onLine`
-no se considera una prueba de disponibilidad del backend. Un Service Worker
-básico conserva el shell ya visitado para poder reabrir la aplicación; no
-implementa background sync ni intercepta la API.
+El layout combina `navigator.onLine` con un health check del BFF. El Service
+Worker generado por `vite-plugin-pwa` conserva el application shell para poder
+reabrir la aplicación; no implementa background sync ni cachea la API.
 
 ## Archivos principales
 
@@ -105,10 +110,10 @@ implementa background sync ni intercepta la API.
 - `apps/inspection-web/src/repositories/local-catalog-repository.ts`: catálogos locales.
 - `apps/inspection-web/src/repositories/offline-repository.ts`: diagnóstico y limpieza.
 - `apps/inspection-web/src/services/cache-site-for-offline.ts`: descarga y persistencia por sitio.
-- `apps/inspection-web/src/features/offline/offline-context.tsx`: selección explícita del origen.
-- `apps/inspection-web/src/hooks/use-connectivity.ts`: indicador online/offline.
+- `apps/inspection-web/src/features/offline/offline-context.tsx`: selección automática del origen.
+- `apps/inspection-web/src/features/connectivity/connectivity-context.tsx`: estado de red y API.
 - `apps/inspection-web/src/pages/offline-debug-page.tsx`: inspección de la base local.
-- `apps/inspection-web/public/sw.js`: caché básica del shell.
+- `apps/inspection-web/vite.config.ts`: generación del manifest y Service Worker.
 
 ## Dependencias que siguen conectadas al backend
 
@@ -166,9 +171,9 @@ flowchart LR
     LR --> IDB[(IndexedDB mediante Dexie)]
 ```
 
-La aplicación no cambia automáticamente entre ambas fuentes. El usuario
-descarga un sitio y activa explícitamente la copia local. Esto permite probar
-la arquitectura sin introducir todavía un motor de sincronización.
+La segunda fase cambia automáticamente a IndexedDB cuando el navegador o la
+API no están disponibles. El usuario también puede abrir la copia local de
+forma explícita para diagnosticarla.
 
 ### 2. Cuatro ideas que conviene separar
 
@@ -574,9 +579,9 @@ Esto habilita el trabajo en terreno, pero no transforma al frontend en la
 autoridad de seguridad. Al volver online y, especialmente, al implementar
 push, el backend debe volver a comprobar usuario, tenant, rol y permisos.
 
-`useConnectivity()` solamente muestra una señal visual. Un navegador puede
-decir “online” aunque la API específica esté caída, por lo que no se usa para
-decidir si una operación remota tuvo éxito.
+`useConnectivity()` comprueba además `/api/health`. Un navegador puede decir
+“online” aunque la API específica esté caída; en ese caso la aplicación muestra
+**Servidor no disponible** y selecciona IndexedDB.
 
 ### 15. Recorrido manual para entenderlo
 
@@ -585,8 +590,8 @@ decidir si una operación remota tuvo éxito.
 3. Seleccionar un tenant y un sitio.
 4. Presionar **Descargar para uso offline**.
 5. Esperar **Disponible offline**.
-6. Abrir **Datos locales** para revisar contadores.
-7. Presionar **Abrir copia local** o seleccionar **Datos locales**.
+6. Abrir **Datos locales** en desarrollo para revisar contadores.
+7. Presionar **Abrir copia local** o desconectar la red.
 8. Volver a **Activos** y verificar el árbol.
 9. Seleccionar un activo y crear un Work.
 10. Completar conceptos, tareas y comentarios.
@@ -594,7 +599,7 @@ decidir si una operación remota tuvo éxito.
 12. Refrescar: el Work debe continuar visible.
 13. En DevTools, abrir `Application > IndexedDB > gridassets-inspection`.
 14. Activar modo avión y volver a abrir una ruta ya usada.
-15. Observar las etiquetas **Solo local** o **Modificado localmente**.
+15. Observar **Pendiente de sincronización** o **Cambios pendientes**.
 
 Para volver al comportamiento anterior, seleccionar **Datos remotos**. Esto no
 elimina los datos locales.

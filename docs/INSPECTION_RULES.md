@@ -669,6 +669,41 @@ tenant esté activo y busca cualquier sitio editable por la combinación `id +
 tenantId`. El frontend no puede indicar un propietario distinto dentro del
 cuerpo de la solicitud.
 
+### RN-OFF-001 — Una API inaccesible activa la copia local
+
+Si el navegador no tiene red o el health check del BFF no responde, las áreas
+offline soportadas usan exclusivamente los repositorios de IndexedDB. Recuperar
+conexión actualiza el estado visual, pero no sincroniza datos automáticamente.
+
+### RN-OFF-002 — Un dato local pendiente no se presenta como sincronizado
+
+Un registro nuevo queda `LOCAL_ONLY` y uno remoto editado localmente queda
+`MODIFIED`. Ambos se muestran como pendientes hasta que un futuro backend
+confirme su recepción.
+
+### RN-OFF-003 — Las reglas del Work también rigen offline
+
+Los campos obligatorios y el estado de solo lectura de Works finalizados o
+revisados se aplican en `LocalWorkRepository` y en la interfaz. Perder conexión
+no amplía los permisos ni permite reabrir un formulario cerrado.
+
+### RN-OFF-004 — Las fotografías todavía requieren servidor
+
+En modo local se permiten comentarios por elemento, pero los controles de
+fotografías quedan deshabilitados con un mensaje explícito. No se inicia una
+cola ni se repiten solicitudes fallidas.
+
+### RP-OFF-001 — El Service Worker guarda únicamente el application shell
+
+Workbox precachea HTML, JavaScript, CSS, iconos, fuentes empaquetadas y assets
+estáticos. Las rutas `/api/*` quedan excluidas; los datos de negocio se guardan
+en IndexedDB.
+
+### RP-OFF-002 — Una actualización nunca recarga un formulario por sí sola
+
+Cuando existe una versión nueva, la PWA muestra **Actualizar ahora**. El Service
+Worker en espera solo se activa cuando el usuario pulsa la acción.
+
 ## Decisiones pendientes
 
 Estas ideas todavía no son reglas implementadas:
@@ -765,3 +800,4 @@ Ejemplo válido o inválido, si ayuda a entenderla.
 | 2026-09-11 | Las membresías incorporan roles por tenant y autorización diferenciada para lectura, trabajo y configuración. |
 | 2026-09-13 | La navegación recuerda por usuario el último tenant y el último sitio utilizado dentro de cada tenant.        |
 | 2026-09-13 | Se agrega la primera fase offline-first con Dexie, descarga por sitio y trabajos locales sin sincronización.  |
+| 2026-09-13 | Se agrega PWA instalable, health check real, fallback automático a IndexedDB y centro `/sync` informativo.    |

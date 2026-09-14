@@ -1,4 +1,9 @@
 import { inspectionDb } from '../db/inspection-db';
+import type {
+  LocalSyncStatus,
+  PendingChangeItem,
+  PendingSyncSummary,
+} from '../features/offline/models';
 
 export const offlineRepository = {
   listSites: () => inspectionDb.offlineSites.toArray(),
@@ -67,4 +72,83 @@ export const offlineRepository = {
       files,
     };
   },
+  async getPendingSummary(): Promise<PendingSyncSummary> {
+    const [works, responses, tasks, annotations] = await Promise.all([
+      inspectionDb.works
+        .filter((item) => item.syncStatus !== 'SYNCED')
+        .toArray(),
+      inspectionDb.conceptResponses
+        .filter((item) => item.syncStatus !== 'SYNCED')
+        .toArray(),
+      inspectionDb.taskCompletions
+        .filter((item) => item.syncStatus !== 'SYNCED')
+        .toArray(),
+      inspectionDb.annotations
+        .filter((item) => item.syncStatus !== 'SYNCED')
+        .toArray(),
+    ]);
+    const statuses: LocalSyncStatus[] = [
+      ...works.map((item) => item.syncStatus),
+      ...responses.map((item) => item.syncStatus),
+      ...tasks.map((item) => item.syncStatus),
+      ...annotations.map((item) => item.syncStatus),
+    ];
+    const items: PendingChangeItem[] = [
+      ...works.map((item) => ({
+        id: item.id,
+        tenantId: item.tenantId,
+        workId: item.id,
+        kind: 'WORK' as const,
+        label: item.title,
+        syncStatus: asPendingStatus(item.syncStatus),
+        updatedAt: item.updatedAt,
+      })),
+      ...responses.map((item) => ({
+        id: item.id,
+        tenantId: item.tenantId,
+        workId: item.workId,
+        kind: 'RESPONSE' as const,
+        label: `Respuesta · ${item.formItemId}`,
+        syncStatus: asPendingStatus(item.syncStatus),
+        updatedAt: item.updatedAt,
+      })),
+      ...tasks.map((item) => ({
+        id: item.id,
+        tenantId: item.tenantId,
+        workId: item.workId,
+        kind: 'TASK_COMPLETION' as const,
+        label: `Tarea · ${item.formItemId}`,
+        syncStatus: asPendingStatus(item.syncStatus),
+        updatedAt: item.updatedAt,
+      })),
+      ...annotations.map((item) => ({
+        id: item.id,
+        tenantId: item.tenantId,
+        workId: item.workId,
+        kind: 'ANNOTATION' as const,
+        label: item.comment,
+        syncStatus: asPendingStatus(item.syncStatus),
+        updatedAt: item.updatedAt,
+      })),
+    ].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    return {
+      total: statuses.length,
+      localOnly: statuses.filter((status) => status === 'LOCAL_ONLY').length,
+      modified: statuses.filter((status) => status === 'MODIFIED').length,
+      newWorks: works.filter((item) => item.syncStatus === 'LOCAL_ONLY').length,
+      modifiedWorks: works.filter((item) => item.syncStatus === 'MODIFIED')
+        .length,
+      responses: responses.length,
+      taskCompletions: tasks.length,
+      annotations: annotations.length,
+      items,
+    };
+  },
 };
+
+function asPendingStatus(status: LocalSyncStatus) {
+  if (status === 'SYNCED') {
+    throw new Error('Un registro sincronizado no es un cambio pendiente.');
+  }
+  return status;
+}

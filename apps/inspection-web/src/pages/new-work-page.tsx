@@ -51,7 +51,15 @@ export function NewWorkPage() {
     );
   }
   if (works.error) {
-    return <InvalidNewWork message={works.error} />;
+    return (
+      <InvalidNewWork
+        message={
+          mode === 'LOCAL'
+            ? 'Este activo o su formulario no está disponible sin conexión. Descarga el sitio antes de salir a terreno.'
+            : works.error
+        }
+      />
+    );
   }
   if (works.isLoading || !works.catalog) {
     return (
@@ -67,7 +75,13 @@ export function NewWorkPage() {
   }
   if (!asset || !site) {
     return (
-      <InvalidNewWork message="El activo no pertenece a la empresa y ubicación indicadas." />
+      <InvalidNewWork
+        message={
+          mode === 'LOCAL'
+            ? 'Este activo no está disponible sin conexión. Descarga el sitio antes de salir a terreno.'
+            : 'El activo no pertenece a la empresa y ubicación indicadas.'
+        }
+      />
     );
   }
 

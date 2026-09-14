@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="GridAssets">
+  <rect width="512" height="512" rx="104" fill="#0f172a"/>
+  <path d="M285 52 119 286h116l-28 174 186-260H270L285 52Z" fill="#fbbf24"/>
+  <path d="M119 286h116l-10 63H75l44-63Zm151-86h123l-45 63h-89l11-63Z" fill="#f8fafc" opacity=".18"/>
+</svg>

@@ -14,6 +14,7 @@ import { formatWorkDate } from '../features/works/work-formatters';
 import { useWorkCatalog } from '../features/works/use-work-catalog';
 import { useTenantAccess } from '../features/tenants/tenant-access-context';
 import { SyncStatusBadge } from '../features/offline/components/sync-status-badge';
+import { useOffline } from '../features/offline/offline-context';
 
 export function WorkDetailPage() {
   const { id = '' } = useParams();
@@ -21,6 +22,7 @@ export function WorkDetailPage() {
   const tenantId = params.get('tenantId') ?? '';
   const catalog = useWorkCatalog(tenantId);
   const tenantAccess = useTenantAccess();
+  const { mode } = useOffline();
   const work = catalog.works.find(
     (item) => item.id === id && item.tenantId === tenantId
   );
@@ -32,7 +34,16 @@ export function WorkDetailPage() {
     return (
       <NotFound message="El enlace no identifica la empresa del trabajo." />
     );
-  if (catalog.error) return <NotFound message={catalog.error} />;
+  if (catalog.error)
+    return (
+      <NotFound
+        message={
+          mode === 'LOCAL'
+            ? 'Este trabajo no está disponible sin conexión. Debes descargar su sitio cuando el servidor vuelva a estar disponible.'
+            : catalog.error
+        }
+      />
+    );
   if (catalog.isLoading || !catalog.catalog) {
     return (
       <section className="grid min-h-72 place-items-center rounded-xl border border-slate-200 bg-white">
@@ -42,7 +53,13 @@ export function WorkDetailPage() {
   }
   if (!work || !snapshot) {
     return (
-      <NotFound message="El trabajo no existe en esta sesión o pertenece a otra empresa." />
+      <NotFound
+        message={
+          mode === 'LOCAL'
+            ? 'Este trabajo o su formulario no fue descargado en este dispositivo.'
+            : 'El trabajo no existe en esta sesión o pertenece a otra empresa.'
+        }
+      />
     );
   }
   const asset = catalog.catalog.assets.find(

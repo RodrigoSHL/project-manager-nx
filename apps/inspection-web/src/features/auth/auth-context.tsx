@@ -16,6 +16,7 @@ import {
 } from './auth-storage';
 import { sessionExpiredEvent } from './authenticated-fetch';
 import type { CurrentUser } from './models';
+import { useConnectivity } from '../../hooks/use-connectivity';
 
 type AuthStatus = 'checking' | 'authenticated' | 'anonymous' | 'unavailable';
 
@@ -31,6 +32,7 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { apiReachable } = useConnectivity();
   const [user, setUser] = useState<CurrentUser | null>(getUserFromToken);
   const [status, setStatus] = useState<AuthStatus>('checking');
   const [verificationKey, setVerificationKey] = useState(0);
@@ -45,6 +47,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = getAccessToken();
     if (!token || !getUserFromToken()) {
       clearSession();
+      return;
+    }
+
+    if (!apiReachable) {
+      setUser(getUserFromToken());
+      setStatus('authenticated');
       return;
     }
 
@@ -66,9 +74,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           error.status === 401
         ) {
           clearSession();
-        } else if (!navigator.onLine && getUserFromToken()) {
-          setUser(getUserFromToken());
-          setStatus('authenticated');
         } else {
           setStatus('unavailable');
         }
@@ -77,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [clearSession, verificationKey]);
+  }, [apiReachable, clearSession, verificationKey]);
 
   useEffect(() => {
     window.addEventListener(sessionExpiredEvent, clearSession);

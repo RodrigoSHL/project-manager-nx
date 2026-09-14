@@ -4,6 +4,7 @@ import { PageHeader } from '../components/page-header';
 import { Button } from '../components/ui/button';
 import { useOffline } from '../features/offline/offline-context';
 import { offlineRepository } from '../repositories/offline-repository';
+import { useConnectivity } from '../hooks/use-connectivity';
 
 type Counts = {
   assets: number;
@@ -17,6 +18,7 @@ type Counts = {
 
 export function OfflineDebugPage() {
   const offline = useOffline();
+  const connectivity = useConnectivity();
   const emptyCounts = {
     assets: 0,
     works: 0,
@@ -33,7 +35,7 @@ export function OfflineDebugPage() {
     void navigator.storage
       ?.estimate()
       .then((value) => setUsage(formatBytes(value.usage ?? 0)));
-  }, [offline.offlineSites]);
+  }, [offline.offlineSites, offline.pendingSummary]);
 
   async function clear() {
     if (
@@ -74,6 +76,7 @@ export function OfflineDebugPage() {
           <div className="flex gap-2">
             <Button
               variant={offline.mode === 'REMOTE' ? 'default' : 'outline'}
+              disabled={!connectivity.apiReachable}
               onClick={() => offline.setMode('REMOTE')}
             >
               Datos remotos
@@ -89,6 +92,12 @@ export function OfflineDebugPage() {
             </Button>
           </div>
         </div>
+        {!connectivity.apiReachable ? (
+          <p className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+            La copia local se usa automáticamente mientras el servidor no está
+            disponible.
+          </p>
+        ) : null}
         <div className="mt-5 divide-y divide-slate-100 rounded-lg border border-slate-200">
           {offline.offlineSites.length ? (
             offline.offlineSites.map((item) => (

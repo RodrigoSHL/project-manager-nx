@@ -70,7 +70,7 @@ const initialState: WorkCatalogState = {
 const WorkCatalogContext = createContext<WorkCatalogValue | null>(null);
 
 export function WorkCatalogProvider({ children }: { children: ReactNode }) {
-  const { mode } = useOffline();
+  const { mode, refresh: refreshOfflineState } = useOffline();
   const repository =
     mode === 'LOCAL' ? localWorkRepository : remoteWorkRepository;
   const [state, setState] = useState(initialState);
@@ -80,7 +80,6 @@ export function WorkCatalogProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     requestedTenantIds.current.clear();
-    setState(initialState);
   }, [mode]);
 
   const replaceTenantWorks = useCallback(
@@ -190,6 +189,7 @@ export function WorkCatalogProvider({ children }: { children: ReactNode }) {
       try {
         const result = await action();
         await refreshTenant(tenantId);
+        if (mode === 'LOCAL') await refreshOfflineState();
         return result;
       } finally {
         setState((current) => ({
@@ -200,7 +200,7 @@ export function WorkCatalogProvider({ children }: { children: ReactNode }) {
         }));
       }
     },
-    [refreshTenant]
+    [mode, refreshOfflineState, refreshTenant]
   );
 
   const createWork = useCallback(

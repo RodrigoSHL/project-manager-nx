@@ -2,9 +2,9 @@ import type { Work } from '../../works/models';
 import type { LocalSyncStatus } from '../models';
 
 const labels: Record<LocalSyncStatus, string> = {
-  SYNCED: 'Sincronizado',
-  LOCAL_ONLY: 'Solo local',
-  MODIFIED: 'Modificado localmente',
+  SYNCED: 'Copia local actual',
+  LOCAL_ONLY: 'Pendiente de sincronización',
+  MODIFIED: 'Cambios pendientes',
 };
 
 export function SyncStatusBadge({ work }: { work: Work }) {
@@ -16,7 +16,7 @@ export function SyncStatusBadge({ work }: { work: Work }) {
         status === 'SYNCED'
           ? 'bg-emerald-50 text-emerald-700'
           : status === 'LOCAL_ONLY'
-          ? 'bg-blue-50 text-blue-700'
+          ? 'bg-amber-50 text-amber-800'
           : 'bg-amber-50 text-amber-800'
       }`}
     >

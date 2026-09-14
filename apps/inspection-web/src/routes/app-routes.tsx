@@ -27,6 +27,8 @@ import { Button } from '../components/ui/button';
 import type { ReactNode } from 'react';
 import { useTenantAccess } from '../features/tenants/tenant-access-context';
 import { OfflineDebugPage } from '../pages/offline-debug-page';
+import { SyncPage } from '../pages/sync-page';
+import { useOffline } from '../features/offline/offline-context';
 
 export function AppRoutes() {
   return (
@@ -46,7 +48,17 @@ export function AppRoutes() {
             <Route path="/works/new" element={<NewWorkPage />} />
             <Route path="/works/:id" element={<WorkDetailPage />} />
             <Route path="/findings" element={<FindingsPage />} />
-            <Route path="/offline-debug" element={<OfflineDebugPage />} />
+            <Route path="/sync" element={<SyncPage />} />
+            <Route
+              path="/offline-debug"
+              element={
+                import.meta.env.DEV ? (
+                  <OfflineDebugPage />
+                ) : (
+                  <Navigate to="/sync" replace />
+                )
+              }
+            />
             <Route element={<RequireTenantAdministration />}>
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminOverviewPage />} />
@@ -120,6 +132,12 @@ function RequireOperationAccess() {
 
 function RequireGlobalAdmin() {
   const auth = useAuth();
+  const { mode } = useOffline();
+  if (mode === 'LOCAL') {
+    return (
+      <SessionMessage message="La administración global de clientes requiere conexión con el servidor." />
+    );
+  }
   return isGlobalAdmin(auth.user) ? (
     <Outlet />
   ) : (

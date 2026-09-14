@@ -226,7 +226,11 @@ export function WorkExecutionForm({
       const result = await onFinish(values);
       if (result.ok) {
         setFinishError(null);
-        setNotice('Trabajo finalizado correctamente.');
+        setNotice(
+          localMode
+            ? 'Trabajo finalizado y guardado localmente.'
+            : 'Trabajo finalizado correctamente.'
+        );
       } else {
         setFinishError(result);
         setNotice(null);
@@ -463,7 +467,12 @@ export function WorkExecutionForm({
               type="button"
               disabled={isSaving}
               onClick={() =>
-                void run(onStart, 'Trabajo iniciado correctamente.')
+                void run(
+                  onStart,
+                  localMode
+                    ? 'Trabajo iniciado y guardado localmente.'
+                    : 'Trabajo iniciado correctamente.'
+                )
               }
             >
               Iniciar trabajo
@@ -478,7 +487,7 @@ export function WorkExecutionForm({
                 void run(
                   () => onSave(values),
                   localMode
-                    ? 'Borrador guardado en este dispositivo.'
+                    ? 'Guardado localmente.'
                     : 'Borrador guardado en la base de datos.'
                 )
               }

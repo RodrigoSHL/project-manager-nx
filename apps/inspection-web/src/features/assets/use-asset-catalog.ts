@@ -7,6 +7,8 @@ import {
   resolveAvailableSelection,
 } from '../tenants/organization-selection-storage';
 import type { Asset, Site, Tenant } from './models';
+import { useOffline } from '../offline/offline-context';
+import { localCatalogRepository } from '../../repositories/local-catalog-repository';
 
 function errorMessage(error: unknown) {
   return error instanceof Error
@@ -16,6 +18,7 @@ function errorMessage(error: unknown) {
 
 export function useAssetCatalog(administration = false) {
   const { user } = useAuth();
+  const { mode } = useOffline();
   const userId = user?.userId ?? '';
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
@@ -35,9 +38,12 @@ export function useAssetCatalog(administration = false) {
     setLoadingTenants(true);
     setError(null);
 
-    const request = administration
-      ? assetCatalogApi.listAdministrableTenants(controller.signal)
-      : assetCatalogApi.listTenants(controller.signal);
+    const request =
+      mode === 'LOCAL'
+        ? localCatalogRepository.listTenants()
+        : administration
+        ? assetCatalogApi.listAdministrableTenants(controller.signal)
+        : assetCatalogApi.listTenants(controller.signal);
 
     request
       .then((data) => {
@@ -58,7 +64,7 @@ export function useAssetCatalog(administration = false) {
       });
 
     return () => controller.abort();
-  }, [administration, retryKey, userId]);
+  }, [administration, mode, retryKey, userId]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -67,10 +73,17 @@ export function useAssetCatalog(administration = false) {
     setLoadingSites(true);
     setError(null);
 
-    Promise.all([
-      assetCatalogApi.listSites(tenantId, controller.signal),
-      assetCatalogApi.listAssetTypes(tenantId, controller.signal),
-    ])
+    Promise.all(
+      mode === 'LOCAL'
+        ? [
+            localCatalogRepository.listSites(tenantId),
+            localCatalogRepository.listAssetTypes(tenantId),
+          ]
+        : [
+            assetCatalogApi.listSites(tenantId, controller.signal),
+            assetCatalogApi.listAssetTypes(tenantId, controller.signal),
+          ]
+    )
       .then(([siteData, assetTypeData]) => {
         setSites(siteData);
         setAssetTypes(assetTypeData);
@@ -90,7 +103,7 @@ export function useAssetCatalog(administration = false) {
       });
 
     return () => controller.abort();
-  }, [retryKey, tenantId, userId]);
+  }, [mode, retryKey, tenantId, userId]);
 
   useEffect(() => {
     if (!tenantId || !siteId) return;
@@ -99,8 +112,11 @@ export function useAssetCatalog(administration = false) {
     setLoadingAssets(true);
     setError(null);
 
-    assetCatalogApi
-      .listAssets(tenantId, siteId, controller.signal)
+    const request =
+      mode === 'LOCAL'
+        ? localCatalogRepository.listAssets(tenantId, siteId)
+        : assetCatalogApi.listAssets(tenantId, siteId, controller.signal);
+    request
       .then(setAssets)
       .catch((requestError: unknown) => {
         if (!controller.signal.aborted) setError(errorMessage(requestError));
@@ -110,7 +126,7 @@ export function useAssetCatalog(administration = false) {
       });
 
     return () => controller.abort();
-  }, [assetRefreshKey, retryKey, siteId, tenantId]);
+  }, [assetRefreshKey, mode, retryKey, siteId, tenantId]);
 
   function selectTenant(nextTenantId: string) {
     organizationSelectionStorage.rememberTenant(userId, nextTenantId);

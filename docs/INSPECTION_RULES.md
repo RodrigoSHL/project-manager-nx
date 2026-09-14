@@ -730,7 +730,8 @@ Tenant: GMIN
 - Crear pautas, hallazgos, mediciones y adjuntos generales fuera del formulario.
 - Implementar creación automática de nuevas versiones inmutables de una
   plantilla.
-- Diseñar persistencia local, funcionamiento offline y sincronización.
+- Implementar sincronización push/pull, conflictos y fotografías offline sobre
+  la persistencia local descrita en `docs/INSPECTION_OFFLINE_FIRST.md`.
 
 ## Plantilla para agregar una regla
 
@@ -763,3 +764,4 @@ Ejemplo válido o inválido, si ayuda a entenderla.
 | 2026-09-11 | Minas, plantas y faenas pueden crearse y editarse desde la administración de cada tenant.                     |
 | 2026-09-11 | Las membresías incorporan roles por tenant y autorización diferenciada para lectura, trabajo y configuración. |
 | 2026-09-13 | La navegación recuerda por usuario el último tenant y el último sitio utilizado dentro de cada tenant.        |
+| 2026-09-13 | Se agrega la primera fase offline-first con Dexie, descarga por sitio y trabajos locales sin sincronización.  |

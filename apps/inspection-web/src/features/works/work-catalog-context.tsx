@@ -2,16 +2,17 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from 'react';
-import { toWorkResponsesPayload, workApi, WorkApiError } from './work-api';
-import {
-  loadWorkReferenceCatalog,
-  type WorkReferenceData,
-} from './work-reference-loader';
+import { WorkApiError, type WorkCatalogResponse } from './work-api';
+import type { WorkReferenceData } from './work-reference-loader';
+import { useOffline } from '../offline/offline-context';
+import { localWorkRepository } from '../../repositories/local-work-repository';
+import { remoteWorkRepository } from '../../repositories/remote-work-repository';
 import type {
   ConceptResponse,
   CreateWorkInput,
@@ -69,15 +70,23 @@ const initialState: WorkCatalogState = {
 const WorkCatalogContext = createContext<WorkCatalogValue | null>(null);
 
 export function WorkCatalogProvider({ children }: { children: ReactNode }) {
+  const { mode } = useOffline();
+  const repository =
+    mode === 'LOCAL' ? localWorkRepository : remoteWorkRepository;
   const [state, setState] = useState(initialState);
   const stateRef = useRef(state);
   const requestedTenantIds = useRef(new Set<string>());
   stateRef.current = state;
 
+  useEffect(() => {
+    requestedTenantIds.current.clear();
+    setState(initialState);
+  }, [mode]);
+
   const replaceTenantWorks = useCallback(
     (
       tenantId: string,
-      data: Awaited<ReturnType<typeof workApi.list>>,
+      data: WorkCatalogResponse,
       catalog?: WorkReferenceData
     ) => {
       setState((current) => ({
@@ -131,11 +140,8 @@ export function WorkCatalogProvider({ children }: { children: ReactNode }) {
         errors: { ...current.errors, [tenantId]: undefined },
       }));
       try {
-        const [catalog, works] = await Promise.all([
-          loadWorkReferenceCatalog(tenantId),
-          workApi.list(tenantId),
-        ]);
-        replaceTenantWorks(tenantId, works, catalog);
+        const result = await repository.loadTenant(tenantId);
+        replaceTenantWorks(tenantId, result.data, result.catalog);
       } catch (error) {
         requestedTenantIds.current.delete(tenantId);
         setState((current) => ({
@@ -150,14 +156,15 @@ export function WorkCatalogProvider({ children }: { children: ReactNode }) {
         }));
       }
     },
-    [replaceTenantWorks]
+    [replaceTenantWorks, repository]
   );
 
   const refreshTenant = useCallback(
     async (tenantId: string) => {
-      replaceTenantWorks(tenantId, await workApi.list(tenantId));
+      const result = await repository.loadTenant(tenantId);
+      replaceTenantWorks(tenantId, result.data, result.catalog);
     },
-    [replaceTenantWorks]
+    [replaceTenantWorks, repository]
   );
 
   const retryTenant = useCallback(
@@ -198,12 +205,9 @@ export function WorkCatalogProvider({ children }: { children: ReactNode }) {
 
   const createWork = useCallback(
     async (input: CreateWorkInput) => {
-      const result = await runMutation(input.tenantId, () =>
-        workApi.create(input)
-      );
-      return result.work;
+      return runMutation(input.tenantId, () => repository.create(input));
     },
-    [runMutation]
+    [repository, runMutation]
   );
 
   const saveResponses = useCallback(
@@ -212,23 +216,18 @@ export function WorkCatalogProvider({ children }: { children: ReactNode }) {
       workId: string,
       values: Record<string, WorkItemValue>
     ) => {
-      const snapshot = findSnapshot(stateRef.current, tenantId, workId);
       await runMutation(tenantId, () =>
-        workApi.saveResponses(
-          tenantId,
-          workId,
-          toWorkResponsesPayload(snapshot, values)
-        )
+        repository.saveResponses(tenantId, workId, values)
       );
     },
-    [runMutation]
+    [repository, runMutation]
   );
 
   const startWork = useCallback(
     async (tenantId: string, workId: string) => {
-      await runMutation(tenantId, () => workApi.start(tenantId, workId));
+      await runMutation(tenantId, () => repository.start(tenantId, workId));
     },
-    [runMutation]
+    [repository, runMutation]
   );
 
   const finishWork = useCallback(
@@ -237,16 +236,10 @@ export function WorkCatalogProvider({ children }: { children: ReactNode }) {
       workId: string,
       values: Record<string, WorkItemValue>
     ): Promise<FinishResult> => {
-      const snapshot = findSnapshot(stateRef.current, tenantId, workId);
       try {
-        await runMutation(tenantId, () =>
-          workApi.finish(
-            tenantId,
-            workId,
-            toWorkResponsesPayload(snapshot, values)
-          )
+        return await runMutation(tenantId, () =>
+          repository.finish(tenantId, workId, values)
         );
-        return { ok: true };
       } catch (error) {
         if (error instanceof WorkApiError) {
           await refreshTenant(tenantId);
@@ -259,7 +252,7 @@ export function WorkCatalogProvider({ children }: { children: ReactNode }) {
         throw error;
       }
     },
-    [refreshTenant, runMutation]
+    [refreshTenant, repository, runMutation]
   );
 
   const value = useMemo<WorkCatalogValue>(
@@ -295,23 +288,6 @@ export function useWorkCatalogStore() {
   if (!context)
     throw new Error('useWorkCatalogStore requiere WorkCatalogProvider.');
   return context;
-}
-
-function findSnapshot(
-  state: WorkCatalogState,
-  tenantId: string,
-  workId: string
-) {
-  const work = state.works.find(
-    (item) => item.id === workId && item.tenantId === tenantId
-  );
-  const snapshot = state.snapshots.find(
-    (item) => item.workId === workId && item.tenantId === tenantId
-  );
-  if (!work || !snapshot) {
-    throw new WorkApiError('El trabajo no pertenece a esta empresa.');
-  }
-  return snapshot;
 }
 
 function messageFrom(error: unknown) {

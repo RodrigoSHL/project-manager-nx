@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -15,6 +16,8 @@ import type {
   ConceptFormValue,
   ConceptOption,
 } from './models';
+import { useOffline } from '../offline/offline-context';
+import { localCatalogRepository } from '../../repositories/local-catalog-repository';
 
 type ConceptCatalogState = {
   loadedTenantIds: string[];
@@ -70,57 +73,80 @@ function messageFrom(error: unknown) {
 }
 
 export function ConceptCatalogProvider({ children }: { children: ReactNode }) {
+  const { mode } = useOffline();
   const [state, setState] = useState<ConceptCatalogState>(emptyState);
   const requestedTenantIds = useRef(new Set<string>());
 
-  const loadTenant = useCallback(async (tenantId: string) => {
-    if (!tenantId || requestedTenantIds.current.has(tenantId)) return;
-    requestedTenantIds.current.add(tenantId);
-    setState((current) => ({
-      ...current,
-      loadingTenantIds: [...current.loadingTenantIds, tenantId],
-      errors: { ...current.errors, [tenantId]: undefined },
-    }));
+  useEffect(() => {
+    requestedTenantIds.current.clear();
+    setState(emptyState);
+  }, [mode]);
 
-    try {
-      const [conceptsWithOptions, relations] = await Promise.all([
-        conceptApi.listConcepts(tenantId),
-        conceptApi.listAssetTypeConcepts(tenantId),
-      ]);
+  const loadTenant = useCallback(
+    async (tenantId: string) => {
+      if (!tenantId || requestedTenantIds.current.has(tenantId)) return;
+      requestedTenantIds.current.add(tenantId);
       setState((current) => ({
         ...current,
-        loadedTenantIds: current.loadedTenantIds.includes(tenantId)
-          ? current.loadedTenantIds
-          : [...current.loadedTenantIds, tenantId],
-        loadingTenantIds: current.loadingTenantIds.filter(
-          (id) => id !== tenantId
-        ),
-        concepts: [
-          ...current.concepts.filter((item) => item.tenantId !== tenantId),
-          ...conceptsWithOptions.map(toConcept),
-        ],
-        options: [
-          ...current.options.filter((item) => item.tenantId !== tenantId),
-          ...conceptsWithOptions.flatMap((concept) => concept.options),
-        ],
-        assetTypeConcepts: [
-          ...current.assetTypeConcepts.filter(
-            (item) => item.tenantId !== tenantId
+        loadingTenantIds: [...current.loadingTenantIds, tenantId],
+        errors: { ...current.errors, [tenantId]: undefined },
+      }));
+
+      try {
+        const localCatalog =
+          mode === 'LOCAL'
+            ? await localCatalogRepository.listConceptCatalog(tenantId)
+            : null;
+        const [conceptsWithOptions, relations] = localCatalog
+          ? [
+              localCatalog.concepts.map((concept) => ({
+                ...concept,
+                options: localCatalog.options.filter(
+                  (option) => option.conceptId === concept.id
+                ),
+              })),
+              localCatalog.relations,
+            ]
+          : await Promise.all([
+              conceptApi.listConcepts(tenantId),
+              conceptApi.listAssetTypeConcepts(tenantId),
+            ]);
+        setState((current) => ({
+          ...current,
+          loadedTenantIds: current.loadedTenantIds.includes(tenantId)
+            ? current.loadedTenantIds
+            : [...current.loadedTenantIds, tenantId],
+          loadingTenantIds: current.loadingTenantIds.filter(
+            (id) => id !== tenantId
           ),
-          ...relations,
-        ],
-      }));
-    } catch (error) {
-      requestedTenantIds.current.delete(tenantId);
-      setState((current) => ({
-        ...current,
-        loadingTenantIds: current.loadingTenantIds.filter(
-          (id) => id !== tenantId
-        ),
-        errors: { ...current.errors, [tenantId]: messageFrom(error) },
-      }));
-    }
-  }, []);
+          concepts: [
+            ...current.concepts.filter((item) => item.tenantId !== tenantId),
+            ...conceptsWithOptions.map(toConcept),
+          ],
+          options: [
+            ...current.options.filter((item) => item.tenantId !== tenantId),
+            ...conceptsWithOptions.flatMap((concept) => concept.options),
+          ],
+          assetTypeConcepts: [
+            ...current.assetTypeConcepts.filter(
+              (item) => item.tenantId !== tenantId
+            ),
+            ...relations,
+          ],
+        }));
+      } catch (error) {
+        requestedTenantIds.current.delete(tenantId);
+        setState((current) => ({
+          ...current,
+          loadingTenantIds: current.loadingTenantIds.filter(
+            (id) => id !== tenantId
+          ),
+          errors: { ...current.errors, [tenantId]: messageFrom(error) },
+        }));
+      }
+    },
+    [mode]
+  );
 
   const ensureTenant = useCallback(
     async (tenantId: string) => loadTenant(tenantId),

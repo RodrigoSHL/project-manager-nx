@@ -15,6 +15,7 @@ import { AssetDetail } from '../features/assets/components/asset-detail';
 import { AssetTree } from '../features/assets/components/asset-tree';
 import { formatSiteType } from '../features/assets/asset-formatters';
 import { useAssetCatalog } from '../features/assets/use-asset-catalog';
+import { OfflineSiteButton } from '../features/offline/components/offline-site-button';
 
 export function AssetsPage() {
   const catalog = useAssetCatalog();
@@ -102,6 +103,11 @@ export function AssetsPage() {
             </span>
             <ChevronRight className="size-4 text-slate-400" />
             <span>Subestaciones y activos</span>
+          </div>
+        ) : null}
+        {tenant && site ? (
+          <div className="mt-4">
+            <OfflineSiteButton tenantId={tenant.id} siteId={site.id} />
           </div>
         ) : null}
       </section>

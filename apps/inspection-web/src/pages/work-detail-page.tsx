@@ -13,6 +13,7 @@ import { WorkStatusBadge } from '../features/works/components/work-status-badge'
 import { formatWorkDate } from '../features/works/work-formatters';
 import { useWorkCatalog } from '../features/works/use-work-catalog';
 import { useTenantAccess } from '../features/tenants/tenant-access-context';
+import { SyncStatusBadge } from '../features/offline/components/sync-status-badge';
 
 export function WorkDetailPage() {
   const { id = '' } = useParams();
@@ -72,7 +73,10 @@ export function WorkDetailPage() {
               {work.title}
             </h1>
           </div>
-          <WorkStatusBadge status={work.status} />
+          <div className="flex flex-wrap gap-2">
+            <WorkStatusBadge status={work.status} />
+            <SyncStatusBadge work={work} />
+          </div>
         </div>
         <dl className="mt-6 grid gap-4 border-t border-slate-200 pt-5 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <Meta

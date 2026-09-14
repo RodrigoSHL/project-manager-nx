@@ -20,6 +20,7 @@ import {
   WorkItemAdditionalInfo,
   type WorkItemPhotoPreview,
 } from './work-item-additional-info';
+import { useOffline } from '../../offline/offline-context';
 
 type WorkExecutionFormProps = {
   work: Work;
@@ -44,6 +45,8 @@ export function WorkExecutionForm({
   onStart,
   onFinish,
 }: WorkExecutionFormProps) {
+  const { mode } = useOffline();
+  const localMode = mode === 'LOCAL';
   const [values, setValues] = useState<Record<string, WorkItemValue>>({});
   const [notice, setNotice] = useState<string | null>(null);
   const [finishError, setFinishError] = useState<FinishResult | null>(null);
@@ -90,6 +93,11 @@ export function WorkExecutionForm({
   }, [annotations, responses, taskCompletions, work.id]);
 
   useEffect(() => {
+    if (localMode) {
+      setPhotos([]);
+      setPhotoErrors({});
+      return;
+    }
     let cancelled = false;
     const workPreviewUrls = new Set<string>();
     previewUrls.current = workPreviewUrls;
@@ -136,7 +144,7 @@ export function WorkExecutionForm({
       workPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
       workPreviewUrls.clear();
     };
-  }, [work.id, work.tenantId]);
+  }, [localMode, work.id, work.tenantId]);
 
   function update(itemId: string, value: WorkItemValue) {
     setValues((current) => ({
@@ -317,6 +325,7 @@ export function WorkExecutionForm({
                             (photo) => photo.metadata.formItemId === item.id
                           )}
                           readonly={readonly}
+                          photosDisabled={localMode}
                           busy={photoBusyItems.includes(item.id)}
                           error={photoErrors[item.id]}
                           onCommentChange={(comment) =>
@@ -409,6 +418,7 @@ export function WorkExecutionForm({
                           (photo) => photo.metadata.formItemId === item.id
                         )}
                         readonly={readonly}
+                        photosDisabled={localMode}
                         busy={photoBusyItems.includes(item.id)}
                         error={photoErrors[item.id]}
                         onCommentChange={(comment) =>
@@ -467,7 +477,9 @@ export function WorkExecutionForm({
               onClick={() =>
                 void run(
                   () => onSave(values),
-                  'Borrador guardado en la base de datos.'
+                  localMode
+                    ? 'Borrador guardado en este dispositivo.'
+                    : 'Borrador guardado en la base de datos.'
                 )
               }
             >

@@ -26,6 +26,7 @@ import {
 import { Button } from '../components/ui/button';
 import type { ReactNode } from 'react';
 import { useTenantAccess } from '../features/tenants/tenant-access-context';
+import { OfflineDebugPage } from '../pages/offline-debug-page';
 
 export function AppRoutes() {
   return (
@@ -45,6 +46,7 @@ export function AppRoutes() {
             <Route path="/works/new" element={<NewWorkPage />} />
             <Route path="/works/:id" element={<WorkDetailPage />} />
             <Route path="/findings" element={<FindingsPage />} />
+            <Route path="/offline-debug" element={<OfflineDebugPage />} />
             <Route element={<RequireTenantAdministration />}>
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminOverviewPage />} />

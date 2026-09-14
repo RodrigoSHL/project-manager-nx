@@ -18,6 +18,7 @@ type WorkItemAdditionalInfoProps = {
   comment: string;
   photos: WorkItemPhotoPreview[];
   readonly: boolean;
+  photosDisabled?: boolean;
   busy: boolean;
   error?: string;
   onCommentChange: (comment: string) => void;
@@ -30,6 +31,7 @@ export function WorkItemAdditionalInfo({
   comment,
   photos,
   readonly,
+  photosDisabled = false,
   busy,
   error,
   onCommentChange,
@@ -106,7 +108,7 @@ export function WorkItemAdditionalInfo({
                     alt={photo.originalName}
                     className="aspect-square w-full object-cover"
                   />
-                  {!readonly ? (
+                  {!readonly && !photosDisabled ? (
                     <button
                       type="button"
                       disabled={busy}
@@ -131,7 +133,7 @@ export function WorkItemAdditionalInfo({
             </p>
           )}
 
-          {!readonly ? (
+          {!readonly && !photosDisabled ? (
             <div className="flex flex-wrap gap-2">
               <input
                 ref={galleryInput}
@@ -180,6 +182,12 @@ export function WorkItemAdditionalInfo({
                 Tomar foto
               </Button>
             </div>
+          ) : null}
+          {photosDisabled && !readonly ? (
+            <p className="text-xs text-slate-500">
+              La carga de fotografías offline se incorporará con el motor de
+              sincronización.
+            </p>
           ) : null}
           {error ? <p className="text-sm text-red-700">{error}</p> : null}
         </div>

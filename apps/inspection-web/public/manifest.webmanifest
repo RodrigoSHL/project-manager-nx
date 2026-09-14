@@ -1,0 +1,11 @@
+{
+  "name": "GridAssets",
+  "short_name": "GridAssets",
+  "description": "Gestión de activos e inspecciones de subestaciones",
+  "start_url": "/assets",
+  "display": "standalone",
+  "background_color": "#f1f5f9",
+  "theme_color": "#0f172a",
+  "lang": "es"
+}
+

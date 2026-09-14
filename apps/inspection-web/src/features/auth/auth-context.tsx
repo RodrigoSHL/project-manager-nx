@@ -66,6 +66,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           error.status === 401
         ) {
           clearSession();
+        } else if (!navigator.onLine && getUserFromToken()) {
+          setUser(getUserFromToken());
+          setStatus('authenticated');
         } else {
           setStatus('unavailable');
         }

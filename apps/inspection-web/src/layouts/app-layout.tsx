@@ -9,6 +9,7 @@ import {
   Settings,
   ShieldCheck,
   Zap,
+  Database,
 } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Button } from '../components/ui/button';
@@ -21,12 +22,14 @@ import {
   SheetTitle,
 } from '../components/ui/sheet';
 import { useTenantAccess } from '../features/tenants/tenant-access-context';
+import { ConnectivityStatus } from '../features/offline/components/connectivity-status';
 
 const navigation = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/assets', label: 'Activos', icon: Building2 },
   { to: '/works', label: 'Trabajos', icon: ClipboardList },
   { to: '/findings', label: 'Hallazgos', icon: AlertTriangle },
+  { to: '/offline-debug', label: 'Datos locales', icon: Database },
   { to: '/admin', label: 'Administración', icon: Settings },
 ];
 
@@ -143,6 +146,7 @@ export function AppLayout() {
             </p>
             <p className="text-xs text-slate-500">Etapa visual</p>
           </div>
+          <ConnectivityStatus />
         </header>
 
         <main className="mx-auto w-full max-w-7xl p-4 md:p-8">

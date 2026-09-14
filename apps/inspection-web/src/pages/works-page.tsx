@@ -18,6 +18,7 @@ import {
 } from '../features/works/work-formatters';
 import type { WorkStatus } from '../features/works/models';
 import { useWorkCatalog } from '../features/works/use-work-catalog';
+import { SyncStatusBadge } from '../features/offline/components/sync-status-badge';
 
 const allStatuses: WorkStatus[] = [
   'DRAFT',
@@ -181,7 +182,10 @@ export function WorksPage() {
                           {work.title}
                         </h2>
                       </div>
-                      <WorkStatusBadge status={work.status} />
+                      <div className="flex flex-wrap gap-2">
+                        <WorkStatusBadge status={work.status} />
+                        <SyncStatusBadge work={work} />
+                      </div>
                     </div>
                     <div className="mt-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-2 lg:grid-cols-4">
                       <span>

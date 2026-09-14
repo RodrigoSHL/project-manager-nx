@@ -4,6 +4,45 @@ Este documento describe la segunda fase offline del MVP. La primera fase creó
 la base Dexie y los repositorios locales; esta fase permite cargar la propia
 aplicación sin internet y elegir automáticamente la fuente de datos correcta.
 
+## Evolución desde la primera fase
+
+La primera implementación resolvió la persistencia del dominio, pero todavía
+dependía de que el navegador pudiera cargar React y de que el usuario eligiera
+la copia local. Esta entrega conecta las piezas que ya existían:
+
+```mermaid
+flowchart LR
+    subgraph F1[Fase 1: datos locales]
+      DOWNLOAD[Descargar sitio] --> IDB[(IndexedDB)]
+      UI1[UI] --> MANUAL{Selector manual}
+      MANUAL --> LOCAL1[LocalRepository]
+      MANUAL --> REMOTE1[RemoteRepository]
+    end
+
+    subgraph F2[Fase 2: modo avión real]
+      PWA[PWA / Workbox] --> UI2[React disponible sin red]
+      UI2 --> HEALTH{Red + health check}
+      HEALTH -->|API disponible| REMOTE2[RemoteRepository]
+      HEALTH -->|API no disponible| LOCAL2[LocalRepository]
+      LOCAL2 --> IDB2[(IndexedDB)]
+    end
+```
+
+| Pieza                     | Fase 1                                      | Cambio de la fase 2                                  |
+| ------------------------- | ------------------------------------------- | ---------------------------------------------------- |
+| Manifest y Service Worker | Archivos manuales dentro de `public`        | Generados para cada build mediante `vite-plugin-pwa` |
+| Inicio sin internet       | Parcial                                     | Application shell completo precacheado               |
+| Estado de conectividad    | `navigator.onLine`                          | Red del navegador y disponibilidad real del BFF      |
+| Repositorio efectivo      | Selección manual                            | Fallback automático a IndexedDB                      |
+| Sesión                    | Fallback cuando el navegador estaba offline | Fallback cuando la API completa no está disponible   |
+| Estado de cambios         | Visible en cada registro y en diagnóstico   | Conteo global enlazado a `/sync`                     |
+| Actualización PWA         | Sin control de activación                   | Nueva versión espera confirmación del usuario        |
+| Contenido no descargado   | Podía terminar en mensajes técnicos         | Estado vacío explicativo                             |
+
+La base Dexie, el contrato `WorkRepository`, los snapshots y las reglas
+`LOCAL_ONLY/MODIFIED` de la fase 1 se mantienen. Esta fase no crea otro modelo
+de datos ni duplica la lógica de Work.
+
 ## Vista general
 
 ```mermaid
@@ -143,7 +182,11 @@ Actualiza cuando termines de guardar lo que estás revisando.
 Solo el usuario activa el nuevo Service Worker. No existe recarga automática
 durante una inspección.
 
-## 8. Archivos creados y modificados
+## 8. Inventario exacto de la segunda fase
+
+Esta fase afecta **43 archivos**: 27 modificados, 14 creados y 2 eliminados.
+Los archivos eliminados eran la versión manual del manifest y Service Worker;
+sus reemplazos se generan ahora dentro de `dist` durante cada build.
 
 ### Infraestructura PWA
 
@@ -211,6 +254,66 @@ durante una inspección.
 - `docs/INSPECTION_RULES.md`: registra las reglas vigentes de operación y PWA
   offline.
 
+### Inventario archivo por archivo
+
+| Acción | Archivo                                                                               | Cambio                                                                         |
+| ------ | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| M      | `apps/inspection-web/index.html`                                                      | Agrega el icono para dispositivos y deja el manifest bajo control del plugin.  |
+| A      | `apps/inspection-web/public/gridassets-icon.svg`                                      | Fuente vectorial del icono normal.                                             |
+| A      | `apps/inspection-web/public/gridassets-maskable.svg`                                  | Fuente vectorial con zona segura maskable.                                     |
+| D      | `apps/inspection-web/public/manifest.webmanifest`                                     | Se elimina la versión mantenida manualmente.                                   |
+| A      | `apps/inspection-web/public/pwa-192x192.png`                                          | Icono requerido para instalación.                                              |
+| A      | `apps/inspection-web/public/pwa-512x512.png`                                          | Icono grande requerido para instalación.                                       |
+| A      | `apps/inspection-web/public/pwa-maskable-512x512.png`                                 | Icono adaptable para launchers móviles.                                        |
+| D      | `apps/inspection-web/public/sw.js`                                                    | Se elimina el worker manual reemplazado por Workbox.                           |
+| M      | `apps/inspection-web/src/app/app.tsx`                                                 | Instala `ConnectivityProvider` y el aviso global de actualización PWA.         |
+| M      | `apps/inspection-web/src/features/auth/auth-context.tsx`                              | Restaura un JWT vigente sin llamar `/profile` cuando la API no está accesible. |
+| A      | `apps/inspection-web/src/features/connectivity/connectivity-context.tsx`              | Centraliza eventos de red, health checks y sondeo periódico.                   |
+| A      | `apps/inspection-web/src/features/connectivity/models.ts`                             | Define `browserOnline` y `apiReachable`.                                       |
+| M      | `apps/inspection-web/src/features/offline/components/connectivity-status.tsx`         | Muestra los tres estados y enlaza cambios pendientes con `/sync`.              |
+| A      | `apps/inspection-web/src/features/offline/components/offline-content-unavailable.tsx` | Presenta un estado amistoso para contenido no descargado.                      |
+| M      | `apps/inspection-web/src/features/offline/components/offline-site-button.tsx`         | Explica cuándo la copia local fue activada automáticamente.                    |
+| M      | `apps/inspection-web/src/features/offline/components/sync-status-badge.tsx`           | Reemplaza mensajes que afirmaban una sincronización inexistente.               |
+| A      | `apps/inspection-web/src/features/offline/models.test.ts`                             | Prueba la regla que fuerza `LOCAL` cuando falla la API.                        |
+| M      | `apps/inspection-web/src/features/offline/models.ts`                                  | Agrega resolución de modo y modelos del resumen pendiente.                     |
+| M      | `apps/inspection-web/src/features/offline/offline-context.tsx`                        | Calcula el modo efectivo y expone el resumen de IndexedDB.                     |
+| A      | `apps/inspection-web/src/features/pwa/pwa-update-prompt.tsx`                          | Permite activar una versión nueva solamente por decisión del usuario.          |
+| M      | `apps/inspection-web/src/features/works/components/work-execution-form.tsx`           | Informa guardado/inicio/finalización local sin decir “sincronizado”.           |
+| M      | `apps/inspection-web/src/features/works/work-catalog-context.tsx`                     | Refresca pendientes y conserva un formulario durante el cambio de conexión.    |
+| M      | `apps/inspection-web/src/hooks/use-connectivity.ts`                                   | Convierte el hook anterior en acceso al contexto central.                      |
+| M      | `apps/inspection-web/src/layouts/app-layout.tsx`                                      | Agrega `/sync`, estado responsive y oculta áreas online cuando corresponde.    |
+| M      | `apps/inspection-web/src/main.tsx`                                                    | Retira el registro manual del Service Worker.                                  |
+| M      | `apps/inspection-web/src/pages/assets-page.tsx`                                       | Muestra el estado no disponible cuando el sitio no fue descargado.             |
+| M      | `apps/inspection-web/src/pages/login-page.tsx`                                        | Explica que un login nuevo requiere API y evita intentos offline.              |
+| M      | `apps/inspection-web/src/pages/new-work-page.tsx`                                     | Distingue creación local y errores por contenido no descargado.                |
+| M      | `apps/inspection-web/src/pages/offline-debug-page.tsx`                                | Refleja el fallback forzado; queda accesible solo en desarrollo.               |
+| A      | `apps/inspection-web/src/pages/sync-page.tsx`                                         | Lista y resume pendientes sin intentar enviarlos.                              |
+| M      | `apps/inspection-web/src/pages/work-detail-page.tsx`                                  | Explica si un Work o snapshot no existe en la copia local.                     |
+| M      | `apps/inspection-web/src/pages/works-page.tsx`                                        | Diferencia una lista vacía de un catálogo no descargado.                       |
+| M      | `apps/inspection-web/src/repositories/local-work-repository.test.ts`                  | Añade verificación del conteo pendiente persistido.                            |
+| M      | `apps/inspection-web/src/repositories/offline-repository.ts`                          | Agrupa Works, respuestas, tareas y comentarios pendientes.                     |
+| M      | `apps/inspection-web/src/routes/app-routes.tsx`                                       | Registra `/sync` y protege rutas que requieren servidor.                       |
+| A      | `apps/inspection-web/src/services/connectivity-service.ts`                            | Ejecuta `/api/health` con timeout corto y sin caché HTTP.                      |
+| A      | `apps/inspection-web/src/vite-env.d.ts`                                               | Declara los tipos virtuales usados por el plugin PWA.                          |
+| M      | `apps/inspection-web/vite.config.ts`                                                  | Genera manifest, Service Worker, precache y fallback de navegación.            |
+| M      | `docs/INSPECTION_OFFLINE_FIRST.md`                                                    | Conserva la fase 1 y explica cómo evoluciona hacia la fase 2.                  |
+| A      | `docs/INSPECTION_PWA_AIRPLANE_MODE.md`                                                | Documenta esta fase, sus diagramas, archivos y prueba.                         |
+| M      | `docs/INSPECTION_RULES.md`                                                            | Agrega reglas de negocio y programación offline vigentes.                      |
+| M      | `package-lock.json`                                                                   | Fija el árbol reproducible de la nueva dependencia.                            |
+| M      | `package.json`                                                                        | Declara `vite-plugin-pwa`.                                                     |
+
+### Validaciones realizadas en esta entrega
+
+| Validación          | Resultado                                                                                        |
+| ------------------- | ------------------------------------------------------------------------------------------------ |
+| Pruebas Vitest      | 3 pruebas aprobadas: resolución de modo, persistencia, aislamiento por tenant y conteo pendiente |
+| TypeScript          | `tsc --noEmit` aprobado                                                                          |
+| Calidad             | ESLint, Prettier y `git diff --check` aprobados                                                  |
+| Build real          | `nx build inspection-web --configuration=production` aprobado                                    |
+| Artefacto PWA       | Manifest, `sw.js` y Workbox generados; 14 entradas en precache                                   |
+| Servidor de preview | Manifest con MIME correcto, fallback de rutas SPA y Service Worker disponibles                   |
+| Separación de datos | Ninguna URL `/api/*` aparece dentro del precache generado                                        |
+
 ## 9. Problemas detectados
 
 1. El Service Worker manual dependía de mantener a mano una lista de bundles y
@@ -247,9 +350,18 @@ La pantalla `/sync` no llama endpoints y su botón permanece deshabilitado.
 El Service Worker solo existe en un build de producción. Para una prueba local:
 
 ```bash
-npx vite build --config apps/inspection-web/vite.config.ts
+NX_NO_CLOUD=true NX_DAEMON=false NX_ISOLATE_PLUGINS=false \
+  npx nx build inspection-web --configuration=production --skip-nx-cache
+
 npx vite preview --config apps/inspection-web/vite.config.ts
 ```
+
+Usa siempre `http://localhost:4300`. No alternes entre `localhost` y
+`127.0.0.1`, porque cada uno tiene un Service Worker e IndexedDB distintos.
+
+Antes de la primera prueba, elimina el Service Worker manual anterior desde
+`Application > Storage > Clear site data`. Hazlo antes de descargar el sitio,
+porque también elimina IndexedDB.
 
 Después:
 
@@ -257,15 +369,25 @@ Después:
 2. inicia sesión;
 3. abre **Activos** y descarga una Mina/Faena/Sitio;
 4. confirma **Disponible offline**;
-5. instala la app desde Chrome;
-6. cierra por completo la ventana instalada;
-7. activa modo avión y vuelve a abrirla;
-8. comprueba el estado ámbar y navega por el sitio descargado;
-9. crea un Work, inícialo, responde los tres tipos de concepto, agrega un
-   comentario y guarda;
-10. cierra y abre la PWA; confirma que el Work y sus respuestas continúan;
-11. abre **Sincronización** y revisa el conteo pendiente;
-12. recupera internet y espera el estado verde, sin esperar envío automático.
+5. recarga una vez y confirma que `sw.js` aparece **Activated and running**;
+6. instala la app desde Chrome;
+7. detén `vite preview` con `Ctrl+C`; esto simula que ni el frontend ni su
+   proxy hacia `/api` están disponibles;
+8. cierra por completo la ventana instalada y vuelve a abrirla;
+9. comprueba **Servidor no disponible** y navega por el sitio descargado;
+10. crea un Work, inícialo, responde los tres tipos de concepto, agrega un
+    comentario y guarda;
+11. comprueba el mensaje **Guardado localmente**;
+12. cierra y abre la PWA; confirma que el Work y sus respuestas continúan;
+13. abre **Sincronización** y revisa `LOCAL_ONLY` y `MODIFIED`;
+14. vuelve a iniciar `vite preview` y espera el estado verde;
+15. confirma que no existe envío automático: el Work continúa pendiente en
+    IndexedDB.
+
+Para probar específicamente el estado ámbar, activa **Offline** desde
+`DevTools > Network` con la PWA abierta. Detener `vite preview` es una prueba
+más fuerte del application shell en localhost, porque el modo avión físico no
+siempre bloquea la interfaz loopback del equipo.
 
 En DevTools se puede verificar:
 

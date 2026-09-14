@@ -8,6 +8,14 @@ La explicación completa del modelo de usuarios, membresías, roles, APIs y
 archivos se encuentra en
 [INSPECTION_TENANT_ACCESS.md](./INSPECTION_TENANT_ACCESS.md).
 
+La evolución offline está separada en dos documentos para conservar las
+decisiones de cada entrega:
+
+- [INSPECTION_OFFLINE_FIRST.md](./INSPECTION_OFFLINE_FIRST.md): fase 1,
+  persistencia Dexie, descarga por sitio y repositorios locales;
+- [INSPECTION_PWA_AIRPLANE_MODE.md](./INSPECTION_PWA_AIRPLANE_MODE.md): fase 2,
+  PWA, application shell, health check y fallback automático.
+
 ## Cómo leer este documento
 
 - **Regla de negocio:** define qué puede ocurrir en el sistema y por qué.
@@ -766,7 +774,8 @@ Tenant: GMIN
 - Implementar creación automática de nuevas versiones inmutables de una
   plantilla.
 - Implementar sincronización push/pull, conflictos y fotografías offline sobre
-  la persistencia local descrita en `docs/INSPECTION_OFFLINE_FIRST.md`.
+  la persistencia y PWA descritas en `docs/INSPECTION_OFFLINE_FIRST.md` y
+  `docs/INSPECTION_PWA_AIRPLANE_MODE.md`.
 
 ## Plantilla para agregar una regla
 

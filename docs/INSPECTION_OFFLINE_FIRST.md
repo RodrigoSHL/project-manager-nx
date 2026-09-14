@@ -10,6 +10,35 @@
 > Las primeras secciones sirven como referencia técnica rápida; la guía parte
 > desde el problema y explica cada recorrido y archivo.
 
+## Evolución del módulo offline
+
+```mermaid
+flowchart LR
+    ONLINE[Aplicación solo online] --> F1[Fase 1: persistencia local]
+    F1 --> F2[Fase 2: PWA y modo avión]
+    F2 -.-> F3[Fase 3 futura: sincronización]
+
+    F1 --> DEXIE[Dexie + LocalRepository]
+    F2 --> SHELL[Application shell + conectividad real]
+    F3 -.-> SYNC[Push, pull y conflictos]
+```
+
+| Capacidad                   | Antes de la fase 1  | Fase 1                                 | Estado actual, fase 2                              |
+| --------------------------- | ------------------- | -------------------------------------- | -------------------------------------------------- |
+| Datos persistentes locales  | No                  | Sí, mediante Dexie                     | Sí                                                 |
+| Descarga por sitio          | No                  | Sí                                     | Sí                                                 |
+| Elección del repositorio    | Solo remoto         | Manual                                 | Automática cuando la API no responde               |
+| Apertura sin servidor web   | No                  | Service Worker manual inicial          | PWA generada por Vite y Workbox                    |
+| Detección del backend       | No                  | Solo `navigator.onLine` como indicador | `navigator.onLine` + `GET /api/health`             |
+| Trabajos offline            | No                  | Crear, responder y comentar            | Igual, con transición automática y mensajes claros |
+| Cambios pendientes          | Estado en cada fila | Visible en diagnóstico                 | Conteo global y pantalla `/sync`                   |
+| Actualización del frontend  | Recarga normal      | Sin estrategia controlada              | Aviso **Actualizar ahora**                         |
+| Sincronización con servidor | No                  | No                                     | No; corresponde a la fase 3                        |
+
+La fase 1 sigue siendo la base de datos y dominio local. La fase 2 no la
+reemplaza: agrega el mecanismo que permite arrancar React sin red, detectar la
+disponibilidad real de la API y activar esos repositorios locales.
+
 La analogía más cercana es una libreta de terreno:
 
 ```text
@@ -135,7 +164,6 @@ se permite agregar fotos en modo local.
 - persistir blobs locales y subir fotografías pendientes;
 - detectar y resolver conflictos con una política explícita;
 - revalidar membresía y permisos antes de aceptar cambios offline;
-- reemplazar el selector de desarrollo por una estrategia operativa controlada;
 - agregar pruebas de integración en navegador para cierre y reapertura real.
 
 ---
@@ -444,13 +472,19 @@ flowchart TD
     DB --> WORKS2[Trabajos]
 ```
 
-El modo es una preferencia de interfaz y se guarda en `localStorage` bajo la
-clave `inspection-data-source`. Los datos importantes no se guardan allí; se
-guardan en IndexedDB.
+La preferencia de interfaz se guarda en `localStorage` bajo la clave
+`inspection-data-source`. Los datos importantes no se guardan allí; se guardan
+en IndexedDB. Desde la fase 2, el modo efectivo se calcula así:
 
-Cambiar de modo limpia el estado en memoria de los catálogos de Conceptos y
-Trabajos. Luego se vuelven a cargar desde el repositorio correcto. Esta limpieza
-evita mostrar simultáneamente registros remotos y locales.
+```typescript
+mode = apiReachable ? preferredMode : 'LOCAL';
+```
+
+Cuando la API deja de responder se selecciona `LOCAL` aunque la preferencia sea
+`REMOTE`. `WorkCatalogProvider` conserva temporalmente el estado React durante
+el cambio para no desmontar un formulario abierto; a continuación recarga el
+tenant desde IndexedDB. Conceptos, activos y configuraciones también cambian a
+sus repositorios locales y no realizan peticiones de negocio offline.
 
 ### 9. Creación de un trabajo local
 
@@ -560,20 +594,21 @@ El Service Worker permite abrir el shell de React sin red después de una visita
 online. IndexedDB permite que React tenga datos que mostrar y editar. Tener uno
 sin el otro no resolvería el caso completo.
 
-El Service Worker actual:
+Desde la fase 2, el Service Worker se genera con `vite-plugin-pwa` y Workbox:
 
 - se registra solamente en build de producción;
-- conserva recursos GET del mismo origen;
+- precachea HTML, bundles JavaScript/CSS, iconos, fuentes y assets estáticos;
 - excluye rutas `/api/`;
-- usa la página raíz como fallback de navegación;
-- no implementa background sync ni una estrategia avanzada de versiones.
+- usa `index.html` como fallback de React Router;
+- espera la acción **Actualizar ahora** antes de activar una versión nueva;
+- no implementa background sync.
 
 ### 14. Sesión al reabrir en modo avión
 
 Al iniciar normalmente, `AuthProvider` valida el token con `/auth/profile`. Si
-el servidor responde `401`, la sesión se elimina. Si no hay red,
-`navigator.onLine` es falso y existe un JWT local vigente, se permite abrir la
-copia offline con el usuario decodificado desde ese token.
+el servidor responde `401`, la sesión se elimina. Si `apiReachable` es falso y
+existe un JWT local vigente, se permite abrir la copia offline con el usuario
+decodificado desde ese token. La contraseña nunca se persiste.
 
 Esto habilita el trabajo en terreno, pero no transforma al frontend en la
 autoridad de seguridad. Al volver online y, especialmente, al implementar
@@ -604,12 +639,17 @@ push, el backend debe volver a comprobar usuario, tenant, rol y permisos.
 Para volver al comportamiento anterior, seleccionar **Datos remotos**. Esto no
 elimina los datos locales.
 
-### 16. Inventario completo de archivos
+### 16. Inventario de la primera fase
 
-Git registra actualmente **39 archivos de implementación**: 21 modificados y
+La primera fase cerró con **39 archivos de implementación**: 21 modificados y
 18 nuevos. El conteo inicial de 38 cambió al modificar también
 `concept-catalog-context.tsx`, porque durante la revisión final se detectó que
 la ficha del activo todavía cargaba conceptos desde la API en modo local.
+
+Este inventario es una fotografía histórica de aquella entrega. La fase 2
+eliminó el manifest y Service Worker manuales y agregó los archivos enumerados
+en
+[INSPECTION_PWA_AIRPLANE_MODE.md](./INSPECTION_PWA_AIRPLANE_MODE.md#8-inventario-exacto-de-la-segunda-fase).
 
 #### Archivos modificados
 
@@ -742,8 +782,8 @@ Faltan decisiones e implementación para:
 8. persistencia y subida de blobs de fotos;
 9. revalidación de membresías y permisos;
 10. reintentos, errores permanentes y observabilidad;
-11. cambio desde el selector de desarrollo hacia una estrategia operativa;
-12. pruebas E2E con navegador cerrado y conectividad real interrumpida.
+11. pruebas E2E automatizadas con navegador cerrado y conectividad real
+    interrumpida.
 
 La implementación actual no intenta resolver estos puntos de forma parcial.
 Su responsabilidad termina al conservar los datos locales y clasificarlos para

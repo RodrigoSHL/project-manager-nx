@@ -39,6 +39,7 @@ CANONICAL_SERVICES=(
   inspection-api
   bff-api
   inspection-web
+  inspection-web-qa
   project-web
   jira-web
   travel-planner-app
@@ -68,6 +69,7 @@ Uso:
 Opciones:
   --profile PERFIL       travel-full, travel-frontend, travel-backend,
                          inspection-full, inspection-frontend,
+                         inspection-qa-frontend,
                          inspection-backend, platform-full o custom
   --services LISTA       Servicios separados por coma; implica perfil custom
   --key RUTA             Clave privada SSH (también ATOMDEV_SSH_KEY)
@@ -142,9 +144,10 @@ select_profile_interactively() {
   printf '  4) Inspection completo (API, BFF, frontend y Caddy)\n'
   printf '  5) Solo frontend Inspection y Caddy\n'
   printf '  6) Backend Inspection (Inspection API y BFF)\n'
-  printf '  7) Plataforma completa (APIs, BFF y frontends)\n'
-  printf '  8) Selección personalizada\n'
-  read -r -p 'Selecciona [1-8]: ' selection
+  printf '  7) Solo frontend Inspection QA y Caddy\n'
+  printf '  8) Plataforma completa (APIs, BFF y frontends)\n'
+  printf '  9) Selección personalizada\n'
+  read -r -p 'Selecciona [1-9]: ' selection
 
   case "$selection" in
     1) PROFILE="travel-full" ;;
@@ -153,8 +156,9 @@ select_profile_interactively() {
     4) PROFILE="inspection-full" ;;
     5) PROFILE="inspection-frontend" ;;
     6) PROFILE="inspection-backend" ;;
-    7) PROFILE="platform-full" ;;
-    8) PROFILE="custom" ;;
+    7) PROFILE="inspection-qa-frontend" ;;
+    8) PROFILE="platform-full" ;;
+    9) PROFILE="custom" ;;
     *) die "Selección inválida" ;;
   esac
 }
@@ -185,6 +189,9 @@ resolve_services() {
       ;;
     inspection-frontend)
       raw_services="inspection-web,caddy"
+      ;;
+    inspection-qa-frontend)
+      raw_services="inspection-web-qa,caddy"
       ;;
     inspection-backend)
       raw_services="inspection-api,bff-api"
@@ -745,17 +752,19 @@ if printf '%s\n' "${SERVICES[@]}" | grep -qx travel-planner-app; then
   printf 'PUBLIC_BUNDLE_URL_CHECK=clean\n'
 fi
 
-if printf '%s\n' "${SERVICES[@]}" | grep -qx inspection-web; then
-  INSPECTION_WEB_CONTAINER=$(docker compose --env-file .env.deploy -f docker-compose.prod.yml ps -q inspection-web)
-  docker exec "$INSPECTION_WEB_CONTAINER" wget -q --spider http://127.0.0.1/health
-  docker exec "$INSPECTION_WEB_CONTAINER" wget -q --spider http://127.0.0.1/login
-  if docker exec "$INSPECTION_WEB_CONTAINER" grep -RlE \
-    '161\.153\.194\.227|http://localhost|http://bff-api' /usr/share/nginx/html; then
-    printf 'El bundle de Inspection contiene una URL prohibida.\n' >&2
-    exit 1
+for INSPECTION_SERVICE in inspection-web inspection-web-qa; do
+  if printf '%s\n' "${SERVICES[@]}" | grep -qx "$INSPECTION_SERVICE"; then
+    INSPECTION_WEB_CONTAINER=$(docker compose --env-file .env.deploy -f docker-compose.prod.yml ps -q "$INSPECTION_SERVICE")
+    docker exec "$INSPECTION_WEB_CONTAINER" wget -q --spider http://127.0.0.1/health
+    docker exec "$INSPECTION_WEB_CONTAINER" wget -q --spider http://127.0.0.1/login
+    if docker exec "$INSPECTION_WEB_CONTAINER" grep -RlE \
+      '161\.153\.194\.227|http://localhost|http://bff-api' /usr/share/nginx/html; then
+      printf 'El bundle de %s contiene una URL prohibida.\n' "$INSPECTION_SERVICE" >&2
+      exit 1
+    fi
+    printf '%s_PUBLIC_BUNDLE_URL_CHECK=clean\n' "$INSPECTION_SERVICE"
   fi
-  printf 'INSPECTION_PUBLIC_BUNDLE_URL_CHECK=clean\n'
-fi
+done
 REMOTE
 }
 
@@ -770,6 +779,11 @@ verify_external() {
   expect_http_status INSPECTION_ROOT https://inspection.atomdev.cl/ 200
   expect_http_status INSPECTION_LOGIN https://inspection.atomdev.cl/login 200
   expect_http_status INSPECTION_API_WITHOUT_JWT https://inspection.atomdev.cl/api/inspection/tenants 401
+  if contains_service inspection-web-qa "${SERVICES[@]}"; then
+    expect_http_status INSPECTION_QA_ROOT https://qa-inspection.atomdev.cl/ 200
+    expect_http_status INSPECTION_QA_LOGIN https://qa-inspection.atomdev.cl/login 200
+    expect_http_status INSPECTION_QA_API_WITHOUT_JWT https://qa-inspection.atomdev.cl/api/inspection/tenants 401
+  fi
   expect_http_status JIRA_ROOT https://jira.atomdev.cl/ 200
   expect_http_status ATOMDEV_ROOT https://atomdev.cl/ 200
   expect_http_status ATOMDEV_WWW https://www.atomdev.cl/ 200

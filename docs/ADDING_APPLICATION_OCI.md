@@ -378,6 +378,7 @@ También admite uso explícito:
 bash scripts/deploy-oci.sh --profile travel-full
 bash scripts/deploy-oci.sh --profile inspection-backend
 bash scripts/deploy-oci.sh --profile inspection-frontend
+bash scripts/deploy-oci.sh --profile inspection-qa-frontend
 bash scripts/deploy-oci.sh --services travel-planner-api,bff-api,travel-planner-app
 ATOMDEV_SSH_KEY=/ruta/segura/oci.key bash scripts/deploy-oci.sh --dry-run
 ```
@@ -461,6 +462,26 @@ Secuencia:
 7. Verificar una IP de Cloudflare y el header `server: cloudflare`.
 
 Nunca usar `Flexible`.
+
+### Frontend QA de Inspection
+
+`qa-inspection.atomdev.cl` usa el servicio Compose `inspection-web-qa`. Este
+contenedor se construye desde la misma aplicación Vite `inspection-web`, pero se
+despliega de manera independiente de `inspection-web`, que atiende producción.
+
+Ambos orígenes envían las rutas `/api/*` al mismo `bff-api`. Mientras se mantenga
+esta configuración, las acciones realizadas desde QA leen y modifican los mismos
+datos del backend productivo. Para publicar solamente el frontend QA:
+
+```bash
+bash scripts/deploy-oci.sh --profile inspection-qa-frontend --yes
+```
+
+El registro DNS requerido es:
+
+| Type | Name | Content |
+|---|---|---|
+| A | `qa-inspection` | `161.153.194.227` |
 
 ## 13. Validación final
 

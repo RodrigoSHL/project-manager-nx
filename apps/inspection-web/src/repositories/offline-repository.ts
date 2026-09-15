@@ -1,6 +1,5 @@
 import { inspectionDb } from '../db/inspection-db';
 import type {
-  LocalSyncStatus,
   PendingChangeItem,
   PendingSyncSummary,
 } from '../features/offline/models';
@@ -73,22 +72,10 @@ export const offlineRepository = {
     };
   },
   async getPendingSummary(): Promise<PendingSyncSummary> {
-    const [works, responses, tasks, annotations, snapshots] =
-      await Promise.all([
-        inspectionDb.works
-          .filter((item) => item.syncStatus !== 'SYNCED')
-          .toArray(),
-        inspectionDb.conceptResponses
-          .filter((item) => item.syncStatus !== 'SYNCED')
-          .toArray(),
-        inspectionDb.taskCompletions
-          .filter((item) => item.syncStatus !== 'SYNCED')
-          .toArray(),
-        inspectionDb.annotations
-          .filter((item) => item.syncStatus !== 'SYNCED')
-          .toArray(),
-        inspectionDb.snapshots.toArray(),
-      ]);
+    const [outbox, snapshots] = await Promise.all([
+      inspectionDb.outbox.filter((item) => item.status !== 'SYNCED').toArray(),
+      inspectionDb.snapshots.toArray(),
+    ]);
     const itemLabels = new Map(
       snapshots.flatMap((snapshot) =>
         snapshot.sections.flatMap((section) =>
@@ -103,79 +90,63 @@ export const offlineRepository = {
         )
       )
     );
-    const statuses: LocalSyncStatus[] = [
-      ...works.map((item) => item.syncStatus),
-      ...responses.map((item) => item.syncStatus),
-      ...tasks.map((item) => item.syncStatus),
-      ...annotations.map((item) => item.syncStatus),
-    ];
-    const items: PendingChangeItem[] = [
-      ...works.map((item) => ({
-        id: item.id,
-        tenantId: item.tenantId,
-        workId: item.id,
-        kind: 'WORK' as const,
-        label: item.title,
-        syncStatus: asPendingStatus(item.syncStatus),
-        updatedAt: item.updatedAt,
-      })),
-      ...responses.map((item) => ({
-        id: item.id,
-        tenantId: item.tenantId,
-        workId: item.workId,
-        kind: 'RESPONSE' as const,
-        label:
-          itemLabels.get(
-            workItemKey(item.tenantId, item.workId, item.formItemId)
-          ) ??
-          'Concepto del formulario',
-        syncStatus: asPendingStatus(item.syncStatus),
-        updatedAt: item.updatedAt,
-      })),
-      ...tasks.map((item) => ({
-        id: item.id,
-        tenantId: item.tenantId,
-        workId: item.workId,
-        kind: 'TASK_COMPLETION' as const,
-        label:
-          itemLabels.get(
-            workItemKey(item.tenantId, item.workId, item.formItemId)
-          ) ??
-          'Tarea del formulario',
-        syncStatus: asPendingStatus(item.syncStatus),
-        updatedAt: item.updatedAt,
-      })),
-      ...annotations.map((item) => ({
-        id: item.id,
-        tenantId: item.tenantId,
-        workId: item.workId,
-        kind: 'ANNOTATION' as const,
-        label: item.comment,
-        syncStatus: asPendingStatus(item.syncStatus),
-        updatedAt: item.updatedAt,
-      })),
-    ].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    const items: PendingChangeItem[] = outbox
+      .map((item) => {
+        const payload = item.payload;
+        const workId =
+          item.entityType === 'WORK'
+            ? item.entityId
+            : String(payload.workId ?? '');
+        const formItemId = String(payload.formItemId ?? '');
+        const fallback =
+          item.entityType === 'RESPONSE'
+            ? 'Concepto del formulario'
+            : item.entityType === 'TASK_COMPLETION'
+            ? 'Tarea del formulario'
+            : item.entityType === 'ANNOTATION'
+            ? String(payload.comment ?? 'Comentario')
+            : String(payload.title ?? 'Trabajo');
+        return {
+          id: item.id,
+          tenantId: item.tenantId,
+          workId,
+          kind: item.entityType,
+          label:
+            item.entityType === 'WORK'
+              ? fallback
+              : itemLabels.get(
+                  workItemKey(item.tenantId, workId, formItemId)
+                ) ?? fallback,
+          syncStatus:
+            item.operation === 'CREATE'
+              ? ('LOCAL_ONLY' as const)
+              : ('MODIFIED' as const),
+          updatedAt: item.updatedAt,
+          operation: item.operation,
+          status: item.status as Exclude<typeof item.status, 'SYNCED'>,
+          attempts: item.attempts,
+          lastError: item.lastError,
+        };
+      })
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     return {
-      total: statuses.length,
-      localOnly: statuses.filter((status) => status === 'LOCAL_ONLY').length,
-      modified: statuses.filter((status) => status === 'MODIFIED').length,
-      newWorks: works.filter((item) => item.syncStatus === 'LOCAL_ONLY').length,
-      modifiedWorks: works.filter((item) => item.syncStatus === 'MODIFIED')
+      total: items.length,
+      localOnly: items.filter((item) => item.operation === 'CREATE').length,
+      modified: items.filter((item) => item.operation !== 'CREATE').length,
+      newWorks: items.filter(
+        (item) => item.kind === 'WORK' && item.operation === 'CREATE'
+      ).length,
+      modifiedWorks: items.filter(
+        (item) => item.kind === 'WORK' && item.operation !== 'CREATE'
+      ).length,
+      responses: items.filter((item) => item.kind === 'RESPONSE').length,
+      taskCompletions: items.filter((item) => item.kind === 'TASK_COMPLETION')
         .length,
-      responses: responses.length,
-      taskCompletions: tasks.length,
-      annotations: annotations.length,
+      annotations: items.filter((item) => item.kind === 'ANNOTATION').length,
       items,
     };
   },
 };
-
-function asPendingStatus(status: LocalSyncStatus) {
-  if (status === 'SYNCED') {
-    throw new Error('Un registro sincronizado no es un cambio pendiente.');
-  }
-  return status;
-}
 
 function workItemKey(tenantId: string, workId: string, formItemId: string) {
   return `${tenantId}:${workId}:${formItemId}`;

@@ -26,6 +26,8 @@ import type {
 export type LocalSyncStatus = 'SYNCED' | 'LOCAL_ONLY' | 'MODIFIED';
 export type OfflineSiteStatus = 'DOWNLOADING' | 'READY' | 'ERROR';
 export type DataSourceMode = 'REMOTE' | 'LOCAL';
+export type OutboxOperation = 'CREATE' | 'UPDATE' | 'DELETE';
+export type OutboxStatus = 'PENDING' | 'SENDING' | 'SYNCED' | 'ERROR';
 
 export function resolveDataSourceMode(
   preferredMode: DataSourceMode,
@@ -48,6 +50,10 @@ export interface PendingChangeItem {
   label: string;
   syncStatus: Exclude<LocalSyncStatus, 'SYNCED'>;
   updatedAt: string;
+  operation: OutboxOperation;
+  status: Exclude<OutboxStatus, 'SYNCED'>;
+  attempts: number;
+  lastError?: string;
 }
 
 export interface PendingSyncSummary {
@@ -72,6 +78,37 @@ export type LocalTaskCompletion = TaskCompletion & {
 export type LocalWorkItemAnnotation = WorkItemAnnotation & {
   syncStatus: LocalSyncStatus;
 };
+
+export interface OutboxItem {
+  id: string;
+  tenantId: string;
+  entityType: PendingChangeKind;
+  entityId: string;
+  operation: OutboxOperation;
+  payload: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+  status: OutboxStatus;
+  attempts: number;
+  lastError?: string;
+}
+
+export interface DeviceMetadata {
+  id: 'current';
+  deviceId: string;
+  createdAt: string;
+}
+
+export interface SyncProgress {
+  processed: number;
+  total: number;
+}
+
+export interface SyncSummary {
+  total: number;
+  synced: number;
+  failed: number;
+}
 
 export interface OfflineSiteRecord {
   id: string;

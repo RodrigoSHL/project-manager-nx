@@ -291,6 +291,38 @@ describe('InspectionApiClient', () => {
     );
   });
 
+  it('forwards an offline sync batch to inspection-api', async () => {
+    fetchMock.mockImplementation(
+      async () => new Response(JSON.stringify([]), { status: 200 })
+    );
+    const client = new InspectionApiClient();
+    const payload = {
+      tenantId: 'tenant-1',
+      deviceId: 'device-1',
+      changes: [
+        {
+          outboxId: 'outbox-1',
+          entityType: 'WORK' as const,
+          entityId: 'work-1',
+          operation: 'CREATE' as const,
+          payload: { id: 'work-1' },
+          clientTimestamp: '2026-09-15T12:00:00.000Z',
+        },
+      ],
+    };
+
+    await client.pushSync('tenant-1', payload);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://inspection-api.test/api/tenants/tenant-1/sync/push',
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  });
+
   it('forwards platform tenant administration to inspection-api', async () => {
     fetchMock.mockImplementation(
       async () => new Response(JSON.stringify({ saved: true }), { status: 200 })

@@ -9,6 +9,7 @@ import type {
 } from '../features/works/models';
 import type { WorkReferenceData } from '../features/works/work-reference-loader';
 import type { LocalSyncStatus } from '../features/offline/models';
+import { enqueueOutboxChange } from './outbox-repository';
 
 export const localWorkRepository: WorkRepository = {
   source: 'LOCAL',
@@ -125,9 +126,18 @@ export const localWorkRepository: WorkRepository = {
       'rw',
       inspectionDb.works,
       inspectionDb.snapshots,
+      inspectionDb.outbox,
       async () => {
         await inspectionDb.works.add(work);
         await inspectionDb.snapshots.add(snapshot);
+        await enqueueOutboxChange({
+          tenantId: input.tenantId,
+          entityType: 'WORK',
+          entityId: work.id,
+          operation: 'CREATE',
+          payload: work,
+          timestamp: now,
+        });
       }
     );
     return work;
@@ -146,6 +156,7 @@ export const localWorkRepository: WorkRepository = {
       inspectionDb.conceptResponses,
       inspectionDb.taskCompletions,
       inspectionDb.annotations,
+      inspectionDb.outbox,
       async () => {
         const oldResponses = await inspectionDb.conceptResponses
           .where('[tenantId+workId]')
@@ -228,21 +239,124 @@ export const localWorkRepository: WorkRepository = {
         await inspectionDb.conceptResponses.bulkAdd(responseRecords);
         await inspectionDb.taskCompletions.bulkAdd(taskRecords);
         await inspectionDb.annotations.bulkAdd(annotationRecords);
-        await inspectionDb.works.update(workId, {
+        const updatedWork = {
+          ...work,
           updatedAt: now,
           syncStatus: status,
+        };
+        await inspectionDb.works.put(updatedWork);
+        await enqueueOutboxChange({
+          tenantId,
+          entityType: 'WORK',
+          entityId: workId,
+          operation: work.syncStatus === 'LOCAL_ONLY' ? 'CREATE' : 'UPDATE',
+          payload: updatedWork,
+          timestamp: now,
         });
+        for (const record of responseRecords) {
+          await enqueueOutboxChange({
+            tenantId,
+            entityType: 'RESPONSE',
+            entityId: record.id,
+            operation: responseByItem.has(record.formItemId)
+              ? 'UPDATE'
+              : 'CREATE',
+            payload: record,
+            timestamp: now,
+          });
+        }
+        for (const record of taskRecords) {
+          await enqueueOutboxChange({
+            tenantId,
+            entityType: 'TASK_COMPLETION',
+            entityId: record.id,
+            operation: taskByItem.has(record.formItemId) ? 'UPDATE' : 'CREATE',
+            payload: record,
+            timestamp: now,
+          });
+        }
+        for (const record of annotationRecords) {
+          await enqueueOutboxChange({
+            tenantId,
+            entityType: 'ANNOTATION',
+            entityId: record.id,
+            operation: annotationByItem.has(record.formItemId)
+              ? 'UPDATE'
+              : 'CREATE',
+            payload: record,
+            timestamp: now,
+          });
+        }
+        const currentResponseIds = new Set(responseRecords.map(({ id }) => id));
+        const currentTaskIds = new Set(taskRecords.map(({ id }) => id));
+        const currentAnnotationIds = new Set(
+          annotationRecords.map(({ id }) => id)
+        );
+        for (const record of oldResponses.filter(
+          ({ id }) => !currentResponseIds.has(id)
+        )) {
+          await enqueueOutboxChange({
+            tenantId,
+            entityType: 'RESPONSE',
+            entityId: record.id,
+            operation: 'DELETE',
+            payload: record,
+            timestamp: now,
+          });
+        }
+        for (const record of oldTasks.filter(
+          ({ id }) => !currentTaskIds.has(id)
+        )) {
+          await enqueueOutboxChange({
+            tenantId,
+            entityType: 'TASK_COMPLETION',
+            entityId: record.id,
+            operation: 'DELETE',
+            payload: record,
+            timestamp: now,
+          });
+        }
+        for (const record of oldAnnotations.filter(
+          ({ id }) => !currentAnnotationIds.has(id)
+        )) {
+          await enqueueOutboxChange({
+            tenantId,
+            entityType: 'ANNOTATION',
+            entityId: record.id,
+            operation: 'DELETE',
+            payload: record,
+            timestamp: now,
+          });
+        }
       }
     );
   },
 
   async start(tenantId, workId) {
     const work = await requireWork(tenantId, workId);
-    await inspectionDb.works.update(workId, {
+    const now = new Date().toISOString();
+    const updatedWork = {
+      ...work,
       status: 'IN_PROGRESS',
-      updatedAt: new Date().toISOString(),
+      updatedAt: now,
       syncStatus: mutableStatus(work.syncStatus),
-    });
+    } as const;
+    await inspectionDb.transaction(
+      'rw',
+      inspectionDb.works,
+      inspectionDb.outbox,
+      async () => {
+        await inspectionDb.works.put(updatedWork);
+        await enqueueOutboxChange({
+          tenantId,
+          entityType: 'WORK',
+          entityId: workId,
+          operation: work.syncStatus === 'LOCAL_ONLY' ? 'CREATE' : 'UPDATE',
+          payload: updatedWork,
+          timestamp: now,
+        });
+      }
+    );
   },
 
   async finish(tenantId, workId, values) {
@@ -261,11 +375,29 @@ export const localWorkRepository: WorkRepository = {
     }
     await this.saveResponses(tenantId, workId, values);
     const work = await requireWork(tenantId, workId);
-    await inspectionDb.works.update(workId, {
+    const now = new Date().toISOString();
+    const updatedWork = {
+      ...work,
       status: 'FINISHED',
-      updatedAt: new Date().toISOString(),
+      updatedAt: now,
       syncStatus: mutableStatus(work.syncStatus),
-    });
+    } as const;
+    await inspectionDb.transaction(
+      'rw',
+      inspectionDb.works,
+      inspectionDb.outbox,
+      async () => {
+        await inspectionDb.works.put(updatedWork);
+        await enqueueOutboxChange({
+          tenantId,
+          entityType: 'WORK',
+          entityId: workId,
+          operation: work.syncStatus === 'LOCAL_ONLY' ? 'CREATE' : 'UPDATE',
+          payload: updatedWork,
+          timestamp: now,
+        });
+      }
+    );
     return { ok: true };
   },
 };

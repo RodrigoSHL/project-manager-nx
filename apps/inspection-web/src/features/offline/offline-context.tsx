@@ -16,6 +16,8 @@ import {
 } from './models';
 import type { PendingSyncSummary } from './models';
 import { useConnectivity } from '../../hooks/use-connectivity';
+import { syncService } from '../../services/sync-service';
+import type { SyncProgress, SyncSummary } from './models';
 
 const modeKey = 'inspection-data-source';
 
@@ -41,6 +43,11 @@ type OfflineContextValue = {
   refresh: () => Promise<void>;
   cacheSite: (tenantId: string, siteId: string) => Promise<void>;
   clearLocalData: () => Promise<void>;
+  synchronize: () => Promise<void>;
+  isSyncing: boolean;
+  syncProgress: SyncProgress | null;
+  lastSyncSummary: SyncSummary | null;
+  syncError: string | null;
 };
 
 const OfflineContext = createContext<OfflineContextValue | null>(null);
@@ -54,6 +61,12 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   const isForcedOffline = !connectivity.apiReachable;
   const [offlineSites, setOfflineSites] = useState<OfflineSiteRecord[]>([]);
   const [pendingSummary, setPendingSummary] = useState(emptyPendingSummary);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null);
+  const [lastSyncSummary, setLastSyncSummary] = useState<SyncSummary | null>(
+    null
+  );
+  const [syncError, setSyncError] = useState<string | null>(null);
   const refresh = useCallback(async () => {
     const [sites, pending] = await Promise.all([
       offlineRepository.listSites(),
@@ -87,6 +100,23 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     setMode('REMOTE');
     await refresh();
   }, [refresh, setMode]);
+  const synchronize = useCallback(async () => {
+    if (!connectivity.apiReachable || isSyncing) return;
+    setIsSyncing(true);
+    setSyncError(null);
+    setLastSyncSummary(null);
+    try {
+      const summary = await syncService.pushPendingChanges(setSyncProgress);
+      setLastSyncSummary(summary);
+    } catch (error) {
+      setSyncError(
+        error instanceof Error ? error.message : 'No fue posible sincronizar.'
+      );
+    } finally {
+      setIsSyncing(false);
+      await refresh();
+    }
+  }, [connectivity.apiReachable, isSyncing, refresh]);
   const value = useMemo(
     () => ({
       mode,
@@ -98,17 +128,27 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       refresh,
       cacheSite,
       clearLocalData,
+      synchronize,
+      isSyncing,
+      syncProgress,
+      lastSyncSummary,
+      syncError,
     }),
     [
       cacheSite,
       clearLocalData,
       isForcedOffline,
+      isSyncing,
+      lastSyncSummary,
       mode,
       offlineSites,
       pendingSummary,
       preferredMode,
       refresh,
       setMode,
+      syncError,
+      syncProgress,
+      synchronize,
     ]
   );
   return (

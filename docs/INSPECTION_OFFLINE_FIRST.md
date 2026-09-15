@@ -4,6 +4,8 @@
 > automática, la PWA y el modo avión se describen en
 > [INSPECTION_PWA_AIRPLANE_MODE.md](./INSPECTION_PWA_AIRPLANE_MODE.md), que
 > reemplaza las notas históricas sobre Service Worker y cambio manual de modo.
+> El Push manual implementado después se documenta en
+> [INSPECTION_SYNC_PUSH.md](./INSPECTION_SYNC_PUSH.md).
 
 > **Si estás aprendiendo esta implementación:** comienza en
 > [Guía explicada de la implementación](#guía-explicada-de-la-implementación).
@@ -16,14 +18,16 @@
 flowchart LR
     ONLINE[Aplicación solo online] --> F1[Fase 1: persistencia local]
     F1 --> F2[Fase 2: PWA y modo avión]
-    F2 -.-> F3[Fase 3 futura: sincronización]
+    F2 --> F3[Fase 3: Outbox y Push]
+    F3 -.-> F4[Fase futura: Pull y conflictos]
 
     F1 --> DEXIE[Dexie + LocalRepository]
     F2 --> SHELL[Application shell + conectividad real]
-    F3 -.-> SYNC[Push, pull y conflictos]
+    F3 --> SYNC[Push idempotente]
+    F4 -.-> PULL[Pull y resolución de conflictos]
 ```
 
-| Capacidad                   | Antes de la fase 1  | Fase 1                                 | Estado actual, fase 2                              |
+| Capacidad                   | Antes de la fase 1  | Fase 1                                 | Estado actual, fase 3                              |
 | --------------------------- | ------------------- | -------------------------------------- | -------------------------------------------------- |
 | Datos persistentes locales  | No                  | Sí, mediante Dexie                     | Sí                                                 |
 | Descarga por sitio          | No                  | Sí                                     | Sí                                                 |
@@ -33,7 +37,7 @@ flowchart LR
 | Trabajos offline            | No                  | Crear, responder y comentar            | Igual, con transición automática y mensajes claros |
 | Cambios pendientes          | Estado en cada fila | Visible en diagnóstico                 | Conteo global y pantalla `/sync`                   |
 | Actualización del frontend  | Recarga normal      | Sin estrategia controlada              | Aviso **Actualizar ahora**                         |
-| Sincronización con servidor | No                  | No                                     | No; corresponde a la fase 3                        |
+| Sincronización con servidor | No                  | No                                     | Push manual disponible; Pull todavía pendiente     |
 
 La fase 1 sigue siendo la base de datos y dominio local. La fase 2 no la
 reemplaza: agrega el mecanismo que permite arrancar React sin red, detectar la

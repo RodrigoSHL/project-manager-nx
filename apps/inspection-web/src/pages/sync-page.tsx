@@ -1,8 +1,11 @@
 import {
+  AlertTriangle,
+  CheckCircle2,
   Cloud,
   CloudOff,
   FilePenLine,
   ListChecks,
+  LoaderCircle,
   MessageSquareText,
   RefreshCw,
   ServerOff,
@@ -22,7 +25,15 @@ const kindLabels: Record<PendingChangeKind, string> = {
 
 export function SyncPage() {
   const connectivity = useConnectivity();
-  const { pendingSummary, refresh } = useOffline();
+  const {
+    pendingSummary,
+    refresh,
+    synchronize,
+    isSyncing,
+    syncProgress,
+    lastSyncSummary,
+    syncError,
+  } = useOffline();
   const connection = !connectivity.browserOnline
     ? {
         Icon: CloudOff,
@@ -134,9 +145,30 @@ export function SyncPage() {
                     {new Date(item.updatedAt).toLocaleString('es-CL')}
                   </p>
                 </div>
-                <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800">
-                  Pendiente
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                    item.status === 'ERROR'
+                      ? 'bg-red-50 text-red-700'
+                      : item.status === 'SENDING'
+                      ? 'bg-blue-50 text-blue-700'
+                      : 'bg-amber-50 text-amber-800'
+                  }`}
+                >
+                  {item.status === 'ERROR'
+                    ? `Error · intento ${item.attempts}`
+                    : item.status === 'SENDING'
+                    ? 'Enviando'
+                    : item.operation === 'CREATE'
+                    ? 'Nuevo'
+                    : item.operation === 'DELETE'
+                    ? 'Eliminar'
+                    : 'Modificado'}
                 </span>
+                {item.lastError ? (
+                  <p className="w-full text-xs text-red-600">
+                    {item.lastError}
+                  </p>
+                ) : null}
               </div>
             ))
           ) : (
@@ -147,13 +179,71 @@ export function SyncPage() {
         </div>
 
         <div className="mt-5 rounded-lg bg-slate-50 p-4">
-          <Button type="button" disabled>
-            <RefreshCw className="size-4" /> Sincronizar
+          <Button
+            type="button"
+            disabled={
+              !connectivity.apiReachable ||
+              pendingSummary.total === 0 ||
+              isSyncing
+            }
+            onClick={() => void synchronize()}
+          >
+            {isSyncing ? (
+              <LoaderCircle className="size-4 animate-spin" />
+            ) : (
+              <RefreshCw className="size-4" />
+            )}{' '}
+            {isSyncing ? 'Sincronizando...' : 'Sincronizar ahora'}
           </Button>
-          <p className="mt-2 text-sm text-slate-600">
-            La sincronización con el servidor se implementará en la siguiente
-            fase. Este botón todavía no envía información.
-          </p>
+          {isSyncing && syncProgress ? (
+            <div className="mt-3" aria-live="polite">
+              <div className="mb-1 flex justify-between text-xs text-slate-600">
+                <span>Enviando cambios</span>
+                <span>
+                  {syncProgress.processed} / {syncProgress.total}
+                </span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+                <div
+                  className="h-full rounded-full bg-slate-900 transition-all"
+                  style={{
+                    width: `${
+                      syncProgress.total
+                        ? (syncProgress.processed / syncProgress.total) * 100
+                        : 0
+                    }%`,
+                  }}
+                />
+              </div>
+            </div>
+          ) : null}
+          {lastSyncSummary ? (
+            <div
+              className="mt-3 flex flex-wrap gap-4 text-sm"
+              aria-live="polite"
+            >
+              <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700">
+                <CheckCircle2 className="size-4" />
+                {lastSyncSummary.synced} sincronizados
+              </span>
+              {lastSyncSummary.failed > 0 ? (
+                <span className="inline-flex items-center gap-1.5 font-medium text-amber-700">
+                  <AlertTriangle className="size-4" />
+                  {lastSyncSummary.failed} con error
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+          {syncError ? (
+            <p className="mt-3 text-sm font-medium text-red-700" role="alert">
+              {syncError}
+            </p>
+          ) : null}
+          {!connectivity.apiReachable ? (
+            <p className="mt-2 text-sm text-slate-600">
+              El botón se habilitará cuando la API vuelva a estar disponible.
+            </p>
+          ) : null}
         </div>
       </section>
     </>

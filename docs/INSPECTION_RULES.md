@@ -15,6 +15,8 @@ decisiones de cada entrega:
   persistencia Dexie, descarga por sitio y repositorios locales;
 - [INSPECTION_PWA_AIRPLANE_MODE.md](./INSPECTION_PWA_AIRPLANE_MODE.md): fase 2,
   PWA, application shell, health check y fallback automático.
+- [INSPECTION_SYNC_PUSH.md](./INSPECTION_SYNC_PUSH.md): fase 3, Outbox local,
+  Push manual, batches e idempotencia en PostgreSQL.
 
 ## Cómo leer este documento
 
@@ -686,8 +688,8 @@ conexión actualiza el estado visual, pero no sincroniza datos automáticamente.
 ### RN-OFF-002 — Un dato local pendiente no se presenta como sincronizado
 
 Un registro nuevo queda `LOCAL_ONLY` y uno remoto editado localmente queda
-`MODIFIED`. Ambos se muestran como pendientes hasta que un futuro backend
-confirme su recepción.
+`MODIFIED`. Ambos se muestran como pendientes hasta que el Push reciba la
+confirmación del backend.
 
 ### RN-OFF-003 — Las reglas del Work también rigen offline
 
@@ -701,6 +703,24 @@ En modo local se permiten comentarios por elemento, pero los controles de
 fotografías quedan deshabilitados con un mensaje explícito. No se inicia una
 cola ni se repiten solicitudes fallidas.
 
+### RN-OFF-005 — El envío de cambios es manual
+
+Recuperar la conexión no modifica PostgreSQL por sí solo. El usuario revisa la
+Outbox en `/sync` y pulsa **Sincronizar ahora**. Un error puede reintentarse
+manualmente y no inicia un ciclo infinito.
+
+### RN-OFF-006 — Un Work se sincroniza como una unidad consistente
+
+El Work se crea antes que sus respuestas, tareas y comentarios. El estado
+`FINISHED` se aplica al final del grupo y solamente si el servidor vuelve a
+validar sus campos obligatorios. Un fallo revierte el grupo completo.
+
+### RN-OFF-007 — Un Work cerrado en servidor rechaza cambios offline
+
+Si PostgreSQL ya contiene el Work como `FINISHED` o `REVIEWED`, el Push no lo
+sobrescribe. Devuelve un error explícito y conserva el cambio local para una
+futura resolución de conflicto.
+
 ### RP-OFF-001 — El Service Worker guarda únicamente el application shell
 
 Workbox precachea HTML, JavaScript, CSS, iconos, fuentes empaquetadas y assets
@@ -711,6 +731,24 @@ en IndexedDB.
 
 Cuando existe una versión nueva, la PWA muestra **Actualizar ahora**. El Service
 Worker en espera solo se activa cuando el usuario pulsa la acción.
+
+### RP-OFF-003 — Toda mutación local produce una Outbox durable
+
+`LocalWorkRepository` guarda la entidad y su `OutboxItem` dentro de la misma
+transacción Dexie. Cambios repetidos se consolidan y un `CREATE` mantiene esa
+operación con el payload más reciente hasta enviarse.
+
+### RP-OFF-004 — outboxId hace el Push idempotente
+
+`sync_operations` posee una restricción única por `tenant_id + outbox_id`. El
+recibo `PROCESSED` se confirma dentro de la misma transacción PostgreSQL que el
+cambio de dominio; reenviar el mismo UUID responde exitosamente sin duplicar.
+
+### RP-OFF-005 — El servidor vuelve a validar tenant y dominio
+
+La ruta pública requiere JWT, membresía y rol de escritura. `inspection-api`
+compara el tenant de ruta, body y payload, reconstruye el snapshot y valida
+relaciones, tipos de valores, opciones, plantilla y estado del Work.
 
 ## Decisiones pendientes
 
@@ -773,9 +811,9 @@ Tenant: GMIN
 - Crear pautas, hallazgos, mediciones y adjuntos generales fuera del formulario.
 - Implementar creación automática de nuevas versiones inmutables de una
   plantilla.
-- Implementar sincronización push/pull, conflictos y fotografías offline sobre
-  la persistencia y PWA descritas en `docs/INSPECTION_OFFLINE_FIRST.md` y
-  `docs/INSPECTION_PWA_AIRPLANE_MODE.md`.
+- Implementar Pull incremental, checkpoints, resolución de conflictos y
+  fotografías offline sobre el Push descrito en
+  `docs/INSPECTION_SYNC_PUSH.md`.
 
 ## Plantilla para agregar una regla
 
@@ -810,3 +848,4 @@ Ejemplo válido o inválido, si ayuda a entenderla.
 | 2026-09-13 | La navegación recuerda por usuario el último tenant y el último sitio utilizado dentro de cada tenant.        |
 | 2026-09-13 | Se agrega la primera fase offline-first con Dexie, descarga por sitio y trabajos locales sin sincronización.  |
 | 2026-09-13 | Se agrega PWA instalable, health check real, fallback automático a IndexedDB y centro `/sync` informativo.    |
+| 2026-09-15 | Se agrega Outbox durable, Push manual en batches, UUID cliente e idempotencia mediante `outboxId`.            |

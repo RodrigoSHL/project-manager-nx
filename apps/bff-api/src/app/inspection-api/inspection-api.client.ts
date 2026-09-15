@@ -120,6 +120,19 @@ export type WorkResponsesPayload = {
   }>;
 };
 
+export type SyncPushPayload = {
+  tenantId: string;
+  deviceId: string;
+  changes: Array<{
+    outboxId: string;
+    entityType: 'WORK' | 'RESPONSE' | 'TASK_COMPLETION' | 'ANNOTATION';
+    entityId: string;
+    operation: 'CREATE' | 'UPDATE' | 'DELETE';
+    payload: Record<string, unknown>;
+    clientTimestamp: string;
+  }>;
+};
+
 @Injectable()
 export class InspectionApiClient {
   private readonly baseUrl = this.resolveBaseUrl();
@@ -247,6 +260,13 @@ export class InspectionApiClient {
       )}/finish`,
       { method: 'POST', body: JSON.stringify(payload) }
     );
+  }
+
+  pushSync(tenantId: string, payload: SyncPushPayload) {
+    return this.request(`/tenants/${encodeURIComponent(tenantId)}/sync/push`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
   }
 
   listSites(tenantId: string) {

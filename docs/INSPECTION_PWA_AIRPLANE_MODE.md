@@ -1,5 +1,9 @@
 # GridAssets: PWA y operación en modo avión
 
+> Este documento conserva la segunda fase. La tercera fase agregó Outbox y Push
+> manual hacia PostgreSQL; se describe en
+> [INSPECTION_SYNC_PUSH.md](./INSPECTION_SYNC_PUSH.md).
+
 Este documento describe la segunda fase offline del MVP. La primera fase creó
 la base Dexie y los repositorios locales; esta fase permite cargar la propia
 aplicación sin internet y elegir automáticamente la fuente de datos correcta.
@@ -147,7 +151,8 @@ Un Work `FINISHED` o `REVIEWED` sigue siendo de solo lectura offline.
 - administración de clientes, sitios, activos y catálogos;
 - listar, cargar, descargar o eliminar fotografías;
 - consultar un sitio que nunca se descargó;
-- enviar cambios locales al servidor.
+- enviar cambios locales al servidor requiere recuperar la conexión y usar
+  **Sincronizar ahora**; ese flujo pertenece a Sync v1.
 
 Las fotos se deshabilitan en modo local y la interfaz explica que se
 incorporarán con el motor de sincronización. No se hacen reintentos HTTP.

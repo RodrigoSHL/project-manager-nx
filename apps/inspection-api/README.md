@@ -83,6 +83,7 @@ POST /api/tenants/:tenantId/sites/:siteId/assets/:assetId/works
 PUT /api/tenants/:tenantId/works/:workId/responses
 PATCH /api/tenants/:tenantId/works/:workId/status
 POST /api/tenants/:tenantId/works/:workId/finish
+POST /api/tenants/:tenantId/sync/push
 GET /api/platform/tenants
 GET /api/platform/tenants/:tenantId
 POST /api/platform/tenants

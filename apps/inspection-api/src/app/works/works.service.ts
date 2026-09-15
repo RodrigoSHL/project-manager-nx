@@ -156,6 +156,42 @@ export class WorksService {
     };
   }
 
+  async prepareSnapshotForSyncedWork(
+    tenantId: string,
+    workId: string,
+    siteId: string,
+    assetId: string,
+    workTypeId: string,
+    formTemplateId: string,
+    formTemplateVersion: number
+  ) {
+    const [asset, effectiveWorkTypes, template] = await Promise.all([
+      this.catalog.getAsset(tenantId, siteId, assetId),
+      this.catalog.listEffectiveWorkTypes(tenantId, siteId, assetId),
+      this.templates.findOne({
+        where: {
+          id: formTemplateId,
+          tenantId,
+          workTypeId,
+          version: formTemplateVersion,
+          active: true,
+        },
+      }),
+    ]);
+    if (!effectiveWorkTypes.some((workType) => workType.id === workTypeId)) {
+      throw new BadRequestException('Work type is not enabled for this asset');
+    }
+    if (!template) {
+      throw new BadRequestException(
+        'The offline work template is no longer active or has changed version'
+      );
+    }
+    return {
+      asset,
+      snapshot: await this.buildSnapshot(workId, tenantId, template),
+    };
+  }
+
   async saveResponses(
     tenantId: string,
     workId: string,

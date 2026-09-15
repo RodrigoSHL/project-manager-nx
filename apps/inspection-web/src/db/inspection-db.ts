@@ -13,12 +13,14 @@ import type {
 } from '../features/form-templates/models';
 import type {
   LocalConceptResponse,
+  DeviceMetadata,
   LocalFileReference,
   LocalTaskCompletion,
   LocalWork,
   LocalWorkItemAnnotation,
   LocalWorkTypeConfiguration,
   OfflineSiteRecord,
+  OutboxItem,
 } from '../features/offline/models';
 import type { WorkTemplateSnapshot } from '../features/works/models';
 import type { WorkType } from '../features/work-types/models';
@@ -43,6 +45,8 @@ export class InspectionDatabase extends Dexie {
   snapshots!: EntityTable<WorkTemplateSnapshot, 'workId'>;
   fileReferences!: EntityTable<LocalFileReference, 'id'>;
   offlineSites!: EntityTable<OfflineSiteRecord, 'id'>;
+  outbox!: EntityTable<OutboxItem, 'id'>;
+  deviceMetadata!: EntityTable<DeviceMetadata, 'id'>;
 
   constructor() {
     super('gridassets-inspection');
@@ -73,6 +77,51 @@ export class InspectionDatabase extends Dexie {
       fileReferences: 'id, tenantId, [tenantId+workId], [tenantId+status]',
       offlineSites: 'id, tenantId, [tenantId+siteId], [tenantId+status]',
     });
+    this.version(2)
+      .stores({
+        outbox:
+          'id, tenantId, [tenantId+status], [tenantId+entityType+entityId], [tenantId+entityType+entityId+status], createdAt',
+        deviceMetadata: 'id, deviceId',
+      })
+      .upgrade(async (transaction) => {
+        const outbox = transaction.table<OutboxItem, string>('outbox');
+        const now = new Date().toISOString();
+        const sources = [
+          ['works', 'WORK'],
+          ['conceptResponses', 'RESPONSE'],
+          ['taskCompletions', 'TASK_COMPLETION'],
+          ['annotations', 'ANNOTATION'],
+        ] as const;
+        for (const [tableName, entityType] of sources) {
+          const records = await transaction
+            .table<
+              {
+                id: string;
+                tenantId: string;
+                syncStatus: string;
+                updatedAt: string;
+              },
+              string
+            >(tableName)
+            .filter((record) => record.syncStatus !== 'SYNCED')
+            .toArray();
+          await outbox.bulkAdd(
+            records.map((record) => ({
+              id: crypto.randomUUID(),
+              tenantId: record.tenantId,
+              entityType,
+              entityId: record.id,
+              operation:
+                record.syncStatus === 'LOCAL_ONLY' ? 'CREATE' : 'UPDATE',
+              payload: { ...record },
+              createdAt: record.updatedAt || now,
+              updatedAt: record.updatedAt || now,
+              status: 'PENDING',
+              attempts: 0,
+            }))
+          );
+        }
+      });
   }
 }
 

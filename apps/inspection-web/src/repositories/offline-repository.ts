@@ -73,20 +73,36 @@ export const offlineRepository = {
     };
   },
   async getPendingSummary(): Promise<PendingSyncSummary> {
-    const [works, responses, tasks, annotations] = await Promise.all([
-      inspectionDb.works
-        .filter((item) => item.syncStatus !== 'SYNCED')
-        .toArray(),
-      inspectionDb.conceptResponses
-        .filter((item) => item.syncStatus !== 'SYNCED')
-        .toArray(),
-      inspectionDb.taskCompletions
-        .filter((item) => item.syncStatus !== 'SYNCED')
-        .toArray(),
-      inspectionDb.annotations
-        .filter((item) => item.syncStatus !== 'SYNCED')
-        .toArray(),
-    ]);
+    const [works, responses, tasks, annotations, snapshots] =
+      await Promise.all([
+        inspectionDb.works
+          .filter((item) => item.syncStatus !== 'SYNCED')
+          .toArray(),
+        inspectionDb.conceptResponses
+          .filter((item) => item.syncStatus !== 'SYNCED')
+          .toArray(),
+        inspectionDb.taskCompletions
+          .filter((item) => item.syncStatus !== 'SYNCED')
+          .toArray(),
+        inspectionDb.annotations
+          .filter((item) => item.syncStatus !== 'SYNCED')
+          .toArray(),
+        inspectionDb.snapshots.toArray(),
+      ]);
+    const itemLabels = new Map(
+      snapshots.flatMap((snapshot) =>
+        snapshot.sections.flatMap((section) =>
+          section.items.map((item) => [
+            workItemKey(snapshot.tenantId, snapshot.workId, item.id),
+            item.title?.trim() ||
+              item.concept?.name.trim() ||
+              (item.type === 'TASK'
+                ? 'Tarea sin nombre'
+                : 'Concepto sin nombre'),
+          ])
+        )
+      )
+    );
     const statuses: LocalSyncStatus[] = [
       ...works.map((item) => item.syncStatus),
       ...responses.map((item) => item.syncStatus),
@@ -108,7 +124,11 @@ export const offlineRepository = {
         tenantId: item.tenantId,
         workId: item.workId,
         kind: 'RESPONSE' as const,
-        label: `Respuesta · ${item.formItemId}`,
+        label:
+          itemLabels.get(
+            workItemKey(item.tenantId, item.workId, item.formItemId)
+          ) ??
+          'Concepto del formulario',
         syncStatus: asPendingStatus(item.syncStatus),
         updatedAt: item.updatedAt,
       })),
@@ -117,7 +137,11 @@ export const offlineRepository = {
         tenantId: item.tenantId,
         workId: item.workId,
         kind: 'TASK_COMPLETION' as const,
-        label: `Tarea · ${item.formItemId}`,
+        label:
+          itemLabels.get(
+            workItemKey(item.tenantId, item.workId, item.formItemId)
+          ) ??
+          'Tarea del formulario',
         syncStatus: asPendingStatus(item.syncStatus),
         updatedAt: item.updatedAt,
       })),
@@ -151,4 +175,8 @@ function asPendingStatus(status: LocalSyncStatus) {
     throw new Error('Un registro sincronizado no es un cambio pendiente.');
   }
   return status;
+}
+
+function workItemKey(tenantId: string, workId: string, formItemId: string) {
+  return `${tenantId}:${workId}:${formItemId}`;
 }

@@ -115,6 +115,9 @@ describe('localWorkRepository', () => {
       responses: 1,
       annotations: 1,
     });
+    expect(
+      pending.items.find((item) => item.kind === 'RESPONSE')?.label
+    ).toBe('Temperatura');
 
     await inspectionDb.works.update(work.id, { syncStatus: 'SYNCED' });
     await inspectionDb.conceptResponses.update(responses[0].id, {

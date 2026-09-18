@@ -3,6 +3,7 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  OneToMany,
   ManyToMany,
   JoinColumn,
   JoinTable,
@@ -78,6 +79,10 @@ export class Ticket {
   assigneeId: string;
 
   @Column({ type: 'uuid', nullable: true })
+  @Index()
+  epicId: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
   reporterId: string;
 
   @Column({ type: 'integer', nullable: true })
@@ -99,6 +104,16 @@ export class Ticket {
   @ManyToOne(() => Sprint, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'sprintId' })
   sprint: Sprint;
+
+  @ManyToOne(() => Ticket, (ticket) => ticket.stories, {
+    nullable: true,
+    onDelete: 'RESTRICT',
+  })
+  @JoinColumn({ name: 'epicId' })
+  epic: Ticket | null;
+
+  @OneToMany(() => Ticket, (ticket) => ticket.epic)
+  stories: Ticket[];
 
   @ManyToMany(() => Label)
   @JoinTable({

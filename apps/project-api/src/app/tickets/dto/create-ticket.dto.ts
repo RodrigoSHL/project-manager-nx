@@ -41,6 +41,10 @@ export class CreateTicketDto {
 
   @IsUUID()
   @IsOptional()
+  epicId?: string | null;
+
+  @IsUUID()
+  @IsOptional()
   reporterId?: string;
 
   @IsInt()

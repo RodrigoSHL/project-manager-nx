@@ -4,7 +4,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Project } from '../projects/entities/project.entity';
 import { TeamMember } from '../projects/entities/team-member.entity';
 import { TicketSupportDetail } from '../support-details/entities/ticket-support-detail.entity';
-import { Ticket, TicketStatus } from './entities/ticket.entity';
+import { Ticket, TicketStatus, TicketType } from './entities/ticket.entity';
 import { TicketsService } from './tickets.service';
 
 describe('TicketsService', () => {
@@ -118,6 +118,68 @@ describe('TicketsService', () => {
       title: 'Unassigned ticket',
       assigneeId: null,
     });
+  });
+
+  it('creates a story linked to an epic from the same project', async () => {
+    ticketsRepository.findOne.mockResolvedValue({
+      id: 'epic-1',
+      projectId: 'project-1',
+      type: TicketType.EPIC,
+    });
+
+    const result = await service.create('project-1', {
+      title: 'User story',
+      type: TicketType.STORY,
+      epicId: 'epic-1',
+    });
+
+    expect(ticketsRepository.findOne).toHaveBeenCalledWith({
+      where: {
+        id: 'epic-1',
+        projectId: 'project-1',
+        type: TicketType.EPIC,
+      },
+    });
+    expect(result).toMatchObject({
+      title: 'User story',
+      type: TicketType.STORY,
+      epicId: 'epic-1',
+    });
+  });
+
+  it('rejects a story without an epic', async () => {
+    await expect(service.create('project-1', {
+      title: 'Orphan story',
+      type: TicketType.STORY,
+    })).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(ticketsRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('rejects a story linked to an invalid epic', async () => {
+    ticketsRepository.findOne.mockResolvedValue(null);
+
+    await expect(service.create('project-1', {
+      title: 'Story with invalid epic',
+      type: TicketType.STORY,
+      epicId: '00000000-0000-4000-8000-000000000099',
+    })).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(ticketsRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('does not delete an epic while it still has stories', async () => {
+    ticketsRepository.findOne.mockResolvedValue({
+      id: 'epic-1',
+      projectId: 'project-1',
+      type: TicketType.EPIC,
+    });
+    ticketsRepository.count.mockResolvedValue(2);
+
+    await expect(service.remove('project-1', 'epic-1'))
+      .rejects.toBeInstanceOf(BadRequestException);
+
+    expect(ticketsRepository.remove).not.toHaveBeenCalled();
   });
 
   it('validates the assignee when updating a ticket', async () => {

@@ -27,6 +27,8 @@ interface BacklogViewProps {
   currentProject: string
   onTicketClick: (ticket: ApiTicket) => void
   onCreateTicket: (sprintId?: string | null) => void
+  onCreateEpic: () => void
+  onCreateStory: (epicId: string) => void
 }
 
 export function BacklogView({
@@ -35,6 +37,8 @@ export function BacklogView({
   currentProject,
   onTicketClick,
   onCreateTicket,
+  onCreateEpic,
+  onCreateStory,
 }: BacklogViewProps) {
   const [expandedSections, setExpandedSections] = React.useState<
     Record<string, boolean>
@@ -50,8 +54,9 @@ export function BacklogView({
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )
     })
+  const epics = tickets.filter((ticket) => ticket.type === 'epic')
   const backlogTickets = tickets.filter(
-    (t) => !t.sprintId || t.status === 'backlog'
+    (t) => t.type !== 'epic' && (!t.sprintId || t.status === 'backlog')
   )
 
   const toggleSection = (section: string) => {
@@ -67,7 +72,7 @@ export function BacklogView({
   }
 
   const getSprintTickets = (sprintId: string) =>
-    tickets.filter((t) => t.sprintId === sprintId && t.status !== 'backlog')
+    tickets.filter((t) => t.type !== 'epic' && t.sprintId === sprintId && t.status !== 'backlog')
 
   const getSprintStats = (sprintTickets: ApiTicket[]) => {
     const doneTickets = sprintTickets.filter((t) => t.status === 'done')
@@ -112,6 +117,65 @@ export function BacklogView({
 
   return (
     <div className="space-y-6 pb-8">
+      <section className="space-y-3">
+        <div className="flex items-center gap-3 p-4 rounded-xl border border-purple-500/20 bg-purple-500/5">
+          <div className="p-1.5 rounded-md bg-purple-500/10">
+            <Layers className="h-4 w-4 text-purple-500" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold">Épicas</h3>
+            <p className="text-xs text-muted-foreground">
+              {epics.length} {epics.length === 1 ? 'épica' : 'épicas'} · agrupan historias de usuario
+            </p>
+          </div>
+          <div className="flex-1" />
+          <Button variant="outline" size="sm" onClick={onCreateEpic}>
+            <Plus className="h-3.5 w-3.5" />
+            Crear épica
+          </Button>
+        </div>
+
+        {epics.length > 0 ? (
+          <div className="grid gap-3 ml-0 md:grid-cols-2 md:ml-10">
+            {epics.map(epic => {
+              const stories = tickets.filter(ticket => ticket.type === 'story' && ticket.epicId === epic.id)
+              const doneStories = stories.filter(story => story.status === 'done').length
+              const progress = stories.length ? (doneStories / stories.length) * 100 : 0
+
+              return (
+                <div key={epic.id} className="rounded-xl border bg-card p-4 space-y-3">
+                  <button className="w-full text-left" onClick={() => onTicketClick(epic)}>
+                    <div className="flex items-center gap-2">
+                      <Layers className="h-4 w-4 text-purple-500 shrink-0" />
+                      <span className="text-xs font-mono text-muted-foreground">{epic.key}</span>
+                    </div>
+                    <p className="mt-2 text-sm font-semibold line-clamp-2">{epic.title}</p>
+                  </button>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{doneStories}/{stories.length} historias completadas</span>
+                      <span>{Math.round(progress)}%</span>
+                    </div>
+                    <Progress value={progress} className="h-1.5" />
+                  </div>
+                  <Button variant="outline" size="sm" className="w-full" onClick={() => onCreateStory(epic.id)}>
+                    <Plus className="h-3.5 w-3.5" />
+                    Crear historia en esta épica
+                  </Button>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="ml-0 md:ml-10 rounded-xl border border-dashed p-6 text-center">
+            <p className="text-sm font-medium">Aún no hay épicas</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Crea un ticket de tipo Épica para empezar a organizar las historias.
+            </p>
+          </div>
+        )}
+      </section>
+
       {/* Sprint Sections */}
       {projectSprints.length > 0 ? (
         projectSprints.map((sprint) => {
@@ -251,6 +315,12 @@ export function BacklogView({
                           <span className="flex-1 text-sm font-medium truncate">
                             {ticket.title}
                           </span>
+
+                          {ticket.epic && (
+                            <Badge variant="secondary" className="hidden lg:inline-flex max-w-44 truncate text-[10px] text-purple-600">
+                              {ticket.epic.key} · {ticket.epic.title}
+                            </Badge>
+                          )}
 
                           {/* Priority Badge */}
                           <Badge
@@ -405,6 +475,12 @@ export function BacklogView({
                     <span className="flex-1 text-sm font-medium truncate">
                       {ticket.title}
                     </span>
+
+                    {ticket.epic && (
+                      <Badge variant="secondary" className="hidden lg:inline-flex max-w-44 truncate text-[10px] text-purple-600">
+                        {ticket.epic.key} · {ticket.epic.title}
+                      </Badge>
+                    )}
 
                     {/* Priority Badge */}
                     <Badge

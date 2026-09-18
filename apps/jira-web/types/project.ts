@@ -98,11 +98,18 @@ export interface ApiTicket {
   priority: 'lowest' | 'low' | 'medium' | 'high' | 'urgent'
   type: 'story' | 'bug' | 'task' | 'epic' | 'subtask' | 'support'
   assigneeId: string | null
+  epicId: string | null
   reporterId: string | null
   storyPoints: number | null
   dueDate: string | null
   createdAt: string
   updatedAt: string
   labels: ApiLabel[]
+  epic?: {
+    id: string
+    key: string
+    title: string
+    type: 'epic'
+  } | null
   supportDetail?: ApiSupportDetail | null
 }

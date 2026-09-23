@@ -5,7 +5,39 @@ import type {
 } from '../features/offline/models';
 
 export const offlineRepository = {
-  listSites: () => inspectionDb.offlineSites.toArray(),
+  listSites: (tenantId?: string) =>
+    tenantId
+      ? inspectionDb.offlineSites.where('tenantId').equals(tenantId).toArray()
+      : inspectionDb.offlineSites.toArray(),
+  async getSyncMetadata(tenantId?: string) {
+    const [checkpoints, conflicts] = await Promise.all([
+      tenantId
+        ? inspectionDb.syncCheckpoints
+            .where('tenantId')
+            .equals(tenantId)
+            .toArray()
+        : inspectionDb.syncCheckpoints.toArray(),
+      tenantId
+        ? inspectionDb.syncConflictCandidates
+            .where('[tenantId+status]')
+            .equals([tenantId, 'PENDING'])
+            .count()
+        : inspectionDb.syncConflictCandidates
+            .filter((item) => item.status === 'PENDING')
+            .count(),
+    ]);
+    const latest = checkpoints.sort((a, b) =>
+      b.updatedAt.localeCompare(a.updatedAt)
+    )[0];
+    return {
+      checkpoint: checkpoints.reduce(
+        (highest, item) => Math.max(highest, item.checkpoint),
+        0
+      ),
+      lastSyncAt: latest?.updatedAt,
+      conflicts,
+    };
+  },
   async clear() {
     await inspectionDb.delete();
     await inspectionDb.open();
@@ -71,10 +103,22 @@ export const offlineRepository = {
       files,
     };
   },
-  async getPendingSummary(): Promise<PendingSyncSummary> {
+  async getPendingSummary(tenantId?: string): Promise<PendingSyncSummary> {
     const [outbox, snapshots] = await Promise.all([
-      inspectionDb.outbox.filter((item) => item.status !== 'SYNCED').toArray(),
-      inspectionDb.snapshots.toArray(),
+      (tenantId
+        ? inspectionDb.outbox.where('tenantId').equals(tenantId)
+        : inspectionDb.outbox.toCollection()
+      )
+        .filter(
+          (item) =>
+            item.status === 'PENDING' ||
+            item.status === 'SENDING' ||
+            item.status === 'ERROR'
+        )
+        .toArray(),
+      tenantId
+        ? inspectionDb.snapshots.where('tenantId').equals(tenantId).toArray()
+        : inspectionDb.snapshots.toArray(),
     ]);
     const itemLabels = new Map(
       snapshots.flatMap((snapshot) =>

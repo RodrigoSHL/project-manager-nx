@@ -1,5 +1,5 @@
-import { inspectionDb } from '../db/inspection-db';
-import { pushSyncBatch } from '../features/offline/sync-api';
+import { inspectionDb, syncCheckpointKey } from '../db/inspection-db';
+import { pullSyncBatch, pushSyncBatch } from '../features/offline/sync-api';
 import type {
   OutboxItem,
   PendingChangeKind,
@@ -7,38 +7,39 @@ import type {
   SyncSummary,
 } from '../features/offline/models';
 import { outboxRepository } from '../repositories/outbox-repository';
+import { applyRemoteChanges } from './apply-remote-changes';
+import { checkApiReachability } from './connectivity-service';
 
 export const SYNC_BATCH_SIZE = 50;
 
+type PushSummary = { total: number; synced: number; failed: number };
+
 export class SyncService {
   async pushPendingChanges(
+    tenantId: string,
     onProgress?: (progress: SyncProgress) => void
-  ): Promise<SyncSummary> {
-    await this.recoverInterruptedChanges();
-    const pending = await outboxRepository.listRetryable();
+  ): Promise<PushSummary> {
+    await this.recoverInterruptedChanges(tenantId);
+    const pending = await outboxRepository.listRetryable(tenantId);
     const total = pending.length;
     let processed = 0;
     let synced = 0;
     let failed = 0;
-    onProgress?.({ processed, total });
+    onProgress?.({ phase: 'PUSHING', processed, total });
     if (total === 0) return { total, synced, failed };
 
     const deviceId = await outboxRepository.getDeviceId();
     for (const batch of this.createBatches(pending)) {
       await this.markSending(batch);
       try {
-        const results = await pushSyncBatch(
-          batch[0].tenantId,
-          deviceId,
-          batch
-        );
+        const results = await pushSyncBatch(batch[0].tenantId, deviceId, batch);
         const resultById = new Map(
           results.map((result) => [result.outboxId, result])
         );
         for (const item of batch) {
           const result = resultById.get(item.id);
           if (result?.success) {
-            await this.markSynced(item);
+            await this.markAcknowledged(item);
             synced += 1;
           } else {
             await this.markError(
@@ -48,7 +49,7 @@ export class SyncService {
             failed += 1;
           }
           processed += 1;
-          onProgress?.({ processed, total });
+          onProgress?.({ phase: 'PUSHING', processed, total });
         }
       } catch (error) {
         const message =
@@ -57,12 +58,88 @@ export class SyncService {
           await this.markError(item, message);
           failed += 1;
           processed += 1;
-          onProgress?.({ processed, total });
+          onProgress?.({ phase: 'PUSHING', processed, total });
         }
         break;
       }
     }
     return { total, synced, failed };
+  }
+
+  async sync(
+    tenantId: string,
+    onProgress?: (progress: SyncProgress) => void
+  ): Promise<SyncSummary> {
+    onProgress?.({ phase: 'CHECKING', processed: 0, total: 0 });
+    if (!(await checkApiReachability())) {
+      throw new Error('La API no está disponible para sincronizar.');
+    }
+
+    const readySites = await inspectionDb.offlineSites
+      .where('[tenantId+status]')
+      .equals([tenantId, 'READY'])
+      .toArray();
+    const push = await this.pushPendingChanges(tenantId, onProgress);
+    const deviceId = await outboxRepository.getDeviceId();
+    if (push.failed > 0) {
+      return {
+        pushed: push.synced,
+        pulled: 0,
+        conflicts: 0,
+        errors: push.failed,
+        checkpoint: await this.latestCheckpoint(tenantId, deviceId),
+      };
+    }
+
+    let pulled = 0;
+    let conflicts = 0;
+    const siteIds = readySites.map((site) => site.siteId);
+    const stored = await inspectionDb.syncCheckpoints.get(
+      syncCheckpointKey(tenantId, deviceId)
+    );
+    let checkpoint = stored?.checkpoint ?? 0;
+    let hasMore = true;
+    while (hasMore) {
+      onProgress?.({ phase: 'PULLING', processed: pulled, total: pulled });
+      const response = await pullSyncBatch(
+        tenantId,
+        deviceId,
+        checkpoint,
+        siteIds
+      );
+      onProgress?.({
+        phase: 'APPLYING',
+        processed: 0,
+        total: response.changes.length,
+      });
+      const result = await applyRemoteChanges({
+        tenantId,
+        deviceId,
+        currentCheckpoint: checkpoint,
+        response,
+      });
+      pulled += response.changes.length;
+      conflicts += result.conflicts;
+      onProgress?.({
+        phase: 'APPLYING',
+        processed: response.changes.length,
+        total: response.changes.length,
+      });
+      if (response.hasMore && response.checkpoint <= checkpoint) {
+        throw new Error('El servidor no avanzó el checkpoint del Pull.');
+      }
+      checkpoint = response.checkpoint;
+      hasMore = response.hasMore;
+    }
+    await this.finalizeAcknowledged(tenantId);
+
+    return {
+      pushed: push.synced,
+      pulled,
+      conflicts,
+      errors: 0,
+      checkpoint,
+    };
   }
 
   createBatches(items: OutboxItem[]) {
@@ -79,7 +156,9 @@ export class SyncService {
     for (const group of groups.values()) {
       if (group.length > SYNC_BATCH_SIZE) {
         throw new Error(
-          `El trabajo ${this.workId(group[0])} supera el máximo de ${SYNC_BATCH_SIZE} cambios por lote.`
+          `El trabajo ${this.workId(
+            group[0]
+          )} supera el máximo de ${SYNC_BATCH_SIZE} cambios por lote.`
         );
       }
       if (
@@ -96,12 +175,14 @@ export class SyncService {
     return batches;
   }
 
-  private async recoverInterruptedChanges() {
+  private async recoverInterruptedChanges(tenantId: string) {
     await inspectionDb.outbox
-      .filter((item) => item.status === 'SENDING')
+      .where('[tenantId+status]')
+      .equals([tenantId, 'SENDING'])
       .modify({
         status: 'ERROR',
-        lastError: 'La sincronización anterior se interrumpió antes de confirmar.',
+        lastError:
+          'La sincronización anterior se interrumpió antes de confirmar.',
       });
   }
 
@@ -119,30 +200,11 @@ export class SyncService {
     });
   }
 
-  private async markSynced(item: OutboxItem) {
-    const domainTable = this.domainTable(item.entityType);
-    await inspectionDb.transaction(
-      'rw',
-      inspectionDb.outbox,
-      domainTable,
-      async () => {
-        await inspectionDb.outbox.update(item.id, {
-          status: 'SYNCED',
-          lastError: undefined,
-        });
-        const laterChanges = await inspectionDb.outbox
-          .where('[tenantId+entityType+entityId]')
-          .equals([item.tenantId, item.entityType, item.entityId])
-          .filter(
-            (candidate) =>
-              candidate.id !== item.id && candidate.status !== 'SYNCED'
-          )
-          .count();
-        if (laterChanges === 0 && item.operation !== 'DELETE') {
-          await domainTable.update(item.entityId, { syncStatus: 'SYNCED' });
-        }
-      }
-    );
+  private async markAcknowledged(item: OutboxItem) {
+    await inspectionDb.outbox.update(item.id, {
+      status: 'ACKNOWLEDGED',
+      lastError: undefined,
+    });
   }
 
   private async markError(item: OutboxItem, message: string) {
@@ -166,6 +228,51 @@ export class SyncService {
       throw new Error(`El cambio ${item.id} no contiene un workId válido.`);
     }
     return workId;
+  }
+
+  private async latestCheckpoint(tenantId: string, deviceId: string) {
+    const checkpoint = await inspectionDb.syncCheckpoints.get(
+      syncCheckpointKey(tenantId, deviceId)
+    );
+    return checkpoint?.checkpoint ?? 0;
+  }
+
+  private async finalizeAcknowledged(tenantId: string) {
+    const acknowledged = await inspectionDb.outbox
+      .where('[tenantId+status]')
+      .equals([tenantId, 'ACKNOWLEDGED'])
+      .toArray();
+    for (const item of acknowledged) {
+      const table = this.domainTable(item.entityType);
+      await inspectionDb.transaction(
+        'rw',
+        inspectionDb.outbox,
+        inspectionDb.syncConflictCandidates,
+        table,
+        async () => {
+          await inspectionDb.outbox.update(item.id, { status: 'SYNCED' });
+          if (item.operation === 'DELETE') return;
+          const [laterChanges, conflicts] = await Promise.all([
+            inspectionDb.outbox
+              .where('[tenantId+entityType+entityId]')
+              .equals([item.tenantId, item.entityType, item.entityId])
+              .filter(
+                (candidate) =>
+                  candidate.id !== item.id && candidate.status !== 'SYNCED'
+              )
+              .count(),
+            inspectionDb.syncConflictCandidates
+              .where('[tenantId+entityType+entityId]')
+              .equals([item.tenantId, item.entityType, item.entityId])
+              .filter((candidate) => candidate.status === 'PENDING')
+              .count(),
+          ]);
+          if (laterChanges === 0 && conflicts === 0) {
+            await table.update(item.entityId, { syncStatus: 'SYNCED' });
+          }
+        }
+      );
+    }
   }
 }
 

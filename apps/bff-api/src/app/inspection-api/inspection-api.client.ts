@@ -133,6 +133,12 @@ export type SyncPushPayload = {
   }>;
 };
 
+export type SyncPullPayload = {
+  checkpoint: number;
+  deviceId: string;
+  siteIds: string[];
+};
+
 @Injectable()
 export class InspectionApiClient {
   private readonly baseUrl = this.resolveBaseUrl();
@@ -264,6 +270,13 @@ export class InspectionApiClient {
 
   pushSync(tenantId: string, payload: SyncPushPayload) {
     return this.request(`/tenants/${encodeURIComponent(tenantId)}/sync/push`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  pullSync(tenantId: string, payload: SyncPullPayload) {
+    return this.request(`/tenants/${encodeURIComponent(tenantId)}/sync/pull`, {
       method: 'POST',
       body: JSON.stringify(payload),
     });

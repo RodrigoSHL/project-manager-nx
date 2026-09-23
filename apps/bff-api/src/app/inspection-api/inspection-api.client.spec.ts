@@ -92,6 +92,34 @@ describe('InspectionApiClient', () => {
     );
   });
 
+  it('forwards incremental pull scope as JSON', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({ changes: [], checkpoint: 20, hasMore: false }),
+        {
+          status: 200,
+        }
+      )
+    );
+    const client = new InspectionApiClient();
+    const payload = {
+      checkpoint: 10,
+      deviceId: 'device-1',
+      siteIds: ['site-1'],
+    };
+
+    await client.pullSync('tenant-1', payload);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://inspection-api.test/api/tenants/tenant-1/sync/pull',
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  });
+
   it('forwards catalog associations and asset overrides', async () => {
     fetchMock.mockImplementation(async () =>
       Promise.resolve(

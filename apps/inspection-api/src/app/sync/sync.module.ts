@@ -8,6 +8,7 @@ import { WorkItemAnnotationEntity } from '../works/entities/work-item-annotation
 import { WorkEntity } from '../works/entities/work.entity';
 import { WorksModule } from '../works/works.module';
 import { SyncOperationEntity } from './entities/sync-operation.entity';
+import { ServerChangeEntity } from './entities/server-change.entity';
 import { SyncChangeParser } from './sync-change.parser';
 import { SyncController } from './sync.controller';
 import { SyncService } from './sync.service';
@@ -19,6 +20,7 @@ import { SyncWorkProcessor } from './sync-work.processor';
     WorksModule,
     TypeOrmModule.forFeature([
       SyncOperationEntity,
+      ServerChangeEntity,
       TenantEntity,
       WorkEntity,
       ConceptResponseEntity,

@@ -17,6 +17,8 @@ decisiones de cada entrega:
   PWA, application shell, health check y fallback automático.
 - [INSPECTION_SYNC_PUSH.md](./INSPECTION_SYNC_PUSH.md): fase 3, Outbox local,
   Push manual, batches e idempotencia en PostgreSQL.
+- [offline-sync-v2.md](./offline-sync-v2.md): fase 4, Pull incremental,
+  checkpoints y candidatos de conflicto.
 
 ## Cómo leer este documento
 
@@ -688,8 +690,8 @@ conexión actualiza el estado visual, pero no sincroniza datos automáticamente.
 ### RN-OFF-002 — Un dato local pendiente no se presenta como sincronizado
 
 Un registro nuevo queda `LOCAL_ONLY` y uno remoto editado localmente queda
-`MODIFIED`. Ambos se muestran como pendientes hasta que el Push reciba la
-confirmación del backend.
+`MODIFIED`. El Push deja su mensaje como `ACKNOWLEDGED`; el ciclo Pull confirma
+el estado final o preserva un candidato de conflicto.
 
 ### RN-OFF-003 — Las reglas del Work también rigen offline
 
@@ -749,6 +751,38 @@ cambio de dominio; reenviar el mismo UUID responde exitosamente sin duplicar.
 La ruta pública requiere JWT, membresía y rol de escritura. `inspection-api`
 compara el tenant de ruta, body y payload, reconstruye el snapshot y valida
 relaciones, tipos de valores, opciones, plantilla y estado del Work.
+
+### RP-OFF-006 — Pull solo lee el tenant y los Sites autorizados
+
+El BFF exige JWT, membresía y rol. `inspection-api` obtiene el tenant desde la
+ruta y rechaza cualquier `siteId` que no pertenezca a ese tenant. Los catálogos
+globales se filtran por tenant y los datos operativos por los Sites descargados.
+
+### RP-OFF-007 — El checkpoint avanza junto con los datos locales
+
+Cada lote Pull se ordena por `server_changes.sequence`. Dexie aplica todas las
+mutaciones y guarda el checkpoint dentro de una sola transacción. Si una
+mutación falla, también se revierte el checkpoint y el lote puede reintentarse.
+
+### RP-OFF-008 — Un cambio remoto no sobrescribe trabajo local pendiente
+
+Si una entidad está `LOCAL_ONLY`, `MODIFIED` o conserva un Outbox pendiente,
+el Pull mantiene el dato local y guarda la versión remota en
+`syncConflictCandidates`. Esta fase detecta el conflicto, pero no decide cuál
+versión gana.
+
+### RP-OFF-009 — El log remoto pertenece a la transacción de dominio
+
+Los triggers escriben `server_changes` dentro de la misma transacción
+PostgreSQL que crea, modifica o elimina la entidad. Un rollback de negocio
+también elimina el evento incremental correspondiente.
+
+### RP-OFF-010 — Cada ciclo de sincronización pertenece a un tenant
+
+La pantalla `/sync` requiere una empresa seleccionada. Los pendientes,
+conflictos, Sites descargados, checkpoint, Push y Pull se filtran por ese
+`tenantId`. Sincronizar una empresa no puede enviar ni modificar la Outbox de
+otra empresa guardada en el mismo navegador.
 
 ## Decisiones pendientes
 
@@ -811,9 +845,8 @@ Tenant: GMIN
 - Crear pautas, hallazgos, mediciones y adjuntos generales fuera del formulario.
 - Implementar creación automática de nuevas versiones inmutables de una
   plantilla.
-- Implementar Pull incremental, checkpoints, resolución de conflictos y
-  fotografías offline sobre el Push descrito en
-  `docs/INSPECTION_SYNC_PUSH.md`.
+- Implementar resolución explícita de candidatos de conflicto y fotografías
+  offline sobre el flujo descrito en `docs/offline-sync-v2.md`.
 
 ## Plantilla para agregar una regla
 
@@ -849,3 +882,5 @@ Ejemplo válido o inválido, si ayuda a entenderla.
 | 2026-09-13 | Se agrega la primera fase offline-first con Dexie, descarga por sitio y trabajos locales sin sincronización.  |
 | 2026-09-13 | Se agrega PWA instalable, health check real, fallback automático a IndexedDB y centro `/sync` informativo.    |
 | 2026-09-15 | Se agrega Outbox durable, Push manual en batches, UUID cliente e idempotencia mediante `outboxId`.            |
+| 2026-09-18 | Se agrega Pull incremental, `server_changes`, checkpoints y preservación de candidatos de conflicto.          |
+| 2026-09-23 | Se limita cada pantalla y ciclo de sincronización al tenant seleccionado.                                     |

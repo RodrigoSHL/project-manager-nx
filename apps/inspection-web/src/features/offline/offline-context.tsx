@@ -43,8 +43,9 @@ type OfflineContextValue = {
   refresh: () => Promise<void>;
   cacheSite: (tenantId: string, siteId: string) => Promise<void>;
   clearLocalData: () => Promise<void>;
-  synchronize: () => Promise<void>;
+  synchronize: (tenantId: string) => Promise<void>;
   isSyncing: boolean;
+  syncTenantId: string | null;
   syncProgress: SyncProgress | null;
   lastSyncSummary: SyncSummary | null;
   syncError: string | null;
@@ -62,6 +63,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   const [offlineSites, setOfflineSites] = useState<OfflineSiteRecord[]>([]);
   const [pendingSummary, setPendingSummary] = useState(emptyPendingSummary);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncTenantId, setSyncTenantId] = useState<string | null>(null);
   const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null);
   const [lastSyncSummary, setLastSyncSummary] = useState<SyncSummary | null>(
     null
@@ -100,23 +102,28 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     setMode('REMOTE');
     await refresh();
   }, [refresh, setMode]);
-  const synchronize = useCallback(async () => {
-    if (!connectivity.apiReachable || isSyncing) return;
-    setIsSyncing(true);
-    setSyncError(null);
-    setLastSyncSummary(null);
-    try {
-      const summary = await syncService.pushPendingChanges(setSyncProgress);
-      setLastSyncSummary(summary);
-    } catch (error) {
-      setSyncError(
-        error instanceof Error ? error.message : 'No fue posible sincronizar.'
-      );
-    } finally {
-      setIsSyncing(false);
-      await refresh();
-    }
-  }, [connectivity.apiReachable, isSyncing, refresh]);
+  const synchronize = useCallback(
+    async (tenantId: string) => {
+      if (!connectivity.apiReachable || isSyncing || !tenantId) return;
+      setIsSyncing(true);
+      setSyncTenantId(tenantId);
+      setSyncError(null);
+      setLastSyncSummary(null);
+      setSyncProgress(null);
+      try {
+        const summary = await syncService.sync(tenantId, setSyncProgress);
+        setLastSyncSummary(summary);
+      } catch (error) {
+        setSyncError(
+          error instanceof Error ? error.message : 'No fue posible sincronizar.'
+        );
+      } finally {
+        setIsSyncing(false);
+        await refresh();
+      }
+    },
+    [connectivity.apiReachable, isSyncing, refresh]
+  );
   const value = useMemo(
     () => ({
       mode,
@@ -130,6 +137,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       clearLocalData,
       synchronize,
       isSyncing,
+      syncTenantId,
       syncProgress,
       lastSyncSummary,
       syncError,
@@ -148,6 +156,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       setMode,
       syncError,
       syncProgress,
+      syncTenantId,
       synchronize,
     ]
   );

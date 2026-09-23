@@ -37,7 +37,7 @@ export function ConnectivityStatus() {
         <span className="block truncate font-semibold">{state.label}</span>
         <span className="hidden truncate text-[0.68rem] opacity-80 lg:block">
           {pendingSummary.total > 0
-            ? `${pendingSummary.total} cambios pendientes`
+            ? `${pendingSummary.total} cambios pendientes en este dispositivo`
             : state.detail}
         </span>
       </span>
@@ -48,7 +48,7 @@ export function ConnectivityStatus() {
     <Link
       to="/sync"
       className="ml-auto min-w-0 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-      aria-label={`Abrir sincronización: ${pendingSummary.total} cambios pendientes`}
+      aria-label={`Abrir sincronización: ${pendingSummary.total} cambios pendientes en este dispositivo`}
     >
       {content}
     </Link>

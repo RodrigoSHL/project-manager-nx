@@ -21,6 +21,8 @@ import type {
   LocalWorkTypeConfiguration,
   OfflineSiteRecord,
   OutboxItem,
+  SyncCheckpoint,
+  SyncConflictCandidate,
 } from '../features/offline/models';
 import type { WorkTemplateSnapshot } from '../features/works/models';
 import type { WorkType } from '../features/work-types/models';
@@ -47,6 +49,8 @@ export class InspectionDatabase extends Dexie {
   offlineSites!: EntityTable<OfflineSiteRecord, 'id'>;
   outbox!: EntityTable<OutboxItem, 'id'>;
   deviceMetadata!: EntityTable<DeviceMetadata, 'id'>;
+  syncCheckpoints!: EntityTable<SyncCheckpoint, 'id'>;
+  syncConflictCandidates!: EntityTable<SyncConflictCandidate, 'id'>;
 
   constructor() {
     super('gridassets-inspection');
@@ -122,6 +126,11 @@ export class InspectionDatabase extends Dexie {
           );
         }
       });
+    this.version(3).stores({
+      syncCheckpoints: 'id, tenantId, deviceId, [tenantId+deviceId], updatedAt',
+      syncConflictCandidates:
+        'id, tenantId, [tenantId+status], [tenantId+entityType+entityId], remoteSequence',
+    });
   }
 }
 
@@ -129,4 +138,8 @@ export const inspectionDb = new InspectionDatabase();
 
 export function offlineSiteKey(tenantId: string, siteId: string) {
   return `${tenantId}:${siteId}`;
+}
+
+export function syncCheckpointKey(tenantId: string, deviceId: string) {
+  return `${tenantId}:${deviceId}`;
 }

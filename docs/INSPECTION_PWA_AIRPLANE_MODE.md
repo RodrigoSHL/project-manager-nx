@@ -3,6 +3,9 @@
 > Este documento conserva la segunda fase. La tercera fase agregó Outbox y Push
 > manual hacia PostgreSQL; se describe en
 > [INSPECTION_SYNC_PUSH.md](./INSPECTION_SYNC_PUSH.md).
+> La cuarta fase agregó Pull incremental, checkpoints y candidatos a conflicto;
+> su estado actual y la prueba completa están en
+> [offline-sync-v2.md](./offline-sync-v2.md).
 
 Este documento describe la segunda fase offline del MVP. La primera fase creó
 la base Dexie y los repositorios locales; esta fase permite cargar la propia

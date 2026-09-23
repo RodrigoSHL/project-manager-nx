@@ -61,6 +61,59 @@ describe('SyncService idempotency', () => {
       service.push('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', request())
     ).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it('returns only one ordered pull batch and advances to its last sequence', async () => {
+    const rows = Array.from({ length: 101 }, (_, index) => ({
+      sequence: String(index + 1),
+      entity_type: 'ASSET_TYPE',
+      entity_id: workId,
+      operation: index === 0 ? 'CREATE' : 'UPDATE',
+      payload: { id: workId, tenant_id: tenantId },
+      changed_at: '2026-09-18T12:00:00.000Z',
+    }));
+    const query = jest
+      .fn()
+      .mockResolvedValueOnce([{ sequence: '500' }])
+      .mockResolvedValueOnce(rows);
+    const service = new SyncService(
+      { query } as unknown as DataSource,
+      {} as SyncWorkProcessor,
+      {} as SyncChangeParser,
+      {} as Repository<SyncOperationEntity>
+    );
+
+    const result = await service.pull(tenantId, {
+      checkpoint: 0,
+      deviceId,
+      siteIds: [],
+    });
+
+    expect(result).toMatchObject({ checkpoint: 100, hasMore: true });
+    expect(result.changes).toHaveLength(100);
+    expect(result.changes[0]).toMatchObject({
+      sequence: 1,
+      payload: { tenantId },
+    });
+  });
+
+  it('rejects a pull scope containing a site from another tenant', async () => {
+    const query = jest.fn().mockResolvedValue([]);
+    const service = new SyncService(
+      { query } as unknown as DataSource,
+      {} as SyncWorkProcessor,
+      {} as SyncChangeParser,
+      {} as Repository<SyncOperationEntity>
+    );
+
+    await expect(
+      service.pull(tenantId, {
+        checkpoint: 0,
+        deviceId,
+        siteIds: ['99999999-9999-4999-8999-999999999999'],
+      })
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(query).toHaveBeenCalledTimes(1);
+  });
 });
 
 function request(): SyncPushRequestDto {

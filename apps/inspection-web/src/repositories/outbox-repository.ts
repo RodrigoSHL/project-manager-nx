@@ -10,7 +10,7 @@ export type EnqueueChange = {
   entityType: PendingChangeKind;
   entityId: string;
   operation: OutboxOperation;
-  payload: Record<string, unknown>;
+  payload: object;
   timestamp?: string;
 };
 
@@ -30,7 +30,7 @@ export async function enqueueOutboxChange(change: EnqueueChange) {
       entityType: change.entityType,
       entityId: change.entityId,
       operation: change.operation,
-      payload: change.payload,
+      payload: { ...change.payload },
       createdAt: now,
       updatedAt: now,
       status: 'PENDING',
@@ -40,10 +40,7 @@ export async function enqueueOutboxChange(change: EnqueueChange) {
     return item;
   }
 
-  if (
-    existing.operation === 'CREATE' &&
-    change.operation === 'DELETE'
-  ) {
+  if (existing.operation === 'CREATE' && change.operation === 'DELETE') {
     await inspectionDb.outbox.delete(existing.id);
     return undefined;
   }
@@ -58,7 +55,7 @@ export async function enqueueOutboxChange(change: EnqueueChange) {
   const updated: OutboxItem = {
     ...existing,
     operation,
-    payload: change.payload,
+    payload: { ...change.payload },
     updatedAt: now,
     status: 'PENDING',
     lastError: undefined,
@@ -69,6 +66,13 @@ export async function enqueueOutboxChange(change: EnqueueChange) {
 
 export const outboxRepository = {
   enqueue: enqueueOutboxChange,
+  listAwaitingPull: (tenantId?: string) =>
+    (tenantId
+      ? inspectionDb.outbox.where('tenantId').equals(tenantId)
+      : inspectionDb.outbox.toCollection()
+    )
+      .filter((item) => item.status === 'ACKNOWLEDGED')
+      .toArray(),
   async listRetryable(tenantId?: string) {
     const items = tenantId
       ? await inspectionDb.outbox
@@ -79,7 +83,9 @@ export const outboxRepository = {
           ])
           .toArray()
       : await inspectionDb.outbox
-          .filter((item) => item.status === 'PENDING' || item.status === 'ERROR')
+          .filter(
+            (item) => item.status === 'PENDING' || item.status === 'ERROR'
+          )
           .toArray();
     return items.sort(
       (left, right) =>

@@ -23,6 +23,7 @@ import {
   FormTemplateMutationPayload,
   InspectionApiClient,
   SiteMutationPayload,
+  SyncPullPayload,
   SyncPushPayload,
   WorkMutationPayload,
   WorkResponsesPayload,
@@ -114,6 +115,15 @@ export class InspectionApiController {
     @Body() payload: SyncPushPayload
   ) {
     return this.client.pushSync(tenantId, payload);
+  }
+
+  @Post('tenants/:tenantId/sync/pull')
+  @TenantRoles('TENANT_ADMIN', 'SUPERVISOR', 'INSPECTOR', 'VIEWER')
+  pullSync(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Body() payload: SyncPullPayload
+  ) {
+    return this.client.pullSync(tenantId, payload);
   }
 
   @Get('tenants/:tenantId/sites')

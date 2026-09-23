@@ -14,6 +14,7 @@ import { useOffline } from '../offline/offline-context';
 import { localCatalogRepository } from '../../repositories/local-catalog-repository';
 
 type TenantAccessContextValue = {
+  accessibleTenants: Tenant[];
   administrableTenants: Tenant[];
   canAdministerTenants: boolean;
   canWriteTenant: (tenantId: string) => boolean;
@@ -73,6 +74,7 @@ export function TenantAccessProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<TenantAccessContextValue>(
     () => ({
+      accessibleTenants,
       administrableTenants,
       canAdministerTenants:
         mode === 'REMOTE' && (globalAdmin || administrableTenants.length > 0),

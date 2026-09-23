@@ -5,9 +5,10 @@ trabajos, respuestas, tareas y comentarios creados o modificados en IndexedDB.
 El envío es manual desde `/sync` y solo se inicia cuando el health check indica
 que la API está disponible.
 
-Esta fase implementa exclusivamente el recorrido de escritura local hacia el
-servidor. Todavía no descarga cambios remotos, compara versiones ni resuelve
-conflictos.
+Esta fase implementó originalmente el recorrido de escritura local hacia el
+servidor. La continuación con Pull incremental y candidatos de conflicto ya
+está implementada y se documenta en
+[offline-sync-v2.md](./offline-sync-v2.md).
 
 ## Evolución
 
@@ -15,7 +16,7 @@ conflictos.
 flowchart LR
   F1[Fase 1<br/>IndexedDB y repositorios locales] --> F2[Fase 2<br/>PWA y modo avión]
   F2 --> F3[Fase 3<br/>Outbox y Push]
-  F3 -. futura .-> F4[Pull, checkpoints y conflictos]
+  F3 --> F4[Pull, checkpoints y candidatos de conflicto]
 ```
 
 ## Flujo completo
@@ -249,13 +250,16 @@ Para probar idempotencia de manera controlada, reenviar el mismo request con
 el mismo `outboxId`: debe responder `success` y existir una sola fila de dominio
 y un solo recibo lógico en `sync_operations`.
 
-## Siguiente fase: Pull
+## Continuación implementada: Pull
 
-Pull necesitará versiones o secuencias de cambio del servidor, un checkpoint
-por dispositivo y tenant, representación de eliminaciones, descarga incremental
-y una política de conflictos. También deberá decidir cómo conciliar un cambio
-remoto con un Outbox local pendiente. Ninguna de esas piezas forma parte de
-Sync v1.
+Sync v2 agrega `server_changes`, secuencias, checkpoints por dispositivo,
+descarga incremental y preservación de candidatos de conflicto. El flujo
+vigente conserva un elemento exitoso como `ACKNOWLEDGED` durante el ciclo Pull
+y aplica cambios remotos dentro de una transacción Dexie. El diseño, los
+archivos y la prueba QA están en
+[offline-sync-v2.md](./offline-sync-v2.md).
+
+La resolución de candidatos de conflicto sigue pendiente.
 
 Las fotografías siguen fuera de `/sync/push`; tendrán una cola y endpoint de
 upload propios.

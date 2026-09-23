@@ -34,6 +34,8 @@ import { AddTenantMembershipRoles1799101300000 } from '../../migrations/17991013
 import { ProvisionRequiredTenantCatalog1799101400000 } from '../../migrations/1799101400000-ProvisionRequiredTenantCatalog';
 import { CreateSyncOperations1799101500000 } from '../../migrations/1799101500000-CreateSyncOperations';
 import { SyncOperationEntity } from '../sync/entities/sync-operation.entity';
+import { ServerChangeEntity } from '../sync/entities/server-change.entity';
+import { CreateServerChanges1799101600000 } from '../../migrations/1799101600000-CreateServerChanges';
 
 export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
   type: 'postgres',
@@ -71,6 +73,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     TenantMembershipEntity,
     WorkItemAnnotationEntity,
     SyncOperationEntity,
+    ServerChangeEntity,
   ],
   migrations: [
     CreateInspectionCatalog1799100000000,
@@ -89,6 +92,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     AddTenantMembershipRoles1799101300000,
     ProvisionRequiredTenantCatalog1799101400000,
     CreateSyncOperations1799101500000,
+    CreateServerChanges1799101600000,
   ],
   migrationsRun: process.env.INSPECTION_MIGRATIONS_RUN === 'true',
   synchronize: false,

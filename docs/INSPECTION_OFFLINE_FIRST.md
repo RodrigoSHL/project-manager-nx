@@ -5,7 +5,8 @@
 > [INSPECTION_PWA_AIRPLANE_MODE.md](./INSPECTION_PWA_AIRPLANE_MODE.md), que
 > reemplaza las notas históricas sobre Service Worker y cambio manual de modo.
 > El Push manual implementado después se documenta en
-> [INSPECTION_SYNC_PUSH.md](./INSPECTION_SYNC_PUSH.md).
+> [INSPECTION_SYNC_PUSH.md](./INSPECTION_SYNC_PUSH.md), y el Pull incremental
+> vigente se documenta en [offline-sync-v2.md](./offline-sync-v2.md).
 
 > **Si estás aprendiendo esta implementación:** comienza en
 > [Guía explicada de la implementación](#guía-explicada-de-la-implementación).
@@ -19,15 +20,15 @@ flowchart LR
     ONLINE[Aplicación solo online] --> F1[Fase 1: persistencia local]
     F1 --> F2[Fase 2: PWA y modo avión]
     F2 --> F3[Fase 3: Outbox y Push]
-    F3 -.-> F4[Fase futura: Pull y conflictos]
+    F3 --> F4[Fase 4: Pull y candidatos de conflicto]
 
     F1 --> DEXIE[Dexie + LocalRepository]
     F2 --> SHELL[Application shell + conectividad real]
     F3 --> SYNC[Push idempotente]
-    F4 -.-> PULL[Pull y resolución de conflictos]
+    F4 --> PULL[Pull incremental y checkpoints]
 ```
 
-| Capacidad                   | Antes de la fase 1  | Fase 1                                 | Estado actual, fase 3                              |
+| Capacidad                   | Antes de la fase 1  | Fase 1                                 | Estado actual, fase 4                              |
 | --------------------------- | ------------------- | -------------------------------------- | -------------------------------------------------- |
 | Datos persistentes locales  | No                  | Sí, mediante Dexie                     | Sí                                                 |
 | Descarga por sitio          | No                  | Sí                                     | Sí                                                 |
@@ -35,9 +36,9 @@ flowchart LR
 | Apertura sin servidor web   | No                  | Service Worker manual inicial          | PWA generada por Vite y Workbox                    |
 | Detección del backend       | No                  | Solo `navigator.onLine` como indicador | `navigator.onLine` + `GET /api/health`             |
 | Trabajos offline            | No                  | Crear, responder y comentar            | Igual, con transición automática y mensajes claros |
-| Cambios pendientes          | Estado en cada fila | Visible en diagnóstico                 | Conteo global y pantalla `/sync`                   |
+| Cambios pendientes          | Estado en cada fila | Visible en diagnóstico                 | Outbox durable y pantalla `/sync`                  |
 | Actualización del frontend  | Recarga normal      | Sin estrategia controlada              | Aviso **Actualizar ahora**                         |
-| Sincronización con servidor | No                  | No                                     | Push manual disponible; Pull todavía pendiente     |
+| Sincronización con servidor | No                  | No                                     | Push y Pull incremental manuales                   |
 
 La fase 1 sigue siendo la base de datos y dominio local. La fase 2 no la
 reemplaza: agrega el mecanismo que permite arrancar React sin red, detectar la
@@ -55,9 +56,10 @@ Sync futuro    = entregar y conciliar la libreta con el archivo central
 
 ## Alcance implementado
 
-Esta fase permite descargar un sitio desde el backend, abrir su copia local y
-crear o completar trabajos usando IndexedDB. No existe todavía sincronización
-de regreso al servidor, resolución de conflictos ni carga offline de fotos.
+La base original permite descargar un sitio, abrir su copia local y crear o
+completar trabajos usando IndexedDB. Las fases posteriores agregan Push y Pull
+manual. Continúan pendientes la resolución de conflictos y la carga offline de
+fotos.
 
 ```text
 UI React
@@ -760,7 +762,7 @@ npx vite build --config apps/inspection-web/vite.config.ts
 El build termina correctamente. Vite informa que el bundle principal supera
 500 kB; es una advertencia de optimización y no un error funcional.
 
-### 20. Qué falta para una sincronización real
+### 20. Evolución posterior y trabajo pendiente
 
 ```mermaid
 flowchart LR
@@ -768,27 +770,28 @@ flowchart LR
     QUEUE --> PUSH[POST sync/push]
     PUSH --> VALIDATE[Validar tenant, usuario y versiones]
     VALIDATE --> SERVER[(PostgreSQL)]
-    SERVER --> PULL[GET sync/pull con cursor]
+    SERVER --> PULL[POST sync/pull con checkpoint]
     PULL --> CONFLICT{¿Conflicto?}
     CONFLICT -->|No| APPLY[Aplicar cambios locales]
     CONFLICT -->|Sí| RESOLVE[Política de resolución]
 ```
 
-Faltan decisiones e implementación para:
+Ya están implementados:
 
-1. contrato idempotente de push y pull;
-2. cola de operaciones por tenant;
-3. cursor de cambios del servidor;
-4. `serverVersion` o mecanismo equivalente;
-5. borrados locales mediante tombstones;
-6. conflictos y política de resolución;
-7. orden de dependencias entre Work, respuestas y archivos;
-8. persistencia y subida de blobs de fotos;
-9. revalidación de membresías y permisos;
-10. reintentos, errores permanentes y observabilidad;
-11. pruebas E2E automatizadas con navegador cerrado y conectividad real
-    interrumpida.
+1. Outbox durable y Push idempotente;
+2. procesamiento transaccional de Work y sus hijos;
+3. `server_changes` con secuencia ordenada;
+4. Pull incremental por tenant y Sites descargados;
+5. checkpoint por tenant y dispositivo;
+6. aplicación transaccional de CREATE, UPDATE y DELETE en Dexie;
+7. preservación de versiones local y remota como candidato de conflicto.
 
-La implementación actual no intenta resolver estos puntos de forma parcial.
-Su responsabilidad termina al conservar los datos locales y clasificarlos para
-que el futuro motor sepa cuáles deberá procesar.
+Continúan pendientes:
+
+1. resolución explícita de candidatos de conflicto;
+2. persistencia y subida offline de blobs de fotos;
+3. política de retención y limpieza de logs de sincronización;
+4. sincronización automática y Background Sync;
+5. prueba E2E automatizada con dos dispositivos.
+
+La fase vigente se explica en [offline-sync-v2.md](./offline-sync-v2.md).

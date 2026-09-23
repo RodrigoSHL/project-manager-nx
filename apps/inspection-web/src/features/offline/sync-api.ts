@@ -1,5 +1,5 @@
 import { authenticatedFetch } from '../auth/authenticated-fetch';
-import type { OutboxItem } from './models';
+import type { OutboxItem, SyncPullResponse } from './models';
 
 export type SyncPushResult = {
   outboxId: string;
@@ -49,7 +49,40 @@ export async function pushSyncBatch(
     const message = Array.isArray(body?.message)
       ? body.message.join(', ')
       : body?.message;
-    throw new Error(message || 'El servidor rechazó el lote de sincronización.');
+    throw new Error(
+      message || 'El servidor rechazó el lote de sincronización.'
+    );
   }
   return response.json() as Promise<SyncPushResult[]>;
+}
+
+export async function pullSyncBatch(
+  tenantId: string,
+  deviceId: string,
+  checkpoint: number,
+  siteIds: string[]
+) {
+  let response: Response;
+  try {
+    response = await authenticatedFetch(
+      `${baseUrl}/tenants/${encodeURIComponent(tenantId)}/sync/pull`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId, checkpoint, siteIds }),
+      }
+    );
+  } catch {
+    throw new Error('Se perdió la conexión durante la descarga de cambios.');
+  }
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as {
+      message?: string | string[];
+    } | null;
+    const message = Array.isArray(body?.message)
+      ? body.message.join(', ')
+      : body?.message;
+    throw new Error(message || 'El servidor rechazó la descarga de cambios.');
+  }
+  return response.json() as Promise<SyncPullResponse>;
 }

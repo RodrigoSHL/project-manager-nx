@@ -59,6 +59,12 @@ describe('InspectionApiController authorization', () => {
         InspectionApiController.prototype.pushSync
       )
     ).toEqual(['TENANT_ADMIN', 'SUPERVISOR', 'INSPECTOR']);
+    expect(
+      Reflect.getMetadata(
+        TENANT_ROLES_KEY,
+        InspectionApiController.prototype.pullSync
+      )
+    ).toEqual(['TENANT_ADMIN', 'SUPERVISOR', 'INSPECTOR', 'VIEWER']);
   });
 
   it('lists every tenant for a global administrator', () => {

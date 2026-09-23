@@ -27,7 +27,12 @@ export type LocalSyncStatus = 'SYNCED' | 'LOCAL_ONLY' | 'MODIFIED';
 export type OfflineSiteStatus = 'DOWNLOADING' | 'READY' | 'ERROR';
 export type DataSourceMode = 'REMOTE' | 'LOCAL';
 export type OutboxOperation = 'CREATE' | 'UPDATE' | 'DELETE';
-export type OutboxStatus = 'PENDING' | 'SENDING' | 'SYNCED' | 'ERROR';
+export type OutboxStatus =
+  | 'PENDING'
+  | 'SENDING'
+  | 'ACKNOWLEDGED'
+  | 'SYNCED'
+  | 'ERROR';
 
 export function resolveDataSourceMode(
   preferredMode: DataSourceMode,
@@ -100,14 +105,68 @@ export interface DeviceMetadata {
 }
 
 export interface SyncProgress {
+  phase: 'CHECKING' | 'PUSHING' | 'PULLING' | 'APPLYING';
   processed: number;
   total: number;
 }
 
 export interface SyncSummary {
-  total: number;
-  synced: number;
-  failed: number;
+  pushed: number;
+  pulled: number;
+  conflicts: number;
+  errors: number;
+  checkpoint: number;
+}
+
+export type PullEntityType =
+  | 'SITE'
+  | 'ASSET'
+  | 'ASSET_TYPE'
+  | 'WORK_TYPE'
+  | 'CONCEPT'
+  | 'CONCEPT_OPTION'
+  | 'FORM_TEMPLATE'
+  | 'FORM_SECTION'
+  | 'FORM_ITEM'
+  | 'WORK'
+  | 'RESPONSE'
+  | 'TASK_COMPLETION'
+  | 'ANNOTATION';
+
+export interface PullChange {
+  sequence: number;
+  entityType: PullEntityType;
+  entityId: string;
+  operation: OutboxOperation;
+  sourceDeviceId?: string;
+  payload?: Record<string, unknown>;
+  serverUpdatedAt: string;
+}
+
+export interface SyncPullResponse {
+  changes: PullChange[];
+  checkpoint: number;
+  hasMore: boolean;
+}
+
+export interface SyncCheckpoint {
+  id: string;
+  tenantId: string;
+  deviceId: string;
+  checkpoint: number;
+  updatedAt: string;
+}
+
+export interface SyncConflictCandidate {
+  id: string;
+  tenantId: string;
+  entityType: PullEntityType;
+  entityId: string;
+  localData: unknown;
+  remoteData: unknown;
+  remoteSequence: number;
+  detectedAt: string;
+  status: 'PENDING';
 }
 
 export interface OfflineSiteRecord {

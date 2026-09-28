@@ -65,7 +65,7 @@ export function WorkExecutionForm({
   const previewUrls = useRef(new Set<string>());
   const readonly =
     accessReadonly || work.status === 'FINISHED' || work.status === 'REVIEWED';
-  const assetGroups = groupSnapshotByAsset(snapshot, work.assetId);
+  const formSections = groupSnapshotBySection(snapshot, work.assetId);
 
   useEffect(() => {
     if (initializedWorkId.current === work.id) return;
@@ -258,6 +258,139 @@ export function WorkExecutionForm({
     }
   }
 
+  function renderItem(item: WorkFormItemSnapshot) {
+    if (item.type === 'TASK') {
+      return (
+        <div
+          key={item.id}
+          className="rounded-lg border border-slate-200 bg-slate-50 p-4"
+        >
+          <label className="flex gap-3">
+            <input
+              type="checkbox"
+              checked={values[item.id]?.completed ?? false}
+              disabled={readonly}
+              onChange={(event) =>
+                update(item.id, { completed: event.target.checked })
+              }
+              className="mt-0.5 size-5 shrink-0"
+            />
+            <div>
+              <p className="text-sm font-medium text-slate-800">
+                {item.title ?? 'Actividad'}
+                {item.required ? ' *' : ''}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                {item.description ?? 'Confirma la ejecución de esta actividad.'}
+              </p>
+            </div>
+          </label>
+          <WorkItemAdditionalInfo
+            itemId={item.id}
+            comment={values[item.id]?.comment ?? ''}
+            photos={photos.filter(
+              (photo) => photo.metadata.formItemId === item.id
+            )}
+            readonly={readonly}
+            photosDisabled={localMode}
+            busy={photoBusyItems.includes(item.id)}
+            error={photoErrors[item.id]}
+            onCommentChange={(comment) => update(item.id, { comment })}
+            onUpload={uploadPhotos}
+            onDelete={removePhoto}
+          />
+        </div>
+      );
+    }
+
+    const concept = item.concept;
+    if (!concept) return null;
+    const value = values[item.id] ?? {};
+    return (
+      <fieldset
+        key={item.id}
+        className="min-w-0 rounded-lg border border-slate-200 p-4"
+      >
+        <legend className="text-sm font-semibold text-slate-800">
+          {concept.name}
+          {item.required ? ' *' : ''}
+        </legend>
+        {concept.description ? (
+          <p className="mt-1 text-xs text-slate-500">{concept.description}</p>
+        ) : null}
+        {concept.type === 'ANALOG' ? (
+          <div className="mt-2 flex items-center gap-2">
+            <input
+              type="number"
+              disabled={readonly}
+              value={value.valueNumber ?? ''}
+              onChange={(event) =>
+                update(item.id, {
+                  valueNumber:
+                    event.target.value === ''
+                      ? undefined
+                      : Number(event.target.value),
+                })
+              }
+              className="h-11 min-w-0 flex-1 rounded-lg border border-slate-300 px-3 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-50"
+            />
+            {concept.unit ? (
+              <span className="shrink-0 text-sm font-medium text-slate-600">
+                {concept.unit}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+        {concept.type === 'DIGITAL' ? (
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {concept.options.map((option) => (
+              <label
+                key={option.id}
+                className="flex min-h-11 items-center gap-3 rounded-lg border border-slate-200 px-3 text-sm text-slate-700 has-[:checked]:border-slate-700 has-[:checked]:bg-slate-50"
+              >
+                <input
+                  type="radio"
+                  disabled={readonly}
+                  name={item.id}
+                  checked={value.selectedOptionId === option.id}
+                  onChange={() =>
+                    update(item.id, { selectedOptionId: option.id })
+                  }
+                />
+                {option.label}
+              </label>
+            ))}
+          </div>
+        ) : null}
+        {concept.type === 'TEXT' ? (
+          <textarea
+            rows={3}
+            disabled={readonly}
+            value={value.valueText ?? ''}
+            onChange={(event) =>
+              update(item.id, { valueText: event.target.value })
+            }
+            className="mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-50"
+          />
+        ) : null}
+        <WorkItemAdditionalInfo
+          itemId={item.id}
+          comment={value.comment ?? ''}
+          photos={photos.filter(
+            (photo) => photo.metadata.formItemId === item.id
+          )}
+          readonly={readonly}
+          photosDisabled={localMode}
+          busy={photoBusyItems.includes(item.id)}
+          error={photoErrors[item.id]}
+          onCommentChange={(comment) => update(item.id, { comment })}
+          onUpload={uploadPhotos}
+          onDelete={removePhoto}
+        />
+      </fieldset>
+    );
+  }
+
   return (
     <section className="mt-6 rounded-xl border border-slate-200 bg-white shadow-sm">
       <header className="border-b border-slate-200 p-4 sm:p-6">
@@ -280,211 +413,63 @@ export function WorkExecutionForm({
             {photoErrors.general}
           </p>
         ) : null}
-        {assetGroups.map((group) => (
-          <details
-            key={group.assetId}
-            open={group.assetDepth === 0}
-            className="group rounded-xl border border-slate-200 bg-slate-50/60"
-          >
-            <summary className="flex cursor-pointer list-none items-start justify-between gap-3 px-4 py-4 marker:content-none sm:px-5">
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {group.assetDepth === 0
-                    ? 'Activo principal'
-                    : `Activo descendiente · nivel ${group.assetDepth}`}
+        {formSections.map((section) => (
+          <section key={section.id}>
+            <div className="border-b border-slate-200 pb-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Sección {section.order}
+              </p>
+              <h3 className="mt-1 font-semibold text-slate-950">
+                {section.title}
+              </h3>
+              {section.description ? (
+                <p className="mt-1 text-sm text-slate-500">
+                  {section.description}
                 </p>
-                <h3 className="mt-1 truncate font-semibold text-slate-950">
-                  {group.assetName}
-                </h3>
-                {group.assetCode ? (
-                  <p className="mt-1 text-xs font-medium text-slate-500">
-                    {group.assetCode}
-                  </p>
-                ) : null}
-              </div>
-              <span className="flex shrink-0 items-center gap-2">
-                <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200">
-                  {group.itemCount}{' '}
-                  {group.itemCount === 1 ? 'elemento' : 'elementos'}
-                </span>
-                <ChevronDown className="size-4 text-slate-500 transition-transform group-open:rotate-180" />
-              </span>
-            </summary>
-            <div className="grid gap-8 border-t border-slate-200 bg-white p-4 sm:p-5">
-              {group.sections.map((section) => {
-                const visibleItems = section.items.filter(
-                  (item) =>
-                    item.type === 'TASK' || item.concept?.type !== 'HIDDEN'
-                );
-                return (
-                  <section key={section.id}>
-                    <div className="border-b border-slate-200 pb-3">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Sección {section.order}
-                      </p>
-                      <h3 className="mt-1 font-semibold text-slate-950">
-                        {section.title}
-                      </h3>
-                      {section.description ? (
-                        <p className="mt-1 text-sm text-slate-500">
-                          {section.description}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="mt-5 grid gap-6">
-                      {visibleItems.map((item) => {
-                        if (item.type === 'TASK') {
-                          return (
-                            <div
-                              key={item.id}
-                              className="rounded-lg border border-slate-200 bg-slate-50 p-4"
-                            >
-                              <label className="flex gap-3">
-                                <input
-                                  type="checkbox"
-                                  checked={values[item.id]?.completed ?? false}
-                                  disabled={readonly}
-                                  onChange={(event) =>
-                                    update(item.id, {
-                                      completed: event.target.checked,
-                                    })
-                                  }
-                                  className="mt-0.5 size-5 shrink-0"
-                                />
-                                <div>
-                                  <p className="text-sm font-medium text-slate-800">
-                                    {item.title ?? 'Actividad'}
-                                    {item.required ? ' *' : ''}
-                                  </p>
-                                  <p className="mt-1 text-xs text-slate-500">
-                                    {item.description ??
-                                      'Confirma la ejecución de esta actividad.'}
-                                  </p>
-                                </div>
-                              </label>
-                              <WorkItemAdditionalInfo
-                                itemId={item.id}
-                                comment={values[item.id]?.comment ?? ''}
-                                photos={photos.filter(
-                                  (photo) =>
-                                    photo.metadata.formItemId === item.id
-                                )}
-                                readonly={readonly}
-                                photosDisabled={localMode}
-                                busy={photoBusyItems.includes(item.id)}
-                                error={photoErrors[item.id]}
-                                onCommentChange={(comment) =>
-                                  update(item.id, { comment })
-                                }
-                                onUpload={uploadPhotos}
-                                onDelete={removePhoto}
-                              />
-                            </div>
-                          );
-                        }
-                        const concept = item.concept;
-                        if (!concept) return null;
-                        const value = values[item.id] ?? {};
-                        return (
-                          <fieldset
-                            key={item.id}
-                            className="min-w-0 rounded-lg border border-slate-200 p-4"
-                          >
-                            <legend className="text-sm font-semibold text-slate-800">
-                              {concept.name}
-                              {item.required ? ' *' : ''}
-                            </legend>
-                            {concept.description ? (
-                              <p className="mt-1 text-xs text-slate-500">
-                                {concept.description}
-                              </p>
-                            ) : null}
-                            {concept.type === 'ANALOG' ? (
-                              <div className="mt-2 flex items-center gap-2">
-                                <input
-                                  type="number"
-                                  disabled={readonly}
-                                  value={value.valueNumber ?? ''}
-                                  onChange={(event) =>
-                                    update(item.id, {
-                                      valueNumber:
-                                        event.target.value === ''
-                                          ? undefined
-                                          : Number(event.target.value),
-                                    })
-                                  }
-                                  className="h-11 min-w-0 flex-1 rounded-lg border border-slate-300 px-3 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-50"
-                                />
-                                {concept.unit ? (
-                                  <span className="shrink-0 text-sm font-medium text-slate-600">
-                                    {concept.unit}
-                                  </span>
-                                ) : null}
-                              </div>
-                            ) : null}
-                            {concept.type === 'DIGITAL' ? (
-                              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                                {concept.options.map((option) => (
-                                  <label
-                                    key={option.id}
-                                    className="flex min-h-11 items-center gap-3 rounded-lg border border-slate-200 px-3 text-sm text-slate-700 has-[:checked]:border-slate-700 has-[:checked]:bg-slate-50"
-                                  >
-                                    <input
-                                      type="radio"
-                                      disabled={readonly}
-                                      name={item.id}
-                                      checked={
-                                        value.selectedOptionId === option.id
-                                      }
-                                      onChange={() =>
-                                        update(item.id, {
-                                          selectedOptionId: option.id,
-                                        })
-                                      }
-                                    />
-                                    {option.label}
-                                  </label>
-                                ))}
-                              </div>
-                            ) : null}
-                            {concept.type === 'TEXT' ? (
-                              <textarea
-                                rows={3}
-                                disabled={readonly}
-                                value={value.valueText ?? ''}
-                                onChange={(event) =>
-                                  update(item.id, {
-                                    valueText: event.target.value,
-                                  })
-                                }
-                                className="mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-50"
-                              />
-                            ) : null}
-                            <WorkItemAdditionalInfo
-                              itemId={item.id}
-                              comment={value.comment ?? ''}
-                              photos={photos.filter(
-                                (photo) => photo.metadata.formItemId === item.id
-                              )}
-                              readonly={readonly}
-                              photosDisabled={localMode}
-                              busy={photoBusyItems.includes(item.id)}
-                              error={photoErrors[item.id]}
-                              onCommentChange={(comment) =>
-                                update(item.id, { comment })
-                              }
-                              onUpload={uploadPhotos}
-                              onDelete={removePhoto}
-                            />
-                          </fieldset>
-                        );
-                      })}
-                    </div>
-                  </section>
-                );
-              })}
+              ) : null}
             </div>
-          </details>
+
+            <div className="mt-5 grid gap-6">
+              {section.assetGroups.map((group) =>
+                group.assetDepth === 0 ? (
+                  <div key={group.assetId} className="grid gap-6">
+                    {group.items.map(renderItem)}
+                  </div>
+                ) : (
+                  <details
+                    key={group.assetId}
+                    className="group rounded-xl border border-slate-200 bg-slate-50/60"
+                  >
+                    <summary className="flex cursor-pointer list-none items-start justify-between gap-3 px-4 py-4 marker:content-none sm:px-5">
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          Activo descendiente · nivel {group.assetDepth}
+                        </p>
+                        <h4 className="mt-1 truncate font-semibold text-slate-950">
+                          {group.assetName}
+                        </h4>
+                        {group.assetCode ? (
+                          <p className="mt-1 text-xs font-medium text-slate-500">
+                            {group.assetCode}
+                          </p>
+                        ) : null}
+                      </div>
+                      <span className="flex shrink-0 items-center gap-2">
+                        <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200">
+                          {group.items.length}{' '}
+                          {group.items.length === 1 ? 'elemento' : 'elementos'}
+                        </span>
+                        <ChevronDown className="size-4 text-slate-500 transition-transform group-open:rotate-180" />
+                      </span>
+                    </summary>
+                    <div className="grid gap-6 border-t border-slate-200 bg-white p-4 sm:p-5">
+                      {group.items.map(renderItem)}
+                    </div>
+                  </details>
+                )
+              )}
+            </div>
+          </section>
         ))}
       </div>
 
@@ -569,67 +554,63 @@ function messageFrom(error: unknown) {
     : 'No fue posible completar la operación.';
 }
 
-type AssetGroup = {
+export type SectionAssetGroup = {
   assetId: string;
   assetCode: string;
   assetName: string;
   assetDepth: number;
   assetOrder: number;
-  itemCount: number;
-  sections: WorkFormSectionSnapshot[];
+  items: WorkFormItemSnapshot[];
 };
 
-function groupSnapshotByAsset(
+export type WorkFormSectionGroup = Omit<WorkFormSectionSnapshot, 'items'> & {
+  assetGroups: SectionAssetGroup[];
+};
+
+export function groupSnapshotBySection(
   snapshot: WorkTemplateSnapshot,
   rootAssetId: string
-): AssetGroup[] {
-  const groups = new Map<
-    string,
-    Omit<AssetGroup, 'itemCount' | 'sections'> & {
-      itemsBySection: Map<string, WorkFormItemSnapshot[]>;
-    }
-  >();
+): WorkFormSectionGroup[] {
+  return [...snapshot.sections]
+    .sort((left, right) => left.order - right.order)
+    .flatMap((section) => {
+      const groups = new Map<string, SectionAssetGroup>();
 
-  for (const section of snapshot.sections) {
-    for (const item of section.items) {
-      const assetId = item.assetId ?? rootAssetId;
-      const group = groups.get(assetId) ?? {
-        assetId,
-        assetCode: item.assetCodeSnapshot ?? '',
-        assetName: item.assetNameSnapshot ?? 'Activo principal',
-        assetDepth: item.assetDepth ?? 0,
-        assetOrder: item.assetOrder ?? 0,
-        itemsBySection: new Map<string, WorkFormItemSnapshot[]>(),
-      };
-      const items = group.itemsBySection.get(section.id) ?? [];
-      items.push(item);
-      group.itemsBySection.set(section.id, items);
-      groups.set(assetId, group);
-    }
-  }
+      for (const item of section.items) {
+        if (!isVisibleItem(item)) continue;
+        const assetId = item.assetId ?? rootAssetId;
+        const group = groups.get(assetId) ?? {
+          assetId,
+          assetCode: item.assetCodeSnapshot ?? '',
+          assetName: item.assetNameSnapshot ?? 'Activo principal',
+          assetDepth: item.assetDepth ?? 0,
+          assetOrder: item.assetOrder ?? 0,
+          items: [],
+        };
+        group.items.push(item);
+        groups.set(assetId, group);
+      }
 
-  return [...groups.values()]
-    .sort(
-      (left, right) =>
-        left.assetOrder - right.assetOrder ||
-        left.assetName.localeCompare(right.assetName)
-    )
-    .map((group) => {
-      const sections = snapshot.sections.flatMap((section) => {
-        const items = group.itemsBySection.get(section.id);
-        return items?.length ? [{ ...section, items }] : [];
-      });
-      return {
-        assetId: group.assetId,
-        assetCode: group.assetCode,
-        assetName: group.assetName,
-        assetDepth: group.assetDepth,
-        assetOrder: group.assetOrder,
-        itemCount: sections.reduce(
-          (total, section) => total + section.items.length,
-          0
-        ),
-        sections,
-      };
+      const assetGroups = [...groups.values()]
+        .sort(
+          (left, right) =>
+            left.assetOrder - right.assetOrder ||
+            left.assetName.localeCompare(right.assetName)
+        )
+        .map((group) => ({
+          ...group,
+          items: [...group.items].sort(
+            (left, right) => left.order - right.order
+          ),
+        }));
+
+      return assetGroups.length ? [{ ...section, assetGroups }] : [];
     });
+}
+
+function isVisibleItem(item: WorkFormItemSnapshot) {
+  return (
+    item.type === 'TASK' ||
+    Boolean(item.concept && item.concept.type !== 'HIDDEN')
+  );
 }

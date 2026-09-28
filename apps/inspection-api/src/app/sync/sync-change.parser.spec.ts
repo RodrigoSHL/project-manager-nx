@@ -23,6 +23,25 @@ describe('SyncChangeParser', () => {
 
     expect(() => parser.parse(tenantId, change)).toThrow(BadRequestException);
   });
+
+  it('preserves the offline work snapshot in the parsed Push payload', () => {
+    const change = workChange();
+    change.payload.formSnapshot = {
+      workId: change.entityId,
+      tenantId,
+      formTemplateId: change.payload.formTemplateId,
+      formTemplateVersion: 1,
+      name: 'Inspección offline',
+      sections: [],
+    };
+
+    expect(parser.parse(tenantId, change).parsedPayload).toMatchObject({
+      formSnapshot: expect.objectContaining({
+        workId: change.entityId,
+        tenantId,
+      }),
+    });
+  });
 });
 
 function workChange(): SyncPushChangeDto {

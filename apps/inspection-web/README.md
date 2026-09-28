@@ -6,6 +6,8 @@ Las reglas funcionales y técnicas vigentes se mantienen en
 [`docs/INSPECTION_RULES.md`](../../docs/INSPECTION_RULES.md).
 La evolución completa de la sincronización offline Push/Pull está en
 [`docs/offline-sync-v2.md`](../../docs/offline-sync-v2.md).
+La expansión de formularios por activo principal y descendientes está en
+[`docs/INSPECTION_DESCENDANT_WORK_ITEMS.md`](../../docs/INSPECTION_DESCENDANT_WORK_ITEMS.md).
 
 ## Ejecutar
 

@@ -92,6 +92,15 @@ export interface WorkConceptSnapshot {
 
 export interface WorkFormItemSnapshot {
   id: string;
+  /** Template item that originated this immutable work item instance. */
+  formItemId?: string;
+  /** Optional only for backwards compatibility with historical snapshots. */
+  assetId?: string;
+  assetCodeSnapshot?: string;
+  assetNameSnapshot?: string;
+  assetTypeIdSnapshot?: string;
+  assetOrder?: number;
+  assetDepth?: number;
   type: 'CONCEPT' | 'TASK';
   order: number;
   title?: string | null;

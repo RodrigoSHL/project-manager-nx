@@ -10,6 +10,7 @@ import { CatalogService } from '../catalog/catalog.service';
 import { ConceptType } from '../catalog/entities/concept.entity';
 import { ConceptOptionEntity } from '../catalog/entities/concept-option.entity';
 import { ConceptEntity } from '../catalog/entities/concept.entity';
+import type { AssetEntity } from '../catalog/entities/asset.entity';
 import {
   FormItemEntity,
   FormItemType,
@@ -31,6 +32,7 @@ import type {
   WorkFormItemSnapshot,
   WorkTemplateSnapshot,
 } from './work-snapshot';
+import { workItemInstanceId } from './work-item-id';
 
 type NormalizedWorkResponses = {
   responses: Array<ConceptResponseValueDto & { conceptId: string }>;
@@ -133,7 +135,7 @@ export class WorksService {
     }
 
     const id = randomUUID();
-    const snapshot = await this.buildSnapshot(id, tenantId, template);
+    const snapshot = await this.buildSnapshot(id, tenantId, asset, template);
     const work = this.works.create({
       id,
       tenantId,
@@ -188,7 +190,7 @@ export class WorksService {
     }
     return {
       asset,
-      snapshot: await this.buildSnapshot(workId, tenantId, template),
+      snapshot: await this.buildSnapshot(workId, tenantId, asset, template),
     };
   }
 
@@ -438,6 +440,7 @@ export class WorksService {
   private async buildSnapshot(
     workId: string,
     tenantId: string,
+    rootAsset: AssetEntity,
     template: FormTemplateEntity
   ): Promise<WorkTemplateSnapshot> {
     const sections = await this.sections.find({
@@ -451,15 +454,52 @@ export class WorksService {
     const conceptIds = templateItems.flatMap((item) =>
       item.conceptId ? [item.conceptId] : []
     );
-    const [concepts, options] = await Promise.all([
-      this.concepts.find({ where: { tenantId } }),
-      this.options.find({ where: { tenantId }, order: { order: 'ASC' } }),
-    ]);
+    const [concepts, options, descendants, assetTypeConcepts] =
+      await Promise.all([
+        this.concepts.find({ where: { tenantId } }),
+        this.options.find({ where: { tenantId }, order: { order: 'ASC' } }),
+        this.catalog.getAssetDescendants(
+          tenantId,
+          rootAsset.siteId,
+          rootAsset.id
+        ),
+        this.catalog.listAssetTypeConcepts(tenantId),
+      ]);
     const conceptById = new Map(
       concepts
         .filter((concept) => conceptIds.includes(concept.id))
         .map((concept) => [concept.id, concept])
     );
+    const assets = [rootAsset, ...descendants];
+    const assetOrder = new Map(assets.map((asset, index) => [asset.id, index]));
+    const assetDepth = new Map<string, number>([[rootAsset.id, 0]]);
+    for (const asset of descendants) {
+      assetDepth.set(asset.id, (assetDepth.get(asset.parentId ?? '') ?? 0) + 1);
+    }
+    const allowedConcepts = new Set(
+      assetTypeConcepts
+        .filter((relation) => relation.active)
+        .map((relation) => `${relation.assetTypeId}:${relation.conceptId}`)
+    );
+    const snapshotAsset = (asset: AssetEntity) => ({
+      assetId: asset.id,
+      assetCodeSnapshot: asset.code,
+      assetNameSnapshot: asset.name,
+      assetTypeIdSnapshot: asset.assetTypeId,
+      assetOrder: assetOrder.get(asset.id) ?? 0,
+      assetDepth: assetDepth.get(asset.id) ?? 0,
+    });
+    const conceptSnapshot = (concept: ConceptEntity) => ({
+      id: concept.id,
+      code: concept.code,
+      name: concept.name,
+      description: concept.description,
+      type: concept.type,
+      unit: concept.unit,
+      options: options
+        .filter((option) => option.conceptId === concept.id && option.active)
+        .map(({ id, label, value, order }) => ({ id, label, value, order })),
+    });
     return {
       workId,
       tenantId,
@@ -474,39 +514,29 @@ export class WorksService {
         items: templateItems
           .filter((item) => item.sectionId === section.id)
           .sort((a, b) => a.order - b.order)
-          .map((item) => {
+          .flatMap((item) => {
             const concept = item.conceptId
               ? conceptById.get(item.conceptId)
               : undefined;
-            return {
-              id: item.id,
+            const targetAssets =
+              item.type === FormItemType.TASK
+                ? [rootAsset]
+                : concept
+                ? assets.filter((asset) =>
+                    allowedConcepts.has(`${asset.assetTypeId}:${concept.id}`)
+                  )
+                : [];
+            return targetAssets.map((asset) => ({
+              id: workItemInstanceId(workId, asset.id, item.id),
+              formItemId: item.id,
+              ...snapshotAsset(asset),
               type: item.type,
               order: item.order,
               title: item.title,
               description: item.description,
               required: item.required,
-              concept: concept
-                ? {
-                    id: concept.id,
-                    code: concept.code,
-                    name: concept.name,
-                    description: concept.description,
-                    type: concept.type,
-                    unit: concept.unit,
-                    options: options
-                      .filter(
-                        (option) =>
-                          option.conceptId === concept.id && option.active
-                      )
-                      .map(({ id, label, value, order }) => ({
-                        id,
-                        label,
-                        value,
-                        order,
-                      })),
-                  }
-                : undefined,
-            };
+              concept: concept ? conceptSnapshot(concept) : undefined,
+            }));
           }),
       })),
     };

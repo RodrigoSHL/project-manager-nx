@@ -74,9 +74,13 @@ export class InspectionApiController {
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Param('siteId', new ParseUUIDPipe()) siteId: string,
     @Param('assetId', new ParseUUIDPipe()) assetId: string,
+    @Request() request: ExpressRequestWithUser,
     @Body() payload: WorkMutationPayload
   ) {
-    return this.client.createWork(tenantId, siteId, assetId, payload);
+    return this.client.createWork(tenantId, siteId, assetId, {
+      ...payload,
+      responsible: request.user.name.trim(),
+    });
   }
 
   @Put('tenants/:tenantId/works/:workId/responses')

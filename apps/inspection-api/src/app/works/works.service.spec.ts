@@ -22,6 +22,18 @@ describe('WorksService', () => {
     save: jest.Mock;
     create: jest.Mock;
   };
+  let catalog: {
+    getAsset: jest.Mock;
+    getAssetDescendants: jest.Mock;
+    listAssetTypeConcepts: jest.Mock;
+    listEffectiveWorkTypes: jest.Mock;
+    listSites: jest.Mock;
+  };
+  let templates: { findOne: jest.Mock };
+  let sections: { find: jest.Mock };
+  let items: { find: jest.Mock };
+  let concepts: { find: jest.Mock };
+  let options: { find: jest.Mock };
   let service: WorksService;
 
   beforeEach(() => {
@@ -61,22 +73,186 @@ describe('WorksService', () => {
     const dataSource = {
       transaction: jest.fn(async (action) => action(manager)),
     } as unknown as DataSource;
+    catalog = {
+      getAsset: jest.fn(),
+      getAssetDescendants: jest.fn().mockResolvedValue([]),
+      listAssetTypeConcepts: jest.fn().mockResolvedValue([]),
+      listEffectiveWorkTypes: jest.fn(),
+      listSites: jest.fn(),
+    };
+    templates = { findOne: jest.fn() };
+    sections = { find: jest.fn().mockResolvedValue([]) };
+    items = { find: jest.fn().mockResolvedValue([]) };
+    concepts = { find: jest.fn().mockResolvedValue([]) };
+    options = { find: jest.fn().mockResolvedValue([]) };
     service = new WorksService(
-      {
-        getAsset: jest.fn(),
-        listEffectiveWorkTypes: jest.fn(),
-        listSites: jest.fn(),
-      } as unknown as CatalogService,
+      catalog as unknown as CatalogService,
       works as unknown as Repository<WorkEntity>,
       responseRepository as unknown as Repository<ConceptResponseEntity>,
       taskRepository as unknown as Repository<TaskCompletionEntity>,
       annotationRepository as unknown as Repository<WorkItemAnnotationEntity>,
-      {} as Repository<FormTemplateEntity>,
-      {} as never,
-      {} as never,
-      {} as never,
-      {} as never,
+      templates as unknown as Repository<FormTemplateEntity>,
+      sections as never,
+      items as never,
+      concepts as never,
+      options as never,
       dataSource
+    );
+  });
+
+  it('materializes template concepts only for matching assets in the full subtree', async () => {
+    const rootAsset = {
+      id: 'asset-root',
+      tenantId,
+      siteId: 'site-a',
+      assetTypeId: 'transformer-type',
+      code: 'T1',
+      name: 'Transformador T1',
+      parentId: null,
+    };
+    catalog.getAsset.mockResolvedValue(rootAsset);
+    catalog.listEffectiveWorkTypes.mockResolvedValue([
+      { id: 'work-type-visual' },
+    ]);
+    catalog.getAssetDescendants.mockResolvedValue([
+      {
+        ...rootAsset,
+        id: 'radiator-r1',
+        assetTypeId: 'radiator-type',
+        code: 'R1',
+        name: 'Radiador R1',
+        parentId: rootAsset.id,
+      },
+      {
+        ...rootAsset,
+        id: 'bushing-b1',
+        assetTypeId: 'bushing-type',
+        code: 'B1',
+        name: 'Bushing B1',
+        parentId: 'radiator-r1',
+      },
+      {
+        ...rootAsset,
+        id: 'fan-v1',
+        assetTypeId: 'fan-type',
+        code: 'V1',
+        name: 'Ventilador V1',
+        parentId: rootAsset.id,
+      },
+    ]);
+    catalog.listAssetTypeConcepts.mockResolvedValue([
+      {
+        assetTypeId: 'transformer-type',
+        conceptId: 'concept-temperature',
+        active: true,
+      },
+      {
+        assetTypeId: 'radiator-type',
+        conceptId: 'concept-temperature',
+        active: true,
+      },
+      {
+        assetTypeId: 'bushing-type',
+        conceptId: 'concept-temperature',
+        active: true,
+      },
+      {
+        assetTypeId: 'fan-type',
+        conceptId: 'concept-current',
+        active: true,
+      },
+    ]);
+    templates.findOne.mockResolvedValue({
+      id: 'template-visual',
+      tenantId,
+      workTypeId: 'work-type-visual',
+      version: 1,
+      name: 'Inspección visual',
+      active: true,
+    });
+    sections.find.mockResolvedValue([
+      {
+        id: 'section-a',
+        title: 'Estado',
+        order: 1,
+      },
+    ]);
+    items.find.mockResolvedValue([
+      {
+        id: 'form-item-temperature',
+        sectionId: 'section-a',
+        type: FormItemType.CONCEPT,
+        conceptId: 'concept-temperature',
+        order: 1,
+        required: true,
+      },
+      {
+        id: 'form-item-task',
+        sectionId: 'section-a',
+        type: FormItemType.TASK,
+        title: 'Verificar acceso',
+        order: 2,
+        required: true,
+      },
+    ]);
+    concepts.find.mockResolvedValue([
+      {
+        id: 'concept-temperature',
+        code: 'TEMPERATURE',
+        name: 'Temperatura',
+        type: ConceptType.ANALOG,
+        unit: '°C',
+      },
+      {
+        id: 'concept-current',
+        code: 'CURRENT',
+        name: 'Corriente',
+        type: ConceptType.ANALOG,
+        unit: 'A',
+      },
+    ]);
+    works.create.mockImplementation((value) => value as WorkEntity);
+    works.save.mockImplementation(async (value) => ({
+      ...(value as WorkEntity),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+
+    const result = await service.create(
+      tenantId,
+      rootAsset.siteId,
+      rootAsset.id,
+      {
+        workTypeId: 'work-type-visual',
+        title: 'Inspección T1',
+        executionDate: '2026-09-25',
+        responsible: 'Inspector',
+        status: WorkStatus.DRAFT,
+      }
+    );
+    const snapshotItems = result.snapshot.sections.flatMap(
+      (section) => section.items
+    );
+    const temperatureItems = snapshotItems.filter(
+      (item) => item.concept?.id === 'concept-temperature'
+    );
+
+    expect(temperatureItems.map((item) => item.assetId)).toEqual([
+      rootAsset.id,
+      'radiator-r1',
+      'bushing-b1',
+    ]);
+    expect(new Set(temperatureItems.map((item) => item.id)).size).toBe(3);
+    expect(
+      snapshotItems.filter((item) => item.type === FormItemType.TASK)
+    ).toEqual([expect.objectContaining({ assetId: rootAsset.id })]);
+    expect(snapshotItems.some((item) => item.assetId === 'fan-v1')).toBe(false);
+    expect(result.work.assetId).toBe(rootAsset.id);
+    expect(catalog.listEffectiveWorkTypes).toHaveBeenCalledTimes(1);
+    expect(catalog.listEffectiveWorkTypes).toHaveBeenCalledWith(
+      tenantId,
+      rootAsset.siteId,
+      rootAsset.id
     );
   });
 

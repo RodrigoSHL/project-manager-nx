@@ -20,6 +20,18 @@ export type WorkConceptSnapshot = {
 
 export type WorkFormItemSnapshot = {
   id: string;
+  /** Template item that originated this immutable work item instance. */
+  formItemId?: string;
+  /**
+   * Asset evaluated by this item. These fields are optional only so snapshots
+   * created before asset-scoped work items remain readable.
+   */
+  assetId?: string;
+  assetCodeSnapshot?: string;
+  assetNameSnapshot?: string;
+  assetTypeIdSnapshot?: string;
+  assetOrder?: number;
+  assetDepth?: number;
   type: FormItemType;
   order: number;
   title?: string | null;

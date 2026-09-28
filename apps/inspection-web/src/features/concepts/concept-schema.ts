@@ -59,8 +59,14 @@ export const conceptSchema = z
 export function normalizeConceptCode(value: string) {
   return value
     .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
     .toUpperCase()
-    .replace(/[\s-]+/g, '_');
+    .replace(/[^A-Z0-9]+/g, '_');
+}
+
+export function suggestConceptCode(value: string) {
+  return normalizeConceptCode(value).replace(/^_+|_+$/g, '');
 }
 
 export const conceptTypeLabels = {

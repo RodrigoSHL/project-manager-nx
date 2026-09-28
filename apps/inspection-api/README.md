@@ -11,6 +11,9 @@ en
 La sincronización offline Push/Pull, sus checkpoints y el registro de cambios
 del servidor se documentan en
 [`docs/offline-sync-v2.md`](../../docs/offline-sync-v2.md).
+La materialización de WorkItems por activo principal y descendientes se explica
+en
+[`docs/INSPECTION_DESCENDANT_WORK_ITEMS.md`](../../docs/INSPECTION_DESCENDANT_WORK_ITEMS.md).
 
 ## Contrato local
 

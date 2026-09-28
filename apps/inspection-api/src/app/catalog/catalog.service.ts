@@ -24,6 +24,7 @@ import { ConceptEntity, ConceptType } from './entities/concept.entity';
 import { ConceptOptionEntity } from './entities/concept-option.entity';
 import { CreateSiteDto } from './dto/create-site.dto';
 import { UpdateSiteDto } from './dto/update-site.dto';
+import { getAssetDescendants as collectAssetDescendants } from './asset-descendants';
 
 @Injectable()
 export class CatalogService {
@@ -481,6 +482,18 @@ export class CatalogService {
   async getAsset(tenantId: string, siteId: string, assetId: string) {
     await this.assertSiteBelongsToTenant(tenantId, siteId);
     return this.findAssetOrFail(tenantId, siteId, assetId);
+  }
+
+  async getAssetDescendants(tenantId: string, siteId: string, assetId: string) {
+    await this.assertSiteBelongsToTenant(tenantId, siteId);
+    const [root, assets] = await Promise.all([
+      this.findAssetOrFail(tenantId, siteId, assetId),
+      this.assets.find({
+        where: { tenantId, siteId },
+        order: { code: 'ASC' },
+      }),
+    ]);
+    return collectAssetDescendants(assets, root.id);
   }
 
   async listEffectiveWorkTypes(

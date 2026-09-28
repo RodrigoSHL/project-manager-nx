@@ -442,7 +442,9 @@ Para un tipo de trabajo se buscan los tipos de activo que lo tienen asociado.
 El selector muestra primero los conceptos activos relacionados con esos tipos
 de activo. Si no existe una compatibilidad suficiente, muestra como alternativa
 el catálogo activo del tenant. Esta preferencia ayuda a elegir; no crea una
-restricción de dominio nueva.
+asociación nueva. Al crear un Work, la aplicabilidad real de cada Concept se
+resuelve con la plantilla seleccionada y la relación `AssetTypeConcept` del
+activo evaluado.
 
 #### RN-FOR-007 — La configuración no cruza empresas
 
@@ -507,12 +509,85 @@ Las fotografías se pueden agregar o eliminar solamente mientras el trabajo
 está en `DRAFT` o `IN_PROGRESS`. En trabajos `FINISHED` o `REVIEWED` permanecen
 visibles como evidencia, pero no se pueden modificar.
 
+#### RN-EJE-010 — El Work conserva un único activo principal
+
+`Work.assetId` identifica siempre el activo sobre el cual se creó el trabajo.
+Incluir conceptos de descendientes no crea Works hijos, no cambia esa FK y no
+duplica el Work.
+
+#### RN-EJE-011 — Los WorkTypes no se heredan hacia los descendientes
+
+La creación valida el `WorkType` únicamente contra la configuración efectiva
+del activo principal. Los hijos conservan sus propias reglas de WorkTypes; su
+participación en el formulario del padre no les habilita ni deshabilita tipos
+de trabajo.
+
+#### RN-EJE-012 — Un Concept descendiente requiere dos permisos
+
+Un Concept se materializa para un activo del subárbol solamente cuando:
+
+1. existe como elemento `CONCEPT` en el `FormTemplate` del WorkType elegido; y
+2. existe una relación activa `AssetTypeConcept` entre el tipo de ese activo y
+   el Concept.
+
+Por tanto, no se agregan indiscriminadamente todos los Concepts de todos los
+descendientes. Un Work de inspección visual y uno de termografía pueden
+recorrer el mismo árbol y producir conjuntos diferentes.
+
+#### RN-EJE-013 — La búsqueda de descendientes es recursiva y acotada
+
+Se recorren hijos, nietos y cualquier profundidad posterior. La colección de
+entrada ya está limitada por `tenantId` y `siteId`; el recorrido nunca puede
+saltar a otro tenant o sitio y evita ciclos accidentales mediante IDs visitados.
+
+#### RN-EJE-014 — Cada WorkItem pertenece a un Asset concreto
+
+Cada elemento materializado conserva `assetId`, código, nombre y tipo del
+activo como snapshot. También conserva `formItemId`, que identifica el elemento
+de plantilla que lo originó. Dos radiadores que usan el mismo Concept generan
+dos WorkItems independientes.
+
+La identidad lógica es:
+
+```text
+Work + Asset + FormItem de plantilla
+```
+
+Como cada `FormItem` de tipo Concept referencia un único Concept, esta clave
+también distingue `Work + Asset + Concept + FormItem` sin deduplicar solo por
+`conceptId`.
+
+#### RN-EJE-015 — El snapshot protege el histórico por activo
+
+El nombre, código y tipo del activo, junto con la definición del Concept, se
+copian en `formSnapshot` al crear el Work. Renombrar, mover o desasociar después
+un activo o Concept no modifica un trabajo histórico.
+
+#### RN-EJE-016 — Tareas y Concepts tienen alcances diferentes
+
+Las tareas definidas por la plantilla se materializan una sola vez para el
+activo principal. Los descendientes aportan únicamente instancias `CONCEPT`
+permitidas por la regla RN-EJE-012.
+
 ## Reglas de programación vigentes
 
 ### RP-API-001 — La API aplica las reglas de negocio
 
 La interfaz puede orientar al usuario, pero NestJS vuelve a validar tenant,
 sitio, jerarquía, estado y relaciones. El frontend no es la autoridad final.
+
+### RP-EJE-001 — Los WorkItems usan UUID determinista
+
+El ID de una instancia se calcula con UUID v5 a partir de `workId`, `assetId` y
+`formItemId`. Esto hace idempotente la materialización y permite que IndexedDB
+y NestJS reconstruyan exactamente los mismos IDs durante un Push offline.
+
+### RP-EJE-002 — Online y offline materializan la misma regla
+
+NestJS usa el catálogo PostgreSQL e IndexedDB usa la copia local descargada.
+Ambos filtran por plantilla y `AssetTypeConcept`, recorren toda la descendencia
+y guardan los nuevos campos dentro del snapshot. Push/Pull continúa enviando el
+Work con su `formSnapshot` y las respuestas siguen apuntando al ID de instancia.
 
 ### RP-API-002 — El BFF es la entrada del frontend
 

@@ -22,5 +22,14 @@ export const catalogItemSchema = z.object({
 export type CatalogItemFormValue = z.infer<typeof catalogItemSchema>;
 
 export function normalizeCatalogCode(value: string) {
-  return value.toUpperCase().replace(/[\s-]+/g, '_');
+  return value
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_');
+}
+
+export function suggestCatalogCode(value: string) {
+  return normalizeCatalogCode(value).replace(/^_+|_+$/g, '');
 }

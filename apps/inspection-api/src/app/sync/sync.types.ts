@@ -1,4 +1,5 @@
 import type { WorkStatus } from '../works/entities/work.entity';
+import type { WorkTemplateSnapshot } from '../works/work-snapshot';
 import type { SyncPushChangeDto } from './dto/sync-push.dto';
 
 export type WorkPayload = {
@@ -15,6 +16,7 @@ export type WorkPayload = {
   company?: string;
   status: WorkStatus;
   notes?: string;
+  formSnapshot?: WorkTemplateSnapshot;
 };
 
 export type ResponsePayload = {

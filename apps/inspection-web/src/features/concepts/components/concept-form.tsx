@@ -6,6 +6,7 @@ import {
   conceptTypeLabels,
   conceptTypes,
   normalizeConceptCode,
+  suggestConceptCode,
 } from '../concept-schema';
 import type {
   Concept,
@@ -42,6 +43,7 @@ export function ConceptForm({
   const [editableOptions, setEditableOptions] = useState<EditableOption[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCodeManuallyEdited, setIsCodeManuallyEdited] = useState(false);
 
   useEffect(() => {
     setForm(
@@ -56,6 +58,7 @@ export function ConceptForm({
           }
         : emptyForm
     );
+    setIsCodeManuallyEdited(false);
     setEditableOptions(
       options
         .filter((option) => option.conceptId === concept?.id)
@@ -146,34 +149,46 @@ export function ConceptForm({
 
       <form className="mt-5 grid gap-4 sm:grid-cols-2" onSubmit={handleSubmit}>
         <label className="text-sm font-medium text-slate-700">
-          Código
-          <input
-            required
-            value={form.code}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                code: normalizeConceptCode(event.target.value),
-              }))
-            }
-            maxLength={80}
-            placeholder="TEMP_AMBIENTE"
-            className="mt-2 h-11 w-full rounded-lg border border-slate-300 px-3 font-mono text-sm text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-          />
-        </label>
-
-        <label className="text-sm font-medium text-slate-700">
           Nombre
           <input
             required
             value={form.name}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, name: event.target.value }))
-            }
+            onChange={(event) => {
+              const name = event.target.value;
+              setForm((current) => ({
+                ...current,
+                name,
+                code: isCodeManuallyEdited
+                  ? current.code
+                  : suggestConceptCode(name),
+              }));
+            }}
             maxLength={160}
             placeholder="Temperatura ambiente"
+            autoFocus={!concept}
             className="mt-2 h-11 w-full rounded-lg border border-slate-300 px-3 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
           />
+        </label>
+
+        <label className="text-sm font-medium text-slate-700">
+          Código
+          <input
+            required
+            value={form.code}
+            onChange={(event) => {
+              setIsCodeManuallyEdited(true);
+              setForm((current) => ({
+                ...current,
+                code: normalizeConceptCode(event.target.value),
+              }));
+            }}
+            maxLength={80}
+            placeholder="TEMP_AMBIENTE"
+            className="mt-2 h-11 w-full rounded-lg border border-slate-300 px-3 font-mono text-sm text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+          />
+          <span className="mt-1.5 block text-xs font-normal text-slate-500">
+            Se sugiere desde el nombre y puedes editarlo.
+          </span>
         </label>
 
         <label className="text-sm font-medium text-slate-700">

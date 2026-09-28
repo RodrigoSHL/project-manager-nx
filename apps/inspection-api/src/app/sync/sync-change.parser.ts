@@ -1,10 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import { WorkStatus } from '../works/entities/work.entity';
-import {
-  SyncEntityType,
-  type SyncPushChangeDto,
-} from './dto/sync-push.dto';
+import { SyncEntityType, type SyncPushChangeDto } from './dto/sync-push.dto';
 import type {
   AnnotationPayload,
   ParsedChange,
@@ -45,12 +42,7 @@ export class SyncChangeParser {
   }
 
   private parseWork(payload: Record<string, unknown>): WorkPayload {
-    for (const key of [
-      'siteId',
-      'assetId',
-      'workTypeId',
-      'formTemplateId',
-    ]) {
+    for (const key of ['siteId', 'assetId', 'workTypeId', 'formTemplateId']) {
       this.assertUuid(payload[key], `payload.${key}`);
     }
     const status = payload.status;
@@ -80,6 +72,10 @@ export class SyncChangeParser {
       company: this.optionalText(payload.company, 'company', 160),
       status: status as WorkStatus,
       notes: this.optionalText(payload.notes, 'notes'),
+      formSnapshot:
+        payload.formSnapshot && typeof payload.formSnapshot === 'object'
+          ? (payload.formSnapshot as WorkPayload['formSnapshot'])
+          : undefined,
     };
   }
 

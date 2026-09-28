@@ -12,6 +12,7 @@ describe('InspectionApiController authorization', () => {
   const client = {
     listTenants: jest.fn(),
     listAccessibleTenants: jest.fn(),
+    createWork: jest.fn(),
   };
   const controller = new InspectionApiController(
     client as unknown as InspectionApiClient
@@ -65,6 +66,31 @@ describe('InspectionApiController authorization', () => {
         InspectionApiController.prototype.pullSync
       )
     ).toEqual(['TENANT_ADMIN', 'SUPERVISOR', 'INSPECTOR', 'VIEWER']);
+  });
+
+  it('uses the authenticated user name as the work responsible', () => {
+    const payload = {
+      workTypeId: 'work-type-1',
+      title: 'Inspección visual',
+      executionDate: '2026-09-27',
+      responsible: 'Nombre enviado por el cliente',
+      status: 'DRAFT' as const,
+    };
+
+    controller.createWork(
+      'tenant-1',
+      'site-1',
+      'asset-1',
+      request([UserRole.USER]),
+      payload
+    );
+
+    expect(client.createWork).toHaveBeenCalledWith(
+      'tenant-1',
+      'site-1',
+      'asset-1',
+      expect.objectContaining({ responsible: 'User' })
+    );
   });
 
   it('lists every tenant for a global administrator', () => {

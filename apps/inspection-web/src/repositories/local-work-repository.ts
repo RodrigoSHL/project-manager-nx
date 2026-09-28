@@ -10,6 +10,9 @@ import type {
 import type { WorkReferenceData } from '../features/works/work-reference-loader';
 import type { LocalSyncStatus } from '../features/offline/models';
 import { enqueueOutboxChange } from './outbox-repository';
+import { getAssetDescendants } from '../features/assets/asset-selectors';
+import { workItemInstanceId } from '../features/works/work-item-id';
+import type { Asset } from '../features/assets/models';
 
 export const localWorkRepository: WorkRepository = {
   source: 'LOCAL',
@@ -110,18 +113,23 @@ export const localWorkRepository: WorkRepository = {
         'No existe una plantilla local activa para este trabajo.'
       );
     }
-    const snapshot = await buildSnapshot(input.tenantId, template.id);
+    const workId = crypto.randomUUID();
+    const snapshot = await buildSnapshot(
+      input.tenantId,
+      workId,
+      asset,
+      template.id
+    );
     const now = new Date().toISOString();
     const work: Work & { syncStatus: LocalSyncStatus } = {
       ...input,
-      id: crypto.randomUUID(),
+      id: workId,
       formTemplateId: template.id,
       formTemplateVersion: template.version,
       createdAt: now,
       updatedAt: now,
       syncStatus: 'LOCAL_ONLY',
     };
-    snapshot.workId = work.id;
     await inspectionDb.transaction(
       'rw',
       inspectionDb.works,
@@ -135,7 +143,7 @@ export const localWorkRepository: WorkRepository = {
           entityType: 'WORK',
           entityId: work.id,
           operation: 'CREATE',
-          payload: work,
+          payload: { ...work, formSnapshot: snapshot },
           timestamp: now,
         });
       }
@@ -250,7 +258,7 @@ export const localWorkRepository: WorkRepository = {
           entityType: 'WORK',
           entityId: workId,
           operation: work.syncStatus === 'LOCAL_ONLY' ? 'CREATE' : 'UPDATE',
-          payload: updatedWork,
+          payload: { ...updatedWork, formSnapshot: snapshot },
           timestamp: now,
         });
         for (const record of responseRecords) {
@@ -333,7 +341,10 @@ export const localWorkRepository: WorkRepository = {
   },
 
   async start(tenantId, workId) {
-    const work = await requireWork(tenantId, workId);
+    const [work, snapshot] = await Promise.all([
+      requireWork(tenantId, workId),
+      requireSnapshot(tenantId, workId),
+    ]);
     const now = new Date().toISOString();
     const updatedWork = {
       ...work,
@@ -352,7 +363,7 @@ export const localWorkRepository: WorkRepository = {
           entityType: 'WORK',
           entityId: workId,
           operation: work.syncStatus === 'LOCAL_ONLY' ? 'CREATE' : 'UPDATE',
-          payload: updatedWork,
+          payload: { ...updatedWork, formSnapshot: snapshot },
           timestamp: now,
         });
       }
@@ -393,7 +404,7 @@ export const localWorkRepository: WorkRepository = {
           entityType: 'WORK',
           entityId: workId,
           operation: work.syncStatus === 'LOCAL_ONLY' ? 'CREATE' : 'UPDATE',
-          payload: updatedWork,
+          payload: { ...updatedWork, formSnapshot: snapshot },
           timestamp: now,
         });
       }
@@ -440,6 +451,8 @@ function isAnswered(item: WorkFormItemSnapshot, value?: WorkItemValue) {
 
 async function buildSnapshot(
   tenantId: string,
+  workId: string,
+  rootAsset: Asset,
   templateId: string
 ): Promise<WorkTemplateSnapshot> {
   const template = await inspectionDb.formTemplates.get(templateId);
@@ -449,8 +462,26 @@ async function buildSnapshot(
     .where('[tenantId+formTemplateId]')
     .equals([tenantId, templateId])
     .sortBy('order');
+  const [siteAssets, conceptRelations] = await Promise.all([
+    inspectionDb.assets
+      .where('[tenantId+siteId]')
+      .equals([tenantId, rootAsset.siteId])
+      .sortBy('code'),
+    inspectionDb.assetTypeConcepts.where('tenantId').equals(tenantId).toArray(),
+  ]);
+  const assets = [rootAsset, ...getAssetDescendants(siteAssets, rootAsset.id)];
+  const assetOrder = new Map(assets.map((asset, index) => [asset.id, index]));
+  const assetDepth = new Map<string, number>([[rootAsset.id, 0]]);
+  for (const asset of assets.slice(1)) {
+    assetDepth.set(asset.id, (assetDepth.get(asset.parentId ?? '') ?? 0) + 1);
+  }
+  const allowedConcepts = new Set(
+    conceptRelations
+      .filter((relation) => relation.active)
+      .map((relation) => `${relation.assetTypeId}:${relation.conceptId}`)
+  );
   return {
-    workId: '',
+    workId,
     tenantId,
     formTemplateId: template.id,
     formTemplateVersion: template.version,
@@ -466,52 +497,69 @@ async function buildSnapshot(
           title: section.title,
           description: section.description,
           order: section.order,
-          items: await Promise.all(
-            items.map(async (item) => {
-              if (item.type === 'TASK')
-                return {
-                  id: item.id,
+          items: (
+            await Promise.all(
+              items.map(async (item) => {
+                const concept = item.conceptId
+                  ? await inspectionDb.concepts.get(item.conceptId)
+                  : undefined;
+                if (
+                  item.type === 'CONCEPT' &&
+                  (!concept || concept.tenantId !== tenantId)
+                )
+                  throw new Error(
+                    'La plantilla contiene un concepto local inválido.'
+                  );
+                const options = concept
+                  ? await inspectionDb.conceptOptions
+                      .where('[tenantId+conceptId]')
+                      .equals([tenantId, concept.id])
+                      .sortBy('order')
+                  : [];
+                const targetAssets =
+                  item.type === 'TASK'
+                    ? [rootAsset]
+                    : concept
+                    ? assets.filter((asset) =>
+                        allowedConcepts.has(
+                          `${asset.assetTypeId}:${concept.id}`
+                        )
+                      )
+                    : [];
+                return targetAssets.map((asset) => ({
+                  id: workItemInstanceId(workId, asset.id, item.id),
+                  formItemId: item.id,
+                  assetId: asset.id,
+                  assetCodeSnapshot: asset.code,
+                  assetNameSnapshot: asset.name,
+                  assetTypeIdSnapshot: asset.assetTypeId,
+                  assetOrder: assetOrder.get(asset.id) ?? 0,
+                  assetDepth: assetDepth.get(asset.id) ?? 0,
                   type: item.type,
                   order: item.order,
                   title: item.title,
                   description: item.description,
                   required: item.required,
-                };
-              const concept = item.conceptId
-                ? await inspectionDb.concepts.get(item.conceptId)
-                : undefined;
-              if (!concept || concept.tenantId !== tenantId)
-                throw new Error(
-                  'La plantilla contiene un concepto local inválido.'
-                );
-              const options = await inspectionDb.conceptOptions
-                .where('[tenantId+conceptId]')
-                .equals([tenantId, concept.id])
-                .sortBy('order');
-              return {
-                id: item.id,
-                type: item.type,
-                order: item.order,
-                title: item.title,
-                description: item.description,
-                required: item.required,
-                concept: {
-                  id: concept.id,
-                  code: concept.code,
-                  name: concept.name,
-                  description: concept.description,
-                  type: concept.type,
-                  unit: concept.unit,
-                  options: options.map(({ id, label, value, order }) => ({
-                    id,
-                    label,
-                    value,
-                    order,
-                  })),
-                },
-              };
-            })
-          ),
+                  concept: concept
+                    ? {
+                        id: concept.id,
+                        code: concept.code,
+                        name: concept.name,
+                        description: concept.description,
+                        type: concept.type,
+                        unit: concept.unit,
+                        options: options.map(({ id, label, value, order }) => ({
+                          id,
+                          label,
+                          value,
+                          order,
+                        })),
+                      }
+                    : undefined,
+                }));
+              })
+            )
+          ).flat(),
         };
       })
     ),

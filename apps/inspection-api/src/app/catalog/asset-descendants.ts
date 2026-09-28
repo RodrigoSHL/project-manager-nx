@@ -1,14 +1,14 @@
-import type { Asset } from './models';
+export type AssetTreeNode = {
+  id: string;
+  parentId: string | null;
+};
 
-export function getRootAssetIds(assets: Asset[]) {
-  return assets
-    .filter((asset) => asset.parentId === null)
-    .map((asset) => asset.id);
-}
-
-/** Assets must already be scoped to one tenant and site. */
-export function getAssetDescendants(assets: Asset[], rootAssetId: string) {
-  const childrenByParent = new Map<string, Asset[]>();
+/** Returns every generation below root in stable depth-first order. */
+export function getAssetDescendants<T extends AssetTreeNode>(
+  assets: T[],
+  rootAssetId: string
+): T[] {
+  const childrenByParent = new Map<string, T[]>();
   for (const asset of assets) {
     if (!asset.parentId) continue;
     const children = childrenByParent.get(asset.parentId) ?? [];
@@ -16,7 +16,7 @@ export function getAssetDescendants(assets: Asset[], rootAssetId: string) {
     childrenByParent.set(asset.parentId, children);
   }
 
-  const descendants: Asset[] = [];
+  const descendants: T[] = [];
   const visited = new Set([rootAssetId]);
   const visit = (parentId: string) => {
     for (const child of childrenByParent.get(parentId) ?? []) {

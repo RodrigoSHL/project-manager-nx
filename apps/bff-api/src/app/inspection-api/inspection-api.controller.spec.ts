@@ -68,6 +68,21 @@ describe('InspectionApiController authorization', () => {
     ).toEqual(['TENANT_ADMIN', 'SUPERVISOR', 'INSPECTOR', 'VIEWER']);
   });
 
+  it('reserves finding review for supervisors and tenant administrators', () => {
+    for (const method of [
+      'confirmFinding',
+      'discardCandidate',
+      'finalizeReview',
+    ] as const) {
+      expect(
+        Reflect.getMetadata(
+          TENANT_ROLES_KEY,
+          InspectionApiController.prototype[method]
+        )
+      ).toEqual(['TENANT_ADMIN', 'SUPERVISOR']);
+    }
+  });
+
   it('uses the authenticated user name as the work responsible', () => {
     const payload = {
       workTypeId: 'work-type-1',

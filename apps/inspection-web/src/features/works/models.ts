@@ -179,6 +179,32 @@ export interface FindingCandidate {
   maxValue?: number | null;
   suggestedSeverityId?: string | null;
   status: 'PENDING' | 'CONFIRMED' | 'DISCARDED';
+  discardReason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Finding {
+  id: string;
+  tenantId: string;
+  workId: string;
+  workItemId: string;
+  assetId: string;
+  conceptId?: string | null;
+  sourceCandidateId: string;
+  source: FindingCandidate['source'];
+  title: string;
+  description?: string | null;
+  measuredValue?: string | null;
+  minValue?: number | null;
+  maxValue?: number | null;
+  severityId?: string | null;
+  manHours?: number | null;
+  materials?: string | null;
+  assetNameSnapshot: string;
+  conceptNameSnapshot?: string | null;
+  unitSnapshot?: string | null;
+  sortOrder: number;
   createdAt: string;
   updatedAt: string;
 }

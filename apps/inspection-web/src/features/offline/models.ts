@@ -14,6 +14,7 @@ import type {
 import type {
   ConceptResponse,
   FindingCandidate,
+  Finding,
   TaskCompletion,
   Work,
   WorkItemAnnotation,
@@ -129,6 +130,7 @@ export type PullEntityType =
   | 'CONCEPT_OPTION'
   | 'SEVERITY_LEVEL'
   | 'FINDING_CANDIDATE'
+  | 'FINDING'
   | 'FORM_TEMPLATE'
   | 'FORM_SECTION'
   | 'FORM_ITEM'
@@ -220,6 +222,7 @@ export interface OfflineCatalogBundle {
   options: ConceptOption[];
   severityLevels: SeverityLevel[];
   findingCandidates: FindingCandidate[];
+  findings: Finding[];
   assetTypeConcepts: AssetTypeConcept[];
   templates: FormTemplate[];
   sections: FormSection[];

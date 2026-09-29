@@ -6,6 +6,7 @@ import type {
   WorkItemAnnotation,
   WorkItemValue,
   WorkTemplateSnapshot,
+  Finding,
 } from './models';
 import { authenticatedFetch } from '../auth/authenticated-fetch';
 import type { SeverityLevel } from '../concepts/models';
@@ -19,6 +20,7 @@ export type WorkCatalogResponse = {
   snapshots: WorkTemplateSnapshot[];
   severityLevels: SeverityLevel[];
   findingCandidates: FindingCandidate[];
+  findings: Finding[];
 };
 
 export type WorkResponsesPayload = {
@@ -91,6 +93,49 @@ export const workApi = {
         workId
       )}/finish`,
       { method: 'POST', body: JSON.stringify(payload) }
+    );
+  },
+
+  confirmFinding(
+    tenantId: string,
+    workId: string,
+    candidateId: string,
+    payload: {
+      title: string;
+      description?: string;
+      severityId?: string | null;
+      manHours?: number | null;
+      materials?: string;
+    }
+  ) {
+    return request<Finding>(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/finding-candidates/${encodeURIComponent(candidateId)}/confirm`,
+      { method: 'PUT', body: JSON.stringify(payload) }
+    );
+  },
+
+  discardCandidate(
+    tenantId: string,
+    workId: string,
+    candidateId: string,
+    reason?: string
+  ) {
+    return request<FindingCandidate>(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/finding-candidates/${encodeURIComponent(candidateId)}/discard`,
+      { method: 'PUT', body: JSON.stringify({ reason }) }
+    );
+  },
+
+  finalizeReview(tenantId: string, workId: string) {
+    return request<Work>(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/review/finalize`,
+      { method: 'POST' }
     );
   },
 };

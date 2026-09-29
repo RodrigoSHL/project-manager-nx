@@ -14,11 +14,19 @@ import { CreateWorkDto } from './dto/create-work.dto';
 import { SaveWorkResponsesDto } from './dto/save-work-responses.dto';
 import { UpdateWorkStatusDto } from './dto/update-work-status.dto';
 import { WorksService } from './works.service';
+import { FindingReviewService } from './finding-review.service';
+import {
+  ConfirmFindingDto,
+  DiscardFindingCandidateDto,
+} from './dto/review-finding.dto';
 
 @Controller('tenants/:tenantId')
 @UseGuards(ActiveTenantGuard)
 export class WorksController {
-  constructor(private readonly works: WorksService) {}
+  constructor(
+    private readonly works: WorksService,
+    private readonly review: FindingReviewService
+  ) {}
 
   @Get('works')
   list(@Param('tenantId', new ParseUUIDPipe()) tenantId: string) {
@@ -68,5 +76,33 @@ export class WorksController {
     @Body() dto: SaveWorkResponsesDto
   ) {
     return this.works.finish(tenantId, workId, dto);
+  }
+
+  @Put('works/:workId/finding-candidates/:candidateId/confirm')
+  confirmFinding(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('workId', new ParseUUIDPipe()) workId: string,
+    @Param('candidateId', new ParseUUIDPipe()) candidateId: string,
+    @Body() dto: ConfirmFindingDto
+  ) {
+    return this.review.confirm(tenantId, workId, candidateId, dto);
+  }
+
+  @Put('works/:workId/finding-candidates/:candidateId/discard')
+  discardCandidate(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('workId', new ParseUUIDPipe()) workId: string,
+    @Param('candidateId', new ParseUUIDPipe()) candidateId: string,
+    @Body() dto: DiscardFindingCandidateDto
+  ) {
+    return this.review.discard(tenantId, workId, candidateId, dto);
+  }
+
+  @Post('works/:workId/review/finalize')
+  finalizeReview(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('workId', new ParseUUIDPipe()) workId: string
+  ) {
+    return this.review.finalize(tenantId, workId);
   }
 }

@@ -18,6 +18,7 @@ type TenantAccessContextValue = {
   administrableTenants: Tenant[];
   canAdministerTenants: boolean;
   canWriteTenant: (tenantId: string) => boolean;
+  canReviewTenant: (tenantId: string) => boolean;
   isLoading: boolean;
 };
 
@@ -82,6 +83,14 @@ export function TenantAccessProvider({ children }: { children: ReactNode }) {
         if (globalAdmin) return true;
         const tenant = accessibleTenants.find((item) => item.id === tenantId);
         return Boolean(tenant && tenant.membershipRole !== 'VIEWER');
+      },
+      canReviewTenant: (tenantId) => {
+        if (mode !== 'REMOTE') return false;
+        if (globalAdmin) return true;
+        const role = accessibleTenants.find(
+          (item) => item.id === tenantId
+        )?.membershipRole;
+        return role === 'TENANT_ADMIN' || role === 'SUPERVISOR';
       },
       isLoading,
     }),

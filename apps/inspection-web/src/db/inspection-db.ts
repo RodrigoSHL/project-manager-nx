@@ -27,6 +27,7 @@ import type {
 } from '../features/offline/models';
 import type {
   FindingCandidate,
+  Finding,
   WorkTemplateSnapshot,
 } from '../features/works/models';
 import type { WorkType } from '../features/work-types/models';
@@ -41,6 +42,7 @@ export class InspectionDatabase extends Dexie {
   concepts!: EntityTable<Concept, 'id'>;
   severityLevels!: EntityTable<SeverityLevel, 'id'>;
   findingCandidates!: EntityTable<FindingCandidate, 'id'>;
+  findings!: EntityTable<Finding, 'id'>;
   conceptOptions!: EntityTable<ConceptOption, 'id'>;
   assetTypeConcepts!: EntityTable<AssetTypeConcept, 'id'>;
   formTemplates!: EntityTable<FormTemplate, 'id'>;
@@ -140,6 +142,9 @@ export class InspectionDatabase extends Dexie {
     this.version(4).stores({
       severityLevels: 'id, tenantId, [tenantId+active]',
       findingCandidates: 'id, tenantId, [tenantId+workId], [tenantId+status]',
+    });
+    this.version(5).stores({
+      findings: 'id, tenantId, [tenantId+workId], sourceCandidateId',
     });
   }
 }

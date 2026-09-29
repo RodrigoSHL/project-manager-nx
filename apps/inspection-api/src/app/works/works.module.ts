@@ -15,6 +15,8 @@ import { WorksController } from './works.controller';
 import { WorksService } from './works.service';
 import { FindingCandidateEntity } from './entities/finding-candidate.entity';
 import { FindingCandidateService } from './finding-candidate.service';
+import { FindingEntity } from './entities/finding.entity';
+import { FindingReviewService } from './finding-review.service';
 
 @Module({
   imports: [
@@ -31,10 +33,11 @@ import { FindingCandidateService } from './finding-candidate.service';
       ConceptOptionEntity,
       TenantEntity,
       FindingCandidateEntity,
+      FindingEntity,
     ]),
   ],
   controllers: [WorksController],
-  providers: [WorksService, FindingCandidateService],
+  providers: [WorksService, FindingCandidateService, FindingReviewService],
   exports: [WorksService, FindingCandidateService],
 })
 export class WorksModule {}

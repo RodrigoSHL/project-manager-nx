@@ -36,6 +36,7 @@ import { workItemInstanceId } from './work-item-id';
 import { FindingCandidateEntity } from './entities/finding-candidate.entity';
 import { FindingCandidateService } from './finding-candidate.service';
 import { SeverityLevelEntity } from '../catalog/entities/severity-level.entity';
+import { FindingEntity } from './entities/finding.entity';
 
 type NormalizedWorkResponses = {
   responses: Array<ConceptResponseValueDto & { conceptId: string }>;
@@ -79,6 +80,7 @@ export class WorksService {
       taskCompletions,
       annotations,
       findingCandidates,
+      findings,
       severityLevels,
     ] = await Promise.all([
       this.works.find({
@@ -90,6 +92,9 @@ export class WorksService {
       this.annotations.find({ where: { tenantId } }),
       this.findingCandidates.find({ where: { tenantId } }),
       this.dataSource
+        .getRepository(FindingEntity)
+        .find({ where: { tenantId }, order: { sortOrder: 'ASC', id: 'ASC' } }),
+      this.dataSource
         .getRepository(SeverityLevelEntity)
         .find({ where: { tenantId }, order: { order: 'ASC' } }),
     ]);
@@ -99,6 +104,7 @@ export class WorksService {
       taskCompletions,
       annotations,
       findingCandidates,
+      findings,
       severityLevels,
       snapshots: works.map((work) => work.formSnapshot),
     };
@@ -106,13 +112,24 @@ export class WorksService {
 
   async getById(tenantId: string, workId: string) {
     const work = await this.findWorkOrFail(tenantId, workId);
-    const [responses, taskCompletions, annotations, findingCandidates] =
-      await Promise.all([
-        this.responses.find({ where: { tenantId, workId } }),
-        this.taskCompletions.find({ where: { tenantId, workId } }),
-        this.annotations.find({ where: { tenantId, workId } }),
-        this.findingCandidates.find({ where: { tenantId, workId } }),
-      ]);
+    const [
+      responses,
+      taskCompletions,
+      annotations,
+      findingCandidates,
+      findings,
+    ] = await Promise.all([
+      this.responses.find({ where: { tenantId, workId } }),
+      this.taskCompletions.find({ where: { tenantId, workId } }),
+      this.annotations.find({ where: { tenantId, workId } }),
+      this.findingCandidates.find({ where: { tenantId, workId } }),
+      this.dataSource
+        .getRepository(FindingEntity)
+        .find({
+          where: { tenantId, workId },
+          order: { sortOrder: 'ASC', id: 'ASC' },
+        }),
+    ]);
     return {
       work: this.toPublicWork(work),
       snapshot: work.formSnapshot,
@@ -120,6 +137,7 @@ export class WorksService {
       taskCompletions,
       annotations,
       findingCandidates,
+      findings,
     };
   }
 

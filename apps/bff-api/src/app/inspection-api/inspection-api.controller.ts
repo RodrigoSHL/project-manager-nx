@@ -112,6 +112,48 @@ export class InspectionApiController {
     return this.client.finishWork(tenantId, workId, payload);
   }
 
+  @Put(
+    'tenants/:tenantId/works/:workId/finding-candidates/:candidateId/confirm'
+  )
+  @TenantRoles('TENANT_ADMIN', 'SUPERVISOR')
+  confirmFinding(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('workId', new ParseUUIDPipe()) workId: string,
+    @Param('candidateId', new ParseUUIDPipe()) candidateId: string,
+    @Body()
+    payload: {
+      title: string;
+      description?: string;
+      severityId?: string | null;
+      manHours?: number | null;
+      materials?: string;
+    }
+  ) {
+    return this.client.confirmFinding(tenantId, workId, candidateId, payload);
+  }
+
+  @Put(
+    'tenants/:tenantId/works/:workId/finding-candidates/:candidateId/discard'
+  )
+  @TenantRoles('TENANT_ADMIN', 'SUPERVISOR')
+  discardCandidate(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('workId', new ParseUUIDPipe()) workId: string,
+    @Param('candidateId', new ParseUUIDPipe()) candidateId: string,
+    @Body() payload: { reason?: string }
+  ) {
+    return this.client.discardCandidate(tenantId, workId, candidateId, payload);
+  }
+
+  @Post('tenants/:tenantId/works/:workId/review/finalize')
+  @TenantRoles('TENANT_ADMIN', 'SUPERVISOR')
+  finalizeReview(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('workId', new ParseUUIDPipe()) workId: string
+  ) {
+    return this.client.finalizeReview(tenantId, workId);
+  }
+
   @Post('tenants/:tenantId/sync/push')
   @TenantRoles('TENANT_ADMIN', 'SUPERVISOR', 'INSPECTOR')
   pushSync(

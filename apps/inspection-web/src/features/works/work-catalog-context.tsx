@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { WorkApiError, type WorkCatalogResponse } from './work-api';
+import { WorkApiError, workApi, type WorkCatalogResponse } from './work-api';
 import type { WorkReferenceData } from './work-reference-loader';
 import { useOffline } from '../offline/offline-context';
 import { localWorkRepository } from '../../repositories/local-work-repository';
@@ -23,6 +23,7 @@ import type {
   WorkItemValue,
   WorkTemplateSnapshot,
   FindingCandidate,
+  Finding,
 } from './models';
 import type { SeverityLevel } from '../concepts/models';
 
@@ -33,6 +34,7 @@ type WorkCatalogState = {
   annotations: WorkItemAnnotation[];
   snapshots: WorkTemplateSnapshot[];
   findingCandidates: FindingCandidate[];
+  findings: Finding[];
   severityLevels: SeverityLevel[];
   catalogs: Record<string, WorkReferenceData | undefined>;
   loadedTenantIds: string[];
@@ -56,6 +58,25 @@ type WorkCatalogValue = WorkCatalogState & {
     workId: string,
     values: Record<string, WorkItemValue>
   ) => Promise<FinishResult>;
+  confirmFinding: (
+    tenantId: string,
+    workId: string,
+    candidateId: string,
+    payload: {
+      title: string;
+      description?: string;
+      severityId?: string | null;
+      manHours?: number | null;
+      materials?: string;
+    }
+  ) => Promise<void>;
+  discardCandidate: (
+    tenantId: string,
+    workId: string,
+    candidateId: string,
+    reason?: string
+  ) => Promise<void>;
+  finalizeReview: (tenantId: string, workId: string) => Promise<void>;
 };
 
 const initialState: WorkCatalogState = {
@@ -65,6 +86,7 @@ const initialState: WorkCatalogState = {
   annotations: [],
   snapshots: [],
   findingCandidates: [],
+  findings: [],
   severityLevels: [],
   catalogs: {},
   loadedTenantIds: [],
@@ -123,6 +145,10 @@ export function WorkCatalogProvider({ children }: { children: ReactNode }) {
             (item) => item.tenantId !== tenantId
           ),
           ...(data.findingCandidates ?? []),
+        ],
+        findings: [
+          ...current.findings.filter((item) => item.tenantId !== tenantId),
+          ...(data.findings ?? []),
         ],
         severityLevels: [
           ...current.severityLevels.filter(
@@ -273,6 +299,55 @@ export function WorkCatalogProvider({ children }: { children: ReactNode }) {
     [refreshTenant, repository, runMutation]
   );
 
+  const confirmFinding = useCallback(
+    async (
+      tenantId: string,
+      workId: string,
+      candidateId: string,
+      payload: {
+        title: string;
+        description?: string;
+        severityId?: string | null;
+        manHours?: number | null;
+        materials?: string;
+      }
+    ) => {
+      if (mode !== 'REMOTE')
+        throw new WorkApiError('La revisión requiere conexión.');
+      await runMutation(tenantId, () =>
+        workApi.confirmFinding(tenantId, workId, candidateId, payload)
+      );
+    },
+    [mode, runMutation]
+  );
+
+  const discardCandidate = useCallback(
+    async (
+      tenantId: string,
+      workId: string,
+      candidateId: string,
+      reason?: string
+    ) => {
+      if (mode !== 'REMOTE')
+        throw new WorkApiError('La revisión requiere conexión.');
+      await runMutation(tenantId, () =>
+        workApi.discardCandidate(tenantId, workId, candidateId, reason)
+      );
+    },
+    [mode, runMutation]
+  );
+
+  const finalizeReview = useCallback(
+    async (tenantId: string, workId: string) => {
+      if (mode !== 'REMOTE')
+        throw new WorkApiError('La revisión requiere conexión.');
+      await runMutation(tenantId, () =>
+        workApi.finalizeReview(tenantId, workId)
+      );
+    },
+    [mode, runMutation]
+  );
+
   const value = useMemo<WorkCatalogValue>(
     () => ({
       ...state,
@@ -282,10 +357,16 @@ export function WorkCatalogProvider({ children }: { children: ReactNode }) {
       saveResponses,
       startWork,
       finishWork,
+      confirmFinding,
+      discardCandidate,
+      finalizeReview,
     }),
     [
       createWork,
       finishWork,
+      confirmFinding,
+      discardCandidate,
+      finalizeReview,
       loadTenant,
       retryTenant,
       saveResponses,

@@ -97,6 +97,7 @@ export async function cacheSiteForOffline(tenantId: string, siteId: string) {
       findingCandidates: (workCatalog.findingCandidates ?? []).filter((item) =>
         workIds.has(item.workId)
       ),
+      findings: (workCatalog.findings ?? []).filter((item) => workIds.has(item.workId)),
       assetTypeConcepts,
       templates: forms.templates,
       sections: forms.sections,
@@ -185,6 +186,7 @@ async function saveBundle(bundle: OfflineCatalogBundle) {
       inspectionDb.conceptOptions,
       inspectionDb.severityLevels,
       inspectionDb.findingCandidates,
+      inspectionDb.findings,
       inspectionDb.assetTypeConcepts,
       inspectionDb.formTemplates,
       inspectionDb.formSections,
@@ -228,6 +230,7 @@ async function saveBundle(bundle: OfflineCatalogBundle) {
         inspectionDb.conceptOptions.bulkPut(bundle.options),
         inspectionDb.severityLevels.bulkPut(bundle.severityLevels),
         inspectionDb.findingCandidates.bulkPut(bundle.findingCandidates),
+        inspectionDb.findings.bulkPut(bundle.findings),
         inspectionDb.assetTypeConcepts.bulkPut(bundle.assetTypeConcepts),
         inspectionDb.formTemplates.bulkPut(bundle.templates),
         inspectionDb.formSections.bulkPut(bundle.sections),

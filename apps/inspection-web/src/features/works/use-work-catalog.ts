@@ -22,6 +22,7 @@ export function useWorkCatalog(tenantId: string) {
       findingCandidates: store.findingCandidates.filter(
         (item) => item.tenantId === tenantId
       ),
+      findings: store.findings.filter((item) => item.tenantId === tenantId),
       severityLevels: store.severityLevels.filter(
         (item) => item.tenantId === tenantId
       ),
@@ -34,6 +35,9 @@ export function useWorkCatalog(tenantId: string) {
       saveResponses: store.saveResponses,
       startWork: store.startWork,
       finishWork: store.finishWork,
+      confirmFinding: store.confirmFinding,
+      discardCandidate: store.discardCandidate,
+      finalizeReview: store.finalizeReview,
     }),
     [store, tenantId]
   );

@@ -229,6 +229,49 @@ export class InspectionApiClient {
     );
   }
 
+  confirmFinding(
+    tenantId: string,
+    workId: string,
+    candidateId: string,
+    payload: {
+      title: string;
+      description?: string;
+      severityId?: string | null;
+      manHours?: number | null;
+      materials?: string;
+    }
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/finding-candidates/${encodeURIComponent(candidateId)}/confirm`,
+      { method: 'PUT', body: JSON.stringify(payload) }
+    );
+  }
+
+  discardCandidate(
+    tenantId: string,
+    workId: string,
+    candidateId: string,
+    payload: { reason?: string }
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/finding-candidates/${encodeURIComponent(candidateId)}/discard`,
+      { method: 'PUT', body: JSON.stringify(payload) }
+    );
+  }
+
+  finalizeReview(tenantId: string, workId: string) {
+    return this.request(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/review/finalize`,
+      { method: 'POST' }
+    );
+  }
+
   createWork(
     tenantId: string,
     siteId: string,

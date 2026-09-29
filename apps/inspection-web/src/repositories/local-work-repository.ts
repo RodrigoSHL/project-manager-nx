@@ -86,6 +86,10 @@ export const localWorkRepository: WorkRepository = {
         .where('tenantId')
         .equals(tenantId)
         .toArray(),
+      findings: await inspectionDb.findings
+        .where('tenantId')
+        .equals(tenantId)
+        .toArray(),
       severityLevels: await inspectionDb.severityLevels
         .where('tenantId')
         .equals(tenantId)

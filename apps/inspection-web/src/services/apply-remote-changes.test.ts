@@ -16,6 +16,55 @@ describe('applyRemoteChanges', () => {
 
   afterEach(async () => inspectionDb.delete());
 
+  it('incorpora hallazgos definitivos y decisiones de candidatos desde Pull', async () => {
+    const candidateId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const findingId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+    await applyRemoteChanges({
+      tenantId,
+      deviceId,
+      currentCheckpoint: 0,
+      response: {
+        changes: [
+          {
+            sequence: 1,
+            entityType: 'FINDING_CANDIDATE',
+            entityId: candidateId,
+            operation: 'CREATE',
+            payload: { id: candidateId, tenantId, workId, status: 'CONFIRMED' },
+            serverUpdatedAt: '2026-09-23T12:00:00Z',
+          },
+          {
+            sequence: 2,
+            entityType: 'FINDING',
+            entityId: findingId,
+            operation: 'CREATE',
+            payload: {
+              id: findingId,
+              tenantId,
+              workId,
+              sourceCandidateId: candidateId,
+              assetNameSnapshot: 'Radiador R2',
+              title: 'Temperatura elevada',
+              manHours: 2.5,
+            },
+            serverUpdatedAt: '2026-09-23T12:00:01Z',
+          },
+        ],
+        checkpoint: 2,
+        hasMore: false,
+      },
+    });
+    await expect(inspectionDb.findings.get(findingId)).resolves.toMatchObject({
+      tenantId,
+      workId,
+      sourceCandidateId: candidateId,
+      manHours: 2.5,
+    });
+    await expect(
+      inspectionDb.findingCandidates.get(candidateId)
+    ).resolves.toMatchObject({ status: 'CONFIRMED' });
+  });
+
   it('aplica severidades y candidatos por Pull en el tenant indicado', async () => {
     const severityId = '99999999-9999-4999-8999-999999999999';
     const candidateId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';

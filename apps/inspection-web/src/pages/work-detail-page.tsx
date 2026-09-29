@@ -9,6 +9,7 @@ import {
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { WorkExecutionForm } from '../features/works/components/work-execution-form';
+import { FindingReview } from '../features/works/components/finding-review';
 import { WorkStatusBadge } from '../features/works/components/work-status-badge';
 import { formatWorkDate } from '../features/works/work-formatters';
 import { useWorkCatalog } from '../features/works/use-work-catalog';
@@ -144,6 +145,25 @@ export function WorkDetailPage() {
         onSave={(values) => catalog.saveResponses(tenantId, work.id, values)}
         onStart={() => catalog.startWork(tenantId, work.id)}
         onFinish={(values) => catalog.finishWork(tenantId, work.id, values)}
+      />
+      <FindingReview
+        work={work}
+        snapshot={snapshot}
+        candidates={catalog.findingCandidates.filter(
+          (item) => item.workId === work.id
+        )}
+        findings={catalog.findings.filter((item) => item.workId === work.id)}
+        severities={catalog.severityLevels}
+        canReview={tenantAccess.canReviewTenant(tenantId)}
+        online={mode === 'REMOTE'}
+        busy={catalog.isMutating}
+        onConfirm={(candidateId, input) =>
+          catalog.confirmFinding(tenantId, work.id, candidateId, input)
+        }
+        onDiscard={(candidateId, reason) =>
+          catalog.discardCandidate(tenantId, work.id, candidateId, reason)
+        }
+        onFinalize={() => catalog.finalizeReview(tenantId, work.id)}
       />
     </>
   );

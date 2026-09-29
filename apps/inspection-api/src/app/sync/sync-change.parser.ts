@@ -101,6 +101,10 @@ export class SyncChangeParser {
       valueNumber: payload.valueNumber as number | undefined,
       valueText: this.optionalText(payload.valueText, 'valueText'),
       selectedOptionId: payload.selectedOptionId as string | undefined,
+      measuredAt:
+        payload.measuredAt === undefined
+          ? undefined
+          : this.requiredDate(payload.measuredAt),
     };
   }
 

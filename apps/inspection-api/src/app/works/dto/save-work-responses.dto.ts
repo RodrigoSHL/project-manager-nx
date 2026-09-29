@@ -1,10 +1,12 @@
 import {
   IsArray,
   IsBoolean,
+  IsDateString,
   IsNumber,
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
   ValidateNested,
 } from 'class-validator';
@@ -25,6 +27,11 @@ export class ConceptResponseValueDto {
   @IsOptional()
   @IsUUID()
   selectedOptionId?: string;
+
+  @IsOptional()
+  @IsDateString({ strict: true })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  measuredAt?: string;
 }
 
 export class TaskCompletionValueDto {

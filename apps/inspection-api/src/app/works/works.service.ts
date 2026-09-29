@@ -123,12 +123,10 @@ export class WorksService {
       this.taskCompletions.find({ where: { tenantId, workId } }),
       this.annotations.find({ where: { tenantId, workId } }),
       this.findingCandidates.find({ where: { tenantId, workId } }),
-      this.dataSource
-        .getRepository(FindingEntity)
-        .find({
-          where: { tenantId, workId },
-          order: { sortOrder: 'ASC', id: 'ASC' },
-        }),
+      this.dataSource.getRepository(FindingEntity).find({
+        where: { tenantId, workId },
+        order: { sortOrder: 'ASC', id: 'ASC' },
+      }),
     ]);
     return {
       work: this.toPublicWork(work),
@@ -343,6 +341,8 @@ export class WorksService {
               valueNumber: value.valueNumber ?? null,
               valueText: value.valueText ?? null,
               selectedOptionId: value.selectedOptionId ?? null,
+              measuredAt:
+                value.measuredAt ?? previous?.measuredAt ?? work.executionDate,
               createdAt: previous?.createdAt,
             });
           })
@@ -446,17 +446,29 @@ export class WorksService {
       concept.type === ConceptType.ANALOG &&
       value.valueNumber !== undefined
     ) {
-      return { formItemId: item.id, valueNumber: value.valueNumber };
+      return {
+        formItemId: item.id,
+        valueNumber: value.valueNumber,
+        measuredAt: value.measuredAt,
+      };
     }
     if (concept.type === ConceptType.TEXT && value.valueText?.trim()) {
-      return { formItemId: item.id, valueText: value.valueText.trim() };
+      return {
+        formItemId: item.id,
+        valueText: value.valueText.trim(),
+        measuredAt: value.measuredAt,
+      };
     }
     if (
       concept.type === ConceptType.DIGITAL &&
       value.selectedOptionId &&
       concept.options.some((option) => option.id === value.selectedOptionId)
     ) {
-      return { formItemId: item.id, selectedOptionId: value.selectedOptionId };
+      return {
+        formItemId: item.id,
+        selectedOptionId: value.selectedOptionId,
+        measuredAt: value.measuredAt,
+      };
     }
     throw new BadRequestException(
       `Response value does not match concept type ${concept.type}`

@@ -29,6 +29,7 @@ export type WorkResponsesPayload = {
     valueNumber?: number;
     valueText?: string;
     selectedOptionId?: string;
+    measuredAt?: string;
   }>;
   taskCompletions: Array<{ formItemId: string; completed: boolean }>;
   annotations: Array<{

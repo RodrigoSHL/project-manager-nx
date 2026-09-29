@@ -38,6 +38,10 @@ export class ConceptResponseEntity {
   @Column({ name: 'selected_option_id', type: 'uuid', nullable: true })
   selectedOptionId?: string | null;
 
+  // The inspection day, not the day the server received this response.
+  @Column({ name: 'measured_at', type: 'date' })
+  measuredAt!: string;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 

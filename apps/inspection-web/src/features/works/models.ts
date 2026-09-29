@@ -31,6 +31,7 @@ export interface ConceptResponse {
   valueNumber?: number;
   valueText?: string;
   selectedOptionId?: string;
+  measuredAt?: string;
   createdAt: string;
   updatedAt: string;
 }

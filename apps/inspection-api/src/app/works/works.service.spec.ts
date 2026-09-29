@@ -22,6 +22,12 @@ describe('WorksService', () => {
     save: jest.Mock;
     create: jest.Mock;
   };
+  let responseRepository: {
+    find: jest.Mock;
+    delete: jest.Mock;
+    save: jest.Mock;
+    create: jest.Mock;
+  };
   let catalog: {
     getAsset: jest.Mock;
     getAssetDescendants: jest.Mock;
@@ -45,7 +51,7 @@ describe('WorksService', () => {
         .fn()
         .mockResolvedValue({ affected: 1, raw: [], generatedMaps: [] }),
     };
-    const responseRepository = {
+    responseRepository = {
       find: jest.fn().mockResolvedValue([]),
       delete: jest.fn().mockResolvedValue({}),
       save: jest.fn().mockResolvedValue([]),
@@ -343,6 +349,81 @@ describe('WorksService', () => {
     ]);
   });
 
+  it('uses the execution day as measuredAt when saving a response', async () => {
+    const work = createWork(WorkStatus.IN_PROGRESS);
+    const itemId = '3ed4c1d6-fae1-4a7f-a47d-7f1bcb4579b1';
+    work.formSnapshot.sections[0].items = [
+      {
+        id: itemId,
+        type: FormItemType.CONCEPT,
+        order: 1,
+        required: false,
+        concept: {
+          id: 'faef8ce5-365e-43ba-a291-d483895c8dc1',
+          code: 'TEMP',
+          name: 'Temperatura',
+          type: ConceptType.ANALOG,
+          options: [],
+        },
+      },
+    ];
+    works.findOne.mockResolvedValue(work);
+
+    await service.saveResponses(tenantId, workId, {
+      responses: [{ formItemId: itemId, valueNumber: 85 }],
+      taskCompletions: [],
+      annotations: [],
+    });
+
+    expect(responseRepository.save).toHaveBeenCalledWith([
+      expect.objectContaining({
+        tenantId,
+        workId,
+        formItemId: itemId,
+        measuredAt: '2026-09-10',
+        valueNumber: 85,
+      }),
+    ]);
+  });
+
+  it('preserves an existing measurement day when a draft is saved again', async () => {
+    const work = createWork(WorkStatus.IN_PROGRESS);
+    const itemId = '3ed4c1d6-fae1-4a7f-a47d-7f1bcb4579b1';
+    work.formSnapshot.sections[0].items = [
+      {
+        id: itemId,
+        type: FormItemType.CONCEPT,
+        order: 1,
+        required: false,
+        concept: {
+          id: 'faef8ce5-365e-43ba-a291-d483895c8dc1',
+          code: 'TEMP',
+          name: 'Temperatura',
+          type: ConceptType.ANALOG,
+          options: [],
+        },
+      },
+    ];
+    works.findOne.mockResolvedValue(work);
+    responseRepository.find.mockResolvedValueOnce([
+      {
+        id: '96a056f5-28cc-4593-9b70-52462db609f8',
+        formItemId: itemId,
+        measuredAt: '2026-09-01',
+      },
+    ]);
+
+    await service.saveResponses(tenantId, workId, {
+      responses: [{ formItemId: itemId, valueNumber: 85 }],
+      taskCompletions: [],
+      annotations: [],
+    });
+
+    expect(responseRepository.save).toHaveBeenCalledWith([
+      expect.objectContaining({ measuredAt: '2026-09-01' }),
+    ]);
+  });
+
   it('rejects status changes for an already finished work', async () => {
     works.findOne.mockResolvedValue(createWork(WorkStatus.FINISHED));
 
@@ -350,6 +431,19 @@ describe('WorksService', () => {
       service.updateStatus(tenantId, workId, WorkStatus.IN_PROGRESS)
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(works.save).not.toHaveBeenCalled();
+  });
+
+  it('does not overwrite historical responses of a finished work', async () => {
+    works.findOne.mockResolvedValue(createWork(WorkStatus.FINISHED));
+
+    await expect(
+      service.saveResponses(tenantId, workId, {
+        responses: [],
+        taskCompletions: [],
+        annotations: [],
+      })
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(responseRepository.delete).not.toHaveBeenCalled();
   });
 
   function createWork(status: WorkStatus): WorkEntity {

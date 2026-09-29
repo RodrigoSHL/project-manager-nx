@@ -42,6 +42,28 @@ describe('SyncChangeParser', () => {
       }),
     });
   });
+
+  it('validates an optional offline measurement day', () => {
+    const change: SyncPushChangeDto = {
+      ...workChange(),
+      entityType: SyncEntityType.RESPONSE,
+      entityId: '99999999-9999-4999-8999-999999999999',
+      payload: {
+        id: '99999999-9999-4999-8999-999999999999',
+        tenantId,
+        workId: '44444444-4444-4444-8444-444444444444',
+        formItemId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        conceptId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+        valueNumber: 85,
+        measuredAt: '2026-09-15',
+      },
+    };
+    expect(parser.parse(tenantId, change).parsedPayload).toMatchObject({
+      measuredAt: '2026-09-15',
+    });
+    change.payload.measuredAt = 'invalid';
+    expect(() => parser.parse(tenantId, change)).toThrow(BadRequestException);
+  });
 });
 
 function workChange(): SyncPushChangeDto {

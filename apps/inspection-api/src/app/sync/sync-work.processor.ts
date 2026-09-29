@@ -198,6 +198,8 @@ export class SyncWorkProcessor {
         workId: work.id,
         formItemId: payload.formItemId,
         conceptId: payload.conceptId,
+        measuredAt:
+          payload.measuredAt ?? existing?.measuredAt ?? work.executionDate,
         ...value,
       })
     );

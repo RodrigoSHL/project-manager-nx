@@ -229,6 +229,20 @@ export class InspectionApiClient {
     );
   }
 
+  listReports(tenantId: string, workId: string) {
+    return this.get(`/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(workId)}/reports`);
+  }
+
+  getReport(tenantId: string, workId: string, reportId: string) {
+    return this.get(`/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(workId)}/reports/${encodeURIComponent(reportId)}`);
+  }
+
+  createReport(tenantId: string, workId: string, payload: { status: 'DRAFT' | 'FINAL'; reportSnapshot: Record<string, unknown>; generatedBy?: string }) {
+    return this.request(`/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(workId)}/reports`, {
+      method: 'POST', body: JSON.stringify(payload),
+    });
+  }
+
   confirmFinding(
     tenantId: string,
     workId: string,

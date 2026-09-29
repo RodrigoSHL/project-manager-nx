@@ -5,6 +5,7 @@ import {
   LoaderCircle,
   MapPin,
   UserRound,
+  FileText,
 } from 'lucide-react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '../components/ui/button';
@@ -81,6 +82,7 @@ export function WorkDetailPage() {
       >
         <ArrowLeft className="size-4" /> Volver a trabajos
       </Link>
+      <Link to={`/works/${id}/report?tenantId=${encodeURIComponent(tenantId)}`} className="mb-4 ml-4 inline-flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-slate-950"><FileText className="size-4" /> Ver informe</Link>
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">

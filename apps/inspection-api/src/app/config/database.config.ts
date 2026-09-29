@@ -41,6 +41,8 @@ import { SeverityLevelEntity } from '../catalog/entities/severity-level.entity';
 import { FindingCandidateEntity } from '../works/entities/finding-candidate.entity';
 import { FindingEntity } from '../works/entities/finding.entity';
 import { CreateFindings1799101800000 } from '../../migrations/1799101800000-CreateFindings';
+import { GeneratedReportEntity } from '../works/entities/generated-report.entity';
+import { CreateGeneratedReports1799101900000 } from '../../migrations/1799101900000-CreateGeneratedReports';
 
 export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
   type: 'postgres',
@@ -82,6 +84,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     SeverityLevelEntity,
     FindingCandidateEntity,
     FindingEntity,
+    GeneratedReportEntity,
   ],
   migrations: [
     CreateInspectionCatalog1799100000000,
@@ -103,6 +106,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     CreateServerChanges1799101600000,
     CreateFindingCandidates1799101700000,
     CreateFindings1799101800000,
+    CreateGeneratedReports1799101900000,
   ],
   migrationsRun: process.env.INSPECTION_MIGRATIONS_RUN === 'true',
   synchronize: false,

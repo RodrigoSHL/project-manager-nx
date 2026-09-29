@@ -14,6 +14,8 @@ import { CreateWorkDto } from './dto/create-work.dto';
 import { SaveWorkResponsesDto } from './dto/save-work-responses.dto';
 import { UpdateWorkStatusDto } from './dto/update-work-status.dto';
 import { WorksService } from './works.service';
+import { GeneratedReportsService } from './generated-reports.service';
+import { GeneratedReportStatus } from './entities/generated-report.entity';
 import { FindingReviewService } from './finding-review.service';
 import {
   ConfirmFindingDto,
@@ -25,7 +27,8 @@ import {
 export class WorksController {
   constructor(
     private readonly works: WorksService,
-    private readonly review: FindingReviewService
+    private readonly review: FindingReviewService,
+    private readonly reports: GeneratedReportsService
   ) {}
 
   @Get('works')
@@ -39,6 +42,22 @@ export class WorksController {
     @Param('workId', new ParseUUIDPipe()) workId: string
   ) {
     return this.works.getById(tenantId, workId);
+  }
+
+  @Get('works/:workId/reports')
+  listReports(@Param('tenantId', new ParseUUIDPipe()) tenantId: string, @Param('workId', new ParseUUIDPipe()) workId: string) {
+    return this.reports.list(tenantId, workId);
+  }
+
+  @Get('works/:workId/reports/:reportId')
+  getReport(@Param('tenantId', new ParseUUIDPipe()) tenantId: string, @Param('workId', new ParseUUIDPipe()) workId: string, @Param('reportId', new ParseUUIDPipe()) reportId: string) {
+    return this.reports.get(tenantId, workId, reportId);
+  }
+
+  @Post('works/:workId/reports')
+  createReport(@Param('tenantId', new ParseUUIDPipe()) tenantId: string, @Param('workId', new ParseUUIDPipe()) workId: string,
+    @Body() body: { status: GeneratedReportStatus; reportSnapshot: Record<string, unknown>; generatedBy?: string }) {
+    return this.reports.create(tenantId, workId, body.status, body.reportSnapshot, body.generatedBy);
   }
 
   @Post('sites/:siteId/assets/:assetId/works')

@@ -16,6 +16,7 @@ import { LoginPage } from '../pages/login-page';
 import { WorksPage } from '../pages/works-page';
 import { NewWorkPage } from '../pages/new-work-page';
 import { WorkDetailPage } from '../pages/work-detail-page';
+import { WorkReportPage } from '../pages/work-report-page';
 import { PlatformLayout } from '../layouts/platform-layout';
 import { PlatformTenantsPage } from '../pages/platform-tenants-page';
 import { useAuth } from '../features/auth/auth-context';
@@ -47,6 +48,7 @@ export function AppRoutes() {
             <Route path="/works" element={<WorksPage />} />
             <Route path="/works/new" element={<NewWorkPage />} />
             <Route path="/works/:id" element={<WorkDetailPage />} />
+            <Route path="/works/:id/report" element={<WorkReportPage />} />
             <Route path="/findings" element={<FindingsPage />} />
             <Route path="/sync" element={<SyncPage />} />
             <Route

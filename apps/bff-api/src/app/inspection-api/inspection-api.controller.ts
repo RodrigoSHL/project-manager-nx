@@ -2,12 +2,14 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
   Put,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -58,6 +60,99 @@ export class InspectionApiController {
   @Get('tenants/:tenantId/works')
   listWorks(@Param('tenantId', new ParseUUIDPipe()) tenantId: string) {
     return this.client.listWorks(tenantId);
+  }
+
+  @Get('tenants/:tenantId/analytics/summary')
+  analyticsSummary(
+    @Param('tenantId', ParseUUIDPipe) tenantId: string,
+    @Query() query: Record<string, string>,
+    @Request() request: ExpressRequestWithUser
+  ) {
+    return this.client.analytics(
+      this.analyticsTenant(request, tenantId),
+      'summary',
+      query
+    );
+  }
+
+  @Get('tenants/:tenantId/analytics/findings')
+  analyticsFindings(
+    @Param('tenantId', ParseUUIDPipe) tenantId: string,
+    @Query() query: Record<string, string>,
+    @Request() request: ExpressRequestWithUser
+  ) {
+    return this.client.analytics(
+      this.analyticsTenant(request, tenantId),
+      'findings',
+      query
+    );
+  }
+
+  @Get('tenants/:tenantId/analytics/measurements')
+  analyticsMeasurements(
+    @Param('tenantId', ParseUUIDPipe) tenantId: string,
+    @Query() query: Record<string, string>,
+    @Request() request: ExpressRequestWithUser
+  ) {
+    return this.client.analytics(
+      this.analyticsTenant(request, tenantId),
+      'measurements',
+      query
+    );
+  }
+
+  @Get('tenants/:tenantId/analytics/assets/:assetId/history')
+  analyticsAssetHistory(
+    @Param('tenantId', ParseUUIDPipe) tenantId: string,
+    @Param('assetId', ParseUUIDPipe) assetId: string,
+    @Query() query: Record<string, string>,
+    @Request() request: ExpressRequestWithUser
+  ) {
+    return this.client.analytics(
+      this.analyticsTenant(request, tenantId),
+      `assets/${encodeURIComponent(assetId)}/history`,
+      query
+    );
+  }
+
+  @Get('tenants/:tenantId/analytics/activity')
+  analyticsActivity(
+    @Param('tenantId', ParseUUIDPipe) tenantId: string,
+    @Query() query: Record<string, string>,
+    @Request() request: ExpressRequestWithUser
+  ) {
+    return this.client.analytics(
+      this.analyticsTenant(request, tenantId),
+      'activity',
+      query
+    );
+  }
+
+  @Get('tenants/:tenantId/analytics/concepts')
+  analyticsConcepts(
+    @Param('tenantId', ParseUUIDPipe) tenantId: string,
+    @Query() query: Record<string, string>,
+    @Request() request: ExpressRequestWithUser
+  ) {
+    return this.client.analytics(
+      this.analyticsTenant(request, tenantId),
+      'concepts',
+      query
+    );
+  }
+
+  private analyticsTenant(
+    request: ExpressRequestWithUser,
+    selectedTenantId: string
+  ): string {
+    if (request.user.roles.includes(UserRole.ADMIN)) return selectedTenantId;
+    if (
+      !request.tenantAccess ||
+      request.tenantAccess.tenantId !== selectedTenantId
+    ) {
+      throw new ForbiddenException('Tenant access denied');
+    }
+    return request.tenantAccess.tenantId;
   }
 
   @Get('tenants/:tenantId/works/:workId')

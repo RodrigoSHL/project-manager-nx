@@ -44,6 +44,7 @@ import { CreateFindings1799101800000 } from '../../migrations/1799101800000-Crea
 import { GeneratedReportEntity } from '../works/entities/generated-report.entity';
 import { CreateGeneratedReports1799101900000 } from '../../migrations/1799101900000-CreateGeneratedReports';
 import { PrepareAnalyticsHistory1799102000000 } from '../../migrations/1799102000000-PrepareAnalyticsHistory';
+import { IndexAnalyticsFindings1799102100000 } from '../../migrations/1799102100000-IndexAnalyticsFindings';
 
 export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
   type: 'postgres',
@@ -109,6 +110,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     CreateFindings1799101800000,
     CreateGeneratedReports1799101900000,
     PrepareAnalyticsHistory1799102000000,
+    IndexAnalyticsFindings1799102100000,
   ],
   migrationsRun: process.env.INSPECTION_MIGRATIONS_RUN === 'true',
   synchronize: false,

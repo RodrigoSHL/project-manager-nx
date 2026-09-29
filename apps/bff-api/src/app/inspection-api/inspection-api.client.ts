@@ -221,6 +221,23 @@ export class InspectionApiClient {
     return this.get(`/tenants/${encodeURIComponent(tenantId)}/works`);
   }
 
+  analytics(
+    tenantId: string,
+    endpoint: string,
+    query: Record<string, string | undefined> = {}
+  ) {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(query)) {
+      if (value !== undefined) params.set(key, value);
+    }
+    const suffix = params.toString();
+    return this.get(
+      `/tenants/${encodeURIComponent(tenantId)}/analytics/${endpoint}${
+        suffix ? `?${suffix}` : ''
+      }`
+    );
+  }
+
   getWork(tenantId: string, workId: string) {
     return this.get(
       `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
@@ -230,17 +247,39 @@ export class InspectionApiClient {
   }
 
   listReports(tenantId: string, workId: string) {
-    return this.get(`/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(workId)}/reports`);
+    return this.get(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/reports`
+    );
   }
 
   getReport(tenantId: string, workId: string, reportId: string) {
-    return this.get(`/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(workId)}/reports/${encodeURIComponent(reportId)}`);
+    return this.get(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/reports/${encodeURIComponent(reportId)}`
+    );
   }
 
-  createReport(tenantId: string, workId: string, payload: { status: 'DRAFT' | 'FINAL'; reportSnapshot: Record<string, unknown>; generatedBy?: string }) {
-    return this.request(`/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(workId)}/reports`, {
-      method: 'POST', body: JSON.stringify(payload),
-    });
+  createReport(
+    tenantId: string,
+    workId: string,
+    payload: {
+      status: 'DRAFT' | 'FINAL';
+      reportSnapshot: Record<string, unknown>;
+      generatedBy?: string;
+    }
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/reports`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    );
   }
 
   confirmFinding(

@@ -6,6 +6,8 @@ export type WorkConceptOptionSnapshot = {
   label: string;
   value: string;
   order: number;
+  generatesFinding?: boolean;
+  suggestedSeverityId?: string | null;
 };
 
 export type WorkConceptSnapshot = {
@@ -15,6 +17,9 @@ export type WorkConceptSnapshot = {
   description?: string | null;
   type: ConceptType;
   unit?: string | null;
+  minValue?: number | null;
+  maxValue?: number | null;
+  outOfRangeSeverityId?: string | null;
   options: WorkConceptOptionSnapshot[];
 };
 

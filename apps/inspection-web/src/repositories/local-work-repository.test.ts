@@ -76,6 +76,59 @@ describe('localWorkRepository', () => {
 
   afterEach(async () => inspectionDb.delete());
 
+  it('materializa el candidato offline sin agregarlo al outbox y lo elimina al normalizar', async () => {
+    await inspectionDb.concepts.update('concept-a', {
+      minValue: 0,
+      maxValue: 40,
+    });
+    const work = await localWorkRepository.create({
+      tenantId,
+      siteId,
+      assetId,
+      workTypeId,
+      title: 'Temperatura',
+      executionDate: '2026-09-13',
+      responsible: 'Inspector',
+      status: 'DRAFT',
+    });
+    const snapshot = await inspectionDb.snapshots.get(work.id);
+    const itemId = snapshot?.sections[0].items[0].id ?? '';
+    await localWorkRepository.saveResponses(tenantId, work.id, {
+      [itemId]: { valueNumber: 51 },
+    });
+    const first = await inspectionDb.findingCandidates
+      .where('[tenantId+workId]')
+      .equals([tenantId, work.id])
+      .toArray();
+    expect(first).toMatchObject([
+      { source: 'ANALOG', measuredValue: '51 °C', status: 'PENDING' },
+    ]);
+    await localWorkRepository.saveResponses(tenantId, work.id, {
+      [itemId]: { valueNumber: 52 },
+    });
+    const second = await inspectionDb.findingCandidates
+      .where('[tenantId+workId]')
+      .equals([tenantId, work.id])
+      .toArray();
+    expect(second).toHaveLength(1);
+    expect(second[0].id).toBe(first[0].id);
+    expect(second[0].measuredValue).toBe('52 °C');
+    expect(
+      (await inspectionDb.outbox.toArray()).some(
+        (item) => item.entityType === 'FINDING_CANDIDATE'
+      )
+    ).toBe(false);
+    await localWorkRepository.saveResponses(tenantId, work.id, {
+      [itemId]: { valueNumber: 35 },
+    });
+    expect(
+      await inspectionDb.findingCandidates
+        .where('[tenantId+workId]')
+        .equals([tenantId, work.id])
+        .count()
+    ).toBe(0);
+  });
+
   it('persiste un trabajo local, su respuesta y comentario sin cruzar tenants', async () => {
     const work = await localWorkRepository.create({
       tenantId,

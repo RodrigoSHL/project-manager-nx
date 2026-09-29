@@ -29,6 +29,9 @@ export class WorkItemAnnotationEntity {
   @Column({ type: 'text' })
   comment!: string;
 
+  @Column({ name: 'is_finding', type: 'boolean', default: false })
+  isFinding!: boolean;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 

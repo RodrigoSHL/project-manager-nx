@@ -19,6 +19,12 @@ export function useWorkCatalog(tenantId: string) {
         (item) => item.tenantId === tenantId
       ),
       snapshots: store.snapshots.filter((item) => item.tenantId === tenantId),
+      findingCandidates: store.findingCandidates.filter(
+        (item) => item.tenantId === tenantId
+      ),
+      severityLevels: store.severityLevels.filter(
+        (item) => item.tenantId === tenantId
+      ),
       catalog: store.catalogs[tenantId],
       isLoading: store.loadingTenantIds.includes(tenantId),
       isMutating: store.mutatingTenantIds.includes(tenantId),

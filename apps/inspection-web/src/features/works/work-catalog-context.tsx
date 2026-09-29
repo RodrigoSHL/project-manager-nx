@@ -22,7 +22,9 @@ import type {
   WorkItemAnnotation,
   WorkItemValue,
   WorkTemplateSnapshot,
+  FindingCandidate,
 } from './models';
+import type { SeverityLevel } from '../concepts/models';
 
 type WorkCatalogState = {
   works: Work[];
@@ -30,6 +32,8 @@ type WorkCatalogState = {
   taskCompletions: TaskCompletion[];
   annotations: WorkItemAnnotation[];
   snapshots: WorkTemplateSnapshot[];
+  findingCandidates: FindingCandidate[];
+  severityLevels: SeverityLevel[];
   catalogs: Record<string, WorkReferenceData | undefined>;
   loadedTenantIds: string[];
   loadingTenantIds: string[];
@@ -60,6 +64,8 @@ const initialState: WorkCatalogState = {
   taskCompletions: [],
   annotations: [],
   snapshots: [],
+  findingCandidates: [],
+  severityLevels: [],
   catalogs: {},
   loadedTenantIds: [],
   loadingTenantIds: [],
@@ -111,6 +117,18 @@ export function WorkCatalogProvider({ children }: { children: ReactNode }) {
         snapshots: [
           ...current.snapshots.filter((item) => item.tenantId !== tenantId),
           ...data.snapshots,
+        ],
+        findingCandidates: [
+          ...current.findingCandidates.filter(
+            (item) => item.tenantId !== tenantId
+          ),
+          ...(data.findingCandidates ?? []),
+        ],
+        severityLevels: [
+          ...current.severityLevels.filter(
+            (item) => item.tenantId !== tenantId
+          ),
+          ...(data.severityLevels ?? []),
         ],
         catalogs: catalog
           ? { ...current.catalogs, [tenantId]: catalog }

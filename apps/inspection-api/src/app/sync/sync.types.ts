@@ -44,6 +44,7 @@ export type AnnotationPayload = {
   workId: string;
   formItemId: string;
   comment: string;
+  isFinding?: boolean;
 };
 
 export type ParsedPayload =

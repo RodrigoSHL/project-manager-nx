@@ -138,6 +138,8 @@ export function WorkDetailPage() {
         responses={catalog.responses}
         taskCompletions={catalog.taskCompletions}
         annotations={catalog.annotations}
+        findingCandidates={catalog.findingCandidates}
+        severityLevels={catalog.severityLevels}
         accessReadonly={!tenantAccess.canWriteTenant(tenantId)}
         onSave={(values) => catalog.saveResponses(tenantId, work.id, values)}
         onStart={() => catalog.startWork(tenantId, work.id)}

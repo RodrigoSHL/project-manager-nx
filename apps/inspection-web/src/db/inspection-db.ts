@@ -5,6 +5,7 @@ import type {
   AssetTypeConcept,
   Concept,
   ConceptOption,
+  SeverityLevel,
 } from '../features/concepts/models';
 import type {
   FormItem,
@@ -24,7 +25,10 @@ import type {
   SyncCheckpoint,
   SyncConflictCandidate,
 } from '../features/offline/models';
-import type { WorkTemplateSnapshot } from '../features/works/models';
+import type {
+  FindingCandidate,
+  WorkTemplateSnapshot,
+} from '../features/works/models';
 import type { WorkType } from '../features/work-types/models';
 
 export class InspectionDatabase extends Dexie {
@@ -35,6 +39,8 @@ export class InspectionDatabase extends Dexie {
   workTypes!: EntityTable<WorkType, 'id'>;
   workTypeConfigurations!: EntityTable<LocalWorkTypeConfiguration, 'recordId'>;
   concepts!: EntityTable<Concept, 'id'>;
+  severityLevels!: EntityTable<SeverityLevel, 'id'>;
+  findingCandidates!: EntityTable<FindingCandidate, 'id'>;
   conceptOptions!: EntityTable<ConceptOption, 'id'>;
   assetTypeConcepts!: EntityTable<AssetTypeConcept, 'id'>;
   formTemplates!: EntityTable<FormTemplate, 'id'>;
@@ -130,6 +136,10 @@ export class InspectionDatabase extends Dexie {
       syncCheckpoints: 'id, tenantId, deviceId, [tenantId+deviceId], updatedAt',
       syncConflictCandidates:
         'id, tenantId, [tenantId+status], [tenantId+entityType+entityId], remoteSequence',
+    });
+    this.version(4).stores({
+      severityLevels: 'id, tenantId, [tenantId+active]',
+      findingCandidates: 'id, tenantId, [tenantId+workId], [tenantId+status]',
     });
   }
 }

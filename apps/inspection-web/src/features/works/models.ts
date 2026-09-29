@@ -51,6 +51,7 @@ export interface WorkItemAnnotation {
   workId: string;
   formItemId: string;
   comment: string;
+  isFinding?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -78,6 +79,8 @@ export interface WorkConceptOptionSnapshot {
   label: string;
   value: string;
   order: number;
+  generatesFinding?: boolean;
+  suggestedSeverityId?: string | null;
 }
 
 export interface WorkConceptSnapshot {
@@ -87,6 +90,9 @@ export interface WorkConceptSnapshot {
   description?: string | null;
   type: ConceptType;
   unit?: string | null;
+  minValue?: number | null;
+  maxValue?: number | null;
+  outOfRangeSeverityId?: string | null;
   options: WorkConceptOptionSnapshot[];
 }
 
@@ -155,7 +161,27 @@ export type ResponseValue = Pick<
 export type WorkItemValue = ResponseValue & {
   completed?: boolean;
   comment?: string;
+  isFinding?: boolean;
 };
+
+export interface FindingCandidate {
+  id: string;
+  tenantId: string;
+  workId: string;
+  workItemId: string;
+  assetId: string;
+  conceptId?: string | null;
+  source: 'DIGITAL' | 'ANALOG' | 'MANUAL';
+  title: string;
+  description?: string | null;
+  measuredValue?: string | null;
+  minValue?: number | null;
+  maxValue?: number | null;
+  suggestedSeverityId?: string | null;
+  status: 'PENDING' | 'CONFIRMED' | 'DISCARDED';
+  createdAt: string;
+  updatedAt: string;
+}
 
 export type FinishResult =
   | { ok: true }

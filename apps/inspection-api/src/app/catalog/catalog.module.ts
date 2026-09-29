@@ -13,6 +13,7 @@ import { ConceptEntity } from './entities/concept.entity';
 import { ConceptOptionEntity } from './entities/concept-option.entity';
 import { AssetTypeConceptEntity } from './entities/asset-type-concept.entity';
 import { ActiveTenantGuard } from './guards/active-tenant.guard';
+import { SeverityLevelEntity } from './entities/severity-level.entity';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { ActiveTenantGuard } from './guards/active-tenant.guard';
       ConceptEntity,
       ConceptOptionEntity,
       AssetTypeConceptEntity,
+      SeverityLevelEntity,
     ]),
   ],
   controllers: [CatalogController],

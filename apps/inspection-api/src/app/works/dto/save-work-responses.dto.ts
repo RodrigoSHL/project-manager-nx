@@ -42,6 +42,10 @@ export class WorkItemAnnotationValueDto {
   @IsString()
   @MaxLength(2000)
   comment!: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isFinding?: boolean;
 }
 
 export class SaveWorkResponsesDto {

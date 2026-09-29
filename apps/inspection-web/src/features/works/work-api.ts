@@ -8,6 +8,8 @@ import type {
   WorkTemplateSnapshot,
 } from './models';
 import { authenticatedFetch } from '../auth/authenticated-fetch';
+import type { SeverityLevel } from '../concepts/models';
+import type { FindingCandidate } from './models';
 
 export type WorkCatalogResponse = {
   works: Work[];
@@ -15,6 +17,8 @@ export type WorkCatalogResponse = {
   taskCompletions: TaskCompletion[];
   annotations: WorkItemAnnotation[];
   snapshots: WorkTemplateSnapshot[];
+  severityLevels: SeverityLevel[];
+  findingCandidates: FindingCandidate[];
 };
 
 export type WorkResponsesPayload = {
@@ -25,7 +29,11 @@ export type WorkResponsesPayload = {
     selectedOptionId?: string;
   }>;
   taskCompletions: Array<{ formItemId: string; completed: boolean }>;
-  annotations: Array<{ formItemId: string; comment: string }>;
+  annotations: Array<{
+    formItemId: string;
+    comment: string;
+    isFinding?: boolean;
+  }>;
 };
 
 export class WorkApiError extends Error {
@@ -96,10 +104,13 @@ export function toWorkResponsesPayload(
   const annotations: WorkResponsesPayload['annotations'] = [];
   for (const item of snapshot.sections.flatMap((section) => section.items)) {
     const value = values[item.id];
+    if (value?.isFinding && !value.comment?.trim())
+      throw new WorkApiError('Escribe un comentario para el hallazgo manual.');
     if (value?.comment?.trim()) {
       annotations.push({
         formItemId: item.id,
         comment: value.comment.trim(),
+        isFinding: value.isFinding ?? false,
       });
     }
     if (item.type === 'TASK') {

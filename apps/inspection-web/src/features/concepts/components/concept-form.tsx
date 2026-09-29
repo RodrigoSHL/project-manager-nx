@@ -13,6 +13,7 @@ import type {
   ConceptFormValue,
   ConceptOption,
   ConceptOptionInput,
+  SeverityLevel,
 } from '../models';
 
 type EditableOption = ConceptOptionInput & { key: string };
@@ -20,6 +21,7 @@ type EditableOption = ConceptOptionInput & { key: string };
 type ConceptFormProps = {
   concept?: Concept | null;
   options: ConceptOption[];
+  severityLevels?: SeverityLevel[];
   onCancel: () => void;
   onSubmit: (value: ConceptFormValue) => void | Promise<void>;
 };
@@ -31,11 +33,15 @@ const emptyForm: Omit<ConceptFormValue, 'options'> = {
   type: 'ANALOG',
   unit: null,
   active: true,
+  minValue: null,
+  maxValue: null,
+  outOfRangeSeverityId: null,
 };
 
 export function ConceptForm({
   concept,
   options,
+  severityLevels = [],
   onCancel,
   onSubmit,
 }: ConceptFormProps) {
@@ -54,6 +60,9 @@ export function ConceptForm({
             description: concept.description ?? null,
             type: concept.type,
             unit: concept.unit ?? null,
+            minValue: concept.minValue ?? null,
+            maxValue: concept.maxValue ?? null,
+            outOfRangeSeverityId: concept.outOfRangeSeverityId ?? null,
             active: concept.active,
           }
         : emptyForm
@@ -77,6 +86,8 @@ export function ConceptForm({
         label: '',
         order: current.length + 1,
         active: true,
+        generatesFinding: false,
+        suggestedSeverityId: null,
       },
     ]);
   }
@@ -84,7 +95,7 @@ export function ConceptForm({
   function updateOption(
     key: string,
     field: keyof ConceptOptionInput,
-    value: string | number | boolean
+    value: string | number | boolean | null
   ) {
     setEditableOptions((current) =>
       current.map((option) =>
@@ -102,6 +113,8 @@ export function ConceptForm({
         label: option.label,
         order: option.order,
         active: option.active,
+        generatesFinding: option.generatesFinding ?? false,
+        suggestedSeverityId: option.suggestedSeverityId ?? null,
       })),
     });
 
@@ -231,6 +244,75 @@ export function ConceptForm({
           <div className="hidden sm:block" />
         )}
 
+        {form.type === 'ANALOG' ? (
+          <div className="grid gap-3 rounded-lg border border-amber-200 bg-amber-50/40 p-3 sm:col-span-2 sm:grid-cols-3">
+            <label className="text-sm font-medium text-slate-700">
+              Mínimo permitido
+              <input
+                type="number"
+                step="any"
+                value={form.minValue ?? ''}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    minValue:
+                      event.target.value === ''
+                        ? null
+                        : Number(event.target.value),
+                  }))
+                }
+                className="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3"
+              />
+            </label>
+            <label className="text-sm font-medium text-slate-700">
+              Máximo permitido
+              <input
+                type="number"
+                step="any"
+                value={form.maxValue ?? ''}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    maxValue:
+                      event.target.value === ''
+                        ? null
+                        : Number(event.target.value),
+                  }))
+                }
+                className="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3"
+              />
+            </label>
+            <label className="text-sm font-medium text-slate-700">
+              Severidad sugerida
+              <select
+                value={form.outOfRangeSeverityId ?? ''}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    outOfRangeSeverityId: event.target.value || null,
+                  }))
+                }
+                className="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3"
+              >
+                <option value="">Sin sugerencia</option>
+                {severityLevels
+                  .filter(
+                    (level) =>
+                      level.active || level.id === form.outOfRangeSeverityId
+                  )
+                  .map((level) => (
+                    <option key={level.id} value={level.id}>
+                      {level.name}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <p className="text-xs text-slate-600 sm:col-span-3">
+              Un valor fuera de los límites genera un candidato de hallazgo.
+            </p>
+          </div>
+        ) : null}
+
         <label className="text-sm font-medium text-slate-700 sm:col-span-2">
           Descripción
           <textarea
@@ -332,6 +414,49 @@ export function ConceptForm({
                     >
                       <Trash2 />
                     </Button>
+                    <label className="flex items-center gap-2 text-xs font-medium text-slate-700 sm:col-span-2">
+                      <input
+                        type="checkbox"
+                        checked={option.generatesFinding ?? false}
+                        onChange={(event) =>
+                          updateOption(
+                            option.key,
+                            'generatesFinding',
+                            event.target.checked
+                          )
+                        }
+                      />{' '}
+                      Genera hallazgo al seleccionar esta opción
+                    </label>
+                    {option.generatesFinding ? (
+                      <label className="text-xs font-medium text-slate-700 sm:col-span-2">
+                        Severidad sugerida
+                        <select
+                          value={option.suggestedSeverityId ?? ''}
+                          onChange={(event) =>
+                            updateOption(
+                              option.key,
+                              'suggestedSeverityId',
+                              event.target.value || null
+                            )
+                          }
+                          className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2"
+                        >
+                          <option value="">Sin sugerencia</option>
+                          {severityLevels
+                            .filter(
+                              (level) =>
+                                level.active ||
+                                level.id === option.suggestedSeverityId
+                            )
+                            .map((level) => (
+                              <option key={level.id} value={level.id}>
+                                {level.name}
+                              </option>
+                            ))}
+                        </select>
+                      </label>
+                    ) : null}
                   </div>
                 ))}
               </div>

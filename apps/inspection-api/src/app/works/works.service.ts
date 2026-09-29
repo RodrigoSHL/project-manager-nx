@@ -33,6 +33,9 @@ import type {
   WorkTemplateSnapshot,
 } from './work-snapshot';
 import { workItemInstanceId } from './work-item-id';
+import { FindingCandidateEntity } from './entities/finding-candidate.entity';
+import { FindingCandidateService } from './finding-candidate.service';
+import { SeverityLevelEntity } from '../catalog/entities/severity-level.entity';
 
 type NormalizedWorkResponses = {
   responses: Array<ConceptResponseValueDto & { conceptId: string }>;
@@ -62,12 +65,22 @@ export class WorksService {
     private readonly concepts: Repository<ConceptEntity>,
     @InjectRepository(ConceptOptionEntity)
     private readonly options: Repository<ConceptOptionEntity>,
-    private readonly dataSource: DataSource
+    @InjectRepository(FindingCandidateEntity)
+    private readonly findingCandidates: Repository<FindingCandidateEntity>,
+    private readonly dataSource: DataSource,
+    private readonly findingCandidateService: FindingCandidateService
   ) {}
 
   async list(tenantId: string) {
     await this.catalog.listSites(tenantId);
-    const [works, responses, taskCompletions, annotations] = await Promise.all([
+    const [
+      works,
+      responses,
+      taskCompletions,
+      annotations,
+      findingCandidates,
+      severityLevels,
+    ] = await Promise.all([
       this.works.find({
         where: { tenantId },
         order: { executionDate: 'DESC', createdAt: 'DESC' },
@@ -75,29 +88,38 @@ export class WorksService {
       this.responses.find({ where: { tenantId } }),
       this.taskCompletions.find({ where: { tenantId } }),
       this.annotations.find({ where: { tenantId } }),
+      this.findingCandidates.find({ where: { tenantId } }),
+      this.dataSource
+        .getRepository(SeverityLevelEntity)
+        .find({ where: { tenantId }, order: { order: 'ASC' } }),
     ]);
     return {
       works: works.map((work) => this.toPublicWork(work)),
       responses,
       taskCompletions,
       annotations,
+      findingCandidates,
+      severityLevels,
       snapshots: works.map((work) => work.formSnapshot),
     };
   }
 
   async getById(tenantId: string, workId: string) {
     const work = await this.findWorkOrFail(tenantId, workId);
-    const [responses, taskCompletions, annotations] = await Promise.all([
-      this.responses.find({ where: { tenantId, workId } }),
-      this.taskCompletions.find({ where: { tenantId, workId } }),
-      this.annotations.find({ where: { tenantId, workId } }),
-    ]);
+    const [responses, taskCompletions, annotations, findingCandidates] =
+      await Promise.all([
+        this.responses.find({ where: { tenantId, workId } }),
+        this.taskCompletions.find({ where: { tenantId, workId } }),
+        this.annotations.find({ where: { tenantId, workId } }),
+        this.findingCandidates.find({ where: { tenantId, workId } }),
+      ]);
     return {
       work: this.toPublicWork(work),
       snapshot: work.formSnapshot,
       responses,
       taskCompletions,
       annotations,
+      findingCandidates,
     };
   }
 
@@ -202,7 +224,7 @@ export class WorksService {
     const work = await this.findWorkOrFail(tenantId, workId);
     this.assertEditable(work);
     const normalized = this.validateAndNormalize(work.formSnapshot, dto);
-    await this.replaceResponses(tenantId, workId, normalized);
+    await this.replaceResponses(work, normalized);
     await this.works.update(
       { id: workId, tenantId },
       { updatedAt: new Date() }
@@ -227,7 +249,7 @@ export class WorksService {
       throw new BadRequestException('The work must be IN_PROGRESS to finish');
     }
     const normalized = this.validateAndNormalize(work.formSnapshot, dto);
-    await this.replaceResponses(tenantId, workId, normalized);
+    await this.replaceResponses(work, normalized);
     await this.works.update(
       { id: workId, tenantId },
       { updatedAt: new Date() }
@@ -260,10 +282,10 @@ export class WorksService {
   }
 
   private async replaceResponses(
-    tenantId: string,
-    workId: string,
+    work: WorkEntity,
     dto: NormalizedWorkResponses
   ) {
+    const { tenantId, id: workId } = work;
     await this.dataSource.transaction(async (manager) => {
       const responseRepository = manager.getRepository(ConceptResponseEntity);
       const taskRepository = manager.getRepository(TaskCompletionEntity);
@@ -333,11 +355,13 @@ export class WorksService {
               workId,
               formItemId: value.formItemId,
               comment: value.comment,
+              isFinding: value.isFinding ?? false,
               createdAt: previous?.createdAt,
             });
           })
         );
       }
+      await this.findingCandidateService.reconcile(manager, work);
     });
   }
 
@@ -379,7 +403,17 @@ export class WorksService {
         );
       }
       const comment = value.comment.trim();
-      return comment ? [{ formItemId: value.formItemId, comment }] : [];
+      if (value.isFinding && !comment)
+        throw new BadRequestException('A manual finding needs a comment');
+      return comment
+        ? [
+            {
+              formItemId: value.formItemId,
+              comment,
+              isFinding: value.isFinding ?? false,
+            },
+          ]
+        : [];
     });
     return { responses, taskCompletions, annotations };
   }
@@ -496,9 +530,28 @@ export class WorksService {
       description: concept.description,
       type: concept.type,
       unit: concept.unit,
+      minValue: concept.minValue ?? null,
+      maxValue: concept.maxValue ?? null,
+      outOfRangeSeverityId: concept.outOfRangeSeverityId ?? null,
       options: options
         .filter((option) => option.conceptId === concept.id && option.active)
-        .map(({ id, label, value, order }) => ({ id, label, value, order })),
+        .map(
+          ({
+            id,
+            label,
+            value,
+            order,
+            generatesFinding,
+            suggestedSeverityId,
+          }) => ({
+            id,
+            label,
+            value,
+            order,
+            generatesFinding,
+            suggestedSeverityId: suggestedSeverityId ?? null,
+          })
+        ),
     });
     return {
       workId,

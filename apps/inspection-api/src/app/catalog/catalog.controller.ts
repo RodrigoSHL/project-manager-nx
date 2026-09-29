@@ -21,11 +21,37 @@ import { UpdateConceptDto } from './dto/update-concept.dto';
 import { CreateSiteDto } from './dto/create-site.dto';
 import { UpdateSiteDto } from './dto/update-site.dto';
 import { ActiveTenantGuard } from './guards/active-tenant.guard';
+import {
+  CreateSeverityLevelDto,
+  UpdateSeverityLevelDto,
+} from './dto/severity-level.dto';
 
 @Controller('tenants')
 @UseGuards(ActiveTenantGuard)
 export class CatalogController {
   constructor(private readonly catalogService: CatalogService) {}
+
+  @Get(':tenantId/severity-levels')
+  listSeverityLevels(@Param('tenantId', new ParseUUIDPipe()) tenantId: string) {
+    return this.catalogService.listSeverityLevels(tenantId);
+  }
+
+  @Post(':tenantId/severity-levels')
+  createSeverityLevel(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Body() dto: CreateSeverityLevelDto
+  ) {
+    return this.catalogService.createSeverityLevel(tenantId, dto);
+  }
+
+  @Patch(':tenantId/severity-levels/:severityId')
+  updateSeverityLevel(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('severityId', new ParseUUIDPipe()) severityId: string,
+    @Body() dto: UpdateSeverityLevelDto
+  ) {
+    return this.catalogService.updateSeverityLevel(tenantId, severityId, dto);
+  }
 
   @Get()
   listTenants() {

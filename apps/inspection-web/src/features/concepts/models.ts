@@ -8,6 +8,18 @@ export interface Concept {
   description?: string | null;
   type: ConceptType;
   unit?: string | null;
+  minValue?: number | null;
+  maxValue?: number | null;
+  outOfRangeSeverityId?: string | null;
+  active: boolean;
+}
+
+export interface SeverityLevel {
+  id: string;
+  tenantId: string;
+  code: string;
+  name: string;
+  order: number;
   active: boolean;
 }
 
@@ -19,6 +31,8 @@ export interface ConceptOption {
   label: string;
   order: number;
   active: boolean;
+  generatesFinding?: boolean;
+  suggestedSeverityId?: string | null;
 }
 
 export interface AssetTypeConcept {
@@ -32,12 +46,25 @@ export interface AssetTypeConcept {
 
 export type ConceptOptionInput = Pick<
   ConceptOption,
-  'value' | 'label' | 'order' | 'active'
+  | 'value'
+  | 'label'
+  | 'order'
+  | 'active'
+  | 'generatesFinding'
+  | 'suggestedSeverityId'
 >;
 
 export type ConceptFormValue = Pick<
   Concept,
-  'code' | 'name' | 'description' | 'type' | 'unit' | 'active'
+  | 'code'
+  | 'name'
+  | 'description'
+  | 'type'
+  | 'unit'
+  | 'active'
+  | 'minValue'
+  | 'maxValue'
+  | 'outOfRangeSeverityId'
 > & {
   options: ConceptOptionInput[];
 };

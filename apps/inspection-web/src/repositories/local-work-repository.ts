@@ -13,6 +13,7 @@ import { enqueueOutboxChange } from './outbox-repository';
 import { getAssetDescendants } from '../features/assets/asset-selectors';
 import { workItemInstanceId } from '../features/works/work-item-id';
 import type { Asset } from '../features/assets/models';
+import { deriveFindingCandidates } from '../features/works/finding-candidates';
 
 export const localWorkRepository: WorkRepository = {
   source: 'LOCAL',
@@ -78,6 +79,14 @@ export const localWorkRepository: WorkRepository = {
         .equals(tenantId)
         .toArray(),
       annotations: await inspectionDb.annotations
+        .where('tenantId')
+        .equals(tenantId)
+        .toArray(),
+      findingCandidates: await inspectionDb.findingCandidates
+        .where('tenantId')
+        .equals(tenantId)
+        .toArray(),
+      severityLevels: await inspectionDb.severityLevels
         .where('tenantId')
         .equals(tenantId)
         .toArray(),
@@ -157,14 +166,24 @@ export const localWorkRepository: WorkRepository = {
       requireSnapshot(tenantId, workId),
     ]);
     const status = mutableStatus(work.syncStatus);
+    if (
+      Object.values(values).some(
+        (value) => value.isFinding && !value.comment?.trim()
+      )
+    ) {
+      throw new Error('Escribe un comentario para el hallazgo manual.');
+    }
     const now = new Date().toISOString();
     await inspectionDb.transaction(
       'rw',
-      inspectionDb.works,
-      inspectionDb.conceptResponses,
-      inspectionDb.taskCompletions,
-      inspectionDb.annotations,
-      inspectionDb.outbox,
+      [
+        inspectionDb.works,
+        inspectionDb.conceptResponses,
+        inspectionDb.taskCompletions,
+        inspectionDb.annotations,
+        inspectionDb.findingCandidates,
+        inspectionDb.outbox,
+      ],
       async () => {
         const oldResponses = await inspectionDb.conceptResponses
           .where('[tenantId+workId]')
@@ -213,6 +232,7 @@ export const localWorkRepository: WorkRepository = {
               workId,
               formItemId: item.id,
               comment: value.comment.trim(),
+              isFinding: value.isFinding ?? false,
               createdAt: annotationByItem.get(item.id)?.createdAt ?? now,
               updatedAt: now,
               syncStatus: status,
@@ -247,6 +267,22 @@ export const localWorkRepository: WorkRepository = {
         await inspectionDb.conceptResponses.bulkAdd(responseRecords);
         await inspectionDb.taskCompletions.bulkAdd(taskRecords);
         await inspectionDb.annotations.bulkAdd(annotationRecords);
+        const oldCandidates = await inspectionDb.findingCandidates
+          .where('[tenantId+workId]')
+          .equals([tenantId, workId])
+          .toArray();
+        const candidates = deriveFindingCandidates(
+          work,
+          snapshot,
+          values,
+          oldCandidates
+        );
+        await inspectionDb.findingCandidates.bulkDelete(
+          oldCandidates
+            .filter((item) => item.status === 'PENDING')
+            .map((item) => item.id)
+        );
+        await inspectionDb.findingCandidates.bulkPut(candidates);
         const updatedWork = {
           ...work,
           updatedAt: now,
@@ -548,12 +584,27 @@ async function buildSnapshot(
                         description: concept.description,
                         type: concept.type,
                         unit: concept.unit,
-                        options: options.map(({ id, label, value, order }) => ({
-                          id,
-                          label,
-                          value,
-                          order,
-                        })),
+                        minValue: concept.minValue ?? null,
+                        maxValue: concept.maxValue ?? null,
+                        outOfRangeSeverityId:
+                          concept.outOfRangeSeverityId ?? null,
+                        options: options.map(
+                          ({
+                            id,
+                            label,
+                            value,
+                            order,
+                            generatesFinding,
+                            suggestedSeverityId,
+                          }) => ({
+                            id,
+                            label,
+                            value,
+                            order,
+                            generatesFinding,
+                            suggestedSeverityId,
+                          })
+                        ),
                       }
                     : undefined,
                 }));

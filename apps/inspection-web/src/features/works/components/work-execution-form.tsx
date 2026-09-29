@@ -16,7 +16,10 @@ import type {
   WorkItemAnnotation,
   WorkItemValue,
   WorkTemplateSnapshot,
+  FindingCandidate,
 } from '../models';
+import type { SeverityLevel } from '../../concepts/models';
+import { deriveFindingCandidates } from '../finding-candidates';
 import {
   deleteWorkPhoto,
   listWorkPhotos,
@@ -35,6 +38,8 @@ type WorkExecutionFormProps = {
   responses: ConceptResponse[];
   taskCompletions: TaskCompletion[];
   annotations: WorkItemAnnotation[];
+  findingCandidates?: FindingCandidate[];
+  severityLevels?: SeverityLevel[];
   accessReadonly?: boolean;
   onSave: (values: Record<string, WorkItemValue>) => Promise<void>;
   onStart: () => Promise<void>;
@@ -47,6 +52,8 @@ export function WorkExecutionForm({
   responses,
   taskCompletions,
   annotations,
+  findingCandidates = [],
+  severityLevels = [],
   accessReadonly = false,
   onSave,
   onStart,
@@ -66,6 +73,13 @@ export function WorkExecutionForm({
   const readonly =
     accessReadonly || work.status === 'FINISHED' || work.status === 'REVIEWED';
   const formSections = groupSnapshotBySection(snapshot, work.assetId);
+  const candidates = deriveFindingCandidates(
+    work,
+    snapshot,
+    values,
+    findingCandidates.filter((item) => item.workId === work.id)
+  );
+  const candidateItems = new Set(candidates.map((item) => item.workItemId));
 
   useEffect(() => {
     if (initializedWorkId.current === work.id) return;
@@ -95,6 +109,7 @@ export function WorkExecutionForm({
       next[annotation.formItemId] = {
         ...next[annotation.formItemId],
         comment: annotation.comment,
+        isFinding: annotation.isFinding ?? false,
       };
     }
     setValues(next);
@@ -259,11 +274,18 @@ export function WorkExecutionForm({
   }
 
   function renderItem(item: WorkFormItemSnapshot) {
+    const itemCandidates = candidates.filter(
+      (candidate) => candidate.workItemId === item.id
+    );
     if (item.type === 'TASK') {
       return (
         <div
           key={item.id}
-          className="rounded-lg border border-slate-200 bg-slate-50 p-4"
+          className={`rounded-lg border p-4 ${
+            itemCandidates.length
+              ? 'border-amber-300 bg-amber-50/40'
+              : 'border-slate-200 bg-slate-50'
+          }`}
         >
           <label className="flex gap-3">
             <input
@@ -285,9 +307,16 @@ export function WorkExecutionForm({
               </p>
             </div>
           </label>
+          {itemCandidates.length ? (
+            <p className="mt-2 text-xs font-medium text-amber-800">
+              Observación marcada como posible hallazgo
+            </p>
+          ) : null}
           <WorkItemAdditionalInfo
             itemId={item.id}
             comment={values[item.id]?.comment ?? ''}
+            isFinding={values[item.id]?.isFinding ?? false}
+            onFindingChange={(isFinding) => update(item.id, { isFinding })}
             photos={photos.filter(
               (photo) => photo.metadata.formItemId === item.id
             )}
@@ -309,12 +338,37 @@ export function WorkExecutionForm({
     return (
       <fieldset
         key={item.id}
-        className="min-w-0 rounded-lg border border-slate-200 p-4"
+        className={`min-w-0 rounded-lg border p-4 ${
+          candidateItems.has(item.id)
+            ? 'border-amber-300 bg-amber-50/30'
+            : 'border-slate-200'
+        }`}
       >
         <legend className="text-sm font-semibold text-slate-800">
           {concept.name}
           {item.required ? ' *' : ''}
         </legend>
+        {candidateItems.has(item.id) ? (
+          <p className="mb-2 text-xs font-medium text-amber-800">
+            {itemCandidates.some((candidate) => candidate.source === 'ANALOG')
+              ? '⚠ Valor fuera de rango'
+              : itemCandidates.some(
+                  (candidate) => candidate.source === 'DIGITAL'
+                )
+              ? '⚠ Esta respuesta genera un posible hallazgo'
+              : '✓ Observación marcada como hallazgo'}
+            {itemCandidates
+              .map((candidate) => {
+                const severity = severityLevels.find(
+                  (level) => level.id === candidate.suggestedSeverityId
+                );
+                return severity
+                  ? ` · Criticidad sugerida: ${severity.name}`
+                  : '';
+              })
+              .join('')}
+          </p>
+        ) : null}
         {concept.description ? (
           <p className="mt-1 text-xs text-slate-500">{concept.description}</p>
         ) : null}
@@ -376,6 +430,8 @@ export function WorkExecutionForm({
         <WorkItemAdditionalInfo
           itemId={item.id}
           comment={value.comment ?? ''}
+          isFinding={value.isFinding ?? false}
+          onFindingChange={(isFinding) => update(item.id, { isFinding })}
           photos={photos.filter(
             (photo) => photo.metadata.formItemId === item.id
           )}
@@ -472,6 +528,76 @@ export function WorkExecutionForm({
           </section>
         ))}
       </div>
+
+      <section className="mx-4 mb-4 rounded-xl border border-amber-200 bg-amber-50/40 p-4 sm:mx-6 sm:mb-6">
+        <h3 className="font-semibold text-slate-900">
+          Candidatos de hallazgo{' '}
+          <span className="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-900">
+            {candidates.length}
+          </span>
+        </h3>
+        <p className="mt-1 text-xs text-slate-600">
+          Vista preliminar. Se guardan con el trabajo; aún no son hallazgos
+          confirmados.
+        </p>
+        {candidates.length ? (
+          <ul className="mt-3 grid gap-2">
+            {candidates.map((candidate) => {
+              const item = snapshot.sections
+                .flatMap((section) => section.items)
+                .find((entry) => entry.id === candidate.workItemId);
+              const severity = severityLevels.find(
+                (level) => level.id === candidate.suggestedSeverityId
+              );
+              return (
+                <li
+                  key={candidate.id}
+                  className="rounded-lg border border-amber-200 bg-white p-3 text-sm"
+                >
+                  <span className="font-medium text-slate-900">
+                    {candidate.title}
+                  </span>
+                  <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+                    {candidate.status === 'PENDING'
+                      ? 'Pendiente'
+                      : candidate.status === 'CONFIRMED'
+                      ? 'Confirmado'
+                      : 'Descartado'}
+                  </span>
+                  <p className="mt-1 text-xs text-slate-600">
+                    {item?.assetNameSnapshot ?? 'Activo'} ·{' '}
+                    {item?.concept?.name ?? item?.title ?? 'Observación'} ·{' '}
+                    {candidate.source === 'MANUAL'
+                      ? 'Manual'
+                      : candidate.source === 'ANALOG'
+                      ? 'Medición'
+                      : 'Opción digital'}
+                    {candidate.measuredValue
+                      ? ` · ${candidate.measuredValue}`
+                      : ''}
+                    {severity ? ` · Severidad sugerida: ${severity.name}` : ''}
+                  </p>
+                  {candidate.description ? (
+                    <p className="mt-1 text-xs text-slate-600">
+                      {candidate.description}
+                    </p>
+                  ) : null}
+                  {candidate.source !== 'MANUAL' &&
+                  values[candidate.workItemId]?.comment?.trim() ? (
+                    <p className="mt-1 text-xs text-slate-600">
+                      Observación: {values[candidate.workItemId].comment}
+                    </p>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="mt-3 text-sm text-slate-600">
+            Sin candidatos por ahora.
+          </p>
+        )}
+      </section>
 
       <footer className="border-t border-slate-200 p-4 sm:p-6">
         {finishError && !finishError.ok ? (

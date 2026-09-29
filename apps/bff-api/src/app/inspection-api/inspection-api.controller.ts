@@ -354,6 +354,32 @@ export class InspectionApiController {
     return this.client.listConcepts(tenantId);
   }
 
+  @Get('tenants/:tenantId/severity-levels')
+  listSeverityLevels(@Param('tenantId', new ParseUUIDPipe()) tenantId: string) {
+    return this.client.listSeverityLevels(tenantId);
+  }
+
+  @Post('tenants/:tenantId/severity-levels')
+  @TenantRoles('TENANT_ADMIN')
+  createSeverityLevel(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Body()
+    payload: { code: string; name: string; order: number; active?: boolean }
+  ) {
+    return this.client.createSeverityLevel(tenantId, payload);
+  }
+
+  @Patch('tenants/:tenantId/severity-levels/:severityId')
+  @TenantRoles('TENANT_ADMIN')
+  updateSeverityLevel(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('severityId', new ParseUUIDPipe()) severityId: string,
+    @Body()
+    payload: { code?: string; name?: string; order?: number; active?: boolean }
+  ) {
+    return this.client.updateSeverityLevel(tenantId, severityId, payload);
+  }
+
   @Post('tenants/:tenantId/concepts')
   @TenantRoles('TENANT_ADMIN')
   createConcept(

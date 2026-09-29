@@ -13,6 +13,8 @@ import { WorkEntity } from './entities/work.entity';
 import { WorkItemAnnotationEntity } from './entities/work-item-annotation.entity';
 import { WorksController } from './works.controller';
 import { WorksService } from './works.service';
+import { FindingCandidateEntity } from './entities/finding-candidate.entity';
+import { FindingCandidateService } from './finding-candidate.service';
 
 @Module({
   imports: [
@@ -28,10 +30,11 @@ import { WorksService } from './works.service';
       ConceptEntity,
       ConceptOptionEntity,
       TenantEntity,
+      FindingCandidateEntity,
     ]),
   ],
   controllers: [WorksController],
-  providers: [WorksService],
-  exports: [WorksService],
+  providers: [WorksService, FindingCandidateService],
+  exports: [WorksService, FindingCandidateService],
 })
 export class WorksModule {}

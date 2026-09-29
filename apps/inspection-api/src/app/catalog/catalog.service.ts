@@ -25,6 +25,11 @@ import { ConceptOptionEntity } from './entities/concept-option.entity';
 import { CreateSiteDto } from './dto/create-site.dto';
 import { UpdateSiteDto } from './dto/update-site.dto';
 import { getAssetDescendants as collectAssetDescendants } from './asset-descendants';
+import { SeverityLevelEntity } from './entities/severity-level.entity';
+import {
+  CreateSeverityLevelDto,
+  UpdateSeverityLevelDto,
+} from './dto/severity-level.dto';
 
 @Injectable()
 export class CatalogService {
@@ -49,6 +54,8 @@ export class CatalogService {
     private readonly conceptOptions: Repository<ConceptOptionEntity>,
     @InjectRepository(AssetTypeConceptEntity)
     private readonly assetTypeConcepts: Repository<AssetTypeConceptEntity>,
+    @InjectRepository(SeverityLevelEntity)
+    private readonly severityLevels: Repository<SeverityLevelEntity>,
     private readonly dataSource: DataSource
   ) {}
 
@@ -57,6 +64,62 @@ export class CatalogService {
       where: { active: true },
       order: { name: 'ASC' },
     });
+  }
+
+  async listSeverityLevels(tenantId: string) {
+    await this.assertTenantExists(tenantId);
+    return this.severityLevels.find({
+      where: { tenantId },
+      order: { order: 'ASC', name: 'ASC' },
+    });
+  }
+
+  async createSeverityLevel(tenantId: string, dto: CreateSeverityLevelDto) {
+    await this.assertTenantExists(tenantId);
+    try {
+      return await this.severityLevels.save(
+        this.severityLevels.create({
+          tenantId,
+          code: this.normalizeCatalogCode(dto.code),
+          name: dto.name.trim(),
+          order: dto.order,
+          active: dto.active ?? true,
+        })
+      );
+    } catch (error) {
+      if (this.isUniqueViolation(error))
+        throw new ConflictException(
+          'Severity code already exists in this tenant'
+        );
+      throw error;
+    }
+  }
+
+  async updateSeverityLevel(
+    tenantId: string,
+    severityId: string,
+    dto: UpdateSeverityLevelDto
+  ) {
+    await this.assertTenantExists(tenantId);
+    const level = await this.severityLevels.findOne({
+      where: { id: severityId, tenantId },
+    });
+    if (!level)
+      throw new NotFoundException('Severity level not found in this tenant');
+    if (dto.code !== undefined)
+      level.code = this.normalizeCatalogCode(dto.code);
+    if (dto.name !== undefined) level.name = dto.name.trim();
+    if (dto.order !== undefined) level.order = dto.order;
+    if (dto.active !== undefined) level.active = dto.active;
+    try {
+      return await this.severityLevels.save(level);
+    } catch (error) {
+      if (this.isUniqueViolation(error))
+        throw new ConflictException(
+          'Severity code already exists in this tenant'
+        );
+      throw error;
+    }
   }
 
   async listSites(tenantId: string) {
@@ -285,6 +348,11 @@ export class CatalogService {
   async createConcept(tenantId: string, dto: CreateConceptDto) {
     await this.assertTenantExists(tenantId);
     const options = this.normalizeConceptOptions(dto.type, dto.options);
+    const criteria = this.normalizeAnalogCriteria(dto.type, dto);
+    await this.assertSeverityReferences(tenantId, [
+      criteria.outOfRangeSeverityId,
+      ...options.map((option) => option.suggestedSeverityId),
+    ]);
 
     try {
       return await this.dataSource.transaction(async (manager) => {
@@ -298,6 +366,7 @@ export class CatalogService {
           type: dto.type,
           unit:
             dto.type === ConceptType.ANALOG ? dto.unit?.trim() || null : null,
+          ...criteria,
           active: dto.active ?? true,
         });
         const saved = await conceptRepository.save(concept);
@@ -333,13 +402,36 @@ export class CatalogService {
       dto.options !== undefined || nextType !== existing.type;
     const inputOptions =
       dto.options ??
-      currentOptions.map(({ value, label, order, active }) => ({
-        value,
-        label,
-        order,
-        active,
-      }));
+      currentOptions.map(
+        ({
+          value,
+          label,
+          order,
+          active,
+          generatesFinding,
+          suggestedSeverityId,
+        }) => ({
+          value,
+          label,
+          order,
+          active,
+          generatesFinding,
+          suggestedSeverityId,
+        })
+      );
     const options = this.normalizeConceptOptions(nextType, inputOptions);
+    const criteria = this.normalizeAnalogCriteria(nextType, {
+      minValue: dto.minValue === undefined ? existing.minValue : dto.minValue,
+      maxValue: dto.maxValue === undefined ? existing.maxValue : dto.maxValue,
+      outOfRangeSeverityId:
+        dto.outOfRangeSeverityId === undefined
+          ? existing.outOfRangeSeverityId
+          : dto.outOfRangeSeverityId,
+    });
+    await this.assertSeverityReferences(tenantId, [
+      criteria.outOfRangeSeverityId,
+      ...options.map((option) => option.suggestedSeverityId),
+    ]);
 
     try {
       return await this.dataSource.transaction(async (manager) => {
@@ -362,6 +454,7 @@ export class CatalogService {
                 ? existing.unit
                 : dto.unit?.trim() || null
               : null,
+          ...criteria,
           active: dto.active ?? existing.active,
         });
         const saved = await conceptRepository.save(existing);
@@ -939,6 +1032,10 @@ export class CatalogService {
       label: option.label.trim(),
       order: option.order,
       active: option.active ?? true,
+      generatesFinding: option.generatesFinding ?? false,
+      suggestedSeverityId: option.generatesFinding
+        ? option.suggestedSeverityId ?? null
+        : null,
     }));
     if (
       new Set(normalized.map((option) => option.value)).size !==
@@ -947,6 +1044,48 @@ export class CatalogService {
       throw new BadRequestException('Concept option values must be unique');
     }
     return normalized;
+  }
+
+  private normalizeAnalogCriteria(
+    type: ConceptType,
+    dto: {
+      minValue?: number | null;
+      maxValue?: number | null;
+      outOfRangeSeverityId?: string | null;
+    }
+  ) {
+    if (type !== ConceptType.ANALOG)
+      return { minValue: null, maxValue: null, outOfRangeSeverityId: null };
+    const minValue = dto.minValue ?? null;
+    const maxValue = dto.maxValue ?? null;
+    if (minValue !== null && maxValue !== null && minValue > maxValue) {
+      throw new BadRequestException('Minimum cannot exceed maximum');
+    }
+    if (dto.outOfRangeSeverityId && minValue === null && maxValue === null) {
+      throw new BadRequestException(
+        'A severity requires at least one analog limit'
+      );
+    }
+    return {
+      minValue,
+      maxValue,
+      outOfRangeSeverityId: dto.outOfRangeSeverityId ?? null,
+    };
+  }
+
+  private async assertSeverityReferences(
+    tenantId: string,
+    ids: Array<string | null | undefined>
+  ) {
+    for (const id of new Set(ids.filter((value): value is string => !!value))) {
+      const severity = await this.severityLevels.findOne({
+        where: { id, tenantId },
+      });
+      if (!severity)
+        throw new BadRequestException(
+          'Suggested severity must belong to this tenant'
+        );
+    }
   }
 
   private handleConceptWriteError(error: unknown): never {

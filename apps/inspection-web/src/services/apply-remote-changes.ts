@@ -41,6 +41,8 @@ export async function applyRemoteChanges({
       inspectionDb.workTypes,
       inspectionDb.concepts,
       inspectionDb.conceptOptions,
+      inspectionDb.severityLevels,
+      inspectionDb.findingCandidates,
       inspectionDb.formTemplates,
       inspectionDb.formSections,
       inspectionDb.formItems,
@@ -216,6 +218,10 @@ function domainTable(type: PullEntityType): Table<StoredRecord, string> {
       ? inspectionDb.concepts
       : type === 'CONCEPT_OPTION'
       ? inspectionDb.conceptOptions
+      : type === 'SEVERITY_LEVEL'
+      ? inspectionDb.severityLevels
+      : type === 'FINDING_CANDIDATE'
+      ? inspectionDb.findingCandidates
       : type === 'FORM_TEMPLATE'
       ? inspectionDb.formTemplates
       : type === 'FORM_SECTION'

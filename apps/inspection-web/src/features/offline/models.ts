@@ -4,6 +4,7 @@ import type {
   AssetTypeConcept,
   Concept,
   ConceptOption,
+  SeverityLevel,
 } from '../concepts/models';
 import type {
   FormItem,
@@ -12,6 +13,7 @@ import type {
 } from '../form-templates/models';
 import type {
   ConceptResponse,
+  FindingCandidate,
   TaskCompletion,
   Work,
   WorkItemAnnotation,
@@ -125,6 +127,8 @@ export type PullEntityType =
   | 'WORK_TYPE'
   | 'CONCEPT'
   | 'CONCEPT_OPTION'
+  | 'SEVERITY_LEVEL'
+  | 'FINDING_CANDIDATE'
   | 'FORM_TEMPLATE'
   | 'FORM_SECTION'
   | 'FORM_ITEM'
@@ -214,6 +218,8 @@ export interface OfflineCatalogBundle {
   >;
   concepts: Concept[];
   options: ConceptOption[];
+  severityLevels: SeverityLevel[];
+  findingCandidates: FindingCandidate[];
   assetTypeConcepts: AssetTypeConcept[];
   templates: FormTemplate[];
   sections: FormSection[];

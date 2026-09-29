@@ -12,6 +12,7 @@ import { WorkEntity, WorkStatus } from '../works/entities/work.entity';
 import { WorkItemAnnotationEntity } from '../works/entities/work-item-annotation.entity';
 import type { WorkFormItemSnapshot } from '../works/work-snapshot';
 import { WorksService } from '../works/works.service';
+import { FindingCandidateService } from '../works/finding-candidate.service';
 import { SyncEntityType, SyncOperation } from './dto/sync-push.dto';
 import type {
   AnnotationPayload,
@@ -23,7 +24,10 @@ import type {
 
 @Injectable()
 export class SyncWorkProcessor {
-  constructor(private readonly worksService: WorksService) {}
+  constructor(
+    private readonly worksService: WorksService,
+    private readonly findingCandidates: FindingCandidateService
+  ) {}
 
   async apply(
     manager: EntityManager,
@@ -83,6 +87,7 @@ export class SyncWorkProcessor {
         );
       }
     }
+    await this.findingCandidates.reconcile(manager, work);
     if (desiredStatus) {
       await this.applyFinalStatus(manager, tenantId, work, desiredStatus);
     }
@@ -184,13 +189,7 @@ export class SyncWorkProcessor {
       );
     }
     const value = this.normalizeResponse(item, payload);
-    this.assertMutationTarget(
-      change,
-      existing,
-      tenantId,
-      work.id,
-      'Response'
-    );
+    this.assertMutationTarget(change, existing, tenantId, work.id, 'Response');
     await repository.save(
       repository.create({
         ...existing,
@@ -272,6 +271,7 @@ export class SyncWorkProcessor {
         workId: work.id,
         formItemId: payload.formItemId,
         comment: payload.comment,
+        isFinding: payload.isFinding ?? false,
       })
     );
   }
@@ -289,7 +289,10 @@ export class SyncWorkProcessor {
     if (change.operation === SyncOperation.UPDATE && !existing) {
       throw new NotFoundException(`${label} to update was not found`);
     }
-    if (existing && (existing.tenantId !== tenantId || existing.workId !== workId)) {
+    if (
+      existing &&
+      (existing.tenantId !== tenantId || existing.workId !== workId)
+    ) {
       throw new BadRequestException(
         `${label} belongs to another work or tenant`
       );
@@ -335,9 +338,7 @@ export class SyncWorkProcessor {
     ]);
     const completed = new Set([
       ...responses.map((item) => item.formItemId),
-      ...tasks
-        .filter((item) => item.completed)
-        .map((item) => item.formItemId),
+      ...tasks.filter((item) => item.completed).map((item) => item.formItemId),
     ]);
     const missing = work.formSnapshot.sections.flatMap((section) =>
       section.items

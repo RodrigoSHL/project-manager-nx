@@ -16,6 +16,65 @@ describe('applyRemoteChanges', () => {
 
   afterEach(async () => inspectionDb.delete());
 
+  it('aplica severidades y candidatos por Pull en el tenant indicado', async () => {
+    const severityId = '99999999-9999-4999-8999-999999999999';
+    const candidateId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    await applyRemoteChanges({
+      tenantId,
+      deviceId,
+      currentCheckpoint: 0,
+      response: {
+        changes: [
+          {
+            sequence: 1,
+            entityType: 'SEVERITY_LEVEL',
+            entityId: severityId,
+            operation: 'CREATE',
+            payload: {
+              id: severityId,
+              tenantId,
+              code: 'ALTA',
+              name: 'Alta',
+              order: 1,
+              active: true,
+            },
+            serverUpdatedAt: '2026-09-18T12:00:00.000Z',
+          },
+          {
+            sequence: 2,
+            entityType: 'FINDING_CANDIDATE',
+            entityId: candidateId,
+            operation: 'CREATE',
+            payload: {
+              id: candidateId,
+              tenantId,
+              workId,
+              workItemId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+              assetId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+              source: 'ANALOG',
+              title: 'Temperatura fuera de rango',
+              status: 'PENDING',
+              suggestedSeverityId: severityId,
+            },
+            serverUpdatedAt: '2026-09-18T12:00:01.000Z',
+          },
+        ],
+        checkpoint: 2,
+        hasMore: false,
+      },
+    });
+    await expect(
+      inspectionDb.severityLevels.get(severityId)
+    ).resolves.toMatchObject({ tenantId, name: 'Alta' });
+    await expect(
+      inspectionDb.findingCandidates.get(candidateId)
+    ).resolves.toMatchObject({
+      tenantId,
+      workId,
+      suggestedSeverityId: severityId,
+    });
+  });
+
   it('aplica un UPDATE remoto sobre un registro sincronizado y avanza checkpoint', async () => {
     await inspectionDb.works.put(work('SYNCED', 'Versión local'));
 

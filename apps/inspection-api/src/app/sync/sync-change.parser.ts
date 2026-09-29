@@ -126,6 +126,7 @@ export class SyncChangeParser {
       workId: payload.workId as string,
       formItemId: payload.formItemId as string,
       comment: this.requiredText(payload.comment, 'comment', 2000, 1),
+      isFinding: payload.isFinding === true,
     };
   }
 

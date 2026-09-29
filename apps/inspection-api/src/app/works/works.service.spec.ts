@@ -72,6 +72,7 @@ describe('WorksService', () => {
     } as unknown as EntityManager;
     const dataSource = {
       transaction: jest.fn(async (action) => action(manager)),
+      getRepository: jest.fn(() => ({ find: jest.fn().mockResolvedValue([]) })),
     } as unknown as DataSource;
     catalog = {
       getAsset: jest.fn(),
@@ -96,7 +97,9 @@ describe('WorksService', () => {
       items as never,
       concepts as never,
       options as never,
-      dataSource
+      { find: jest.fn().mockResolvedValue([]) } as never,
+      dataSource,
+      { reconcile: jest.fn().mockResolvedValue(undefined) } as never
     );
   });
 

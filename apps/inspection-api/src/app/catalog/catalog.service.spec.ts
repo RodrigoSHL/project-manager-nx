@@ -139,6 +139,7 @@ describe('CatalogService tenant isolation', () => {
       conceptRepository as unknown as Repository<ConceptEntity>,
       conceptOptionRepository as unknown as Repository<ConceptOptionEntity>,
       assetTypeConceptRepository as unknown as Repository<AssetTypeConceptEntity>,
+      { findOne: jest.fn() } as never,
       {} as DataSource
     );
   });

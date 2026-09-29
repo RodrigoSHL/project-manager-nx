@@ -65,12 +65,17 @@ export type ConceptMutationPayload = {
   description?: string | null;
   type?: 'ANALOG' | 'DIGITAL' | 'TEXT' | 'HIDDEN';
   unit?: string | null;
+  minValue?: number | null;
+  maxValue?: number | null;
+  outOfRangeSeverityId?: string | null;
   active?: boolean;
   options?: Array<{
     value: string;
     label: string;
     order: number;
     active?: boolean;
+    generatesFinding?: boolean;
+    suggestedSeverityId?: string | null;
   }>;
 };
 
@@ -117,6 +122,7 @@ export type WorkResponsesPayload = {
   annotations: Array<{
     formItemId: string;
     comment: string;
+    isFinding?: boolean;
   }>;
 };
 
@@ -515,6 +521,33 @@ export class InspectionApiClient {
 
   listConcepts(tenantId: string) {
     return this.get(`/tenants/${encodeURIComponent(tenantId)}/concepts`);
+  }
+
+  listSeverityLevels(tenantId: string) {
+    return this.get(`/tenants/${encodeURIComponent(tenantId)}/severity-levels`);
+  }
+
+  createSeverityLevel(
+    tenantId: string,
+    payload: { code: string; name: string; order: number; active?: boolean }
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(tenantId)}/severity-levels`,
+      { method: 'POST', body: JSON.stringify(payload) }
+    );
+  }
+
+  updateSeverityLevel(
+    tenantId: string,
+    severityId: string,
+    payload: { code?: string; name?: string; order?: number; active?: boolean }
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(
+        tenantId
+      )}/severity-levels/${encodeURIComponent(severityId)}`,
+      { method: 'PATCH', body: JSON.stringify(payload) }
+    );
   }
 
   createConcept(tenantId: string, payload: Required<ConceptMutationPayload>) {

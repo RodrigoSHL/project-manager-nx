@@ -76,4 +76,4 @@ Las pruebas `dashboard-filters.test.ts`, `analytics-api.test.ts` y `dashboard-co
 
 ## Límite de la fase
 
-El comparador técnico queda pendiente: series de múltiples activos, límites históricos en el gráfico, detalle al seleccionar un punto y controles avanzados de medición. Se construirá sobre `GET /analytics/measurements` en la fase 4. Tampoco se agregaron telemetría, sensores, predicciones, alertas ni mapas.
+El comparador técnico se implementó posteriormente en la [fase 4](./ANALYTICS_COMPARADOR_FASE_4.md): series de hasta cinco activos, límites históricos por punto y navegación desde cada medición. No se agregaron telemetría, sensores, predicciones, alertas ni mapas.

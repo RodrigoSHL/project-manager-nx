@@ -181,7 +181,11 @@ export function FindingReview({
             </thead>
             <tbody>
               {finalFindings.map((finding, index) => (
-                <tr key={finding.id} className="border-b">
+                <tr
+                  key={finding.id}
+                  id={`finding-${finding.id}`}
+                  className="scroll-mt-24 border-b target:bg-amber-50"
+                >
                   <td className="p-3">{index + 1}</td>
                   <td className="p-3">{finding.assetNameSnapshot}</td>
                   <td className="p-3">{finding.title}</td>

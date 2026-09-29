@@ -7,7 +7,13 @@ import {
   UserRound,
   FileText,
 } from 'lucide-react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import {
+  Link,
+  useLocation,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom';
+import { useEffect } from 'react';
 import { Button } from '../components/ui/button';
 import { WorkExecutionForm } from '../features/works/components/work-execution-form';
 import { FindingReview } from '../features/works/components/finding-review';
@@ -20,6 +26,7 @@ import { useOffline } from '../features/offline/offline-context';
 
 export function WorkDetailPage() {
   const { id = '' } = useParams();
+  const location = useLocation();
   const [params] = useSearchParams();
   const tenantId = params.get('tenantId') ?? '';
   const catalog = useWorkCatalog(tenantId);
@@ -31,6 +38,15 @@ export function WorkDetailPage() {
   const snapshot = catalog.snapshots.find(
     (item) => item.workId === id && item.tenantId === tenantId
   );
+
+  useEffect(() => {
+    if (!work || !snapshot || !location.hash.startsWith('#finding-')) return;
+    const target = decodeURIComponent(location.hash.slice(1));
+    const frame = requestAnimationFrame(() =>
+      document.getElementById(target)?.scrollIntoView({ block: 'center' })
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [work, snapshot, location.hash, catalog.findings.length]);
 
   if (!tenantId)
     return (
@@ -82,7 +98,12 @@ export function WorkDetailPage() {
       >
         <ArrowLeft className="size-4" /> Volver a trabajos
       </Link>
-      <Link to={`/works/${id}/report?tenantId=${encodeURIComponent(tenantId)}`} className="mb-4 ml-4 inline-flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-slate-950"><FileText className="size-4" /> Ver informe</Link>
+      <Link
+        to={`/works/${id}/report?tenantId=${encodeURIComponent(tenantId)}`}
+        className="mb-4 ml-4 inline-flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-slate-950"
+      >
+        <FileText className="size-4" /> Ver informe
+      </Link>
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">

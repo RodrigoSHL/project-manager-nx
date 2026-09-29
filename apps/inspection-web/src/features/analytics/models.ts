@@ -66,6 +66,50 @@ export type AnalyticsConcept = {
   measurementCount: number;
 };
 
+export type MeasurementPoint = {
+  responseId: string;
+  workItemId: string;
+  workId: string;
+  workTitle: string;
+  hasReport: boolean;
+  workDate: string;
+  measuredAt: string;
+  value: number;
+  minValue?: number;
+  maxValue?: number;
+  isInRange?: boolean;
+  findingId?: string;
+  findingTitle?: string;
+};
+
+export type MeasurementSeries = {
+  assetId: string;
+  assetName: string;
+  measurements: MeasurementPoint[];
+  statistics: {
+    count: number;
+    min: number;
+    max: number;
+    avg: number;
+    latest: number;
+    latestMeasuredAt?: string;
+    latestMinValue?: number;
+    latestMaxValue?: number;
+    latestIsInRange?: boolean;
+    inRange: number;
+    evaluable: number;
+    percentageInRange?: number;
+  };
+};
+
+export type AnalyticsMeasurements = {
+  concept: { id: string; name: string; type: 'ANALOG'; unit?: string | null };
+  totalMeasurements: number;
+  page: number;
+  pageSize: number;
+  series: MeasurementSeries[];
+};
+
 export type AssetHistory = {
   asset: {
     id: string;

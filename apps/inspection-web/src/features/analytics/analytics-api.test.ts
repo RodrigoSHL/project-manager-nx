@@ -69,4 +69,33 @@ describe('analytics API requests', () => {
     expect(second.searchParams.get('siteId')).toBe('mine-north');
     expect(second.searchParams.get('from')).toBe('2026-08-03');
   });
+
+  it('requests only the selected concept and assets with a bounded point limit', async () => {
+    await analyticsApi.measurements(
+      'tenant-a',
+      'concept-temperature',
+      {
+        ...filters,
+        siteId: 'site-north',
+        workTypeId: 'inspection',
+        assetTypeId: 'radiator',
+      },
+      ['radiator-r1', 'radiator-r2'],
+      undefined,
+      800
+    );
+    const url = new URL(
+      String(fetchMock.mock.calls[0][0]),
+      'https://test.local'
+    );
+    expect(url.pathname).toBe(
+      '/api/inspection/tenants/tenant-a/analytics/measurements'
+    );
+    expect(url.searchParams.get('conceptId')).toBe('concept-temperature');
+    expect(url.searchParams.get('assetIds')).toBe('radiator-r1,radiator-r2');
+    expect(url.searchParams.get('siteId')).toBe('site-north');
+    expect(url.searchParams.get('workTypeId')).toBe('inspection');
+    expect(url.searchParams.get('assetTypeId')).toBe('radiator');
+    expect(url.searchParams.get('limit')).toBe('800');
+  });
 });

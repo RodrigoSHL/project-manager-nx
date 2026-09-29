@@ -4,6 +4,7 @@ import type {
   AnalyticsConcept,
   AnalyticsFilters,
   AnalyticsFindings,
+  AnalyticsMeasurements,
   AnalyticsSummary,
   AssetHistory,
 } from './models';
@@ -72,6 +73,24 @@ export const analyticsApi = {
   },
   concepts(tenantId: string, filters: AnalyticsFilters, signal?: AbortSignal) {
     return get<AnalyticsConcept[]>(path(tenantId, 'concepts', filters), signal);
+  },
+  measurements(
+    tenantId: string,
+    conceptId: string,
+    filters: AnalyticsFilters,
+    assetIds: string[],
+    signal?: AbortSignal,
+    limit = 800
+  ) {
+    return get<AnalyticsMeasurements>(
+      path(tenantId, 'measurements', {
+        ...filters,
+        conceptId,
+        assetIds: assetIds.length ? assetIds.join(',') : undefined,
+        limit,
+      }),
+      signal
+    );
   },
   assetHistory(
     tenantId: string,

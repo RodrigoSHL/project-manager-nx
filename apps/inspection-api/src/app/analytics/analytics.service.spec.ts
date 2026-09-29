@@ -130,6 +130,92 @@ describe('AnalyticsService', () => {
     expect(query.mock.calls[2][1]).toContainEqual([assetId, secondAsset]);
   });
 
+  it('keeps each Work snapshot limit and exposes links only for real related records', async () => {
+    query
+      .mockResolvedValueOnce([
+        { id: conceptId, name: 'Temperatura', type: 'ANALOG', unit: '°C' },
+      ])
+      .mockResolvedValueOnce([
+        {
+          assetId,
+          assetName: 'Radiador R1',
+          count: 2,
+          min: 85,
+          max: 85,
+          avg: 85,
+          latest: 85,
+          latestMeasuredAt: '2026-09-02',
+          latestMinValue: 0,
+          latestMaxValue: 90,
+          latestIsInRange: true,
+          inRange: 1,
+          evaluable: 2,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          assetId,
+          responseId: 'response-a',
+          workItemId: 'item-a',
+          workId: 'work-a',
+          workTitle: 'Inspección A',
+          hasReport: false,
+          workDate: '2026-09-01',
+          measuredAt: '2026-09-01',
+          value: 85,
+          minValue: 0,
+          maxValue: 80,
+          findingId: 'finding-a',
+          findingTitle: 'Temperatura elevada',
+        },
+        {
+          assetId,
+          responseId: 'response-b',
+          workItemId: 'item-b',
+          workId: 'work-b',
+          workTitle: 'Inspección B',
+          hasReport: true,
+          workDate: '2026-09-02',
+          measuredAt: '2026-09-02',
+          value: 85,
+          minValue: 0,
+          maxValue: 90,
+        },
+      ]);
+
+    const result = await service.measurements(tenantId, {
+      conceptId,
+      assetIds: assetId,
+      limit: 800,
+      page: 1,
+    });
+    expect(result.series[0].measurements).toEqual([
+      expect.objectContaining({
+        responseId: 'response-a',
+        isInRange: false,
+        maxValue: 80,
+        findingTitle: 'Temperatura elevada',
+        hasReport: false,
+      }),
+      expect.objectContaining({
+        responseId: 'response-b',
+        isInRange: true,
+        maxValue: 90,
+        findingId: undefined,
+        hasReport: true,
+      }),
+    ]);
+    expect(result.series[0].statistics).toMatchObject({
+      latest: 85,
+      latestMeasuredAt: '2026-09-02',
+      latestMaxValue: 90,
+      latestIsInRange: true,
+      percentageInRange: 50,
+    });
+    expect(query.mock.calls[2][0]).toContain('generated_reports');
+    expect(query.mock.calls[2][0]).toContain('finding.title AS "findingTitle"');
+  });
+
   it('finds a child asset inside its parent Work snapshot with bounded pages', async () => {
     query
       .mockResolvedValueOnce([

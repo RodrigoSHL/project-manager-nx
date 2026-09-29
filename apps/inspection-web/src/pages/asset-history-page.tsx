@@ -1,6 +1,7 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../components/page-header';
 import { analyticsApi } from '../features/analytics/analytics-api';
+import { formatMeasurementDate } from '../features/analytics/measurement-comparison';
 import {
   analyticsFilters,
   readDashboardFilters,
@@ -28,6 +29,8 @@ export function AssetHistoryPage() {
   );
   const backParams = new URLSearchParams(params);
   backParams.delete('page');
+  const returnToMeasurements = backParams.get('returnTo') === 'measurements';
+  backParams.delete('returnTo');
 
   function setPage(nextPage: number) {
     const next = new URLSearchParams(params);
@@ -42,10 +45,12 @@ export function AssetHistoryPage() {
         description="Inspecciones y hallazgos del activo, incluidos los registrados dentro de un trabajo del activo padre."
       />
       <Link
-        to={`/dashboard?${backParams.toString()}`}
+        to={`${
+          returnToMeasurements ? '/analytics/measurements' : '/dashboard'
+        }?${backParams.toString()}`}
         className="text-sm font-medium text-slate-600 hover:text-slate-950"
       >
-        ← Volver al dashboard
+        ← Volver {returnToMeasurements ? 'al comparador' : 'al dashboard'}
       </Link>
       {mode !== 'REMOTE' ? (
         <p className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
@@ -89,7 +94,7 @@ export function AssetHistoryPage() {
               </p>
               <p>
                 <strong className="block text-base text-slate-950">
-                  {history.data.summary.lastInspectionAt ?? '—'}
+                  {formatMeasurementDate(history.data.summary.lastInspectionAt)}
                 </strong>
                 <span className="text-sm text-slate-500">
                   Última inspección
@@ -99,11 +104,17 @@ export function AssetHistoryPage() {
           </section>
           <div className="grid gap-6 lg:grid-cols-2">
             <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="font-semibold">Trabajos</h2>
+              <h2 className="font-semibold">Historial de trabajos</h2>
               {history.data.works.length ? (
                 <ul className="mt-4 divide-y divide-slate-100">
                   {history.data.works.map((work) => (
-                    <li key={work.id} className="py-3">
+                    <li
+                      key={work.id}
+                      className="border-l-2 border-slate-200 py-3 pl-4"
+                    >
+                      <p className="text-xs font-medium text-slate-500">
+                        {formatMeasurementDate(work.executionDate)}
+                      </p>
                       <Link
                         className="font-medium text-slate-900 hover:underline"
                         to={`/works/${encodeURIComponent(
@@ -113,8 +124,14 @@ export function AssetHistoryPage() {
                         {work.title}
                       </Link>
                       <p className="text-xs text-slate-500">
-                        {work.executionDate} · {work.status}
+                        {work.status} · Trabajo {work.id.slice(0, 8)}…
                       </p>
+                      {work.workAssetId !== id && (
+                        <p className="mt-1 text-xs text-slate-600">
+                          Trabajo del activo padre que incluyó este activo en su
+                          formulario.
+                        </p>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -125,16 +142,29 @@ export function AssetHistoryPage() {
               )}
             </section>
             <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="font-semibold">Hallazgos</h2>
+              <h2 className="font-semibold">Historial de hallazgos</h2>
               {history.data.findings.length ? (
                 <ul className="mt-4 divide-y divide-slate-100">
                   {history.data.findings.map((finding) => (
-                    <li key={finding.id} className="py-3">
-                      <p className="font-medium text-slate-900">
-                        {finding.title}
+                    <li
+                      key={finding.id}
+                      className="border-l-2 border-slate-200 py-3 pl-4"
+                    >
+                      <p className="text-xs font-medium text-slate-500">
+                        {formatMeasurementDate(finding.workDate)}
                       </p>
+                      <Link
+                        to={`/works/${encodeURIComponent(
+                          finding.workId
+                        )}?tenantId=${encodeURIComponent(
+                          tenantId
+                        )}#finding-${encodeURIComponent(finding.id)}`}
+                        className="font-medium text-slate-900 hover:underline"
+                      >
+                        {finding.title}
+                      </Link>
                       <p className="text-xs text-slate-500">
-                        {finding.severityName} · {finding.workDate}
+                        {finding.severityName}
                       </p>
                     </li>
                   ))}
@@ -151,11 +181,20 @@ export function AssetHistoryPage() {
             {history.data.analogConcepts.length ? (
               <ul className="mt-4 grid gap-2 sm:grid-cols-2">
                 {history.data.analogConcepts.map((concept) => (
-                  <li
-                    key={concept.conceptId}
-                    className="rounded-lg border border-slate-200 p-3 text-sm"
-                  >
-                    {concept.name} · {concept.measurements} mediciones
+                  <li key={concept.conceptId}>
+                    <Link
+                      to={`/analytics/measurements?${new URLSearchParams({
+                        ...Object.fromEntries(backParams),
+                        tenantId,
+                        conceptId: concept.conceptId,
+                        assetIds: id,
+                      }).toString()}`}
+                      className="block rounded-lg border border-slate-200 p-3 text-sm text-slate-800 hover:border-slate-400 hover:bg-slate-50"
+                    >
+                      {concept.name}
+                      {concept.unit ? ` (${concept.unit})` : ''} ·{' '}
+                      {concept.measurements} mediciones →
+                    </Link>
                   </li>
                 ))}
               </ul>

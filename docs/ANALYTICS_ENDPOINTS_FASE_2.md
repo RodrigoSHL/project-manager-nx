@@ -70,4 +70,4 @@ Se reutilizan los índices de fase 1 sobre `(tenant_id, status, execution_date)`
 
 Se comprobaron compilación TypeScript de ambas APIs, pruebas Jest del nuevo servicio, fase 1 y BFF, y consultas de solo lectura sobre PostgreSQL local: seis endpoints, filtros de sitio/tipo/fecha, comparación, historial y rechazo 404 de un activo de otro tenant. La ejecución local aplicó la migración pendiente de fase 1 al abrir la conexión con la configuración del proyecto; no se desplegó QA en esta fase.
 
-El dashboard de fase 3 ya consume `/summary` para tarjetas, `/findings` para rankings, `/activity` para evolución y `/concepts` para el listado de variables. La ruta `/analytics/measurements` queda preparada para el comparador técnico de fase 4; `/assets/:assetId/history` alimenta la navegación desde el ranking.
+El dashboard de fase 3 consume `/summary` para tarjetas, `/findings` para rankings, `/activity` para evolución y `/concepts` para el listado de variables. La [fase 4](./ANALYTICS_COMPARADOR_FASE_4.md) utiliza `/analytics/measurements` para el comparador técnico; `/assets/:assetId/history` alimenta la navegación desde el ranking y desde las tarjetas de mediciones.

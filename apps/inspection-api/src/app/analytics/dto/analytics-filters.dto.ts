@@ -50,7 +50,4 @@ export class ActivityFiltersDto extends AnalyticsFiltersDto {
     ActivityGrouping.MONTH;
 }
 
-export class ConceptsFiltersDto {
-  @IsOptional() @IsUUID() siteId?: string;
-  @IsOptional() @IsUUID() assetTypeId?: string;
-}
+export class ConceptsFiltersDto extends AnalyticsFiltersDto {}

@@ -1,6 +1,6 @@
 # Analytics, fase 2: endpoints para el dashboard
 
-Esta fase agrega consultas de solo lectura. El frontend todavía no tiene gráficos. Los datos salen de `works`, `concept_responses`, `findings` y el `form_snapshot` conservado en cada Work. No se agregaron tablas de resultados precalculados.
+Esta fase agregó consultas de solo lectura. La fase 3 conectó el dashboard y sus gráficos a estos endpoints; se documenta en [ANALYTICS_DASHBOARD_FASE_3.md](./ANALYTICS_DASHBOARD_FASE_3.md). Los datos salen de `works`, `concept_responses`, `findings` y el `form_snapshot` conservado en cada Work. No se agregaron tablas de resultados precalculados.
 
 ```mermaid
 flowchart LR
@@ -24,9 +24,9 @@ Todas las rutas públicas usan el prefijo `/api/inspection/tenants/:tenantId/ana
 | `/measurements`            | Series y estadísticas de un concepto analógico | `conceptId` obligatorio, `assetId`, `assetIds` separados por coma, `limit`, `page` |
 | `/assets/:assetId/history` | Historial técnico del activo                   | `page`, `pageSize`                                                                 |
 | `/activity`                | Works ejecutados por período                   | `groupBy=day\|week\|month`                                                         |
-| `/concepts`                | Conceptos analógicos con datos históricos      | `siteId`, `assetTypeId`                                                            |
+| `/concepts`                | Conceptos analógicos con datos históricos      | Filtros comunes                                                                    |
 
-Los filtros comunes son `siteId`, `workTypeId`, `assetTypeId`, `from` y `to`, salvo `/concepts`, que solo acepta los dos indicados. Las fechas son días de inspección o medición en formato `YYYY-MM-DD`, ambos extremos inclusivos; `from=2026-09-01&to=2026-09-30` incluye todo el 30 de septiembre. No se filtra por la fecha de recepción en el servidor. IDs deben ser UUID. Los parámetros desconocidos o inválidos reciben 400.
+Los filtros comunes son `siteId`, `workTypeId`, `assetTypeId`, `from` y `to`. Las fechas son días de inspección o medición en formato `YYYY-MM-DD`, ambos extremos inclusivos; `from=2026-09-01&to=2026-09-30` incluye todo el 30 de septiembre. No se filtra por la fecha de recepción en el servidor. IDs deben ser UUID. Los parámetros desconocidos o inválidos reciben 400.
 
 Ejemplo:
 
@@ -47,7 +47,7 @@ Para `measurementsEvaluable` se toman solo respuestas numéricas de conceptos `A
 
 `/assets/:assetId/history` primero comprueba que el activo pertenezca al tenant; un ID ajeno devuelve 404. El historial incluye Works cuyo `asset_id` es el activo **o** cuyo `form_snapshot.sections[].items[].assetId` apunta a él. Para Radiador R1, por tanto, se incluye el Work de Transformador T1 que contiene un ítem de R1. Los Findings se cuentan solo si pertenecen a R1. Devuelve datos y ruta jerárquica del activo, resumen, páginas de Works y Findings (mismo `page`/`pageSize`) y conceptos analógicos con cantidad de mediciones. Works se ordenan por `execution_date DESC` e ID; Findings por fecha e ID.
 
-`/activity` agrupa Works válidos por día, semana ISO o mes a partir de `execution_date`. Devuelve `{ period, works }[]` en orden cronológico. `/concepts` devuelve solo conceptos `ANALOG` que ya tienen al menos una respuesta numérica histórica en un Work válido. Cuenta mediciones por concepto, opcionalmente restringidas a sitio y tipo del activo que respondió.
+`/activity` agrupa Works válidos por día, semana ISO o mes a partir de `execution_date`. Devuelve `{ period, works }[]` en orden cronológico. `/concepts` devuelve solo conceptos `ANALOG` que ya tienen al menos una respuesta numérica histórica en un Work válido. Cuenta mediciones por concepto aplicando los mismos filtros comunes del dashboard.
 
 ## Consultas, índices y rendimiento
 
@@ -70,4 +70,4 @@ Se reutilizan los índices de fase 1 sobre `(tenant_id, status, execution_date)`
 
 Se comprobaron compilación TypeScript de ambas APIs, pruebas Jest del nuevo servicio, fase 1 y BFF, y consultas de solo lectura sobre PostgreSQL local: seis endpoints, filtros de sitio/tipo/fecha, comparación, historial y rechazo 404 de un activo de otro tenant. La ejecución local aplicó la migración pendiente de fase 1 al abrir la conexión con la configuración del proyecto; no se desplegó QA en esta fase.
 
-El dashboard posterior consumirá `/summary` para tarjetas, `/findings` para criticidad/rankings, `/activity` para evolución, `/concepts` para seleccionar variable, `/measurements` para gráficos/comparación y `/assets/:assetId/history` para el detalle técnico.
+El dashboard de fase 3 ya consume `/summary` para tarjetas, `/findings` para rankings, `/activity` para evolución y `/concepts` para el listado de variables. La ruta `/analytics/measurements` queda preparada para el comparador técnico de fase 4; `/assets/:assetId/history` alimenta la navegación desde el ranking.

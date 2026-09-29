@@ -11,6 +11,8 @@ import { AdminPlaceholderPage } from '../pages/admin-placeholder-page';
 import { AdminSitesPage } from '../pages/admin-sites-page';
 import { AssetsPage } from '../pages/assets-page';
 import { DashboardPage } from '../pages/dashboard-page';
+import { AssetHistoryPage } from '../pages/asset-history-page';
+import { MeasurementAnalyticsPage } from '../pages/measurement-analytics-page';
 import { FindingsPage } from '../pages/findings-page';
 import { LoginPage } from '../pages/login-page';
 import { WorksPage } from '../pages/works-page';
@@ -44,6 +46,11 @@ export function AppRoutes() {
         <Route element={<RequireOperationAccess />}>
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/assets/:id/history" element={<AssetHistoryPage />} />
+            <Route
+              path="/analytics/measurements"
+              element={<MeasurementAnalyticsPage />}
+            />
             <Route path="/assets" element={<AssetsPage />} />
             <Route path="/works" element={<WorksPage />} />
             <Route path="/works/new" element={<NewWorkPage />} />

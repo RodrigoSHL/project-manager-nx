@@ -46,7 +46,7 @@ export function CursorGlow() {
         height: 280,
         borderRadius: '50%',
         background:
-          'radial-gradient(circle, oklch(0.82 0.18 190 / 0.08) 0%, transparent 70%)',
+          'radial-gradient(circle, color-mix(in oklch, var(--turquoise) 8%, transparent) 0%, transparent 70%)',
       }}
       aria-hidden="true"
     />

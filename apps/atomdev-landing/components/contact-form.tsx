@@ -64,14 +64,12 @@ function InputField({
   required?: boolean
   placeholder?: string
 }) {
-  const turq = 'oklch(0.82 0.18 190)'
-
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={id} className="text-sm font-medium text-foreground/80">
         {label}
         {required && (
-          <span className="ml-1 text-[oklch(0.75_0.22_340)]" aria-hidden="true">
+          <span className="ml-1 text-pink" aria-hidden="true">
             *
           </span>
         )}
@@ -87,20 +85,20 @@ function InputField({
         aria-describedby={error ? `${id}-error` : undefined}
         className="rounded-lg px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 transition-all duration-200 focus:outline-none"
         style={{
-          background: 'oklch(0.14 0.016 240 / 0.7)',
-          border: `1px solid ${error ? 'oklch(0.75 0.22 340 / 0.6)' : 'oklch(1 0 0 / 0.1)'}`,
+          background: 'var(--surface-input)',
+          border: `1px solid ${error ? 'var(--destructive)' : 'var(--input)'}`,
         }}
         onFocus={(e) => {
-          e.target.style.borderColor = `${turq}60`
-          e.target.style.boxShadow = `0 0 0 3px ${turq}12`
+          e.target.style.borderColor = 'var(--ring)'
+          e.target.style.boxShadow = '0 0 0 3px color-mix(in oklch, var(--turquoise) 10%, transparent)'
         }}
         onBlur={(e) => {
-          e.target.style.borderColor = error ? 'oklch(0.75 0.22 340 / 0.6)' : 'oklch(1 0 0 / 0.1)'
+          e.target.style.borderColor = error ? 'var(--destructive)' : 'var(--input)'
           e.target.style.boxShadow = 'none'
         }}
       />
       {error && (
-        <p id={`${id}-error`} role="alert" className="flex items-center gap-1.5 text-xs text-[oklch(0.75_0.22_340)]">
+        <p id={`${id}-error`} role="alert" className="flex items-center gap-1.5 text-xs text-pink">
           <AlertCircle size={12} />
           {error}
         </p>
@@ -141,14 +139,12 @@ export function ContactForm() {
     setTimeout(() => setStatus('success'), 1200)
   }
 
-  const turq = 'oklch(0.82 0.18 190)'
-
   return (
     <section id="contacto" className="relative py-24 lg:py-32">
       {/* Right glow */}
       <div
         className="pointer-events-none absolute bottom-0 right-0 h-80 w-80 rounded-full opacity-10"
-        style={{ background: 'radial-gradient(circle, oklch(0.75 0.22 340) 0%, transparent 70%)' }}
+        style={{ background: 'radial-gradient(circle, var(--pink) 0%, transparent 70%)' }}
         aria-hidden="true"
       />
 
@@ -184,19 +180,19 @@ export function ContactForm() {
               transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
               className="rounded-2xl p-6 sm:p-8"
               style={{
-                background: 'oklch(0.13 0.018 240 / 0.7)',
+                background: 'var(--surface-raised)',
                 backdropFilter: 'blur(20px)',
                 WebkitBackdropFilter: 'blur(20px)',
-                border: '1px solid oklch(1 0 0 / 0.08)',
+                border: '1px solid var(--border)',
               }}
             >
               {status === 'success' ? (
                 <div className="flex flex-col items-center gap-4 py-12 text-center">
                   <div
                     className="flex h-16 w-16 items-center justify-center rounded-full"
-                    style={{ background: `${turq}18`, boxShadow: `0 0 24px ${turq}30` }}
+                    style={{ background: 'color-mix(in oklch, var(--turquoise) 10%, transparent)', boxShadow: '0 0 24px color-mix(in oklch, var(--turquoise) 18%, transparent)' }}
                   >
-                    <CheckCircle2 size={32} style={{ color: turq }} />
+                    <CheckCircle2 size={32} className="text-turquoise" />
                   </div>
                   <h3 className="text-xl font-semibold text-foreground">
                     Mensaje recibido
@@ -254,7 +250,7 @@ export function ContactForm() {
                   <div className="flex flex-col gap-1.5">
                     <label htmlFor="tipoproyecto" className="text-sm font-medium text-foreground/80">
                       Tipo de proyecto
-                      <span className="ml-1 text-[oklch(0.75_0.22_340)]" aria-hidden="true">*</span>
+                      <span className="ml-1 text-pink" aria-hidden="true">*</span>
                     </label>
                     <select
                       id="tipoproyecto"
@@ -265,22 +261,22 @@ export function ContactForm() {
                       aria-describedby={errors.tipoproyecto ? 'tipoproyecto-error' : undefined}
                       className="rounded-lg px-4 py-2.5 text-sm text-foreground transition-all duration-200 focus:outline-none appearance-none"
                       style={{
-                        background: 'oklch(0.14 0.016 240 / 0.7)',
-                        border: `1px solid ${errors.tipoproyecto ? 'oklch(0.75 0.22 340 / 0.6)' : 'oklch(1 0 0 / 0.1)'}`,
-                        color: form.tipoproyecto ? 'oklch(0.93 0.01 240)' : 'oklch(0.6 0.015 240)',
+                        background: 'var(--surface-input)',
+                        border: `1px solid ${errors.tipoproyecto ? 'var(--destructive)' : 'var(--input)'}`,
+                        color: form.tipoproyecto ? 'var(--foreground)' : 'var(--muted-foreground)',
                       }}
                     >
                       <option value="" disabled>
                         Selecciona una opción
                       </option>
                       {TIPOS_PROYECTO.map((t) => (
-                        <option key={t} value={t} style={{ background: 'oklch(0.12 0.015 240)', color: 'oklch(0.93 0.01 240)' }}>
+                        <option key={t} value={t} style={{ background: 'var(--popover)', color: 'var(--popover-foreground)' }}>
                           {t}
                         </option>
                       ))}
                     </select>
                     {errors.tipoproyecto && (
-                      <p id="tipoproyecto-error" role="alert" className="flex items-center gap-1.5 text-xs text-[oklch(0.75_0.22_340)]">
+                      <p id="tipoproyecto-error" role="alert" className="flex items-center gap-1.5 text-xs text-pink">
                         <AlertCircle size={12} />
                         {errors.tipoproyecto}
                       </p>
@@ -291,7 +287,7 @@ export function ContactForm() {
                   <div className="flex flex-col gap-1.5">
                     <label htmlFor="mensaje" className="text-sm font-medium text-foreground/80">
                       Mensaje
-                      <span className="ml-1 text-[oklch(0.75_0.22_340)]" aria-hidden="true">*</span>
+                      <span className="ml-1 text-pink" aria-hidden="true">*</span>
                     </label>
                     <textarea
                       id="mensaje"
@@ -304,20 +300,20 @@ export function ContactForm() {
                       aria-describedby={errors.mensaje ? 'mensaje-error' : undefined}
                       className="resize-none rounded-lg px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 transition-all duration-200 focus:outline-none"
                       style={{
-                        background: 'oklch(0.14 0.016 240 / 0.7)',
-                        border: `1px solid ${errors.mensaje ? 'oklch(0.75 0.22 340 / 0.6)' : 'oklch(1 0 0 / 0.1)'}`,
+                        background: 'var(--surface-input)',
+                        border: `1px solid ${errors.mensaje ? 'var(--destructive)' : 'var(--input)'}`,
                       }}
                       onFocus={(e) => {
-                        e.target.style.borderColor = `${turq}60`
-                        e.target.style.boxShadow = `0 0 0 3px ${turq}12`
+                        e.target.style.borderColor = 'var(--ring)'
+                        e.target.style.boxShadow = '0 0 0 3px color-mix(in oklch, var(--turquoise) 10%, transparent)'
                       }}
                       onBlur={(e) => {
-                        e.target.style.borderColor = errors.mensaje ? 'oklch(0.75 0.22 340 / 0.6)' : 'oklch(1 0 0 / 0.1)'
+                        e.target.style.borderColor = errors.mensaje ? 'var(--destructive)' : 'var(--input)'
                         e.target.style.boxShadow = 'none'
                       }}
                     />
                     {errors.mensaje && (
-                      <p id="mensaje-error" role="alert" className="flex items-center gap-1.5 text-xs text-[oklch(0.75_0.22_340)]">
+                      <p id="mensaje-error" role="alert" className="flex items-center gap-1.5 text-xs text-pink">
                         <AlertCircle size={12} />
                         {errors.mensaje}
                       </p>
@@ -326,13 +322,13 @@ export function ContactForm() {
 
                   {/* Required note */}
                   <p className="text-xs text-muted-foreground/50">
-                    Los campos marcados con <span className="text-[oklch(0.75_0.22_340)]">*</span> son obligatorios.
+                    Los campos marcados con <span className="text-pink">*</span> son obligatorios.
                   </p>
 
                   <button
                     type="submit"
                     disabled={status === 'submitting'}
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-turquoise px-6 py-3 text-sm font-semibold text-background shadow-lg transition-all duration-200 hover:bg-turquoise/90 hover:shadow-[0_0_24px_oklch(0.82_0.18_190/0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-turquoise/50 active:scale-[0.97] disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-turquoise px-6 py-3 text-sm font-semibold text-background shadow-lg transition-all duration-200 hover:bg-turquoise/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-turquoise/50 active:scale-[0.97] disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {status === 'submitting' ? (
                       <>

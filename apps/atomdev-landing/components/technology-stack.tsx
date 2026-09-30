@@ -82,8 +82,9 @@ function TechNode({
 }) {
   const colorVar =
     color === 'turquoise'
-      ? 'oklch(0.82 0.18 190)'
-      : 'oklch(0.75 0.22 340)'
+      ? 'var(--turquoise)'
+      : 'var(--pink)'
+  const tint = (percent: number) => `color-mix(in oklch, ${colorVar} ${percent}%, transparent)`
 
   return (
     <motion.div
@@ -98,16 +99,16 @@ function TechNode({
       whileHover={{ scale: 1.06 }}
       className="group relative flex items-center justify-center rounded-xl px-4 py-3 transition-all duration-200 cursor-default"
       style={{
-        background: `${colorVar}0d`,
-        border: `1px solid ${colorVar}25`,
+        background: tint(5),
+        border: `1px solid ${tint(16)}`,
       }}
     >
       {/* Hover glow */}
       <div
         className="absolute inset-0 rounded-xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
         style={{
-          background: `${colorVar}12`,
-          boxShadow: `0 0 16px ${colorVar}25`,
+          background: tint(8),
+          boxShadow: `0 0 16px ${tint(16)}`,
         }}
       />
       <span
@@ -127,7 +128,7 @@ export function TechnologyStack() {
       <div
         className="pointer-events-none absolute right-0 top-1/2 h-96 w-96 -translate-y-1/2 rounded-full opacity-10"
         style={{
-          background: 'radial-gradient(circle, oklch(0.82 0.18 190) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, var(--turquoise) 0%, transparent 70%)',
         }}
         aria-hidden="true"
       />
@@ -151,8 +152,8 @@ export function TechnologyStack() {
                   style={{
                     background:
                       cat.color === 'turquoise'
-                        ? 'oklch(0.82 0.18 190 / 0.2)'
-                        : 'oklch(0.75 0.22 340 / 0.2)',
+                        ? 'color-mix(in oklch, var(--turquoise) 20%, transparent)'
+                        : 'color-mix(in oklch, var(--pink) 20%, transparent)',
                   }}
                 />
                 <span
@@ -160,8 +161,8 @@ export function TechnologyStack() {
                   style={{
                     color:
                       cat.color === 'turquoise'
-                        ? 'oklch(0.82 0.18 190)'
-                        : 'oklch(0.75 0.22 340)',
+                        ? 'var(--turquoise)'
+                        : 'var(--pink)',
                   }}
                 >
                   {cat.label}
@@ -171,8 +172,8 @@ export function TechnologyStack() {
                   style={{
                     background:
                       cat.color === 'turquoise'
-                        ? 'oklch(0.82 0.18 190 / 0.2)'
-                        : 'oklch(0.75 0.22 340 / 0.2)',
+                        ? 'color-mix(in oklch, var(--turquoise) 20%, transparent)'
+                        : 'color-mix(in oklch, var(--pink) 20%, transparent)',
                   }}
                 />
               </div>

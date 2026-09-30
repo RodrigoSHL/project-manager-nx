@@ -22,14 +22,14 @@ export const metadata: Metadata = {
     'inspección de activos',
     'GridAssets',
   ],
-  authors: [{ name: 'Atom Dev', url: SITE_URL }],
-  creator: 'Atom Dev',
+  authors: [{ name: 'AtomDev', url: SITE_URL }],
+  creator: 'AtomDev',
   openGraph: {
     type: 'website',
     locale: 'es_CL',
     url: SITE_URL,
-    siteName: 'Atom Dev',
-    title: 'Atom Dev | Software para empresas y minería',
+    siteName: 'AtomDev',
+    title: 'AtomDev | Software para empresas y minería',
     description:
       'Diseñamos software a medida para empresas e industria minera, con plataformas de inspección y gestión de activos como GridAssets.',
   },
@@ -47,8 +47,8 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'dark',
-  themeColor: '#07090f',
+  colorScheme: 'light dark',
+  themeColor: '#f5f7fa',
   width: 'device-width',
   initialScale: 1,
 }
@@ -61,7 +61,7 @@ export default function RootLayout({
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'Atom Dev',
+    name: 'AtomDev',
     url: SITE_URL,
     description:
       'Desarrollo de software para empresas y minería. Creamos plataformas de inspección y gestión de activos, además de soluciones web, cloud y DevOps.',
@@ -73,8 +73,13 @@ export default function RootLayout({
   }
 
   return (
-    <html lang="es" className="bg-background">
+    <html lang="es" className="dark bg-background" suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try { const savedTheme = localStorage.getItem('atomdev-theme'); document.documentElement.classList.toggle('dark', savedTheme !== 'light'); } catch { document.documentElement.classList.add('dark'); }`,
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

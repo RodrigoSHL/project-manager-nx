@@ -76,7 +76,7 @@ export function WorkProcess() {
               className="absolute top-10 left-[8.33%] right-[8.33%] h-px"
               style={{
                 background:
-                  'linear-gradient(90deg, oklch(0.82 0.18 190 / 0.4), oklch(0.75 0.22 340 / 0.4), oklch(0.82 0.18 190 / 0.4))',
+                  'linear-gradient(90deg, color-mix(in oklch, var(--turquoise) 40%, transparent), color-mix(in oklch, var(--pink) 40%, transparent), color-mix(in oklch, var(--turquoise) 40%, transparent))',
               }}
               aria-hidden="true"
             />
@@ -85,8 +85,9 @@ export function WorkProcess() {
               const Icon = step.icon
               const colorVar =
                 step.color === 'turquoise'
-                  ? 'oklch(0.82 0.18 190)'
-                  : 'oklch(0.75 0.22 340)'
+                  ? 'var(--turquoise)'
+                  : 'var(--pink)'
+              const tint = (percent: number) => `color-mix(in oklch, ${colorVar} ${percent}%, transparent)`
 
               return (
                 <motion.div
@@ -105,9 +106,9 @@ export function WorkProcess() {
                   <div
                     className="relative z-10 flex h-20 w-20 items-center justify-center rounded-full transition-all duration-300 hover:scale-105"
                     style={{
-                      background: `${colorVar}12`,
-                      border: `1px solid ${colorVar}40`,
-                      boxShadow: `0 0 20px ${colorVar}20`,
+                      background: tint(8),
+                      border: `1px solid ${tint(25)}`,
+                      boxShadow: `0 0 20px ${tint(12)}`,
                     }}
                   >
                     <Icon size={26} style={{ color: colorVar }} />
@@ -116,7 +117,7 @@ export function WorkProcess() {
                       className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold"
                       style={{
                         background: colorVar,
-                        color: 'oklch(0.09 0.015 240)',
+                        color: 'var(--primary-foreground)',
                       }}
                     >
                       {step.number.slice(1)}
@@ -143,8 +144,9 @@ export function WorkProcess() {
             const Icon = step.icon
             const colorVar =
               step.color === 'turquoise'
-                ? 'oklch(0.82 0.18 190)'
-                : 'oklch(0.75 0.22 340)'
+                ? 'var(--turquoise)'
+                : 'var(--pink)'
+            const tint = (percent: number) => `color-mix(in oklch, ${colorVar} ${percent}%, transparent)`
             const isLast = i === STEPS.length - 1
 
             return (
@@ -165,9 +167,9 @@ export function WorkProcess() {
                   <div
                     className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full"
                     style={{
-                      background: `${colorVar}12`,
-                      border: `1px solid ${colorVar}40`,
-                      boxShadow: `0 0 12px ${colorVar}20`,
+                      background: tint(8),
+                      border: `1px solid ${tint(25)}`,
+                      boxShadow: `0 0 12px ${tint(12)}`,
                     }}
                   >
                     <Icon size={18} style={{ color: colorVar }} />
@@ -176,7 +178,7 @@ export function WorkProcess() {
                     <div
                       className="mt-2 w-px flex-1"
                       style={{
-                        background: `linear-gradient(${colorVar}40, transparent)`,
+                        background: `linear-gradient(${tint(25)}, transparent)`,
                         minHeight: 48,
                       }}
                     />

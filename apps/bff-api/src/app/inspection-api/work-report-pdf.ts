@@ -3,7 +3,7 @@ import PDFDocument from 'pdfkit';
 import sharp from 'sharp';
 import { AuthenticatedUser } from '../auth/types/authenticated-user';
 import { FilesApiService } from '../files-api/files-api.service';
-import { WorkReport, ReportItem } from './work-report';
+import { WorkReport, ReportItem, groupReportSections } from './work-report';
 
 const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
@@ -115,32 +115,35 @@ export class WorkReportPdf {
       line('', h.introduction);
     }
 
-    for (const section of report.sections) {
+    for (const section of groupReportSections(report.sections)) {
       ensure(100);
       heading(section.title);
-      doc
-        .font('Helvetica')
-        .fontSize(8)
-        .fillColor(muted)
-        .text(section.assetPath, LEFT, doc.y, { width: CONTENT_WIDTH });
-      doc.moveDown(0.35);
       if (section.description) line('', section.description);
-      for (const item of section.items) {
-        const content = itemText(item);
-        const textHeight = doc
-          .font('Helvetica')
+      for (const assetGroup of section.assetGroups ?? []) {
+        ensure(30);
+        doc
+          .font('Helvetica-Bold')
           .fontSize(9)
-          .heightOfString(content, { width: CONTENT_WIDTH - 20 });
-        ensure(textHeight + 16);
-        doc
-          .roundedRect(LEFT, doc.y, CONTENT_WIDTH, textHeight + 12, 3)
-          .fill('#F8FAFC');
-        doc
-          .fillColor(ink)
-          .text(content, LEFT + 8, doc.y + 6, { width: CONTENT_WIDTH - 16 });
-        doc.y += 10;
-        if (item.photos.length)
-          await this.drawPhotos(doc, item.photos, user, ensure);
+          .fillColor(muted)
+          .text(assetGroup.assetPath, LEFT, doc.y, { width: CONTENT_WIDTH });
+        doc.moveDown(0.25);
+        for (const item of assetGroup.items) {
+          const content = itemText(item);
+          const textHeight = doc
+            .font('Helvetica')
+            .fontSize(9)
+            .heightOfString(content, { width: CONTENT_WIDTH - 20 });
+          ensure(textHeight + 16);
+          doc
+            .roundedRect(LEFT, doc.y, CONTENT_WIDTH, textHeight + 12, 3)
+            .fill('#F8FAFC');
+          doc
+            .fillColor(ink)
+            .text(content, LEFT + 8, doc.y + 6, { width: CONTENT_WIDTH - 16 });
+          doc.y += 10;
+          if (item.photos.length)
+            await this.drawPhotos(doc, item.photos, user, ensure);
+        }
       }
     }
     heading('Observaciones adicionales');

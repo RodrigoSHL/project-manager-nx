@@ -27,23 +27,7 @@ export type WorkReport = {
     primaryColor?: string | null;
     footerText?: string | null;
   };
-  sections: Array<{
-    id: string;
-    title: string;
-    description?: string | null;
-    assetPath: string;
-    items: Array<{
-      id: string;
-      type: 'TASK' | 'CONCEPT';
-      title: string;
-      description?: string | null;
-      assetPath: string;
-      completed?: boolean | null;
-      value?: string | null;
-      observation?: string | null;
-      photos: Array<{ id: string; caption: string }>;
-    }>;
-  }>;
+  sections: ReportSection[];
   observations: string | null;
   findings: Array<{
     number: number;
@@ -56,6 +40,73 @@ export type WorkReport = {
     materials: string | null;
   }>;
 };
+
+export type ReportItem = {
+  id: string;
+  type: 'TASK' | 'CONCEPT';
+  title: string;
+  description?: string | null;
+  assetPath: string;
+  completed?: boolean | null;
+  value?: string | null;
+  observation?: string | null;
+  photos: Array<{ id: string; caption: string }>;
+};
+
+export type ReportAssetGroup = {
+  id: string;
+  assetPath: string;
+  items: ReportItem[];
+};
+
+export type ReportSection = {
+  id: string;
+  title: string;
+  description?: string | null;
+  /** Optional legacy fields keep saved report versions readable. */
+  assetPath: string;
+  items: ReportItem[];
+  assetGroups?: ReportAssetGroup[];
+};
+
+export function groupReportSections(sections: ReportSection[]) {
+  const grouped = new Map<string, ReportSection>();
+
+  for (const section of sections) {
+    const legacySeparator = section.id.lastIndexOf(':');
+    const id = section.assetGroups
+      ? section.id
+      : legacySeparator >= 0
+      ? section.id.slice(legacySeparator + 1)
+      : section.id;
+    const current = grouped.get(id) ?? {
+      ...section,
+      id,
+      assetPath: '',
+      items: [],
+      assetGroups: [],
+    };
+    const incomingGroups = section.assetGroups ?? [
+      {
+        id: section.assetPath || section.id,
+        assetPath: section.assetPath,
+        items: section.items,
+      },
+    ];
+    for (const incoming of incomingGroups) {
+      const assetGroup = current.assetGroups?.find(
+        (candidate) => candidate.id === incoming.id
+      );
+      if (assetGroup) assetGroup.items.push(...incoming.items);
+      else
+        current.assetGroups?.push({ ...incoming, items: [...incoming.items] });
+    }
+    current.items = current.assetGroups?.flatMap((group) => group.items) ?? [];
+    grouped.set(id, current);
+  }
+
+  return [...grouped.values()];
+}
 
 export type GeneratedReport = {
   id: string;

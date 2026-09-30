@@ -6,6 +6,7 @@ import { useOffline } from '../features/offline/offline-context';
 import { loadWorkPhotoUrl } from '../features/works/work-photo-api';
 import {
   GeneratedReport,
+  groupReportSections,
   ReportOptions,
   WorkReport,
   workReportApi,
@@ -263,6 +264,7 @@ function ReportDocument({
   version?: GeneratedReport;
 }) {
   const h = report.header;
+  const sections = groupReportSections(report.sections);
   const entries: Array<[string, string | null]> = [
     ['Fecha', h.executionDate],
     ['Trabajo', h.workId],
@@ -317,56 +319,66 @@ function ReportDocument({
           </p>
         </section>
       )}
-      {report.sections.map((section) => (
+      {sections.map((section) => (
         <section key={section.id} className="break-inside-avoid-page">
           <h3 className="border-b border-slate-200 pb-2 text-lg font-semibold">
             {section.title}
           </h3>
-          <p className="mt-1 text-xs text-slate-500">{section.assetPath}</p>
           {section.description && (
             <p className="mt-2 text-sm text-slate-600">{section.description}</p>
           )}
-          <div className="mt-3 space-y-3">
-            {section.items.map((item) => (
-              <div
-                key={item.id}
-                className="break-inside-avoid rounded-lg border border-slate-200 p-3 text-sm"
-              >
-                <div className="flex gap-3">
-                  <span className="font-semibold text-slate-700">
-                    {item.type === 'TASK' ? (item.completed ? '✓' : '○') : '•'}
-                  </span>
-                  <div>
-                    <p className="font-medium text-slate-950">
-                      {item.title}
-                      {item.type === 'CONCEPT' && (
-                        <span className="ml-2 font-normal text-slate-700">
-                          {item.value || '—'}
-                        </span>
-                      )}
-                    </p>
-                    {item.description && (
-                      <p className="text-slate-600">{item.description}</p>
-                    )}
-                    {item.observation && (
-                      <p className="mt-1 text-slate-700">
-                        <span className="font-medium">Observación:</span>{' '}
-                        {item.observation}
-                      </p>
+          <div className="mt-3 space-y-4">
+            {(section.assetGroups ?? []).map((assetGroup) => (
+              <div key={assetGroup.id} className="space-y-2">
+                <h4 className="text-sm font-semibold text-slate-600">
+                  {assetGroup.assetPath}
+                </h4>
+                {assetGroup.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="break-inside-avoid rounded-lg border border-slate-200 p-3 text-sm"
+                  >
+                    <div className="flex gap-3">
+                      <span className="font-semibold text-slate-700">
+                        {item.type === 'TASK'
+                          ? item.completed
+                            ? '✓'
+                            : '○'
+                          : '•'}
+                      </span>
+                      <div>
+                        <p className="font-medium text-slate-950">
+                          {item.title}
+                          {item.type === 'CONCEPT' && (
+                            <span className="ml-2 font-normal text-slate-700">
+                              {item.value || '—'}
+                            </span>
+                          )}
+                        </p>
+                        {item.description && (
+                          <p className="text-slate-600">{item.description}</p>
+                        )}
+                        {item.observation && (
+                          <p className="mt-1 text-slate-700">
+                            <span className="font-medium">Observación:</span>{' '}
+                            {item.observation}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    {item.photos.length > 0 && (
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        {item.photos.map((photo) => (
+                          <ReportPhoto
+                            key={photo.id}
+                            id={photo.id}
+                            caption={photo.caption}
+                          />
+                        ))}
+                      </div>
                     )}
                   </div>
-                </div>
-                {item.photos.length > 0 && (
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    {item.photos.map((photo) => (
-                      <ReportPhoto
-                        key={photo.id}
-                        id={photo.id}
-                        caption={photo.caption}
-                      />
-                    ))}
-                  </div>
-                )}
+                ))}
               </div>
             ))}
           </div>

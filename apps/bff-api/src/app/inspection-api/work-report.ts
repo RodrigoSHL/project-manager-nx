@@ -23,6 +23,59 @@ export type ReportItem = {
   photos: Array<{ id: string; caption: string }>;
 };
 
+export type ReportAssetGroup = {
+  id: string;
+  assetPath: string;
+  items: ReportItem[];
+};
+
+export type ReportSection = {
+  id: string;
+  title: string;
+  description?: string | null;
+  /** Kept for reports generated before sections were grouped by asset. */
+  assetPath: string;
+  items: ReportItem[];
+  assetGroups?: ReportAssetGroup[];
+};
+
+export function groupReportSections(sections: ReportSection[]) {
+  const grouped = new Map<string, ReportSection>();
+  for (const section of sections) {
+    const separator = section.id.lastIndexOf(':');
+    const id = section.assetGroups
+      ? section.id
+      : separator >= 0
+      ? section.id.slice(separator + 1)
+      : section.id;
+    const current = grouped.get(id) ?? {
+      ...section,
+      id,
+      assetPath: '',
+      items: [],
+      assetGroups: [],
+    };
+    const incomingGroups = section.assetGroups ?? [
+      {
+        id: section.assetPath || section.id,
+        assetPath: section.assetPath,
+        items: section.items,
+      },
+    ];
+    for (const incoming of incomingGroups) {
+      const assetGroup = current.assetGroups?.find(
+        (candidate) => candidate.id === incoming.id
+      );
+      if (assetGroup) assetGroup.items.push(...incoming.items);
+      else
+        current.assetGroups?.push({ ...incoming, items: [...incoming.items] });
+    }
+    current.items = current.assetGroups?.flatMap((group) => group.items) ?? [];
+    grouped.set(id, current);
+  }
+  return [...grouped.values()];
+}
+
 export type WorkReport = {
   header: {
     tenantId: string;
@@ -44,13 +97,7 @@ export type WorkReport = {
     introduction: string | null;
   };
   branding: ReportBranding;
-  sections: Array<{
-    id: string;
-    title: string;
-    description?: string | null;
-    assetPath: string;
-    items: ReportItem[];
-  }>;
+  sections: ReportSection[];
   observations: string | null;
   findings: Array<{
     number: number;
@@ -233,35 +280,20 @@ export class WorkReportBuilder {
         { id: photo.id, caption },
       ]);
     }
-    const groups = new Map<
-      string,
-      {
-        id: string;
-        title: string;
-        description?: string | null;
-        assetPath: string;
-        items: ReportItem[];
-        order: number;
-        assetOrder: number;
-      }
-    >();
+    const sections: ReportSection[] = [];
     for (const section of [...detail.snapshot.sections].sort(
       (a, b) => a.order - b.order
     )) {
+      const groups = new Map<string, ReportAssetGroup & { order: number }>();
       for (const item of [...section.items].sort((a, b) => a.order - b.order)) {
-        const key = `${item.assetId || work.assetId}:${section.id}`;
+        const assetId = item.assetId || work.assetId;
+        const key = assetId;
         if (!groups.has(key))
           groups.set(key, {
             id: key,
-            title: section.title,
-            description: section.description,
             assetPath: assetPath(item.assetId, item.assetNameSnapshot),
             items: [],
-            order: section.order,
-            assetOrder:
-              item.assetId === work.assetId || !item.assetId
-                ? -1
-                : item.assetOrder ?? 9999,
+            order: item.assetOrder ?? 0,
           });
         const response = responses.get(item.id);
         let value: string | null = null;
@@ -295,13 +327,23 @@ export class WorkReportBuilder {
           photos: photoByItem.get(item.id) || [],
         });
       }
+      if (groups.size) {
+        const assetGroups = [...groups.values()]
+          .sort(
+            (a, b) =>
+              a.order - b.order || a.assetPath.localeCompare(b.assetPath)
+          )
+          .map(({ id, assetPath, items }) => ({ id, assetPath, items }));
+        sections.push({
+          id: section.id,
+          title: section.title,
+          description: section.description,
+          assetPath: '',
+          assetGroups,
+          items: assetGroups.flatMap((group) => group.items),
+        });
+      }
     }
-    const sections = [...groups.values()].sort(
-      (a, b) =>
-        a.assetOrder - b.assetOrder ||
-        a.order - b.order ||
-        a.assetPath.localeCompare(b.assetPath)
-    );
     const severityById = new Map(
       severities.map((level) => [level.id, level.name])
     );
@@ -358,6 +400,7 @@ export class WorkReportBuilder {
         description: section.description,
         assetPath: section.assetPath,
         items: section.items,
+        assetGroups: section.assetGroups,
       })),
       observations: work.notes || null,
       findings,

@@ -2,17 +2,21 @@ import { useState } from 'react';
 import {
   ArrowRight,
   ArrowUpRight,
+  Activity,
   BarChart3,
   Building2,
   Check,
   ChevronRight,
+  Clock3,
   ClipboardCheck,
   CloudUpload,
+  FileBarChart2,
   FileText,
   Layers3,
   MapPinned,
   Menu,
   ShieldCheck,
+  TrendingUp,
   WifiOff,
   X,
   Zap,
@@ -183,8 +187,8 @@ export function LandingPage() {
                   Plataforma de inspección y gestión de activos
                 </p>
                 <h1 className="max-w-3xl text-balance text-5xl font-extrabold leading-[1.06] tracking-[-0.055em] sm:text-6xl lg:text-[4.65rem]">
-                  Cada activo cuenta una historia.{' '}
-                  <span className="text-blue-600">Tu equipo puede verla.</span>
+                  Inspecciones conectadas.{' '}
+                  <span className="text-blue-600">Activos bajo control.</span>
                 </h1>
               </div>
               <div className="lg:pt-10">
@@ -359,6 +363,179 @@ export function LandingPage() {
                   </li>
                 ))}
               </ol>
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-slate-950 py-20 text-white sm:py-28">
+          <div className="mx-auto grid max-w-7xl gap-14 px-5 sm:px-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:gap-20 lg:px-10">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-blue-300">
+                Menos trabajo manual, más contexto
+              </p>
+              <h2 className="mt-5 text-balance text-4xl font-extrabold leading-tight tracking-[-0.045em] sm:text-5xl">
+                Ahorra tiempo y decide con una visión más completa.
+              </h2>
+              <p className="mt-6 text-lg leading-relaxed text-slate-300">
+                Reúne inspecciones, mediciones, hallazgos e informes. Así el
+                equipo puede revisar la evolución de cada activo sin reconstruir
+                su historia desde varias planillas.
+              </p>
+              <ul className="mt-8 space-y-4 text-sm font-medium text-slate-200 sm:text-base">
+                <li className="flex items-start gap-3">
+                  <Clock3 className="mt-0.5 size-5 shrink-0 text-blue-300" />
+                  Dedica menos tiempo a consolidar datos y preparar reportes.
+                </li>
+                <li className="flex items-start gap-3">
+                  <TrendingUp className="mt-0.5 size-5 shrink-0 text-blue-300" />
+                  Compara mediciones y observa cómo evoluciona cada activo.
+                </li>
+                <li className="flex items-start gap-3">
+                  <FileBarChart2 className="mt-0.5 size-5 shrink-0 text-blue-300" />
+                  Comparte informes con respuestas, hallazgos y evidencias.
+                </li>
+              </ul>
+            </div>
+
+            <div className="min-w-0 space-y-4">
+              <div className="rounded-3xl border border-white/10 bg-white p-5 text-slate-950 shadow-2xl shadow-black/20 sm:p-7">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <span className="grid size-10 place-items-center rounded-xl bg-blue-50 text-blue-700">
+                      <Activity className="size-5" />
+                    </span>
+                    <div>
+                      <p className="font-bold">Evolución de mediciones</p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        Temperatura · Transformador T1
+                      </p>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    Ejemplo ilustrativo
+                  </span>
+                </div>
+
+                <div className="mt-5 rounded-2xl bg-slate-50 p-3 sm:p-5">
+                  <div className="flex items-center justify-between text-xs font-medium text-slate-500">
+                    <span>Historial del concepto</span>
+                    <span>°C</span>
+                  </div>
+                  <svg
+                    className="mt-3 h-48 w-full overflow-visible"
+                    viewBox="0 0 560 190"
+                    role="img"
+                    aria-label="Gráfico ilustrativo de mediciones históricas que permite observar su variación en el tiempo"
+                    preserveAspectRatio="none"
+                  >
+                    <defs>
+                      <linearGradient
+                        id="measurement-area"
+                        x1="0"
+                        x2="0"
+                        y1="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="0%"
+                          stopColor="#2563eb"
+                          stopOpacity="0.18"
+                        />
+                        <stop
+                          offset="100%"
+                          stopColor="#2563eb"
+                          stopOpacity="0"
+                        />
+                      </linearGradient>
+                    </defs>
+                    {[24, 68, 112, 156].map((y) => (
+                      <line
+                        key={y}
+                        x1="40"
+                        x2="548"
+                        y1={y}
+                        y2={y}
+                        stroke="#e2e8f0"
+                        strokeDasharray="4 6"
+                      />
+                    ))}
+                    <text x="2" y="28" fill="#94a3b8" fontSize="11">
+                      70
+                    </text>
+                    <text x="2" y="72" fill="#94a3b8" fontSize="11">
+                      60
+                    </text>
+                    <text x="2" y="116" fill="#94a3b8" fontSize="11">
+                      50
+                    </text>
+                    <text x="2" y="160" fill="#94a3b8" fontSize="11">
+                      40
+                    </text>
+                    <path
+                      d="M42 141 C88 137 94 114 146 119 S214 101 248 108 S328 84 350 91 S430 67 455 77 S518 51 546 57 L546 166 L42 166 Z"
+                      fill="url(#measurement-area)"
+                    />
+                    <path
+                      d="M42 141 C88 137 94 114 146 119 S214 101 248 108 S328 84 350 91 S430 67 455 77 S518 51 546 57"
+                      fill="none"
+                      stroke="#2563eb"
+                      strokeWidth="4"
+                      strokeLinecap="round"
+                    />
+                    {[
+                      [42, 141],
+                      [146, 119],
+                      [248, 108],
+                      [350, 91],
+                      [455, 77],
+                      [546, 57],
+                    ].map(([cx, cy]) => (
+                      <circle
+                        key={cx}
+                        cx={cx}
+                        cy={cy}
+                        r="5"
+                        fill="#fff"
+                        stroke="#2563eb"
+                        strokeWidth="3"
+                      />
+                    ))}
+                    <text x="40" y="185" fill="#94a3b8" fontSize="11">
+                      Jun
+                    </text>
+                    <text x="205" y="185" fill="#94a3b8" fontSize="11">
+                      Jul
+                    </text>
+                    <text x="370" y="185" fill="#94a3b8" fontSize="11">
+                      Ago
+                    </text>
+                    <text x="520" y="185" fill="#94a3b8" fontSize="11">
+                      Sep
+                    </text>
+                  </svg>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Cada punto representa una medición registrada.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-white/[0.07] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+                <div className="flex items-start gap-3">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-emerald-400/15 text-emerald-300">
+                    <ClipboardCheck className="size-5" />
+                  </span>
+                  <div>
+                    <p className="font-bold">Informe de inspección</p>
+                    <p className="mt-1 text-sm text-slate-300">
+                      Trabajo, mediciones, hallazgos y fotografías en un mismo
+                      registro.
+                    </p>
+                  </div>
+                </div>
+                <span className="inline-flex shrink-0 items-center gap-2 self-start rounded-full bg-emerald-400/15 px-3 py-1.5 text-xs font-semibold text-emerald-200 sm:self-center">
+                  <Check className="size-3.5" /> Trazable
+                </span>
+              </div>
             </div>
           </div>
         </section>

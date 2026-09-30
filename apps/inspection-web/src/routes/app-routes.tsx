@@ -15,6 +15,7 @@ import { AssetHistoryPage } from '../pages/asset-history-page';
 import { MeasurementAnalyticsPage } from '../pages/measurement-analytics-page';
 import { FindingsPage } from '../pages/findings-page';
 import { LoginPage } from '../pages/login-page';
+import { LandingPage } from '../pages/landing-page';
 import { WorksPage } from '../pages/works-page';
 import { NewWorkPage } from '../pages/new-work-page';
 import { WorkDetailPage } from '../pages/work-detail-page';
@@ -36,6 +37,7 @@ import { useOffline } from '../features/offline/offline-context';
 export function AppRoutes() {
   return (
     <Routes>
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route
         path="/platform/login"

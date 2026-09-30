@@ -78,9 +78,9 @@ export function Hero() {
               variants={item}
               className="text-4xl font-bold leading-tight text-balance text-foreground sm:text-5xl lg:text-6xl xl:text-7xl"
             >
-              Tecnología para operaciones exigentes.{' '}
+              Desarrollo de software{' '}
               <span className="text-turquoise text-glow-turquoise">
-                También en minería.
+                a escala atómica.
               </span>
             </motion.h1>
 

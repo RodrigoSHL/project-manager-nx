@@ -4,6 +4,7 @@ import { Header } from '@/components/header'
 import { Hero } from '@/components/hero'
 import { ValueProposition } from '@/components/value-proposition'
 import { Services } from '@/components/services'
+import { MiningShowcase } from '@/components/mining-showcase'
 import { TechnologyStack } from '@/components/technology-stack'
 import { WorkProcess } from '@/components/work-process'
 import { PublicSector } from '@/components/public-sector'
@@ -25,6 +26,7 @@ export default function Page() {
         <Hero />
         <ValueProposition />
         <Services />
+        <MiningShowcase />
         <TechnologyStack />
         <WorkProcess />
         <PublicSector />

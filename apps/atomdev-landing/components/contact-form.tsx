@@ -23,6 +23,7 @@ interface FormErrors {
 
 const TIPOS_PROYECTO = [
   'Desarrollo de software',
+  'Software para minería',
   'Modernización de plataforma',
   'Página o aplicación web',
   'DevOps y automatización',

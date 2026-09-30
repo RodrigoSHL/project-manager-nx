@@ -5,6 +5,7 @@ import { Mail } from 'lucide-react'
 const NAV_LINKS = [
   { label: 'Inicio', href: '#inicio' },
   { label: 'Servicios', href: '#servicios' },
+  { label: 'Minería / GridAssets', href: '#gridassets' },
   { label: 'Tecnologías', href: '#tecnologias' },
   { label: 'Cómo trabajamos', href: '#proceso' },
   { label: 'Contacto', href: '#contacto' },
@@ -58,7 +59,7 @@ export function Footer() {
               </span>
             </a>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              Ingeniería de software, cloud y automatización.
+              Ingeniería de software para empresas, minería y operaciones en terreno.
             </p>
           </div>
 

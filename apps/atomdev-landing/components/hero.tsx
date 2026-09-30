@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, type Variants } from 'framer-motion'
-import { ArrowRight, ChevronDown } from 'lucide-react'
+import { ArrowRight, ChevronDown, ExternalLink } from 'lucide-react'
 import { AtomAnimation } from './atom-animation'
 import { useEffect, useState } from 'react'
 
@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1]
 
 const CONCEPTS = [
+  'Software minero',
   'Software empresarial',
   'Sector público',
   'Cloud',
@@ -69,7 +70,7 @@ export function Hero() {
               variants={item}
               className="inline-flex items-center rounded-full border border-turquoise/30 bg-turquoise/10 px-4 py-1.5 text-xs font-semibold tracking-[0.18em] text-turquoise uppercase"
             >
-              INGENIERÍA DE SOFTWARE · CLOUD · DEVOPS
+              SOFTWARE · MINERÍA · CLOUD · DEVOPS
             </motion.span>
 
             {/* Title */}
@@ -77,9 +78,9 @@ export function Hero() {
               variants={item}
               className="text-4xl font-bold leading-tight text-balance text-foreground sm:text-5xl lg:text-6xl xl:text-7xl"
             >
-              Desarrollo de software{' '}
+              Tecnología para operaciones exigentes.{' '}
               <span className="text-turquoise text-glow-turquoise">
-                a escala atómica.
+                También en minería.
               </span>
             </motion.h1>
 
@@ -88,9 +89,9 @@ export function Hero() {
               variants={item}
               className="max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg"
             >
-              Diseñamos soluciones digitales robustas, modernas y escalables,
-              cuidando cada componente desde el levantamiento de requerimientos
-              hasta su despliegue en producción.
+              Creamos software a medida para empresas e industria minera: desde
+              procesos de terreno e inspección hasta plataformas que convierten
+              datos operacionales en información útil para decidir.
             </motion.p>
 
             {/* Buttons */}
@@ -105,12 +106,15 @@ export function Hero() {
                 Cuéntanos tu proyecto
                 <ArrowRight size={16} />
               </button>
-              <button
-                onClick={() => scrollTo('proceso')}
+              <a
+                href="https://inspection.atomdev.cl/"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.05] px-6 py-3 text-sm font-medium text-foreground transition-all duration-200 hover:border-white/20 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 active:scale-[0.97]"
               >
-                Conoce cómo trabajamos
-              </button>
+                Explora GridAssets
+                <ExternalLink size={15} />
+              </a>
             </motion.div>
           </motion.div>
 

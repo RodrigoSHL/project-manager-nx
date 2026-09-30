@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 const NAV_LINKS = [
   { label: 'Inicio', href: '#inicio' },
   { label: 'Servicios', href: '#servicios' },
+  { label: 'Minería / GridAssets', href: '#gridassets' },
   { label: 'Tecnologías', href: '#tecnologias' },
   { label: 'Cómo trabajamos', href: '#proceso' },
   { label: 'Contacto', href: '#contacto' },

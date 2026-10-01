@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../components/page-header';
 import { assetCatalogApi } from '../features/assets/asset-catalog-api';
 import type { Asset, Site } from '../features/assets/models';
@@ -8,6 +8,7 @@ import { analyticsApi } from '../features/analytics/analytics-api';
 import { VariableComparisonChart } from '../features/analytics/components/variable-comparison-chart';
 import {
   presetDates,
+  readDashboardFilters,
   type PeriodPreset,
 } from '../features/analytics/dashboard-filters';
 import type { AnalyticsMeasurements } from '../features/analytics/models';
@@ -25,18 +26,25 @@ const selectClass =
 type Pair = { assetId: string; conceptId: string };
 
 export function VariableComparisonPage() {
+  const [searchParams] = useSearchParams();
+  const [initialFilters] = useState(() => readDashboardFilters(searchParams));
   const { user } = useAuth();
   const access = useTenantAccess();
   const { mode } = useOffline();
-  const [tenantChoice, setTenantChoice] = useState('');
+  const [tenantChoice, setTenantChoice] = useState(
+    () => searchParams.get('tenantId') ?? ''
+  );
   const tenantId = resolveAvailableSelection(
     access.accessibleTenants,
     tenantChoice,
     organizationSelectionStorage.getTenantId(user?.userId ?? '')
   );
-  const [siteId, setSiteId] = useState('');
-  const [period, setPeriod] = useState<PeriodPreset>('6m');
-  const [dates, setDates] = useState(() => presetDates('6m'));
+  const [siteId, setSiteId] = useState(initialFilters.siteId ?? '');
+  const [period, setPeriod] = useState<PeriodPreset>(initialFilters.period);
+  const [dates, setDates] = useState({
+    from: initialFilters.from,
+    to: initialFilters.to,
+  });
   const [first, setFirst] = useState<Pair>({ assetId: '', conceptId: '' });
   const [second, setSecond] = useState<Pair>({ assetId: '', conceptId: '' });
   const filter = { siteId, from: dates.from, to: dates.to };
@@ -206,10 +214,10 @@ export function VariableComparisonPage() {
         description="Observa dos conceptos analógicos, incluso de activos distintos, sobre una misma línea de tiempo. Las mediciones provienen de trabajos finalizados o revisados."
       />
       <Link
-        to="/dashboard"
+        to={`/analytics/measurements?${searchParams.toString()}`}
         className="mb-5 inline-block text-sm font-medium text-slate-600 hover:text-slate-950"
       >
-        ← Volver al dashboard
+        ← Volver a análisis de mediciones
       </Link>
       {mode !== 'REMOTE' ? (
         <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">

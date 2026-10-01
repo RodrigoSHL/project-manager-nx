@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ChartNoAxesCombined } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../components/page-header';
 import { assetCatalogApi } from '../features/assets/asset-catalog-api';
@@ -232,12 +233,21 @@ export function MeasurementAnalyticsPage() {
         title="Análisis de mediciones"
         description="Compara mediciones históricas de inspecciones ejecutadas entre activos para un mismo concepto."
       />
-      <Link
-        to={`/dashboard?${backParams.toString()}`}
-        className="mb-5 inline-block text-sm font-medium text-slate-600 hover:text-slate-950"
-      >
-        ← Volver al dashboard
-      </Link>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <Link
+          to={`/dashboard?${backParams.toString()}`}
+          className="text-sm font-medium text-slate-600 hover:text-slate-950"
+        >
+          ← Volver al dashboard
+        </Link>
+        <Link
+          to={`/analytics/variables?${params.toString()}`}
+          className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-800 shadow-sm hover:border-slate-400 hover:bg-slate-50"
+        >
+          <ChartNoAxesCombined className="size-4" aria-hidden="true" />
+          Comparar variables
+        </Link>
+      </div>
       {access.isLoading ? (
         <Message text="Cargando empresas disponibles…" />
       ) : !tenantId ? (

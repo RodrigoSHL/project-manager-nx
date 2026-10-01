@@ -11,7 +11,6 @@ import {
   Zap,
   Database,
   RefreshCw,
-  ChartNoAxesCombined,
 } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Button } from '../components/ui/button';
@@ -36,11 +35,6 @@ type NavigationItem = {
 
 const navigation: NavigationItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  {
-    to: '/analytics/variables',
-    label: 'Comparar variables',
-    icon: ChartNoAxesCombined,
-  },
   { to: '/assets', label: 'Activos', icon: Building2 },
   { to: '/works', label: 'Trabajos', icon: ClipboardList },
   { to: '/findings', label: 'Hallazgos', icon: AlertTriangle },

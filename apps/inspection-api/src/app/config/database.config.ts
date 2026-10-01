@@ -47,6 +47,7 @@ import { PrepareAnalyticsHistory1799102000000 } from '../../migrations/179910200
 import { IndexAnalyticsFindings1799102100000 } from '../../migrations/1799102100000-IndexAnalyticsFindings';
 import { TenantReportSettingsEntity } from '../catalog/entities/tenant-report-settings.entity';
 import { CreateTenantReportSettings1799102200000 } from '../../migrations/1799102200000-CreateTenantReportSettings';
+import { AddConceptResponseMeasurementTime1799102300000 } from '../../migrations/1799102300000-AddConceptResponseMeasurementTime';
 
 export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
   type: 'postgres',
@@ -115,6 +116,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     PrepareAnalyticsHistory1799102000000,
     IndexAnalyticsFindings1799102100000,
     CreateTenantReportSettings1799102200000,
+    AddConceptResponseMeasurementTime1799102300000,
   ],
   migrationsRun: process.env.INSPECTION_MIGRATIONS_RUN === 'true',
   synchronize: false,

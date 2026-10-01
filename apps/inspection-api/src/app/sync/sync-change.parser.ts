@@ -105,7 +105,17 @@ export class SyncChangeParser {
         payload.measuredAt === undefined
           ? undefined
           : this.requiredDate(payload.measuredAt),
+      measuredAtTime:
+        payload.measuredAtTime === undefined || payload.measuredAtTime === null
+          ? (payload.measuredAtTime as null | undefined)
+          : this.requiredMeasurementTime(payload.measuredAtTime),
     };
+  }
+
+  private requiredMeasurementTime(value: unknown): string {
+    if (typeof value !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(value))
+      throw new BadRequestException('measuredAtTime must use HH:mm');
+    return value;
   }
 
   private parseTask(payload: Record<string, unknown>): TaskPayload {

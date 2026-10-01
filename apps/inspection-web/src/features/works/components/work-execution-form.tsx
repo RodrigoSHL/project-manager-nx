@@ -93,6 +93,8 @@ export function WorkExecutionForm({
         valueNumber: response.valueNumber,
         valueText: response.valueText,
         selectedOptionId: response.selectedOptionId,
+        measuredAt: response.measuredAt,
+        measuredAtTime: response.measuredAtTime?.slice(0, 5) ?? null,
       };
     }
     for (const completion of taskCompletions.filter(
@@ -373,7 +375,7 @@ export function WorkExecutionForm({
           <p className="mt-1 text-xs text-slate-500">{concept.description}</p>
         ) : null}
         {concept.type === 'ANALOG' ? (
-          <div className="mt-2 flex items-center gap-2">
+          <div className="mt-2 flex flex-wrap items-end gap-2">
             <input
               type="number"
               disabled={readonly}
@@ -393,6 +395,37 @@ export function WorkExecutionForm({
                 {concept.unit}
               </span>
             ) : null}
+            <label className="flex min-w-40 flex-col text-xs font-medium text-slate-600">
+              Fecha de medición
+              <input
+                type="date"
+                disabled={readonly}
+                value={
+                  value.measuredAt?.slice(0, 10) ??
+                  work.executionDate.slice(0, 10)
+                }
+                onChange={(event) =>
+                  update(item.id, {
+                    measuredAt: event.target.value || undefined,
+                  })
+                }
+                className="mt-1 h-11 rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-900 disabled:bg-slate-50"
+              />
+            </label>
+            <label className="flex min-w-32 flex-col text-xs font-medium text-slate-600">
+              Hora de medición (opcional)
+              <input
+                type="time"
+                disabled={readonly}
+                value={value.measuredAtTime?.slice(0, 5) ?? ''}
+                onChange={(event) =>
+                  update(item.id, {
+                    measuredAtTime: event.target.value || null,
+                  })
+                }
+                className="mt-1 h-11 rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-900 disabled:bg-slate-50"
+              />
+            </label>
           </div>
         ) : null}
         {concept.type === 'DIGITAL' ? (

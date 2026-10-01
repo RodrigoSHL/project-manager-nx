@@ -149,6 +149,8 @@ describe('localWorkRepository', () => {
     await localWorkRepository.saveResponses(tenantId, work.id, {
       [rootItem?.id ?? 'missing']: {
         valueNumber: 42,
+        measuredAt: '2026-09-12',
+        measuredAtTime: '14:35',
         comment: 'Lectura estable',
       },
     });
@@ -170,6 +172,8 @@ describe('localWorkRepository', () => {
     expect(foreign).toBeUndefined();
     expect(responses[0]).toMatchObject({
       valueNumber: 42,
+      measuredAt: '2026-09-12',
+      measuredAtTime: '14:35',
       syncStatus: 'LOCAL_ONLY',
     });
     expect(annotations[0]).toMatchObject({
@@ -191,6 +195,7 @@ describe('localWorkRepository', () => {
     await inspectionDb.works.update(work.id, { syncStatus: 'SYNCED' });
     await inspectionDb.conceptResponses.update(responses[0].id, {
       syncStatus: 'SYNCED',
+      measuredAtTime: '14:35:00',
     });
     await inspectionDb.annotations.update(annotations[0].id, {
       syncStatus: 'SYNCED',
@@ -210,6 +215,8 @@ describe('localWorkRepository', () => {
     expect(modifiedResponse).toMatchObject({
       id: responses[0].id,
       valueNumber: 43,
+      measuredAt: '2026-09-12',
+      measuredAtTime: '14:35',
       syncStatus: 'MODIFIED',
     });
   });

@@ -370,7 +370,9 @@ describe('WorksService', () => {
     works.findOne.mockResolvedValue(work);
 
     await service.saveResponses(tenantId, workId, {
-      responses: [{ formItemId: itemId, valueNumber: 85 }],
+      responses: [
+        { formItemId: itemId, valueNumber: 85, measuredAtTime: '14:35' },
+      ],
       taskCompletions: [],
       annotations: [],
     });
@@ -381,6 +383,7 @@ describe('WorksService', () => {
         workId,
         formItemId: itemId,
         measuredAt: '2026-09-10',
+        measuredAtTime: '14:35',
         valueNumber: 85,
       }),
     ]);
@@ -410,6 +413,7 @@ describe('WorksService', () => {
         id: '96a056f5-28cc-4593-9b70-52462db609f8',
         formItemId: itemId,
         measuredAt: '2026-09-01',
+        measuredAtTime: '14:35',
       },
     ]);
 
@@ -420,7 +424,10 @@ describe('WorksService', () => {
     });
 
     expect(responseRepository.save).toHaveBeenCalledWith([
-      expect.objectContaining({ measuredAt: '2026-09-01' }),
+      expect.objectContaining({
+        measuredAt: '2026-09-01',
+        measuredAtTime: '14:35',
+      }),
     ]);
   });
 

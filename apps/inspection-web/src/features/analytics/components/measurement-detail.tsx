@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { MeasurementPoint, MeasurementSeries } from '../models';
 import {
-  formatMeasurementDate,
+  formatMeasurementDateTime,
   formatMeasurementValue,
   measurementStatus,
 } from '../measurement-comparison';
@@ -49,7 +49,7 @@ export function MeasurementDetail({
       <dl className="mt-4 grid gap-3 border-t border-slate-100 pt-4 text-sm sm:grid-cols-2">
         <div>
           <dt className="text-xs text-slate-500">Fecha de medición</dt>
-          <dd>{formatMeasurementDate(point.measuredAt)}</dd>
+          <dd>{formatMeasurementDateTime(point)}</dd>
         </div>
         <div>
           <dt className="text-xs text-slate-500">

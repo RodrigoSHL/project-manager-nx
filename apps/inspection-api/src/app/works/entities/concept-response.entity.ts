@@ -42,6 +42,10 @@ export class ConceptResponseEntity {
   @Column({ name: 'measured_at', type: 'date' })
   measuredAt!: string;
 
+  // Optional local time at the inspection site. Historical date-only rows stay null.
+  @Column({ name: 'measured_at_time', type: 'time', nullable: true })
+  measuredAtTime?: string | null;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 

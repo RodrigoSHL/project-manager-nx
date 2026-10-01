@@ -298,7 +298,8 @@ export class AnalyticsService {
       SELECT r.id AS "responseId", r.concept_id AS "conceptId", w.id AS "workId",
         w.title AS "workTitle",
         EXISTS (SELECT 1 FROM generated_reports gr WHERE gr.tenant_id = w.tenant_id AND gr.work_id = w.id) AS "hasReport",
-        w.execution_date AS "workDate", r.measured_at AS "measuredAt", r.form_item_id AS "workItemId",
+        w.execution_date AS "workDate", r.measured_at AS "measuredAt",
+        r.measured_at_time AS "measuredAtTime", r.form_item_id AS "workItemId",
         ${itemAsset} AS "assetId", COALESCE(item->>'assetNameSnapshot',asset.name) AS "assetName",
         item->'concept'->>'name' AS "conceptName", item->'concept'->>'unit' AS unit,
         r.value_number AS value,
@@ -334,11 +335,11 @@ export class AnalyticsService {
         FROM measured)
         SELECT "assetId", max("assetName") AS "assetName", count(*)::integer AS count,
           min(value) AS min, max(value) AS max, avg(value) AS avg,
-          (array_agg(value ORDER BY "measuredAt" DESC,"workDate" DESC,"workId" DESC,"workItemId" DESC))[1] AS latest,
-          (array_agg("measuredAt" ORDER BY "measuredAt" DESC,"workDate" DESC,"workId" DESC,"workItemId" DESC))[1] AS "latestMeasuredAt",
-          (array_agg("minValue" ORDER BY "measuredAt" DESC,"workDate" DESC,"workId" DESC,"workItemId" DESC))[1] AS "latestMinValue",
-          (array_agg("maxValue" ORDER BY "measuredAt" DESC,"workDate" DESC,"workId" DESC,"workItemId" DESC))[1] AS "latestMaxValue",
-          (array_agg("isInRange" ORDER BY "measuredAt" DESC,"workDate" DESC,"workId" DESC,"workItemId" DESC))[1] AS "latestIsInRange",
+          (array_agg(value ORDER BY "measuredAt" DESC,"measuredAtTime" DESC NULLS LAST,"workDate" DESC,"workId" DESC,"workItemId" DESC))[1] AS latest,
+          (array_agg("measuredAt" ORDER BY "measuredAt" DESC,"measuredAtTime" DESC NULLS LAST,"workDate" DESC,"workId" DESC,"workItemId" DESC))[1] AS "latestMeasuredAt",
+          (array_agg("minValue" ORDER BY "measuredAt" DESC,"measuredAtTime" DESC NULLS LAST,"workDate" DESC,"workId" DESC,"workItemId" DESC))[1] AS "latestMinValue",
+          (array_agg("maxValue" ORDER BY "measuredAt" DESC,"measuredAtTime" DESC NULLS LAST,"workDate" DESC,"workId" DESC,"workItemId" DESC))[1] AS "latestMaxValue",
+          (array_agg("isInRange" ORDER BY "measuredAt" DESC,"measuredAtTime" DESC NULLS LAST,"workDate" DESC,"workId" DESC,"workItemId" DESC))[1] AS "latestIsInRange",
           count(*) FILTER (WHERE "isInRange" = true)::integer AS "inRange",
           count(*) FILTER (WHERE "isInRange" IS NOT NULL)::integer AS evaluable
         FROM evaluated GROUP BY "assetId" ORDER BY "assetName","assetId"`,
@@ -349,7 +350,7 @@ export class AnalyticsService {
         LEFT JOIN LATERAL (SELECT f.id,f.title FROM findings f WHERE f.tenant_id = $1::uuid AND f.work_id = m."workId"
           AND f.work_item_id = m."workItemId" AND f.asset_id = m."assetId"
           AND f.concept_id = m."conceptId" AND f.source = 'ANALOG' ORDER BY f.id LIMIT 1) finding ON true
-        ORDER BY m."measuredAt",m."workDate",m."workId",m."workItemId"
+        ORDER BY m."measuredAt",m."measuredAtTime" NULLS FIRST,m."workDate",m."workId",m."workItemId"
         LIMIT $${scope.params.length + 1}::integer OFFSET $${
           scope.params.length + 2
         }::integer`,
@@ -401,6 +402,7 @@ export class AnalyticsService {
         hasReport,
         workDate,
         measuredAt,
+        measuredAtTime,
         value,
         minValue,
         maxValue,
@@ -415,6 +417,7 @@ export class AnalyticsService {
         hasReport,
         workDate: dateOnly(workDate),
         measuredAt: dateOnly(measuredAt),
+        measuredAtTime: measuredAtTime?.slice(0, 5) ?? undefined,
         value,
         minValue: minValue ?? undefined,
         maxValue: maxValue ?? undefined,

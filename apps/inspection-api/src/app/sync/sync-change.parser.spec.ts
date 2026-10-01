@@ -56,12 +56,17 @@ describe('SyncChangeParser', () => {
         conceptId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
         valueNumber: 85,
         measuredAt: '2026-09-15',
+        measuredAtTime: '14:35',
       },
     };
     expect(parser.parse(tenantId, change).parsedPayload).toMatchObject({
       measuredAt: '2026-09-15',
+      measuredAtTime: '14:35',
     });
     change.payload.measuredAt = 'invalid';
+    expect(() => parser.parse(tenantId, change)).toThrow(BadRequestException);
+    change.payload.measuredAt = '2026-09-15';
+    change.payload.measuredAtTime = '25:91';
     expect(() => parser.parse(tenantId, change)).toThrow(BadRequestException);
   });
 });

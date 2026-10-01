@@ -30,6 +30,7 @@ export type WorkResponsesPayload = {
     valueText?: string;
     selectedOptionId?: string;
     measuredAt?: string;
+    measuredAtTime?: string | null;
   }>;
   taskCompletions: Array<{ formItemId: string; completed: boolean }>;
   annotations: Array<{
@@ -171,7 +172,14 @@ export function toWorkResponsesPayload(
     const concept = item.concept;
     if (!concept || !value) continue;
     if (concept.type === 'ANALOG' && Number.isFinite(value.valueNumber)) {
-      responses.push({ formItemId: item.id, valueNumber: value.valueNumber });
+      responses.push({
+        formItemId: item.id,
+        valueNumber: value.valueNumber,
+        measuredAt: value.measuredAt,
+        ...(value.measuredAtTime !== undefined
+          ? { measuredAtTime: value.measuredAtTime }
+          : {}),
+      });
     }
     if (concept.type === 'TEXT' && value.valueText?.trim()) {
       responses.push({

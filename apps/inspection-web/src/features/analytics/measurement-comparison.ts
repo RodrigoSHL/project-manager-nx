@@ -47,6 +47,15 @@ export function formatMeasurementDate(value?: string): string {
   return match ? `${match[3]}/${match[2]}/${match[1]}` : value;
 }
 
+export function formatMeasurementDateTime(
+  point: Pick<MeasurementPoint, 'measuredAt' | 'measuredAtTime'>
+): string {
+  const date = formatMeasurementDate(point.measuredAt);
+  return point.measuredAtTime
+    ? `${date}, ${point.measuredAtTime.slice(0, 5)}`
+    : date;
+}
+
 export function formatMeasurementValue(
   value: number,
   unit?: string | null
@@ -61,7 +70,11 @@ export function toChartRows(series: MeasurementSeries[]): ChartRow[] {
     .flatMap((asset) =>
       asset.measurements.map((point) => ({
         key: point.responseId,
-        timestamp: Date.parse(`${point.measuredAt.slice(0, 10)}T00:00:00Z`),
+        timestamp: Date.parse(
+          `${point.measuredAt.slice(0, 10)}T${
+            point.measuredAtTime?.slice(0, 5) ?? '00:00'
+          }:00Z`
+        ),
         points: { [asset.assetId]: point },
         [asset.assetId]: point.value,
       }))

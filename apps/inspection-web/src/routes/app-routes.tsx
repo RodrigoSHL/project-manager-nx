@@ -14,6 +14,7 @@ import { AssetsPage } from '../pages/assets-page';
 import { DashboardPage } from '../pages/dashboard-page';
 import { AssetHistoryPage } from '../pages/asset-history-page';
 import { MeasurementAnalyticsPage } from '../pages/measurement-analytics-page';
+import { VariableComparisonPage } from '../pages/variable-comparison-page';
 import { FindingsPage } from '../pages/findings-page';
 import { LoginPage } from '../pages/login-page';
 import { LandingPage } from '../pages/landing-page';
@@ -53,6 +54,10 @@ export function AppRoutes() {
             <Route
               path="/analytics/measurements"
               element={<MeasurementAnalyticsPage />}
+            />
+            <Route
+              path="/analytics/variables"
+              element={<VariableComparisonPage />}
             />
             <Route path="/assets" element={<AssetsPage />} />
             <Route path="/works" element={<WorksPage />} />

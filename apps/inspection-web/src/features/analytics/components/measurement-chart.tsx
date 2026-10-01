@@ -13,6 +13,7 @@ import type { MeasurementSeries } from '../models';
 import {
   constantHistoricalLimits,
   formatMeasurementDate,
+  formatMeasurementDateTime,
   formatMeasurementValue,
   measurementStatus,
   toChartRows,
@@ -104,7 +105,7 @@ function MeasurementTooltip({
         {formatMeasurementValue(point.value, unit)}
       </p>
       <p className="mt-1 text-slate-600">
-        Medido el {formatMeasurementDate(point.measuredAt)}
+        Medido el {formatMeasurementDateTime(point)}
       </p>
       <p className="text-slate-600">
         Rango aplicado: {point.minValue ?? '—'} a {point.maxValue ?? '—'}{' '}
@@ -135,6 +136,9 @@ export function MeasurementChart({
 }) {
   const rows = toChartRows(series);
   const limits = constantHistoricalLimits(series);
+  const hasTime = series.some((asset) =>
+    asset.measurements.some((point) => Boolean(point.measuredAtTime))
+  );
   if (!rows.length)
     return (
       <p className="rounded-lg border border-dashed border-slate-200 p-8 text-center text-sm text-slate-600">
@@ -160,9 +164,11 @@ export function MeasurementChart({
                 type="number"
                 scale="time"
                 domain={['dataMin', 'dataMax']}
-                tickFormatter={(value: number) =>
-                  formatMeasurementDate(new Date(value).toISOString())
-                }
+                tickFormatter={(value: number) => {
+                  const iso = new Date(value).toISOString();
+                  const date = formatMeasurementDate(iso);
+                  return hasTime ? `${date} ${iso.slice(11, 16)}` : date;
+                }}
                 tick={{ fontSize: 11, fill: '#64748b' }}
               />
               <YAxis
@@ -265,7 +271,8 @@ export function MeasurementChart({
       )}
       <p className="mt-1 text-xs text-slate-500">
         Las líneas unen únicamente observaciones reales de Works; no se crean
-        mediciones intermedias. La fecha es el día de inspección registrado.
+        mediciones intermedias. La fecha es el día de inspección; si existe una
+        hora, se usa para ordenar las lecturas.
       </p>
     </>
   );

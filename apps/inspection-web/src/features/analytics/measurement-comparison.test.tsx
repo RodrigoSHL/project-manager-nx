@@ -5,6 +5,7 @@ import { MeasurementDetail } from './components/measurement-detail';
 import { MeasurementStatCard } from './components/measurement-stat-card';
 import {
   constantHistoricalLimits,
+  formatMeasurementDateTime,
   MAX_ASSET_SERIES,
   measurementStatus,
   parseAssetIds,
@@ -91,6 +92,34 @@ describe('historical measurement comparison', () => {
       'Fuera de rango',
       'En rango',
     ]);
+  });
+
+  it('orders same-day readings by recorded time while preserving date-only readings', () => {
+    const readings = series('fan-1', 'Ventilador 1', [
+      {
+        ...point('afternoon', '2026-09-29', 60, 42, false),
+        measuredAtTime: '15:00',
+      },
+      {
+        ...point('morning', '2026-09-29', 44, 42, false),
+        measuredAtTime: '09:00',
+      },
+      point('legacy', '2026-09-28', 1, 42, false),
+    ]);
+    const rows = toChartRows([readings]);
+
+    expect(rows.map((row) => row.key)).toEqual([
+      'legacy',
+      'morning',
+      'afternoon',
+    ]);
+    expect(rows[2].timestamp - rows[1].timestamp).toBe(6 * 60 * 60 * 1000);
+    expect(formatMeasurementDateTime(readings.measurements[0])).toBe(
+      '29/09/2026, 15:00'
+    );
+    expect(formatMeasurementDateTime(readings.measurements[2])).toBe(
+      '28/09/2026'
+    );
   });
 
   it('deduplicates URL assets and enforces the five-series limit', () => {

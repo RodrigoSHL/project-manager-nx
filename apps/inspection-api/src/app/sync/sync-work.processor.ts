@@ -200,6 +200,10 @@ export class SyncWorkProcessor {
         conceptId: payload.conceptId,
         measuredAt:
           payload.measuredAt ?? existing?.measuredAt ?? work.executionDate,
+        measuredAtTime:
+          payload.measuredAtTime === undefined
+            ? existing?.measuredAtTime ?? null
+            : payload.measuredAtTime,
         ...value,
       })
     );

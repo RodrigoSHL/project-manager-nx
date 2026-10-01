@@ -29,6 +29,7 @@ export type ResponsePayload = {
   valueText?: string;
   selectedOptionId?: string;
   measuredAt?: string;
+  measuredAtTime?: string | null;
 };
 
 export type TaskPayload = {

@@ -343,6 +343,10 @@ export class WorksService {
               selectedOptionId: value.selectedOptionId ?? null,
               measuredAt:
                 value.measuredAt ?? previous?.measuredAt ?? work.executionDate,
+              measuredAtTime:
+                value.measuredAtTime === undefined
+                  ? previous?.measuredAtTime ?? null
+                  : value.measuredAtTime,
               createdAt: previous?.createdAt,
             });
           })
@@ -450,6 +454,7 @@ export class WorksService {
         formItemId: item.id,
         valueNumber: value.valueNumber,
         measuredAt: value.measuredAt,
+        measuredAtTime: value.measuredAtTime,
       };
     }
     if (concept.type === ConceptType.TEXT && value.valueText?.trim()) {
@@ -457,6 +462,7 @@ export class WorksService {
         formItemId: item.id,
         valueText: value.valueText.trim(),
         measuredAt: value.measuredAt,
+        measuredAtTime: value.measuredAtTime,
       };
     }
     if (
@@ -468,6 +474,7 @@ export class WorksService {
         formItemId: item.id,
         selectedOptionId: value.selectedOptionId,
         measuredAt: value.measuredAt,
+        measuredAtTime: value.measuredAtTime,
       };
     }
     throw new BadRequestException(

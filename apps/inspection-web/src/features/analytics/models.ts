@@ -74,6 +74,7 @@ export type MeasurementPoint = {
   hasReport: boolean;
   workDate: string;
   measuredAt: string;
+  measuredAtTime?: string;
   value: number;
   minValue?: number;
   maxValue?: number;

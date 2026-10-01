@@ -89,6 +89,7 @@ describe('AnalyticsService', () => {
           workId: 'work-2',
           workDate: '2026-09-02',
           measuredAt: '2026-09-02',
+          measuredAtTime: '14:35:00',
           value: 62,
           minValue: 0,
           maxValue: 80,
@@ -125,7 +126,13 @@ describe('AnalyticsService', () => {
       latest: 84,
       percentageInRange: 50,
     });
+    expect(result.series[1].measurements[0]).toMatchObject({
+      measuredAtTime: '14:35',
+    });
     expect(query.mock.calls[1][0]).toContain('GROUP BY "assetId"');
+    expect(query.mock.calls[1][0]).toContain(
+      '"measuredAtTime" DESC NULLS LAST'
+    );
     expect(query.mock.calls[2][0]).toContain('ORDER BY m."measuredAt"');
     expect(query.mock.calls[2][1]).toContainEqual([assetId, secondAsset]);
   });

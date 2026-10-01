@@ -263,7 +263,14 @@ export const localWorkRepository: WorkRepository = {
               valueText: value.valueText?.trim() || undefined,
               selectedOptionId: value.selectedOptionId,
               measuredAt:
-                responseByItem.get(item.id)?.measuredAt ?? work.executionDate,
+                value.measuredAt ??
+                responseByItem.get(item.id)?.measuredAt ??
+                work.executionDate,
+              measuredAtTime:
+                value.measuredAtTime === undefined
+                  ? responseByItem.get(item.id)?.measuredAtTime?.slice(0, 5) ??
+                    null
+                  : value.measuredAtTime?.slice(0, 5) ?? null,
               createdAt: responseByItem.get(item.id)?.createdAt ?? now,
               updatedAt: now,
               syncStatus: status,

@@ -32,6 +32,7 @@ export interface ConceptResponse {
   valueText?: string;
   selectedOptionId?: string;
   measuredAt?: string;
+  measuredAtTime?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -156,7 +157,11 @@ export type CreateWorkInput = Pick<
 
 export type ResponseValue = Pick<
   ConceptResponse,
-  'valueNumber' | 'valueText' | 'selectedOptionId'
+  | 'valueNumber'
+  | 'valueText'
+  | 'selectedOptionId'
+  | 'measuredAt'
+  | 'measuredAtTime'
 >;
 
 export type WorkItemValue = ResponseValue & {

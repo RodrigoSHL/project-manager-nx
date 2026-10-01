@@ -11,6 +11,11 @@ describe('WorkReportPdf', () => {
     })
       .png()
       .toBuffer();
+    const logo = await sharp({
+      create: { width: 300, height: 100, channels: 3, background: '#008a96' },
+    })
+      .webp()
+      .toBuffer();
     const files = {
       content: jest
         .fn()
@@ -39,7 +44,11 @@ describe('WorkReportPdf', () => {
         receivedBy: null,
         introduction: 'Revisión del equipo.',
       },
-      branding: { tenantId: 'tenant', companyName: 'Minera de prueba' },
+      branding: {
+        tenantId: 'tenant',
+        companyName: 'Minera de prueba',
+        logoUrl: `data:image/webp;base64,${logo.toString('base64')}`,
+      },
       sections: Array.from({ length: 5 }, (_, section) => ({
         id: String(section),
         title: `Sección ${section + 1}`,
@@ -81,11 +90,24 @@ describe('WorkReportPdf', () => {
     });
     expect(buffer.subarray(0, 4).toString()).toBe('%PDF');
     expect(buffer.length).toBeGreaterThan(3000);
+    expect(
+      (buffer.toString('latin1').match(/\/Type \/Page\b/g) || []).length
+    ).toBeGreaterThanOrEqual(3);
     expect(files.content).toHaveBeenCalledTimes(8);
     expect(
       (buffer.toString('latin1').match(/\/Type \/Page\b/g) || []).length
     ).toBeLessThan(15);
     if (process.env.REPORT_PDF_SAMPLE_PATH)
       writeFileSync(process.env.REPORT_PDF_SAMPLE_PATH, buffer);
+    const defaultLogo = await renderer.render(
+      { ...report, branding: { ...report.branding, logoUrl: null } },
+      {} as never
+    );
+    expect(defaultLogo.subarray(0, 4).toString()).toBe('%PDF');
+    if (process.env.REPORT_PDF_SAMPLE_PATH)
+      writeFileSync(
+        process.env.REPORT_PDF_SAMPLE_PATH.replace(/\.pdf$/, '-default.pdf'),
+        defaultLogo
+      );
   });
 });

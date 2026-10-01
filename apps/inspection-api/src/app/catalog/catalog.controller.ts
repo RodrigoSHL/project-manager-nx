@@ -21,6 +21,7 @@ import { UpdateConceptDto } from './dto/update-concept.dto';
 import { CreateSiteDto } from './dto/create-site.dto';
 import { UpdateSiteDto } from './dto/update-site.dto';
 import { ActiveTenantGuard } from './guards/active-tenant.guard';
+import type { ReportCoverDefaults } from './entities/tenant-report-settings.entity';
 import {
   CreateSeverityLevelDto,
   UpdateSeverityLevelDto,
@@ -56,6 +57,27 @@ export class CatalogController {
   @Get()
   listTenants() {
     return this.catalogService.listTenants();
+  }
+
+  @Get(':tenantId/report-settings')
+  getReportSettings(@Param('tenantId', ParseUUIDPipe) tenantId: string) {
+    return this.catalogService.getReportSettings(tenantId);
+  }
+
+  @Put(':tenantId/report-settings')
+  saveReportDefaults(
+    @Param('tenantId', ParseUUIDPipe) tenantId: string,
+    @Body() body: { defaults?: ReportCoverDefaults }
+  ) {
+    return this.catalogService.saveReportDefaults(tenantId, body?.defaults);
+  }
+
+  @Patch(':tenantId/report-settings/logo')
+  saveReportLogo(
+    @Param('tenantId', ParseUUIDPipe) tenantId: string,
+    @Body() body: { logoUrl: string | null }
+  ) {
+    return this.catalogService.saveReportLogo(tenantId, body?.logoUrl);
   }
 
   @Get(':tenantId/sites')

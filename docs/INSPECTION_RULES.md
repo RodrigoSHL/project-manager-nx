@@ -163,6 +163,22 @@ avanzar su estado. `VIEWER` solo puede leer. `TENANT_ADMIN` también puede entra
 a `/admin` y modificar sitios, activos, tipos, conceptos, asociaciones y
 plantillas de su empresa. El rol global `admin` conserva acceso total.
 
+`TENANT_ADMIN` también puede revisar los informes desde `/admin/reports` para
+los tenants que administra. Las vistas previas y versiones se consultan mediante
+los mismos endpoints de informe del trabajo. Entre los roles de tenant, solo
+`TENANT_ADMIN` o `SUPERVISOR` pueden guardar una nueva versión.
+
+El administrador del tenant puede confirmar o descartar hallazgos y cerrar la
+revisión de un trabajo finalizado. Solo después de cerrar esa revisión se puede
+aprobar un informe final. Al aprobarlo, `Aprobado por` se toma de la cuenta
+autenticada; una versión borrador nunca queda marcada como aprobada.
+
+Cada tenant puede guardar valores predeterminados para la portada del informe y
+un logo propio desde `/admin/reports`. Si no hay logo configurado se usa
+GridAssets. Los valores pueden ajustarse en cada informe antes de guardarlo.
+La versión guardada conserva una copia de los datos y del logo usados, aunque
+la configuración de la empresa cambie después.
+
 La autorización se valida en el BFF para cada petición. Ocultar botones o rutas
 en React mejora la experiencia, pero no constituye una regla de seguridad.
 

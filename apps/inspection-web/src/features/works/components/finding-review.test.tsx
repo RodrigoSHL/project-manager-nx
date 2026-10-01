@@ -66,7 +66,9 @@ describe('FindingReview', () => {
     expect(html).toContain('Radiador R2');
     expect(html).toContain('95 °C');
     expect(html).toContain('Diferencia: +15 °C');
-    expect(html).toMatch(/<button[^>]*disabled[^>]*>Finalizar revisión/);
+    expect(html).toMatch(
+      /<button[^>]*disabled[^>]*>Cerrar revisión de hallazgos/
+    );
   });
 
   it('renders the final summary with hours and materials', () => {
@@ -85,7 +87,7 @@ describe('FindingReview', () => {
         onFinalize={vi.fn()}
       />
     );
-    expect(html).toContain('Hallazgos confirmados');
+    expect(html).toContain('Hallazgos aprobados');
     expect(html).toContain('Temperatura elevada');
     expect(html).toContain('Revisar refrigeración');
     expect(html).toContain('>4</td>');

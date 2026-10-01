@@ -208,9 +208,10 @@ export class WorkReportBuilder {
       workId
     )) as WorkDetails;
     const work = detail.work;
-    const [tenants, sites, workTypes, assets, severities, photos] =
+    const [tenants, settings, sites, workTypes, assets, severities, photos] =
       await Promise.all([
         this.inspection.listTenants(),
+        this.inspection.getReportSettings(tenantId),
         this.inspection.listSites(tenantId) as Promise<
           Array<{ id: string; name: string }>
         >,
@@ -366,6 +367,10 @@ export class WorkReportBuilder {
     const tenant = tenants.find((row) => row.id === tenantId);
     const workType = workTypes.find((row) => row.id === work.workTypeId);
     const optional = (value?: string | null) => value?.trim() || null;
+    const coverValue = (field: keyof ReportOptions) =>
+      optional(
+        options[field] === undefined ? settings.defaults[field] : options[field]
+      );
     return {
       header: {
         tenantId,
@@ -378,19 +383,19 @@ export class WorkReportBuilder {
         responsible: work.responsible,
         company: work.company || null,
         status: work.status,
-        content: optional(options.content),
-        requestedBy: optional(options.requestedBy),
-        preparedBy: optional(options.preparedBy),
+        content: coverValue('content'),
+        requestedBy: coverValue('requestedBy'),
+        preparedBy: coverValue('preparedBy'),
         approvedBy: optional(options.approvedBy),
-        distribution: optional(options.distribution),
-        receivedBy: optional(options.receivedBy),
+        distribution: coverValue('distribution'),
+        receivedBy: coverValue('receivedBy'),
         introduction:
-          optional(options.introduction) || optional(workType?.description),
+          coverValue('introduction') || optional(workType?.description),
       },
       branding: {
         tenantId,
         companyName: tenant?.name || '',
-        logoUrl: null,
+        logoUrl: settings.logoUrl,
         primaryColor: null,
         footerText: null,
       },

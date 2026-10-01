@@ -16,7 +16,6 @@ const fields: Array<[keyof ReportOptions, string]> = [
   ['content', 'Contenido'],
   ['requestedBy', 'Solicitado por'],
   ['preparedBy', 'Preparado por'],
-  ['approvedBy', 'Aprobado por'],
   ['distribution', 'Distribución'],
   ['receivedBy', 'Recibido conforme'],
   ['introduction', 'Introducción'],
@@ -47,7 +46,15 @@ export function WorkReportPage() {
         if (active) {
           setLive(report);
           setVersions(saved);
-          setOptions({ introduction: report.header.introduction || '' });
+          setOptions({
+            content: report.header.content,
+            requestedBy: report.header.requestedBy,
+            preparedBy: report.header.preparedBy,
+            approvedBy: report.header.approvedBy,
+            distribution: report.header.distribution,
+            receivedBy: report.header.receivedBy,
+            introduction: report.header.introduction,
+          });
         }
       })
       .catch((cause) => {
@@ -127,6 +134,16 @@ export function WorkReportPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {canReview && live?.header.status === 'FINISHED' && (
+            <Link
+              to={`/works/${id}?tenantId=${encodeURIComponent(
+                tenantId
+              )}#review-findings`}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800"
+            >
+              Aprobar hallazgos
+            </Link>
+          )}
           {canReview &&
             mode === 'REMOTE' &&
             !saved &&
@@ -148,7 +165,7 @@ export function WorkReportPage() {
                 disabled={busy}
                 className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
               >
-                Finalizar informe
+                Aprobar informe
               </button>
             )}
           <button
@@ -265,7 +282,7 @@ function ReportDocument({
 }) {
   const h = report.header;
   const sections = groupReportSections(report.sections);
-  const entries: Array<[string, string | null]> = [
+  const coverEntries: Array<[string, string | null]> = [
     ['Fecha', h.executionDate],
     ['Trabajo', h.workId],
     ['Contenido', h.content],
@@ -274,6 +291,8 @@ function ReportDocument({
     ['Aprobado por', h.approvedBy],
     ['Distribución', h.distribution],
     ['Recibido conforme', h.receivedBy],
+  ];
+  const generalEntries: Array<[string, string | null]> = [
     ['Mina / faena', h.site],
     ['Activo principal', h.asset],
     ['Tipo de trabajo', h.workType],
@@ -282,171 +301,230 @@ function ReportDocument({
     ['Estado', h.status],
   ];
   return (
-    <article className="mx-auto max-w-[820px] space-y-8 rounded-lg border border-slate-200 bg-white px-5 py-8 shadow-sm sm:px-10">
-      <header className="border-b border-slate-200 pb-5">
-        {version && (
-          <p
-            className={`mb-3 text-xs font-semibold uppercase tracking-wide ${
-              version.status === 'FINAL' ? 'text-emerald-700' : 'text-amber-700'
-            }`}
-          >
-            Informe v{version.version} ·{' '}
-            {version.status === 'FINAL' ? 'Final' : 'Borrador'}
-          </p>
-        )}
-        <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
-          {report.branding.companyName}
+    <div className="mx-auto max-w-[820px] space-y-6">
+      <article className="min-h-[620px] rounded-lg border border-slate-200 bg-white px-5 py-10 shadow-sm sm:min-h-[850px] sm:px-10 sm:py-16">
+        <p className="text-center text-xs text-slate-500">
+          {report.branding.companyName} · {h.workType}
         </p>
-        <h2 className="mt-3 text-3xl font-semibold text-slate-950">
-          {h.title}
-        </h2>
-        <dl className="mt-5 grid gap-2 text-sm sm:grid-cols-2">
-          {entries
-            .filter(([, value]) => value)
-            .map(([label, value]) => (
-              <div key={label}>
-                <dt className="inline font-medium text-slate-500">{label}: </dt>
-                <dd className="inline text-slate-900">{value}</dd>
-              </div>
-            ))}
-        </dl>
-      </header>
-      {h.introduction && (
+        <div className="mt-16 flex justify-center sm:mt-20">
+          <img
+            src={report.branding.logoUrl || '/gridassets-icon.svg'}
+            alt={
+              report.branding.logoUrl
+                ? 'Logo de la empresa'
+                : 'Logo de GridAssets'
+            }
+            className="block h-28 w-52 object-contain sm:h-32 sm:w-72"
+          />
+        </div>
+        <div className="mt-24 text-center sm:mt-32">
+          <p className="text-sm font-semibold uppercase tracking-widest text-slate-500">
+            {report.branding.companyName}
+          </p>
+          <h2 className="mt-4 text-3xl font-semibold text-slate-950 sm:text-4xl">
+            Informe de trabajo
+          </h2>
+          <p className="mt-3 text-lg text-slate-700 sm:text-xl">{h.title}</p>
+        </div>
+      </article>
+      <article className="min-h-[620px] space-y-8 rounded-lg border border-slate-200 bg-white px-5 py-8 shadow-sm sm:min-h-[850px] sm:px-10">
+        <div>
+          <h2 className="text-2xl font-semibold text-slate-950">
+            Datos del informe
+          </h2>
+          {version && (
+            <p
+              className={`mt-3 text-xs font-semibold uppercase tracking-wide ${
+                version.status === 'FINAL'
+                  ? 'text-emerald-700'
+                  : 'text-amber-700'
+              }`}
+            >
+              Informe v{version.version} ·{' '}
+              {version.status === 'FINAL' ? 'Final' : 'Borrador'}
+            </p>
+          )}
+        </div>
         <section>
-          <h3 className="mb-2 text-lg font-semibold">Introducción</h3>
+          <h3 className="mb-3 border-b border-slate-200 pb-2 text-lg font-semibold">
+            Identificación
+          </h3>
+          <dl className="grid gap-3 text-sm sm:grid-cols-2">
+            {coverEntries
+              .filter(([, value]) => value)
+              .map(([label, value]) => (
+                <div key={label}>
+                  <dt className="inline font-medium text-slate-500">
+                    {label}:{' '}
+                  </dt>
+                  <dd className="inline text-slate-900">{value}</dd>
+                </div>
+              ))}
+          </dl>
+        </section>
+        <section>
+          <h3 className="mb-3 border-b border-slate-200 pb-2 text-lg font-semibold">
+            Trabajo y activo
+          </h3>
+          <dl className="grid gap-3 text-sm sm:grid-cols-2">
+            {generalEntries
+              .filter(([, value]) => value)
+              .map(([label, value]) => (
+                <div key={label}>
+                  <dt className="inline font-medium text-slate-500">
+                    {label}:{' '}
+                  </dt>
+                  <dd className="inline text-slate-900">{value}</dd>
+                </div>
+              ))}
+          </dl>
+        </section>
+      </article>
+      <article className="space-y-8 rounded-lg border border-slate-200 bg-white px-5 py-8 shadow-sm sm:px-10">
+        {h.introduction && (
+          <section>
+            <h2 className="mb-3 text-2xl font-semibold text-slate-950">
+              Introducción
+            </h2>
+            <p className="whitespace-pre-wrap text-sm text-slate-700">
+              {h.introduction}
+            </p>
+          </section>
+        )}
+        <h2 className="text-2xl font-semibold text-slate-950">
+          Contenido del informe
+        </h2>
+        {sections.map((section) => (
+          <section key={section.id} className="break-inside-avoid-page">
+            <h3 className="border-b border-slate-200 pb-2 text-lg font-semibold">
+              {section.title}
+            </h3>
+            {section.description && (
+              <p className="mt-2 text-sm text-slate-600">
+                {section.description}
+              </p>
+            )}
+            <div className="mt-3 space-y-4">
+              {(section.assetGroups ?? []).map((assetGroup) => (
+                <div key={assetGroup.id} className="space-y-2">
+                  <h4 className="text-sm font-semibold text-slate-600">
+                    {assetGroup.assetPath}
+                  </h4>
+                  {assetGroup.items.map((item) => (
+                    <div
+                      key={item.id}
+                      className="break-inside-avoid rounded-lg border border-slate-200 p-3 text-sm"
+                    >
+                      <div className="flex gap-3">
+                        <span className="font-semibold text-slate-700">
+                          {item.type === 'TASK'
+                            ? item.completed
+                              ? '✓'
+                              : '○'
+                            : '•'}
+                        </span>
+                        <div>
+                          <p className="font-medium text-slate-950">
+                            {item.title}
+                            {item.type === 'CONCEPT' && (
+                              <span className="ml-2 font-normal text-slate-700">
+                                {item.value || '—'}
+                              </span>
+                            )}
+                          </p>
+                          {item.description && (
+                            <p className="text-slate-600">{item.description}</p>
+                          )}
+                          {item.observation && (
+                            <p className="mt-1 text-slate-700">
+                              <span className="font-medium">Observación:</span>{' '}
+                              {item.observation}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      {item.photos.length > 0 && (
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                          {item.photos.map((photo) => (
+                            <ReportPhoto
+                              key={photo.id}
+                              id={photo.id}
+                              caption={photo.caption}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
+        <section>
+          <h3 className="mb-2 text-lg font-semibold">
+            Observaciones adicionales
+          </h3>
           <p className="whitespace-pre-wrap text-sm text-slate-700">
-            {h.introduction}
+            {report.observations || 'Sin observaciones adicionales.'}
           </p>
         </section>
-      )}
-      {sections.map((section) => (
-        <section key={section.id} className="break-inside-avoid-page">
-          <h3 className="border-b border-slate-200 pb-2 text-lg font-semibold">
-            {section.title}
-          </h3>
-          {section.description && (
-            <p className="mt-2 text-sm text-slate-600">{section.description}</p>
-          )}
-          <div className="mt-3 space-y-4">
-            {(section.assetGroups ?? []).map((assetGroup) => (
-              <div key={assetGroup.id} className="space-y-2">
-                <h4 className="text-sm font-semibold text-slate-600">
-                  {assetGroup.assetPath}
-                </h4>
-                {assetGroup.items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="break-inside-avoid rounded-lg border border-slate-200 p-3 text-sm"
-                  >
-                    <div className="flex gap-3">
-                      <span className="font-semibold text-slate-700">
-                        {item.type === 'TASK'
-                          ? item.completed
-                            ? '✓'
-                            : '○'
-                          : '•'}
-                      </span>
-                      <div>
-                        <p className="font-medium text-slate-950">
-                          {item.title}
-                          {item.type === 'CONCEPT' && (
-                            <span className="ml-2 font-normal text-slate-700">
-                              {item.value || '—'}
-                            </span>
-                          )}
-                        </p>
-                        {item.description && (
-                          <p className="text-slate-600">{item.description}</p>
-                        )}
-                        {item.observation && (
-                          <p className="mt-1 text-slate-700">
-                            <span className="font-medium">Observación:</span>{' '}
-                            {item.observation}
+        <section>
+          <h3 className="mb-3 text-lg font-semibold">Hallazgos</h3>
+          {report.findings.length ? (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left text-xs">
+                <thead>
+                  <tr className="bg-slate-100">
+                    {['Nº', 'Hallazgo', 'Criticidad', 'HH', 'Materiales'].map(
+                      (label) => (
+                        <th key={label} className="border border-slate-200 p-2">
+                          {label}
+                        </th>
+                      )
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.findings.map((finding) => (
+                    <tr key={finding.id} className="align-top">
+                      <td className="border border-slate-200 p-2">
+                        {finding.number}
+                      </td>
+                      <td className="border border-slate-200 p-2">
+                        <p className="text-slate-500">{finding.assetPath}</p>
+                        <p className="font-medium">{finding.title}</p>
+                        {finding.description && (
+                          <p className="whitespace-pre-wrap">
+                            {finding.description}
                           </p>
                         )}
-                      </div>
-                    </div>
-                    {item.photos.length > 0 && (
-                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                        {item.photos.map((photo) => (
-                          <ReportPhoto
-                            key={photo.id}
-                            id={photo.id}
-                            caption={photo.caption}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
+                      </td>
+                      <td className="border border-slate-200 p-2">
+                        {finding.severity || '—'}
+                      </td>
+                      <td className="border border-slate-200 p-2">
+                        {finding.manHours ?? '—'}
+                      </td>
+                      <td className="border border-slate-200 p-2">
+                        {finding.materials || '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-600">
+              No se registraron hallazgos durante la ejecución del trabajo.
+            </p>
+          )}
         </section>
-      ))}
-      <section>
-        <h3 className="mb-2 text-lg font-semibold">
-          Observaciones adicionales
-        </h3>
-        <p className="whitespace-pre-wrap text-sm text-slate-700">
-          {report.observations || 'Sin observaciones adicionales.'}
-        </p>
-      </section>
-      <section>
-        <h3 className="mb-3 text-lg font-semibold">Hallazgos</h3>
-        {report.findings.length ? (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left text-xs">
-              <thead>
-                <tr className="bg-slate-100">
-                  {['Nº', 'Hallazgo', 'Criticidad', 'HH', 'Materiales'].map(
-                    (label) => (
-                      <th key={label} className="border border-slate-200 p-2">
-                        {label}
-                      </th>
-                    )
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {report.findings.map((finding) => (
-                  <tr key={finding.id} className="align-top">
-                    <td className="border border-slate-200 p-2">
-                      {finding.number}
-                    </td>
-                    <td className="border border-slate-200 p-2">
-                      <p className="text-slate-500">{finding.assetPath}</p>
-                      <p className="font-medium">{finding.title}</p>
-                      {finding.description && (
-                        <p className="whitespace-pre-wrap">
-                          {finding.description}
-                        </p>
-                      )}
-                    </td>
-                    <td className="border border-slate-200 p-2">
-                      {finding.severity || '—'}
-                    </td>
-                    <td className="border border-slate-200 p-2">
-                      {finding.manHours ?? '—'}
-                    </td>
-                    <td className="border border-slate-200 p-2">
-                      {finding.materials || '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="text-sm text-slate-600">
-            No se registraron hallazgos durante la ejecución del trabajo.
-          </p>
-        )}
-      </section>
-      <footer className="border-t border-slate-200 pt-3 text-xs text-slate-500">
-        {report.branding.footerText || 'Documento generado por sistema'}
-      </footer>
-    </article>
+        <footer className="border-t border-slate-200 pt-3 text-xs text-slate-500">
+          {report.branding.footerText || 'Documento generado por sistema'}
+        </footer>
+      </article>
+    </div>
   );
 }
 

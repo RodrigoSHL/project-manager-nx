@@ -45,6 +45,8 @@ import { GeneratedReportEntity } from '../works/entities/generated-report.entity
 import { CreateGeneratedReports1799101900000 } from '../../migrations/1799101900000-CreateGeneratedReports';
 import { PrepareAnalyticsHistory1799102000000 } from '../../migrations/1799102000000-PrepareAnalyticsHistory';
 import { IndexAnalyticsFindings1799102100000 } from '../../migrations/1799102100000-IndexAnalyticsFindings';
+import { TenantReportSettingsEntity } from '../catalog/entities/tenant-report-settings.entity';
+import { CreateTenantReportSettings1799102200000 } from '../../migrations/1799102200000-CreateTenantReportSettings';
 
 export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
   type: 'postgres',
@@ -87,6 +89,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     FindingCandidateEntity,
     FindingEntity,
     GeneratedReportEntity,
+    TenantReportSettingsEntity,
   ],
   migrations: [
     CreateInspectionCatalog1799100000000,
@@ -111,6 +114,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     CreateGeneratedReports1799101900000,
     PrepareAnalyticsHistory1799102000000,
     IndexAnalyticsFindings1799102100000,
+    CreateTenantReportSettings1799102200000,
   ],
   migrationsRun: process.env.INSPECTION_MIGRATIONS_RUN === 'true',
   synchronize: false,

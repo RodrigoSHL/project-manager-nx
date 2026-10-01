@@ -74,6 +74,76 @@ export class WorkReportPdf {
       return lines.join('\n');
     };
     const h = report.header;
+    const coverColor = report.branding.primaryColor || '#0F172A';
+    const logo = report.branding.logoUrl;
+    let companyLogo = false;
+    if (logo?.startsWith('data:image/webp;base64,')) {
+      try {
+        const buffer = Buffer.from(
+          logo.slice('data:image/webp;base64,'.length),
+          'base64'
+        );
+        const png = await sharp(buffer).png().toBuffer();
+        const metadata = await sharp(png).metadata();
+        const width = metadata.width || 1;
+        const height = metadata.height || 1;
+        const scale = Math.min(320 / width, 120 / height);
+        const renderedWidth = width * scale;
+        const renderedHeight = height * scale;
+        doc.image(
+          png,
+          (PAGE_WIDTH - renderedWidth) / 2,
+          112 + (120 - renderedHeight) / 2,
+          { width: renderedWidth, height: renderedHeight }
+        );
+        companyLogo = true;
+      } catch {
+        // Older saved snapshots may contain an unavailable logo.
+      }
+    }
+    if (!companyLogo) {
+      const logoLeft = (PAGE_WIDTH - 90) / 2;
+      doc.roundedRect(logoLeft, 125, 90, 90, 16).fill(coverColor);
+      doc
+        .moveTo(logoLeft + 49, 137)
+        .lineTo(logoLeft + 24, 178)
+        .lineTo(logoLeft + 47, 178)
+        .lineTo(logoLeft + 39, 205)
+        .lineTo(logoLeft + 69, 166)
+        .lineTo(logoLeft + 46, 166)
+        .closePath()
+        .fill('#FBBF24');
+    }
+    doc.y = 340;
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(13)
+      .fillColor(muted)
+      .text(report.branding.companyName.toUpperCase(), LEFT, doc.y, {
+        width: CONTENT_WIDTH,
+        align: 'center',
+      });
+    doc.moveDown(0.8);
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(32)
+      .fillColor(ink)
+      .text('Informe de trabajo', LEFT, doc.y, {
+        width: CONTENT_WIDTH,
+        align: 'center',
+      });
+    doc.moveDown(0.4);
+    doc
+      .font('Helvetica')
+      .fontSize(17)
+      .fillColor(ink)
+      .text(h.title, LEFT, doc.y, {
+        width: CONTENT_WIDTH,
+        align: 'center',
+      });
+
+    doc.addPage();
+    heading('Datos del informe', 20);
     if (version) {
       doc
         .font('Helvetica-Bold')
@@ -89,12 +159,7 @@ export class WorkReportPdf {
         );
       doc.moveDown(0.4);
     }
-    doc
-      .font('Helvetica-Bold')
-      .fontSize(19)
-      .fillColor(ink)
-      .text(h.title, LEFT, doc.y, { width: CONTENT_WIDTH });
-    doc.moveDown(0.5);
+    heading('Identificación');
     line('Fecha', h.executionDate);
     line('Trabajo', h.workId);
     line('Contenido', h.content);
@@ -103,18 +168,20 @@ export class WorkReportPdf {
     line('Aprobado por', h.approvedBy);
     line('Distribución', h.distribution);
     line('Recibido conforme', h.receivedBy);
-    heading('Datos generales');
+    heading('Trabajo y activo');
     line('Mina / faena', h.site);
     line('Activo principal', h.asset);
     line('Tipo de trabajo', h.workType);
     line('Responsable', h.responsible);
     line('Empresa contratista', h.company);
     line('Estado', h.status);
+
+    doc.addPage();
     if (h.introduction) {
-      heading('Introducción');
+      heading('Introducción', 18);
       line('', h.introduction);
     }
-
+    heading('Contenido del informe', 18);
     for (const section of groupReportSections(report.sections)) {
       ensure(100);
       heading(section.title);
@@ -197,7 +264,7 @@ export class WorkReportPdf {
         .fillColor(muted)
         .text(`${report.branding.companyName} · ${h.workType}`, LEFT, 30, {
           width: CONTENT_WIDTH,
-          align: 'left',
+          align: page === 0 ? 'center' : 'left',
           lineBreak: false,
         });
       doc.moveTo(LEFT, 48).lineTo(RIGHT, 48).strokeColor('#CBD5E1').stroke();

@@ -40,7 +40,13 @@ export function WorkDetailPage() {
   );
 
   useEffect(() => {
-    if (!work || !snapshot || !location.hash.startsWith('#finding-')) return;
+    if (
+      !work ||
+      !snapshot ||
+      (!location.hash.startsWith('#finding-') &&
+        location.hash !== '#review-findings')
+    )
+      return;
     const target = decodeURIComponent(location.hash.slice(1));
     const frame = requestAnimationFrame(() =>
       document.getElementById(target)?.scrollIntoView({ block: 'center' })

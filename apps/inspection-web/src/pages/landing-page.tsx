@@ -5,11 +5,12 @@ import {
   Activity,
   BarChart3,
   Building2,
+  Cable,
   Check,
   ChevronRight,
   Clock3,
   ClipboardCheck,
-  CloudUpload,
+  Cpu,
   FileBarChart2,
   FileText,
   Layers3,
@@ -30,6 +31,56 @@ const demoHref = `mailto:${contactEmail}?subject=${encodeURIComponent(
 const quoteHref = `mailto:${contactEmail}?subject=${encodeURIComponent(
   'Cotización de GridAssets'
 )}`;
+const hardwareHref = `mailto:${contactEmail}?subject=${encodeURIComponent(
+  'Revisión de compatibilidad de hardware para GridAssets'
+)}&body=${encodeURIComponent(
+  'Hola, quiero evaluar una integración con GridAssets.\n\nEquipo o sistema (marca/modelo):\nProtocolo o interfaz, si lo conozco:\nMediciones que necesito:\nFaena y conectividad disponible:\n'
+)}`;
+
+const pricingPlans = [
+  {
+    name: 'Una faena',
+    price: '10 UF',
+    description:
+      'Para gestionar una faena con todas las herramientas de trabajo en terreno.',
+    scope: '1 faena',
+    features: [
+      'Árbol de activos y pautas configurables',
+      'Ejecución sin conexión y sincronización',
+      'Hallazgos, informes y analítica',
+      'Puesta en marcha autogestionada',
+    ],
+    highlighted: false,
+  },
+  {
+    name: 'Multifaena',
+    price: '15 UF',
+    description:
+      'Para coordinar varias faenas con acompañamiento desde el primer día.',
+    scope: 'Hasta 3 faenas',
+    features: [
+      'Todas las capacidades de Una faena',
+      'Análisis por faena desde un mismo panel',
+      'Configuración guiada de la primera pauta',
+      '2 sesiones remotas de arranque de 60 minutos',
+      'Revisión mensual de indicadores de 30 minutos',
+    ],
+    highlighted: true,
+  },
+  {
+    name: 'Corporativo',
+    price: 'A medida',
+    description:
+      'Para despliegues más amplios, con requisitos de adopción y soporte propios.',
+    scope: 'Más de 3 faenas',
+    features: [
+      'Alcance y volumen definidos en conjunto',
+      'Puesta en marcha por etapas',
+      'Condiciones de soporte acordadas',
+    ],
+    highlighted: false,
+  },
+] as const;
 
 const capabilities = [
   {
@@ -115,6 +166,9 @@ export function LandingPage() {
             <a className="transition hover:text-blue-600" href="#como-funciona">
               Cómo funciona
             </a>
+            <a className="transition hover:text-blue-600" href="#integraciones">
+              Integraciones
+            </a>
             <a className="transition hover:text-blue-600" href="#precios">
               Precios
             </a>
@@ -149,6 +203,7 @@ export function LandingPage() {
               {[
                 ['Producto', '#producto'],
                 ['Cómo funciona', '#como-funciona'],
+                ['Integraciones', '#integraciones'],
                 ['Precios', '#precios'],
               ].map(([label, href]) => (
                 <a
@@ -618,6 +673,88 @@ export function LandingPage() {
           </div>
         </section>
 
+        <section
+          id="integraciones"
+          className="scroll-mt-24 bg-[#f7f9fc] py-20 sm:py-28"
+        >
+          <div className="mx-auto grid max-w-7xl gap-12 px-5 sm:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:gap-20 lg:px-10">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-blue-600">
+                Integración con hardware
+              </p>
+              <h2 className="mt-5 text-balance text-4xl font-extrabold leading-tight tracking-[-0.045em] sm:text-5xl">
+                Tus equipos también pueden aportar datos.
+              </h2>
+              <p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-600">
+                Evaluamos cómo conectar sensores, medidores o sistemas de
+                control para asociar sus mediciones a los activos que ya
+                gestionas en GridAssets.
+              </p>
+              <div className="mt-7 flex items-start gap-3 rounded-2xl border border-blue-100 bg-white p-5 text-sm leading-relaxed text-slate-600 shadow-sm">
+                <ShieldCheck className="mt-0.5 size-5 shrink-0 text-blue-600" />
+                <p>
+                  Cada integración requiere una revisión previa de
+                  compatibilidad, conectividad y alcance técnico. La solución se
+                  define para los equipos disponibles en tu faena.
+                </p>
+              </div>
+              <a
+                href={hardwareHref}
+                className="mt-8 inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-600/15 transition hover:-translate-y-0.5 hover:bg-blue-700"
+              >
+                Revisar compatibilidad <ArrowUpRight className="size-4" />
+              </a>
+            </div>
+
+            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/5 sm:p-8">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
+                De la señal al contexto
+              </p>
+              <div className="mt-6 space-y-3">
+                {[
+                  {
+                    icon: Cpu,
+                    title: 'Equipo en terreno',
+                    detail: 'Sensor, medidor o PLC/SCADA existente.',
+                    accent: 'bg-amber-50 text-amber-700',
+                  },
+                  {
+                    icon: Cable,
+                    title: 'Revisión de compatibilidad',
+                    detail: 'Protocolo, señal, red y frecuencia de lectura.',
+                    accent: 'bg-blue-50 text-blue-700',
+                  },
+                  {
+                    icon: Activity,
+                    title: 'Integración a medida',
+                    detail: 'Mediciones vinculadas al activo correspondiente.',
+                    accent: 'bg-emerald-50 text-emerald-700',
+                  },
+                ].map(({ icon: Icon, title, detail, accent }, index) => (
+                  <div key={title}>
+                    {index > 0 && (
+                      <div className="ml-6 h-3 border-l-2 border-dashed border-slate-200" />
+                    )}
+                    <div className="flex items-start gap-4 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 sm:p-5">
+                      <span
+                        className={`grid size-12 shrink-0 place-items-center rounded-xl ${accent}`}
+                      >
+                        <Icon className="size-6" strokeWidth={1.8} />
+                      </span>
+                      <div>
+                        <h3 className="font-bold text-slate-950">{title}</h3>
+                        <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                          {detail}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section id="precios" className="scroll-mt-24 py-20 sm:py-28">
           <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
             <div className="max-w-3xl">
@@ -625,92 +762,106 @@ export function LandingPage() {
                 Precios
               </p>
               <h2 className="mt-5 text-balance text-4xl font-extrabold leading-tight tracking-[-0.045em] sm:text-5xl">
-                El alcance correcto para tu operación.
+                Empieza por una faena. Crece con tu operación.
               </h2>
               <p className="mt-5 text-lg leading-relaxed text-slate-600">
-                Cada equipo parte desde una realidad distinta. Preparamos una
-                propuesta según tus usuarios, faenas y necesidades de puesta en
-                marcha.
+                El precio parte por el alcance de tus faenas, sin cobrar cada
+                activo del árbol por separado. La ejecución sin conexión está
+                incluida desde el primer plan. Los valores se expresan en UF
+                mensuales, más IVA.
               </p>
             </div>
 
-            <div className="mt-12 grid gap-5 lg:grid-cols-[1fr_1.18fr_1fr] lg:items-stretch">
-              <div className="rounded-3xl border border-slate-200 p-8">
-                <span className="grid size-12 place-items-center rounded-2xl bg-sky-50 text-blue-700">
-                  <Building2 className="size-6" />
-                </span>
-                <h3 className="mt-8 text-2xl font-bold">Tu estructura</h3>
-                <p className="mt-3 text-sm leading-relaxed text-slate-600">
-                  Cuéntanos cuántas empresas, faenas y equipos necesitas
-                  organizar.
-                </p>
-                <ul className="mt-6 space-y-3 text-sm text-slate-700">
-                  <li className="flex gap-2">
-                    <Check className="size-4 shrink-0 text-blue-600" /> Sitios y
-                    subestaciones
-                  </li>
-                  <li className="flex gap-2">
-                    <Check className="size-4 shrink-0 text-blue-600" /> Árbol de
-                    activos
-                  </li>
-                  <li className="flex gap-2">
-                    <Check className="size-4 shrink-0 text-blue-600" /> Usuarios
-                    y acceso por empresa
-                  </li>
-                </ul>
-              </div>
-
-              <div className="relative rounded-3xl border-2 border-blue-600 bg-slate-950 p-8 text-white shadow-2xl shadow-blue-950/15">
-                <span className="absolute -top-4 left-8 rounded-full bg-blue-600 px-4 py-1.5 text-xs font-bold text-white">
-                  Hablemos de tu proyecto
-                </span>
-                <p className="mt-3 text-sm font-semibold text-blue-300">
-                  GridAssets
-                </p>
-                <h3 className="mt-3 text-3xl font-extrabold tracking-tight">
-                  Cotización a medida
-                </h3>
-                <p className="mt-4 text-sm leading-relaxed text-slate-300">
-                  Revisamos tu operación y definimos juntos la implementación,
-                  las cuentas y el acompañamiento necesario.
-                </p>
-                <a
-                  href={quoteHref}
-                  className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-full bg-blue-600 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-blue-500"
+            <div className="mt-12 grid gap-5 lg:grid-cols-3 lg:items-stretch">
+              {pricingPlans.map((plan) => (
+                <div
+                  key={plan.name}
+                  className={`flex flex-col rounded-3xl p-8 ${
+                    plan.highlighted
+                      ? 'border-2 border-blue-600 bg-slate-950 text-white shadow-2xl shadow-blue-950/15'
+                      : 'border border-slate-200 bg-white text-slate-950'
+                  }`}
                 >
-                  Solicitar una cotización <ArrowUpRight className="size-4" />
-                </a>
-                <p className="mt-4 text-center text-xs text-slate-400">
-                  Escríbenos a {contactEmail}
-                </p>
-              </div>
+                  {plan.highlighted && (
+                    <span className="mb-5 inline-flex w-fit rounded-full bg-blue-600 px-3 py-1 text-xs font-bold text-white">
+                      Recomendado
+                    </span>
+                  )}
+                  <p
+                    className={`text-sm font-bold ${
+                      plan.highlighted ? 'text-blue-300' : 'text-blue-700'
+                    }`}
+                  >
+                    {plan.scope}
+                  </p>
+                  <h3 className="mt-3 text-2xl font-extrabold">{plan.name}</h3>
+                  <div className="mt-7 flex flex-wrap items-baseline gap-x-2">
+                    {plan.price !== 'A medida' && (
+                      <span className="text-sm font-semibold">Desde</span>
+                    )}
+                    <span className="text-4xl font-extrabold tracking-tight">
+                      {plan.price}
+                    </span>
+                    {plan.price !== 'A medida' && (
+                      <span className="text-sm">al mes + IVA</span>
+                    )}
+                  </div>
+                  <p
+                    className={`mt-5 min-h-16 text-sm leading-relaxed ${
+                      plan.highlighted ? 'text-slate-300' : 'text-slate-600'
+                    }`}
+                  >
+                    {plan.description}
+                  </p>
+                  <ul className="mt-7 flex-1 space-y-3 text-sm">
+                    {plan.features.map((feature) => (
+                      <li key={feature} className="flex items-start gap-2.5">
+                        <Check
+                          aria-hidden="true"
+                          className={`mt-0.5 size-4 shrink-0 ${
+                            plan.highlighted ? 'text-blue-300' : 'text-blue-600'
+                          }`}
+                        />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                  <a
+                    href={`mailto:${contactEmail}?subject=${encodeURIComponent(
+                      `Cotización GridAssets · ${plan.name}`
+                    )}`}
+                    className={`mt-9 inline-flex items-center justify-center gap-2 rounded-full px-5 py-3.5 text-sm font-bold transition ${
+                      plan.highlighted
+                        ? 'bg-blue-600 text-white hover:bg-blue-500'
+                        : 'border border-slate-200 text-slate-950 hover:bg-slate-50'
+                    }`}
+                  >
+                    Solicitar cotización <ArrowUpRight className="size-4" />
+                  </a>
+                </div>
+              ))}
+            </div>
 
-              <div className="rounded-3xl border border-slate-200 p-8">
-                <span className="grid size-12 place-items-center rounded-2xl bg-amber-50 text-amber-700">
-                  <CloudUpload className="size-6" />
-                </span>
-                <h3 className="mt-8 text-2xl font-bold">
-                  Tu forma de trabajar
-                </h3>
-                <p className="mt-3 text-sm leading-relaxed text-slate-600">
-                  Alineamos las pautas, el trabajo móvil y los informes con tu
-                  proceso técnico.
-                </p>
-                <ul className="mt-6 space-y-3 text-sm text-slate-700">
-                  <li className="flex gap-2">
-                    <Check className="size-4 shrink-0 text-blue-600" /> Pautas
-                    configurables
-                  </li>
-                  <li className="flex gap-2">
-                    <Check className="size-4 shrink-0 text-blue-600" />{' '}
-                    Operación offline
-                  </li>
-                  <li className="flex gap-2">
-                    <Check className="size-4 shrink-0 text-blue-600" /> Informes
-                    y análisis
-                  </li>
-                </ul>
-              </div>
+            <div className="mt-8 rounded-2xl bg-slate-50 p-6 text-sm leading-relaxed text-slate-600 sm:p-7">
+              <p className="font-bold text-slate-950">
+                ¿Qué define el valor final?
+              </p>
+              <p className="mt-2">
+                La propuesta precisa usuarios, volumen de datos, soporte y
+                almacenamiento. La configuración adicional a las sesiones
+                incluidas y la migración de información se cotizan por separado
+                cuando se necesitan. La integración con hardware se evalúa y
+                cotiza por separado. La mensualidad en pesos se calcula con el
+                valor vigente de la UF. Antes de trabajar sin señal, descarga la
+                faena en el dispositivo; al reconectarte, podrás sincronizar lo
+                registrado.
+              </p>
+              <a
+                href={quoteHref}
+                className="mt-4 inline-flex items-center gap-1 font-bold text-blue-700 hover:text-blue-800"
+              >
+                Consultar por mi operación <ArrowRight className="size-4" />
+              </a>
             </div>
           </div>
         </section>
@@ -750,6 +901,9 @@ export function LandingPage() {
           <div className="flex flex-wrap gap-x-7 gap-y-3 text-sm font-medium text-slate-300">
             <a className="hover:text-white" href="#producto">
               Producto
+            </a>
+            <a className="hover:text-white" href="#integraciones">
+              Integraciones
             </a>
             <a className="hover:text-white" href="#precios">
               Precios

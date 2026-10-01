@@ -82,13 +82,16 @@ export function FindingReview({
 
   if (work.status !== 'FINISHED' && work.status !== 'REVIEWED') return null;
   return (
-    <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+    <section
+      id="review-findings"
+      className="mt-5 scroll-mt-24 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6"
+    >
       <h2 className="text-xl font-semibold text-slate-950">
         Revisión de hallazgos
       </h2>
       <p className="mt-1 text-sm text-slate-600">
         {candidates.length} posibles · {pending} pendientes · {confirmed}{' '}
-        confirmados · {discarded} descartados
+        aprobados · {discarded} descartados
       </p>
       {work.status === 'REVIEWED' ? (
         <p className="mt-3 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
@@ -153,7 +156,7 @@ export function FindingReview({
             disabled={busy || localBusy || pending > 0}
             onClick={() => execute(onFinalize)}
           >
-            Finalizar revisión
+            Cerrar revisión de hallazgos
           </Button>
           {pending > 0 ? (
             <p className="mt-2 text-sm text-amber-700">
@@ -164,7 +167,7 @@ export function FindingReview({
       ) : null}
 
       <h3 className="mt-8 text-lg font-semibold text-slate-950">
-        Hallazgos confirmados
+        Hallazgos aprobados
       </h3>
       {finalFindings.length ? (
         <div className="mt-3 overflow-x-auto">
@@ -386,7 +389,7 @@ function CandidateCard({
                   })
                 }
               >
-                {finding ? 'Guardar cambios' : 'Confirmar hallazgo'}
+                {finding ? 'Guardar cambios' : 'Aprobar hallazgo'}
               </Button>
             </div>
           ) : null}

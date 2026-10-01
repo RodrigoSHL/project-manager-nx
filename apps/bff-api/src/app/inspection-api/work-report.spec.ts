@@ -135,6 +135,13 @@ describe('WorkReportBuilder', () => {
       listTenants: jest
         .fn()
         .mockResolvedValue([{ id: 'tenant', name: 'Minera' }]),
+      getReportSettings: jest.fn().mockResolvedValue({
+        defaults: {
+          content: 'Pauta de mantenimiento',
+          requestedBy: 'Operaciones',
+        },
+        logoUrl: null,
+      }),
       listSites: jest
         .fn()
         .mockResolvedValue([{ id: 'site', name: 'Faena Norte' }]),
@@ -187,6 +194,20 @@ describe('WorkReportBuilder', () => {
       },
     ]);
     expect(report.observations).toBe('Observación general');
+    expect(report.header.content).toBe('Pauta de mantenimiento');
+    expect(report.header.requestedBy).toBe('Operaciones');
+    const customized = await builder.buildWorkReport(
+      'tenant',
+      'work',
+      {} as never,
+      {
+        content: 'Detalle especial para este trabajo',
+      }
+    );
+    expect(customized.header.content).toBe(
+      'Detalle especial para este trabajo'
+    );
+    expect(customized.header.requestedBy).toBe('Operaciones');
   });
 
   it('groups descendant assets inside each form section in template order', async () => {
@@ -249,6 +270,9 @@ describe('WorkReportBuilder', () => {
         findings: [],
       }),
       listTenants: jest.fn().mockResolvedValue([]),
+      getReportSettings: jest
+        .fn()
+        .mockResolvedValue({ defaults: {}, logoUrl: null }),
       listSites: jest.fn().mockResolvedValue([]),
       listWorkTypes: jest.fn().mockResolvedValue([]),
       listAssets: jest.fn().mockResolvedValue([
@@ -302,6 +326,9 @@ describe('WorkReportBuilder', () => {
       listTenants: jest
         .fn()
         .mockResolvedValue([{ id: 'tenant', name: 'Minera' }]),
+      getReportSettings: jest
+        .fn()
+        .mockResolvedValue({ defaults: {}, logoUrl: null }),
       listSites: jest.fn().mockResolvedValue([]),
       listWorkTypes: jest.fn().mockResolvedValue([]),
       listAssets: jest.fn().mockResolvedValue([]),

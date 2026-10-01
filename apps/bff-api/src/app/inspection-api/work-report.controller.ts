@@ -75,7 +75,7 @@ export class WorkReportController {
       tenantId,
       workId,
       req.user,
-      options
+      { ...options, approvedBy: body.status === 'FINAL' ? req.user.name : null }
     );
     return this.inspection.createReport(tenantId, workId, {
       status: body.status,

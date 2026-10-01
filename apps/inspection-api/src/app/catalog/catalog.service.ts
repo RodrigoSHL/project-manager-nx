@@ -27,6 +27,10 @@ import { UpdateSiteDto } from './dto/update-site.dto';
 import { getAssetDescendants as collectAssetDescendants } from './asset-descendants';
 import { SeverityLevelEntity } from './entities/severity-level.entity';
 import {
+  ReportCoverDefaults,
+  TenantReportSettingsEntity,
+} from './entities/tenant-report-settings.entity';
+import {
   CreateSeverityLevelDto,
   UpdateSeverityLevelDto,
 } from './dto/severity-level.dto';
@@ -56,8 +60,66 @@ export class CatalogService {
     private readonly assetTypeConcepts: Repository<AssetTypeConceptEntity>,
     @InjectRepository(SeverityLevelEntity)
     private readonly severityLevels: Repository<SeverityLevelEntity>,
+    @InjectRepository(TenantReportSettingsEntity)
+    private readonly reportSettings: Repository<TenantReportSettingsEntity>,
     private readonly dataSource: DataSource
   ) {}
+
+  async getReportSettings(tenantId: string) {
+    await this.assertTenantExists(tenantId);
+    const settings = await this.reportSettings.findOne({ where: { tenantId } });
+    return {
+      tenantId,
+      defaults: settings?.defaults ?? {},
+      logoUrl: settings?.logoDataUri ?? null,
+    };
+  }
+
+  async saveReportDefaults(tenantId: string, defaults?: ReportCoverDefaults) {
+    await this.assertTenantExists(tenantId);
+    if (!defaults || typeof defaults !== 'object' || Array.isArray(defaults))
+      throw new BadRequestException('Invalid report defaults');
+    const fields = [
+      'content',
+      'requestedBy',
+      'preparedBy',
+      'distribution',
+      'receivedBy',
+      'introduction',
+    ] as const;
+    const normalized: ReportCoverDefaults = {};
+    for (const field of fields) {
+      const value = defaults[field];
+      if (value === undefined || value === null) continue;
+      if (typeof value !== 'string' || value.length > 4000)
+        throw new BadRequestException(`Invalid report field: ${field}`);
+      normalized[field] = value.trim() || null;
+    }
+    const settings =
+      (await this.reportSettings.findOne({ where: { tenantId } })) ??
+      this.reportSettings.create({ tenantId, defaults: {}, logoDataUri: null });
+    settings.defaults = normalized;
+    await this.reportSettings.save(settings);
+    return this.getReportSettings(tenantId);
+  }
+
+  async saveReportLogo(tenantId: string, logoUrl?: string | null) {
+    await this.assertTenantExists(tenantId);
+    if (
+      logoUrl === undefined ||
+      (logoUrl !== null &&
+        (!/^data:image\/webp;base64,[A-Za-z0-9+/=]+$/.test(logoUrl) ||
+          logoUrl.length > 90000))
+    ) {
+      throw new BadRequestException('Invalid report logo');
+    }
+    const settings =
+      (await this.reportSettings.findOne({ where: { tenantId } })) ??
+      this.reportSettings.create({ tenantId, defaults: {}, logoDataUri: null });
+    settings.logoDataUri = logoUrl;
+    await this.reportSettings.save(settings);
+    return this.getReportSettings(tenantId);
+  }
 
   listTenants() {
     return this.tenants.find({

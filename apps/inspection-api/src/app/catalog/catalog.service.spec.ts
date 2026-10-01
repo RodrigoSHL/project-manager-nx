@@ -16,6 +16,7 @@ import { WorkTypeEntity } from './entities/work-type.entity';
 import { ConceptEntity } from './entities/concept.entity';
 import { ConceptOptionEntity } from './entities/concept-option.entity';
 import { AssetTypeConceptEntity } from './entities/asset-type-concept.entity';
+import { TenantReportSettingsEntity } from './entities/tenant-report-settings.entity';
 
 describe('CatalogService tenant isolation', () => {
   const tenantId = 'f1ee65d1-95bc-5ae4-95d5-f8fb3818f737';
@@ -66,6 +67,9 @@ describe('CatalogService tenant isolation', () => {
       Repository<AssetTypeConceptEntity>,
       'find' | 'findOne' | 'count' | 'create' | 'save'
     >
+  >;
+  let reportSettingsRepository: jest.Mocked<
+    Pick<Repository<TenantReportSettingsEntity>, 'findOne' | 'create' | 'save'>
   >;
   let service: CatalogService;
 
@@ -128,6 +132,11 @@ describe('CatalogService tenant isolation', () => {
       create: jest.fn(),
       save: jest.fn(),
     };
+    reportSettingsRepository = {
+      findOne: jest.fn(),
+      create: jest.fn().mockImplementation((value) => value),
+      save: jest.fn().mockImplementation((value) => Promise.resolve(value)),
+    };
     service = new CatalogService(
       tenantRepository as unknown as Repository<TenantEntity>,
       siteRepository as unknown as Repository<SiteEntity>,
@@ -140,8 +149,43 @@ describe('CatalogService tenant isolation', () => {
       conceptOptionRepository as unknown as Repository<ConceptOptionEntity>,
       assetTypeConceptRepository as unknown as Repository<AssetTypeConceptEntity>,
       { findOne: jest.fn() } as never,
+      reportSettingsRepository as unknown as Repository<TenantReportSettingsEntity>,
       {} as DataSource
     );
+  });
+
+  it('saves report defaults only for the selected tenant', async () => {
+    tenantRepository.exist.mockResolvedValue(true);
+    reportSettingsRepository.findOne
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        tenantId,
+        defaults: { requestedBy: 'Operaciones' },
+        logoDataUri: null,
+      } as TenantReportSettingsEntity);
+
+    const result = await service.saveReportDefaults(tenantId, {
+      requestedBy: '  Operaciones  ',
+    });
+
+    expect(reportSettingsRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId,
+        defaults: { requestedBy: 'Operaciones' },
+      })
+    );
+    expect(reportSettingsRepository.findOne).toHaveBeenCalledWith({
+      where: { tenantId },
+    });
+    expect(result.defaults).toEqual({ requestedBy: 'Operaciones' });
+  });
+
+  it('rejects an invalid logo before persisting tenant branding', async () => {
+    tenantRepository.exist.mockResolvedValue(true);
+    await expect(
+      service.saveReportLogo(tenantId, 'https://example.com/logo.svg')
+    ).rejects.toThrow(BadRequestException);
+    expect(reportSettingsRepository.save).not.toHaveBeenCalled();
   });
 
   it('exposes only active tenants to operational selectors', async () => {

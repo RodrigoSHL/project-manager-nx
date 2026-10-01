@@ -2,6 +2,7 @@ import {
   ArrowRight,
   BookOpenText,
   Building2,
+  FileText,
   MapPinned,
   Shapes,
   Users,
@@ -40,6 +41,14 @@ const sections = [
     description:
       'Define variables, estados y características reutilizables por tipo de activo.',
     icon: BookOpenText,
+    status: 'Disponible',
+  },
+  {
+    to: '/admin/reports',
+    title: 'Informes',
+    description:
+      'Revisa los informes y las vistas previas de los trabajos de tu empresa.',
+    icon: FileText,
     status: 'Disponible',
   },
   {

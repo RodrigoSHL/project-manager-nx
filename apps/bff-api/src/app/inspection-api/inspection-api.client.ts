@@ -59,6 +59,22 @@ export type TenantResponse = {
   membershipRole?: TenantRole;
 };
 
+export type ReportCoverDefaults = {
+  content?: string | null;
+  requestedBy?: string | null;
+  preparedBy?: string | null;
+  approvedBy?: string | null;
+  distribution?: string | null;
+  receivedBy?: string | null;
+  introduction?: string | null;
+};
+
+export type TenantReportSettings = {
+  tenantId: string;
+  defaults: ReportCoverDefaults;
+  logoUrl: string | null;
+};
+
 export type ConceptMutationPayload = {
   code?: string;
   name?: string;
@@ -151,6 +167,26 @@ export class InspectionApiClient {
 
   listTenants() {
     return this.get<TenantResponse[]>('/tenants');
+  }
+
+  getReportSettings(tenantId: string) {
+    return this.get<TenantReportSettings>(
+      `/tenants/${encodeURIComponent(tenantId)}/report-settings`
+    );
+  }
+
+  saveReportDefaults(tenantId: string, defaults: ReportCoverDefaults) {
+    return this.request<TenantReportSettings>(
+      `/tenants/${encodeURIComponent(tenantId)}/report-settings`,
+      { method: 'PUT', body: JSON.stringify({ defaults }) }
+    );
+  }
+
+  saveReportLogo(tenantId: string, logoUrl: string | null) {
+    return this.request<TenantReportSettings>(
+      `/tenants/${encodeURIComponent(tenantId)}/report-settings/logo`,
+      { method: 'PATCH', body: JSON.stringify({ logoUrl }) }
+    );
   }
 
   listAccessibleTenants(userId: string) {

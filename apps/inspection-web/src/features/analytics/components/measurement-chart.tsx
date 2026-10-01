@@ -1,6 +1,5 @@
 import {
   CartesianGrid,
-  Legend,
   Line,
   LineChart,
   ReferenceLine,
@@ -15,6 +14,8 @@ import {
   formatMeasurementDate,
   formatMeasurementDateTime,
   formatMeasurementValue,
+  historicalLineSegments,
+  measurementAxisTicks,
   measurementStatus,
   toChartRows,
   type ChartRow,
@@ -135,16 +136,21 @@ export function MeasurementChart({
   onSelect: (responseId: string) => void;
 }) {
   const rows = toChartRows(series);
+  const historicalLines = historicalLineSegments(rows, series);
   const limits = constantHistoricalLimits(series);
   const hasTime = series.some((asset) =>
     asset.measurements.some((point) => Boolean(point.measuredAtTime))
   );
+  const axisTicks = measurementAxisTicks(rows, hasTime);
   if (!rows.length)
     return (
       <p className="rounded-lg border border-dashed border-slate-200 p-8 text-center text-sm text-slate-600">
         Aún no existen mediciones para este concepto en el período seleccionado.
       </p>
     );
+  const spansYears =
+    new Date(rows[0].timestamp).getUTCFullYear() !==
+    new Date(rows[rows.length - 1].timestamp).getUTCFullYear();
   return (
     <>
       <div className="overflow-x-auto pb-2">
@@ -155,7 +161,7 @@ export function MeasurementChart({
         >
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
-              data={rows}
+              data={historicalLines.rows}
               margin={{ top: 20, right: 28, left: 4, bottom: 12 }}
             >
               <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
@@ -164,9 +170,15 @@ export function MeasurementChart({
                 type="number"
                 scale="time"
                 domain={['dataMin', 'dataMax']}
+                ticks={axisTicks}
+                interval="preserveStartEnd"
+                minTickGap={16}
                 tickFormatter={(value: number) => {
                   const iso = new Date(value).toISOString();
-                  const date = formatMeasurementDate(iso);
+                  const fullDate = formatMeasurementDate(iso);
+                  const date = spansYears
+                    ? `${fullDate.slice(0, 6)}${fullDate.slice(-2)}`
+                    : fullDate.slice(0, 5);
                   return hasTime ? `${date} ${iso.slice(11, 16)}` : date;
                 }}
                 tick={{ fontSize: 11, fill: '#64748b' }}
@@ -189,7 +201,6 @@ export function MeasurementChart({
                   />
                 )}
               />
-              <Legend verticalAlign="bottom" />
               {limits?.minValue !== undefined && (
                 <ReferenceLine
                   y={limits.minValue}
@@ -218,15 +229,35 @@ export function MeasurementChart({
                   }}
                 />
               )}
+              {historicalLines.segments.map((segment) => {
+                const index = series.findIndex(
+                  (asset) => asset.assetId === segment.assetId
+                );
+                return (
+                  <Line
+                    key={segment.key}
+                    dataKey={segment.key}
+                    type="linear"
+                    connectNulls
+                    stroke={colors[index % colors.length]}
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={false}
+                    legendType="none"
+                    tooltipType="none"
+                    isAnimationActive={false}
+                  />
+                );
+              })}
               {series.map((asset, index) => (
                 <Line
                   key={asset.assetId}
                   dataKey={asset.assetId}
                   name={asset.assetName}
                   type="linear"
-                  connectNulls
-                  stroke={colors[index % colors.length]}
+                  stroke="transparent"
                   strokeWidth={2}
+                  legendType="none"
                   isAnimationActive={false}
                   dot={(props) => (
                     <MeasurementDot
@@ -242,6 +273,18 @@ export function MeasurementChart({
             </LineChart>
           </ResponsiveContainer>
         </div>
+      </div>
+      <div className="mt-1 flex flex-wrap justify-center gap-x-5 gap-y-1 text-sm text-slate-700">
+        {series.map((asset, index) => (
+          <span key={asset.assetId} className="flex items-center gap-2">
+            <span
+              className="h-0.5 w-5"
+              style={{ backgroundColor: colors[index % colors.length] }}
+              aria-hidden="true"
+            />
+            {asset.assetName}
+          </span>
+        ))}
       </div>
       <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-600">
         <span>
@@ -267,6 +310,12 @@ export function MeasurementChart({
         <p className="mt-3 text-xs text-slate-500">
           Los límites cambian entre mediciones o no están configurados. Consulta
           el rango histórico de cada punto en su detalle.
+        </p>
+      )}
+      {historicalLines.hasAmbiguousDays && (
+        <p className="mt-2 text-xs text-amber-800">
+          Algunas lecturas comparten día y no tienen horas distintas. Sus puntos
+          se muestran, pero no se unen porque se desconoce su orden.
         </p>
       )}
       <p className="mt-1 text-xs text-slate-500">

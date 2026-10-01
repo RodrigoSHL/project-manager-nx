@@ -6,7 +6,9 @@ import { MeasurementStatCard } from './components/measurement-stat-card';
 import {
   constantHistoricalLimits,
   formatMeasurementDateTime,
+  historicalLineSegments,
   MAX_ASSET_SERIES,
+  measurementAxisTicks,
   measurementStatus,
   parseAssetIds,
   toChartRows,
@@ -120,6 +122,67 @@ describe('historical measurement comparison', () => {
     expect(formatMeasurementDateTime(readings.measurements[2])).toBe(
       '28/09/2026'
     );
+  });
+
+  it('spaces axis dates evenly and avoids duplicate day labels in a short date-only range', () => {
+    const readings = series('fan-1', 'Ventilador 1', [
+      point('first', '2026-09-28', 12, 42, true),
+      point('last', '2026-09-29', 20, 42, true),
+    ]);
+    const ticks = measurementAxisTicks(toChartRows([readings]), false);
+    expect(ticks).toEqual([
+      Date.parse('2026-09-28T00:00:00Z'),
+      Date.parse('2026-09-29T00:00:00Z'),
+    ]);
+
+    const longRange = series('fan-1', 'Ventilador 1', [
+      point('first', '2026-09-02', 12, 42, true),
+      point('last', '2026-09-29', 20, 42, true),
+    ]);
+    const regularTicks = measurementAxisTicks(toChartRows([longRange]), false);
+    expect(regularTicks).toHaveLength(5);
+    expect(regularTicks[1] - regularTicks[0]).toBe(
+      regularTicks[2] - regularTicks[1]
+    );
+  });
+
+  it('keeps legacy same-day readings visible without drawing an invented sequence', () => {
+    const readings = series('fan-1', 'Ventilador 1', [
+      point('previous', '2026-09-28', 30, 42, true),
+      point('same-day-a', '2026-09-29', 44, 42, false),
+      point('same-day-b', '2026-09-29', 60, 42, false),
+      point('next', '2026-09-30', 32, 42, true),
+      point('later', '2026-10-01', 33, 42, true),
+    ]);
+    const chart = historicalLineSegments(toChartRows([readings]), [readings]);
+
+    expect(chart.hasAmbiguousDays).toBe(true);
+    expect(chart.rows).toHaveLength(5);
+    expect(chart.segments).toHaveLength(1);
+    const line = chart.segments[0].key;
+    expect(
+      chart.rows.filter((row) => row[line] !== undefined).map((row) => row.key)
+    ).toEqual(['next', 'later']);
+  });
+
+  it('connects same-day readings when distinct hours establish their order', () => {
+    const readings = series('fan-1', 'Ventilador 1', [
+      {
+        ...point('early', '2026-09-29', 44, 42, false),
+        measuredAtTime: '01:22',
+      },
+      {
+        ...point('late', '2026-09-29', 60, 42, false),
+        measuredAtTime: '11:03',
+      },
+    ]);
+    const chart = historicalLineSegments(toChartRows([readings]), [readings]);
+
+    expect(chart.hasAmbiguousDays).toBe(false);
+    expect(chart.segments).toHaveLength(1);
+    expect(chart.rows.map((row) => row[chart.segments[0].key])).toEqual([
+      44, 60,
+    ]);
   });
 
   it('deduplicates URL assets and enforces the five-series limit', () => {

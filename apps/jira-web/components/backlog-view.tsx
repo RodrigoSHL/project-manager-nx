@@ -46,7 +46,9 @@ export function BacklogView({
     Record<string, boolean>
   >({
     backlog: true,
+    epics: true,
   })
+  const epicsContentId = React.useId()
 
   const projectSprints = sprints
     .filter((s) => s.projectId === currentProject)
@@ -121,61 +123,81 @@ export function BacklogView({
     <div className="space-y-6 pb-8">
       <section className="space-y-3">
         <div className="flex items-center gap-3 p-4 rounded-xl border border-purple-500/20 bg-purple-500/5">
-          <div className="p-1.5 rounded-md bg-purple-500/10">
-            <Layers className="h-4 w-4 text-purple-500" />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold">Épicas</h3>
-            <p className="text-xs text-muted-foreground">
-              {epics.length} {epics.length === 1 ? 'épica' : 'épicas'} · agrupan historias de usuario
-            </p>
-          </div>
-          <div className="flex-1" />
-          {canWrite && <Button variant="outline" size="sm" onClick={onCreateEpic}>
+          <button
+            type="button"
+            className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            onClick={() => toggleSection('epics')}
+            aria-expanded={expandedSections.epics}
+            aria-controls={epicsContentId}
+          >
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center">
+              {expandedSections.epics ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </span>
+            <span className="p-1.5 rounded-md bg-purple-500/10">
+              <Layers className="h-4 w-4 text-purple-500" />
+            </span>
+            <span>
+              <span className="block text-sm font-semibold">Épicas</span>
+              <span className="block text-xs text-muted-foreground">
+                {epics.length} {epics.length === 1 ? 'épica' : 'épicas'} · agrupan historias de usuario
+              </span>
+            </span>
+          </button>
+          {canWrite && <Button variant="outline" size="sm" className="shrink-0" onClick={onCreateEpic}>
             <Plus className="h-3.5 w-3.5" />
             Crear épica
           </Button>}
         </div>
 
-        {epics.length > 0 ? (
-          <div className="grid gap-3 ml-0 md:grid-cols-2 md:ml-10">
-            {epics.map(epic => {
-              const stories = tickets.filter(ticket => ticket.type === 'story' && ticket.epicId === epic.id)
-              const doneStories = stories.filter(story => story.status === 'done').length
-              const progress = stories.length ? (doneStories / stories.length) * 100 : 0
+        <div id={epicsContentId} hidden={!expandedSections.epics}>
+          {epics.length > 0 ? (
+            <div className="grid gap-2 ml-0 md:grid-cols-2 md:ml-10">
+              {epics.map(epic => {
+                const stories = tickets.filter(ticket => ticket.type === 'story' && ticket.epicId === epic.id)
+                const doneStories = stories.filter(story => story.status === 'done').length
+                const progress = stories.length ? (doneStories / stories.length) * 100 : 0
 
-              return (
-                <div key={epic.id} className="rounded-xl border bg-card p-4 space-y-3">
-                  <button className="w-full text-left" onClick={() => onTicketClick(epic)}>
-                    <div className="flex items-center gap-2">
-                      <Layers className="h-4 w-4 text-purple-500 shrink-0" />
-                      <span className="text-xs font-mono text-muted-foreground">{epic.key}</span>
+                return (
+                  <div key={epic.id} className="rounded-xl border bg-card p-3 space-y-2">
+                    <div className="flex items-start gap-2">
+                      <button type="button" className="min-w-0 flex-1 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={() => onTicketClick(epic)}>
+                        <span className="flex items-center gap-2">
+                          <Layers className="h-4 w-4 text-purple-500 shrink-0" />
+                          <span className="text-xs font-mono text-muted-foreground">{epic.key}</span>
+                        </span>
+                        <span className="mt-1 block text-sm font-semibold line-clamp-2" title={epic.title}>{epic.title}</span>
+                      </button>
+                      {canWrite && <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => onCreateStory(epic.id)}
+                        aria-label={`Crear historia en ${epic.key ?? epic.title}`}
+                        title="Crear historia en esta épica"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>}
                     </div>
-                    <p className="mt-2 text-sm font-semibold line-clamp-2">{epic.title}</p>
-                  </button>
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>{doneStories}/{stories.length} historias completadas</span>
-                      <span>{Math.round(progress)}%</span>
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>{doneStories}/{stories.length} historias completadas</span>
+                        <span>{Math.round(progress)}%</span>
+                      </div>
+                      <Progress value={progress} className="h-1.5" />
                     </div>
-                    <Progress value={progress} className="h-1.5" />
                   </div>
-                  {canWrite && <Button variant="outline" size="sm" className="w-full" onClick={() => onCreateStory(epic.id)}>
-                    <Plus className="h-3.5 w-3.5" />
-                    Crear historia en esta épica
-                  </Button>}
-                </div>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="ml-0 md:ml-10 rounded-xl border border-dashed p-6 text-center">
-            <p className="text-sm font-medium">Aún no hay épicas</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Crea un ticket de tipo Épica para empezar a organizar las historias.
-            </p>
-          </div>
-        )}
+                )
+              })}
+            </div>
+          ) : (
+            <div className="ml-0 md:ml-10 rounded-xl border border-dashed p-6 text-center">
+              <p className="text-sm font-medium">Aún no hay épicas</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Crea un ticket de tipo Épica para empezar a organizar las historias.
+              </p>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* Sprint Sections */}

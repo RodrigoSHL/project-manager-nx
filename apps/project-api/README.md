@@ -162,11 +162,12 @@ GET    /projects/business-unit/:businessUnit - Proyectos por unidad de negocio
 - `architect` - Arquitecto
 
 Miembro, Analista y Técnico se guardan como `member`, `analyst` y `technician`.
-Cuando `TYPEORM_SYNCHRONIZE=true`, TypeORM actualiza el enum al iniciar la API.
-Con sincronización desactivada, ejecutar
-[20261001-add-project-team-roles.sql](../../docker/migrations/20261001-add-project-team-roles.sql)
-en la base de project-api antes de guardar estos roles. El script puede repetirse
-y conserva las asignaciones existentes.
+Compose de producción desactiva la sincronización automática en project-api.
+Con `PROJECT_MIGRATIONS_RUN=true`, TypeORM ejecuta las migraciones pendientes al
+iniciar la API y las registra en su tabla `migrations`, igual que en inspection-api.
+[AddProjectTeamRoles](src/migrations/1790812800000-AddProjectTeamRoles.ts) amplía
+el enum y admite bases donde esos valores ya existen. El rollback exige que los
+roles nuevos no estén asignados; PostgreSQL rechaza la conversión si están en uso.
 
 ### TaskStatus
 - `todo` - Por hacer
@@ -225,10 +226,12 @@ DATABASE_PASSWORD=secure_password
    - Crear base de datos PostgreSQL
    - Configurar variables de entorno
 
-3. **Ejecutar migraciones**:
-   ```bash
-   npm run migration:run
-   ```
+3. **Ejecutar migraciones sobre una base existente**:
+   - Configurar `PROJECT_MIGRATIONS_RUN=true` y `TYPEORM_SYNCHRONIZE=false`.
+   - Iniciar project-api; TypeORM ejecuta las migraciones pendientes.
+   - El catálogo actual de migraciones amplía el esquema existente; no crea
+     todas las tablas de una instalación nueva. En desarrollo, la sincronización
+     de TypeORM sigue disponible para inicializar una base nueva.
 
 4. **Ejecutar seeds** (opcional):
    ```bash

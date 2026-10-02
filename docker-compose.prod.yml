@@ -36,8 +36,9 @@ services:
       DATABASE_NAME: ${DATABASE_NAME:-project_management_db}
       DATABASE_USERNAME: ${DATABASE_USERNAME:-project_user}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD is required}
+      PROJECT_MIGRATIONS_RUN: "true"
       DATABASE_SSL: ${DATABASE_SSL:-false}
-      TYPEORM_SYNCHRONIZE: ${TYPEORM_SYNCHRONIZE:-true}
+      TYPEORM_SYNCHRONIZE: "false"
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost,http://localhost:8081,http://localhost:8082}
     depends_on:
       postgres:

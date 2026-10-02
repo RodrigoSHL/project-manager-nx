@@ -38,7 +38,7 @@ export function ValueProposition() {
             <SectionHeading
               label="Propuesta de valor"
               title="Cada gran solución comienza en sus componentes más pequeños."
-              subtitle="En Atom Dev transformamos necesidades complejas en soluciones digitales claras, mantenibles y preparadas para evolucionar. Combinamos análisis, arquitectura, desarrollo y automatización para construir software confiable de principio a fin."
+              subtitle="En AtomDev transformamos necesidades complejas en soluciones digitales claras, mantenibles y preparadas para evolucionar. Combinamos análisis, arquitectura, desarrollo y automatización para construir software confiable de principio a fin."
             />
           </div>
 
@@ -48,8 +48,8 @@ export function ValueProposition() {
               const Icon = pillar.icon
               const colorVar =
                 pillar.color === 'turquoise'
-                  ? 'oklch(0.82 0.18 190)'
-                  : 'oklch(0.75 0.22 340)'
+                  ? 'var(--turquoise)'
+                  : 'var(--pink)'
 
               return (
                 <motion.div
@@ -66,7 +66,7 @@ export function ValueProposition() {
                 >
                   <div
                     className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg transition-transform duration-300 group-hover:scale-110"
-                    style={{ background: `${colorVar}20`, boxShadow: `0 0 16px ${colorVar}30` }}
+                    style={{ background: `color-mix(in oklch, ${colorVar} 12%, transparent)`, boxShadow: `0 0 16px color-mix(in oklch, ${colorVar} 18%, transparent)` }}
                   >
                     <Icon size={22} style={{ color: colorVar }} />
                   </div>

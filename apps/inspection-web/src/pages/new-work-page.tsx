@@ -11,6 +11,8 @@ import {
 import { useWorkCatalog } from '../features/works/use-work-catalog';
 import { useEffectiveWorkTypes } from '../features/work-types/use-effective-work-types';
 import { useTenantAccess } from '../features/tenants/tenant-access-context';
+import { useOffline } from '../features/offline/offline-context';
+import { useAuth } from '../features/auth/auth-context';
 
 type FieldErrors = Partial<Record<keyof CreateWorkFormValue, string>>;
 
@@ -21,6 +23,8 @@ export function NewWorkPage() {
   const assetId = params.get('assetId') ?? '';
   const works = useWorkCatalog(tenantId);
   const tenantAccess = useTenantAccess();
+  const { user } = useAuth();
+  const { mode } = useOffline();
   const asset = works.catalog?.assets.find(
     (item) =>
       item.id === assetId &&
@@ -49,7 +53,15 @@ export function NewWorkPage() {
     );
   }
   if (works.error) {
-    return <InvalidNewWork message={works.error} />;
+    return (
+      <InvalidNewWork
+        message={
+          mode === 'LOCAL'
+            ? 'Este activo o su formulario no está disponible sin conexión. Descarga el sitio antes de salir a terreno.'
+            : works.error
+        }
+      />
+    );
   }
   if (works.isLoading || !works.catalog) {
     return (
@@ -65,14 +77,37 @@ export function NewWorkPage() {
   }
   if (!asset || !site) {
     return (
-      <InvalidNewWork message="El activo no pertenece a la empresa y ubicación indicadas." />
+      <InvalidNewWork
+        message={
+          mode === 'LOCAL'
+            ? 'Este activo no está disponible sin conexión. Descarga el sitio antes de salir a terreno.'
+            : 'El activo no pertenece a la empresa y ubicación indicadas.'
+        }
+      />
     );
   }
 
-  return <NewWorkForm asset={asset} siteName={site.name} />;
+  return (
+    <NewWorkForm
+      asset={asset}
+      siteName={site.name}
+      localMode={mode === 'LOCAL'}
+      responsibleName={user?.name.trim() || user?.email || ''}
+    />
+  );
 }
 
-function NewWorkForm({ asset, siteName }: { asset: Asset; siteName: string }) {
+function NewWorkForm({
+  asset,
+  siteName,
+  localMode,
+  responsibleName,
+}: {
+  asset: Asset;
+  siteName: string;
+  localMode: boolean;
+  responsibleName: string;
+}) {
   const navigate = useNavigate();
   const works = useWorkCatalog(asset.tenantId);
   const { workTypes, isLoading, error } = useEffectiveWorkTypes(asset);
@@ -92,7 +127,7 @@ function NewWorkForm({ asset, siteName }: { asset: Asset; siteName: string }) {
     workTypeId: '',
     title: '',
     executionDate: localDate(),
-    responsible: '',
+    responsible: responsibleName,
     company: '',
     status: 'DRAFT',
     notes: '',
@@ -130,7 +165,10 @@ function NewWorkForm({ asset, siteName }: { asset: Asset; siteName: string }) {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    const parsed = createWorkSchema.safeParse(form);
+    const parsed = createWorkSchema.safeParse({
+      ...form,
+      responsible: responsibleName,
+    });
     if (!parsed.success) {
       const next: FieldErrors = {};
       for (const issue of parsed.error.issues) {
@@ -171,7 +209,11 @@ function NewWorkForm({ asset, siteName }: { asset: Asset; siteName: string }) {
       </Link>
       <PageHeader
         title="Nuevo trabajo"
-        description="Crea una ejecución real sobre el activo seleccionado y guárdala en la base de datos."
+        description={
+          localMode
+            ? 'Crea el trabajo en este dispositivo. Quedará pendiente de sincronización.'
+            : 'Crea una ejecución real sobre el activo seleccionado y guárdala en la base de datos.'
+        }
       />
       <form
         onSubmit={submit}
@@ -228,14 +270,7 @@ function NewWorkForm({ asset, siteName }: { asset: Asset; siteName: string }) {
               className={inputClass}
             />
           </Field>
-          <Field label="Responsable" error={errors.responsible}>
-            <input
-              value={form.responsible}
-              onChange={(event) => change('responsible', event.target.value)}
-              placeholder="Ej. Juan Pérez"
-              className={inputClass}
-            />
-          </Field>
+          <ReadonlyField label="Responsable" value={responsibleName} />
           <Field label="Empresa / cuadrilla" error={errors.company}>
             <input
               value={form.company ?? ''}

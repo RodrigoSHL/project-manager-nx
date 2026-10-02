@@ -8,6 +8,18 @@ La explicación completa del modelo de usuarios, membresías, roles, APIs y
 archivos se encuentra en
 [INSPECTION_TENANT_ACCESS.md](./INSPECTION_TENANT_ACCESS.md).
 
+La evolución offline está separada en dos documentos para conservar las
+decisiones de cada entrega:
+
+- [INSPECTION_OFFLINE_FIRST.md](./INSPECTION_OFFLINE_FIRST.md): fase 1,
+  persistencia Dexie, descarga por sitio y repositorios locales;
+- [INSPECTION_PWA_AIRPLANE_MODE.md](./INSPECTION_PWA_AIRPLANE_MODE.md): fase 2,
+  PWA, application shell, health check y fallback automático.
+- [INSPECTION_SYNC_PUSH.md](./INSPECTION_SYNC_PUSH.md): fase 3, Outbox local,
+  Push manual, batches e idempotencia en PostgreSQL.
+- [offline-sync-v2.md](./offline-sync-v2.md): fase 4, Pull incremental,
+  checkpoints y candidatos de conflicto.
+
 ## Cómo leer este documento
 
 - **Regla de negocio:** define qué puede ocurrir en el sistema y por qué.
@@ -150,6 +162,22 @@ Todo miembro activo puede consultar su tenant. `INSPECTOR`, `SUPERVISOR` y
 avanzar su estado. `VIEWER` solo puede leer. `TENANT_ADMIN` también puede entrar
 a `/admin` y modificar sitios, activos, tipos, conceptos, asociaciones y
 plantillas de su empresa. El rol global `admin` conserva acceso total.
+
+`TENANT_ADMIN` también puede revisar los informes desde `/admin/reports` para
+los tenants que administra. Las vistas previas y versiones se consultan mediante
+los mismos endpoints de informe del trabajo. Entre los roles de tenant, solo
+`TENANT_ADMIN` o `SUPERVISOR` pueden guardar una nueva versión.
+
+El administrador del tenant puede confirmar o descartar hallazgos y cerrar la
+revisión de un trabajo finalizado. Solo después de cerrar esa revisión se puede
+aprobar un informe final. Al aprobarlo, `Aprobado por` se toma de la cuenta
+autenticada; una versión borrador nunca queda marcada como aprobada.
+
+Cada tenant puede guardar valores predeterminados para la portada del informe y
+un logo propio desde `/admin/reports`. Si no hay logo configurado se usa
+GridAssets. Los valores pueden ajustarse en cada informe antes de guardarlo.
+La versión guardada conserva una copia de los datos y del logo usados, aunque
+la configuración de la empresa cambie después.
 
 La autorización se valida en el BFF para cada petición. Ocultar botones o rutas
 en React mejora la experiencia, pero no constituye una regla de seguridad.
@@ -430,7 +458,9 @@ Para un tipo de trabajo se buscan los tipos de activo que lo tienen asociado.
 El selector muestra primero los conceptos activos relacionados con esos tipos
 de activo. Si no existe una compatibilidad suficiente, muestra como alternativa
 el catálogo activo del tenant. Esta preferencia ayuda a elegir; no crea una
-restricción de dominio nueva.
+asociación nueva. Al crear un Work, la aplicabilidad real de cada Concept se
+resuelve con la plantilla seleccionada y la relación `AssetTypeConcept` del
+activo evaluado.
 
 #### RN-FOR-007 — La configuración no cruza empresas
 
@@ -495,12 +525,85 @@ Las fotografías se pueden agregar o eliminar solamente mientras el trabajo
 está en `DRAFT` o `IN_PROGRESS`. En trabajos `FINISHED` o `REVIEWED` permanecen
 visibles como evidencia, pero no se pueden modificar.
 
+#### RN-EJE-010 — El Work conserva un único activo principal
+
+`Work.assetId` identifica siempre el activo sobre el cual se creó el trabajo.
+Incluir conceptos de descendientes no crea Works hijos, no cambia esa FK y no
+duplica el Work.
+
+#### RN-EJE-011 — Los WorkTypes no se heredan hacia los descendientes
+
+La creación valida el `WorkType` únicamente contra la configuración efectiva
+del activo principal. Los hijos conservan sus propias reglas de WorkTypes; su
+participación en el formulario del padre no les habilita ni deshabilita tipos
+de trabajo.
+
+#### RN-EJE-012 — Un Concept descendiente requiere dos permisos
+
+Un Concept se materializa para un activo del subárbol solamente cuando:
+
+1. existe como elemento `CONCEPT` en el `FormTemplate` del WorkType elegido; y
+2. existe una relación activa `AssetTypeConcept` entre el tipo de ese activo y
+   el Concept.
+
+Por tanto, no se agregan indiscriminadamente todos los Concepts de todos los
+descendientes. Un Work de inspección visual y uno de termografía pueden
+recorrer el mismo árbol y producir conjuntos diferentes.
+
+#### RN-EJE-013 — La búsqueda de descendientes es recursiva y acotada
+
+Se recorren hijos, nietos y cualquier profundidad posterior. La colección de
+entrada ya está limitada por `tenantId` y `siteId`; el recorrido nunca puede
+saltar a otro tenant o sitio y evita ciclos accidentales mediante IDs visitados.
+
+#### RN-EJE-014 — Cada WorkItem pertenece a un Asset concreto
+
+Cada elemento materializado conserva `assetId`, código, nombre y tipo del
+activo como snapshot. También conserva `formItemId`, que identifica el elemento
+de plantilla que lo originó. Dos radiadores que usan el mismo Concept generan
+dos WorkItems independientes.
+
+La identidad lógica es:
+
+```text
+Work + Asset + FormItem de plantilla
+```
+
+Como cada `FormItem` de tipo Concept referencia un único Concept, esta clave
+también distingue `Work + Asset + Concept + FormItem` sin deduplicar solo por
+`conceptId`.
+
+#### RN-EJE-015 — El snapshot protege el histórico por activo
+
+El nombre, código y tipo del activo, junto con la definición del Concept, se
+copian en `formSnapshot` al crear el Work. Renombrar, mover o desasociar después
+un activo o Concept no modifica un trabajo histórico.
+
+#### RN-EJE-016 — Tareas y Concepts tienen alcances diferentes
+
+Las tareas definidas por la plantilla se materializan una sola vez para el
+activo principal. Los descendientes aportan únicamente instancias `CONCEPT`
+permitidas por la regla RN-EJE-012.
+
 ## Reglas de programación vigentes
 
 ### RP-API-001 — La API aplica las reglas de negocio
 
 La interfaz puede orientar al usuario, pero NestJS vuelve a validar tenant,
 sitio, jerarquía, estado y relaciones. El frontend no es la autoridad final.
+
+### RP-EJE-001 — Los WorkItems usan UUID determinista
+
+El ID de una instancia se calcula con UUID v5 a partir de `workId`, `assetId` y
+`formItemId`. Esto hace idempotente la materialización y permite que IndexedDB
+y NestJS reconstruyan exactamente los mismos IDs durante un Push offline.
+
+### RP-EJE-002 — Online y offline materializan la misma regla
+
+NestJS usa el catálogo PostgreSQL e IndexedDB usa la copia local descargada.
+Ambos filtran por plantilla y `AssetTypeConcept`, recorren toda la descendencia
+y guardan los nuevos campos dentro del snapshot. Push/Pull continúa enviando el
+Work con su `formSnapshot` y las respuestas siguen apuntando al ID de instancia.
 
 ### RP-API-002 — El BFF es la entrada del frontend
 
@@ -669,6 +772,109 @@ tenant esté activo y busca cualquier sitio editable por la combinación `id +
 tenantId`. El frontend no puede indicar un propietario distinto dentro del
 cuerpo de la solicitud.
 
+### RN-OFF-001 — Una API inaccesible activa la copia local
+
+Si el navegador no tiene red o el health check del BFF no responde, las áreas
+offline soportadas usan exclusivamente los repositorios de IndexedDB. Recuperar
+conexión actualiza el estado visual, pero no sincroniza datos automáticamente.
+
+### RN-OFF-002 — Un dato local pendiente no se presenta como sincronizado
+
+Un registro nuevo queda `LOCAL_ONLY` y uno remoto editado localmente queda
+`MODIFIED`. El Push deja su mensaje como `ACKNOWLEDGED`; el ciclo Pull confirma
+el estado final o preserva un candidato de conflicto.
+
+### RN-OFF-003 — Las reglas del Work también rigen offline
+
+Los campos obligatorios y el estado de solo lectura de Works finalizados o
+revisados se aplican en `LocalWorkRepository` y en la interfaz. Perder conexión
+no amplía los permisos ni permite reabrir un formulario cerrado.
+
+### RN-OFF-004 — Las fotografías todavía requieren servidor
+
+En modo local se permiten comentarios por elemento, pero los controles de
+fotografías quedan deshabilitados con un mensaje explícito. No se inicia una
+cola ni se repiten solicitudes fallidas.
+
+### RN-OFF-005 — El envío de cambios es manual
+
+Recuperar la conexión no modifica PostgreSQL por sí solo. El usuario revisa la
+Outbox en `/sync` y pulsa **Sincronizar ahora**. Un error puede reintentarse
+manualmente y no inicia un ciclo infinito.
+
+### RN-OFF-006 — Un Work se sincroniza como una unidad consistente
+
+El Work se crea antes que sus respuestas, tareas y comentarios. El estado
+`FINISHED` se aplica al final del grupo y solamente si el servidor vuelve a
+validar sus campos obligatorios. Un fallo revierte el grupo completo.
+
+### RN-OFF-007 — Un Work cerrado en servidor rechaza cambios offline
+
+Si PostgreSQL ya contiene el Work como `FINISHED` o `REVIEWED`, el Push no lo
+sobrescribe. Devuelve un error explícito y conserva el cambio local para una
+futura resolución de conflicto.
+
+### RP-OFF-001 — El Service Worker guarda únicamente el application shell
+
+Workbox precachea HTML, JavaScript, CSS, iconos, fuentes empaquetadas y assets
+estáticos. Las rutas `/api/*` quedan excluidas; los datos de negocio se guardan
+en IndexedDB.
+
+### RP-OFF-002 — Una actualización nunca recarga un formulario por sí sola
+
+Cuando existe una versión nueva, la PWA muestra **Actualizar ahora**. El Service
+Worker en espera solo se activa cuando el usuario pulsa la acción.
+
+### RP-OFF-003 — Toda mutación local produce una Outbox durable
+
+`LocalWorkRepository` guarda la entidad y su `OutboxItem` dentro de la misma
+transacción Dexie. Cambios repetidos se consolidan y un `CREATE` mantiene esa
+operación con el payload más reciente hasta enviarse.
+
+### RP-OFF-004 — outboxId hace el Push idempotente
+
+`sync_operations` posee una restricción única por `tenant_id + outbox_id`. El
+recibo `PROCESSED` se confirma dentro de la misma transacción PostgreSQL que el
+cambio de dominio; reenviar el mismo UUID responde exitosamente sin duplicar.
+
+### RP-OFF-005 — El servidor vuelve a validar tenant y dominio
+
+La ruta pública requiere JWT, membresía y rol de escritura. `inspection-api`
+compara el tenant de ruta, body y payload, reconstruye el snapshot y valida
+relaciones, tipos de valores, opciones, plantilla y estado del Work.
+
+### RP-OFF-006 — Pull solo lee el tenant y los Sites autorizados
+
+El BFF exige JWT, membresía y rol. `inspection-api` obtiene el tenant desde la
+ruta y rechaza cualquier `siteId` que no pertenezca a ese tenant. Los catálogos
+globales se filtran por tenant y los datos operativos por los Sites descargados.
+
+### RP-OFF-007 — El checkpoint avanza junto con los datos locales
+
+Cada lote Pull se ordena por `server_changes.sequence`. Dexie aplica todas las
+mutaciones y guarda el checkpoint dentro de una sola transacción. Si una
+mutación falla, también se revierte el checkpoint y el lote puede reintentarse.
+
+### RP-OFF-008 — Un cambio remoto no sobrescribe trabajo local pendiente
+
+Si una entidad está `LOCAL_ONLY`, `MODIFIED` o conserva un Outbox pendiente,
+el Pull mantiene el dato local y guarda la versión remota en
+`syncConflictCandidates`. Esta fase detecta el conflicto, pero no decide cuál
+versión gana.
+
+### RP-OFF-009 — El log remoto pertenece a la transacción de dominio
+
+Los triggers escriben `server_changes` dentro de la misma transacción
+PostgreSQL que crea, modifica o elimina la entidad. Un rollback de negocio
+también elimina el evento incremental correspondiente.
+
+### RP-OFF-010 — Cada ciclo de sincronización pertenece a un tenant
+
+La pantalla `/sync` requiere una empresa seleccionada. Los pendientes,
+conflictos, Sites descargados, checkpoint, Push y Pull se filtran por ese
+`tenantId`. Sincronizar una empresa no puede enviar ni modificar la Outbox de
+otra empresa guardada en el mismo navegador.
+
 ## Decisiones pendientes
 
 Estas ideas todavía no son reglas implementadas:
@@ -730,7 +936,8 @@ Tenant: GMIN
 - Crear pautas, hallazgos, mediciones y adjuntos generales fuera del formulario.
 - Implementar creación automática de nuevas versiones inmutables de una
   plantilla.
-- Diseñar persistencia local, funcionamiento offline y sincronización.
+- Implementar resolución explícita de candidatos de conflicto y fotografías
+  offline sobre el flujo descrito en `docs/offline-sync-v2.md`.
 
 ## Plantilla para agregar una regla
 
@@ -763,3 +970,8 @@ Ejemplo válido o inválido, si ayuda a entenderla.
 | 2026-09-11 | Minas, plantas y faenas pueden crearse y editarse desde la administración de cada tenant.                     |
 | 2026-09-11 | Las membresías incorporan roles por tenant y autorización diferenciada para lectura, trabajo y configuración. |
 | 2026-09-13 | La navegación recuerda por usuario el último tenant y el último sitio utilizado dentro de cada tenant.        |
+| 2026-09-13 | Se agrega la primera fase offline-first con Dexie, descarga por sitio y trabajos locales sin sincronización.  |
+| 2026-09-13 | Se agrega PWA instalable, health check real, fallback automático a IndexedDB y centro `/sync` informativo.    |
+| 2026-09-15 | Se agrega Outbox durable, Push manual en batches, UUID cliente e idempotencia mediante `outboxId`.            |
+| 2026-09-18 | Se agrega Pull incremental, `server_changes`, checkpoints y preservación de candidatos de conflicto.          |
+| 2026-09-23 | Se limita cada pantalla y ciclo de sincronización al tenant seleccionado.                                     |

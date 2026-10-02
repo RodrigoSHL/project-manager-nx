@@ -5,21 +5,33 @@ import {
   LoaderCircle,
   MapPin,
   UserRound,
+  FileText,
 } from 'lucide-react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import {
+  Link,
+  useLocation,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom';
+import { useEffect } from 'react';
 import { Button } from '../components/ui/button';
 import { WorkExecutionForm } from '../features/works/components/work-execution-form';
+import { FindingReview } from '../features/works/components/finding-review';
 import { WorkStatusBadge } from '../features/works/components/work-status-badge';
 import { formatWorkDate } from '../features/works/work-formatters';
 import { useWorkCatalog } from '../features/works/use-work-catalog';
 import { useTenantAccess } from '../features/tenants/tenant-access-context';
+import { SyncStatusBadge } from '../features/offline/components/sync-status-badge';
+import { useOffline } from '../features/offline/offline-context';
 
 export function WorkDetailPage() {
   const { id = '' } = useParams();
+  const location = useLocation();
   const [params] = useSearchParams();
   const tenantId = params.get('tenantId') ?? '';
   const catalog = useWorkCatalog(tenantId);
   const tenantAccess = useTenantAccess();
+  const { mode } = useOffline();
   const work = catalog.works.find(
     (item) => item.id === id && item.tenantId === tenantId
   );
@@ -27,11 +39,35 @@ export function WorkDetailPage() {
     (item) => item.workId === id && item.tenantId === tenantId
   );
 
+  useEffect(() => {
+    if (
+      !work ||
+      !snapshot ||
+      (!location.hash.startsWith('#finding-') &&
+        location.hash !== '#review-findings')
+    )
+      return;
+    const target = decodeURIComponent(location.hash.slice(1));
+    const frame = requestAnimationFrame(() =>
+      document.getElementById(target)?.scrollIntoView({ block: 'center' })
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [work, snapshot, location.hash, catalog.findings.length]);
+
   if (!tenantId)
     return (
       <NotFound message="El enlace no identifica la empresa del trabajo." />
     );
-  if (catalog.error) return <NotFound message={catalog.error} />;
+  if (catalog.error)
+    return (
+      <NotFound
+        message={
+          mode === 'LOCAL'
+            ? 'Este trabajo no está disponible sin conexión. Debes descargar su sitio cuando el servidor vuelva a estar disponible.'
+            : catalog.error
+        }
+      />
+    );
   if (catalog.isLoading || !catalog.catalog) {
     return (
       <section className="grid min-h-72 place-items-center rounded-xl border border-slate-200 bg-white">
@@ -41,7 +77,13 @@ export function WorkDetailPage() {
   }
   if (!work || !snapshot) {
     return (
-      <NotFound message="El trabajo no existe en esta sesión o pertenece a otra empresa." />
+      <NotFound
+        message={
+          mode === 'LOCAL'
+            ? 'Este trabajo o su formulario no fue descargado en este dispositivo.'
+            : 'El trabajo no existe en esta sesión o pertenece a otra empresa.'
+        }
+      />
     );
   }
   const asset = catalog.catalog.assets.find(
@@ -62,6 +104,12 @@ export function WorkDetailPage() {
       >
         <ArrowLeft className="size-4" /> Volver a trabajos
       </Link>
+      <Link
+        to={`/works/${id}/report?tenantId=${encodeURIComponent(tenantId)}`}
+        className="mb-4 ml-4 inline-flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-slate-950"
+      >
+        <FileText className="size-4" /> Ver informe
+      </Link>
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
@@ -72,7 +120,10 @@ export function WorkDetailPage() {
               {work.title}
             </h1>
           </div>
-          <WorkStatusBadge status={work.status} />
+          <div className="flex flex-wrap gap-2">
+            <WorkStatusBadge status={work.status} />
+            <SyncStatusBadge work={work} />
+          </div>
         </div>
         <dl className="mt-6 grid gap-4 border-t border-slate-200 pt-5 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <Meta
@@ -117,10 +168,31 @@ export function WorkDetailPage() {
         responses={catalog.responses}
         taskCompletions={catalog.taskCompletions}
         annotations={catalog.annotations}
+        findingCandidates={catalog.findingCandidates}
+        severityLevels={catalog.severityLevels}
         accessReadonly={!tenantAccess.canWriteTenant(tenantId)}
         onSave={(values) => catalog.saveResponses(tenantId, work.id, values)}
         onStart={() => catalog.startWork(tenantId, work.id)}
         onFinish={(values) => catalog.finishWork(tenantId, work.id, values)}
+      />
+      <FindingReview
+        work={work}
+        snapshot={snapshot}
+        candidates={catalog.findingCandidates.filter(
+          (item) => item.workId === work.id
+        )}
+        findings={catalog.findings.filter((item) => item.workId === work.id)}
+        severities={catalog.severityLevels}
+        canReview={tenantAccess.canReviewTenant(tenantId)}
+        online={mode === 'REMOTE'}
+        busy={catalog.isMutating}
+        onConfirm={(candidateId, input) =>
+          catalog.confirmFinding(tenantId, work.id, candidateId, input)
+        }
+        onDiscard={(candidateId, reason) =>
+          catalog.discardCandidate(tenantId, work.id, candidateId, reason)
+        }
+        onFinalize={() => catalog.finalizeReview(tenantId, work.id)}
       />
     </>
   );

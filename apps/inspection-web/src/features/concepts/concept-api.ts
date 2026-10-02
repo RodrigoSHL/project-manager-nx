@@ -3,6 +3,7 @@ import type {
   Concept,
   ConceptFormValue,
   ConceptOption,
+  SeverityLevel,
 } from './models';
 import { authenticatedFetch } from '../auth/authenticated-fetch';
 
@@ -13,6 +14,33 @@ const baseUrl = (
 ).replace(/\/$/, '');
 
 export const conceptApi = {
+  listSeverityLevels(tenantId: string, signal?: AbortSignal) {
+    return request<SeverityLevel[]>(
+      `/tenants/${encodeURIComponent(tenantId)}/severity-levels`,
+      { signal }
+    );
+  },
+  createSeverityLevel(
+    tenantId: string,
+    input: Pick<SeverityLevel, 'code' | 'name' | 'order' | 'active'>
+  ) {
+    return request<SeverityLevel>(
+      `/tenants/${encodeURIComponent(tenantId)}/severity-levels`,
+      { method: 'POST', body: JSON.stringify(input) }
+    );
+  },
+  updateSeverityLevel(
+    tenantId: string,
+    id: string,
+    input: Partial<Pick<SeverityLevel, 'code' | 'name' | 'order' | 'active'>>
+  ) {
+    return request<SeverityLevel>(
+      `/tenants/${encodeURIComponent(
+        tenantId
+      )}/severity-levels/${encodeURIComponent(id)}`,
+      { method: 'PATCH', body: JSON.stringify(input) }
+    );
+  },
   listConcepts(tenantId: string, signal?: AbortSignal) {
     return request<ConceptWithOptions[]>(
       `/tenants/${encodeURIComponent(tenantId)}/concepts`,

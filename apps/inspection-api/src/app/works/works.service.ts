@@ -10,6 +10,7 @@ import { CatalogService } from '../catalog/catalog.service';
 import { ConceptType } from '../catalog/entities/concept.entity';
 import { ConceptOptionEntity } from '../catalog/entities/concept-option.entity';
 import { ConceptEntity } from '../catalog/entities/concept.entity';
+import type { AssetEntity } from '../catalog/entities/asset.entity';
 import {
   FormItemEntity,
   FormItemType,
@@ -31,6 +32,11 @@ import type {
   WorkFormItemSnapshot,
   WorkTemplateSnapshot,
 } from './work-snapshot';
+import { workItemInstanceId } from './work-item-id';
+import { FindingCandidateEntity } from './entities/finding-candidate.entity';
+import { FindingCandidateService } from './finding-candidate.service';
+import { SeverityLevelEntity } from '../catalog/entities/severity-level.entity';
+import { FindingEntity } from './entities/finding.entity';
 
 type NormalizedWorkResponses = {
   responses: Array<ConceptResponseValueDto & { conceptId: string }>;
@@ -60,12 +66,23 @@ export class WorksService {
     private readonly concepts: Repository<ConceptEntity>,
     @InjectRepository(ConceptOptionEntity)
     private readonly options: Repository<ConceptOptionEntity>,
-    private readonly dataSource: DataSource
+    @InjectRepository(FindingCandidateEntity)
+    private readonly findingCandidates: Repository<FindingCandidateEntity>,
+    private readonly dataSource: DataSource,
+    private readonly findingCandidateService: FindingCandidateService
   ) {}
 
   async list(tenantId: string) {
     await this.catalog.listSites(tenantId);
-    const [works, responses, taskCompletions, annotations] = await Promise.all([
+    const [
+      works,
+      responses,
+      taskCompletions,
+      annotations,
+      findingCandidates,
+      findings,
+      severityLevels,
+    ] = await Promise.all([
       this.works.find({
         where: { tenantId },
         order: { executionDate: 'DESC', createdAt: 'DESC' },
@@ -73,22 +90,43 @@ export class WorksService {
       this.responses.find({ where: { tenantId } }),
       this.taskCompletions.find({ where: { tenantId } }),
       this.annotations.find({ where: { tenantId } }),
+      this.findingCandidates.find({ where: { tenantId } }),
+      this.dataSource
+        .getRepository(FindingEntity)
+        .find({ where: { tenantId }, order: { sortOrder: 'ASC', id: 'ASC' } }),
+      this.dataSource
+        .getRepository(SeverityLevelEntity)
+        .find({ where: { tenantId }, order: { order: 'ASC' } }),
     ]);
     return {
       works: works.map((work) => this.toPublicWork(work)),
       responses,
       taskCompletions,
       annotations,
+      findingCandidates,
+      findings,
+      severityLevels,
       snapshots: works.map((work) => work.formSnapshot),
     };
   }
 
   async getById(tenantId: string, workId: string) {
     const work = await this.findWorkOrFail(tenantId, workId);
-    const [responses, taskCompletions, annotations] = await Promise.all([
+    const [
+      responses,
+      taskCompletions,
+      annotations,
+      findingCandidates,
+      findings,
+    ] = await Promise.all([
       this.responses.find({ where: { tenantId, workId } }),
       this.taskCompletions.find({ where: { tenantId, workId } }),
       this.annotations.find({ where: { tenantId, workId } }),
+      this.findingCandidates.find({ where: { tenantId, workId } }),
+      this.dataSource.getRepository(FindingEntity).find({
+        where: { tenantId, workId },
+        order: { sortOrder: 'ASC', id: 'ASC' },
+      }),
     ]);
     return {
       work: this.toPublicWork(work),
@@ -96,6 +134,8 @@ export class WorksService {
       responses,
       taskCompletions,
       annotations,
+      findingCandidates,
+      findings,
     };
   }
 
@@ -133,7 +173,7 @@ export class WorksService {
     }
 
     const id = randomUUID();
-    const snapshot = await this.buildSnapshot(id, tenantId, template);
+    const snapshot = await this.buildSnapshot(id, tenantId, asset, template);
     const work = this.works.create({
       id,
       tenantId,
@@ -156,6 +196,42 @@ export class WorksService {
     };
   }
 
+  async prepareSnapshotForSyncedWork(
+    tenantId: string,
+    workId: string,
+    siteId: string,
+    assetId: string,
+    workTypeId: string,
+    formTemplateId: string,
+    formTemplateVersion: number
+  ) {
+    const [asset, effectiveWorkTypes, template] = await Promise.all([
+      this.catalog.getAsset(tenantId, siteId, assetId),
+      this.catalog.listEffectiveWorkTypes(tenantId, siteId, assetId),
+      this.templates.findOne({
+        where: {
+          id: formTemplateId,
+          tenantId,
+          workTypeId,
+          version: formTemplateVersion,
+          active: true,
+        },
+      }),
+    ]);
+    if (!effectiveWorkTypes.some((workType) => workType.id === workTypeId)) {
+      throw new BadRequestException('Work type is not enabled for this asset');
+    }
+    if (!template) {
+      throw new BadRequestException(
+        'The offline work template is no longer active or has changed version'
+      );
+    }
+    return {
+      asset,
+      snapshot: await this.buildSnapshot(workId, tenantId, asset, template),
+    };
+  }
+
   async saveResponses(
     tenantId: string,
     workId: string,
@@ -164,7 +240,7 @@ export class WorksService {
     const work = await this.findWorkOrFail(tenantId, workId);
     this.assertEditable(work);
     const normalized = this.validateAndNormalize(work.formSnapshot, dto);
-    await this.replaceResponses(tenantId, workId, normalized);
+    await this.replaceResponses(work, normalized);
     await this.works.update(
       { id: workId, tenantId },
       { updatedAt: new Date() }
@@ -189,7 +265,7 @@ export class WorksService {
       throw new BadRequestException('The work must be IN_PROGRESS to finish');
     }
     const normalized = this.validateAndNormalize(work.formSnapshot, dto);
-    await this.replaceResponses(tenantId, workId, normalized);
+    await this.replaceResponses(work, normalized);
     await this.works.update(
       { id: workId, tenantId },
       { updatedAt: new Date() }
@@ -222,10 +298,10 @@ export class WorksService {
   }
 
   private async replaceResponses(
-    tenantId: string,
-    workId: string,
+    work: WorkEntity,
     dto: NormalizedWorkResponses
   ) {
+    const { tenantId, id: workId } = work;
     await this.dataSource.transaction(async (manager) => {
       const responseRepository = manager.getRepository(ConceptResponseEntity);
       const taskRepository = manager.getRepository(TaskCompletionEntity);
@@ -265,6 +341,12 @@ export class WorksService {
               valueNumber: value.valueNumber ?? null,
               valueText: value.valueText ?? null,
               selectedOptionId: value.selectedOptionId ?? null,
+              measuredAt:
+                value.measuredAt ?? previous?.measuredAt ?? work.executionDate,
+              measuredAtTime:
+                value.measuredAtTime === undefined
+                  ? previous?.measuredAtTime ?? null
+                  : value.measuredAtTime,
               createdAt: previous?.createdAt,
             });
           })
@@ -295,11 +377,13 @@ export class WorksService {
               workId,
               formItemId: value.formItemId,
               comment: value.comment,
+              isFinding: value.isFinding ?? false,
               createdAt: previous?.createdAt,
             });
           })
         );
       }
+      await this.findingCandidateService.reconcile(manager, work);
     });
   }
 
@@ -341,7 +425,17 @@ export class WorksService {
         );
       }
       const comment = value.comment.trim();
-      return comment ? [{ formItemId: value.formItemId, comment }] : [];
+      if (value.isFinding && !comment)
+        throw new BadRequestException('A manual finding needs a comment');
+      return comment
+        ? [
+            {
+              formItemId: value.formItemId,
+              comment,
+              isFinding: value.isFinding ?? false,
+            },
+          ]
+        : [];
     });
     return { responses, taskCompletions, annotations };
   }
@@ -356,17 +450,32 @@ export class WorksService {
       concept.type === ConceptType.ANALOG &&
       value.valueNumber !== undefined
     ) {
-      return { formItemId: item.id, valueNumber: value.valueNumber };
+      return {
+        formItemId: item.id,
+        valueNumber: value.valueNumber,
+        measuredAt: value.measuredAt,
+        measuredAtTime: value.measuredAtTime,
+      };
     }
     if (concept.type === ConceptType.TEXT && value.valueText?.trim()) {
-      return { formItemId: item.id, valueText: value.valueText.trim() };
+      return {
+        formItemId: item.id,
+        valueText: value.valueText.trim(),
+        measuredAt: value.measuredAt,
+        measuredAtTime: value.measuredAtTime,
+      };
     }
     if (
       concept.type === ConceptType.DIGITAL &&
       value.selectedOptionId &&
       concept.options.some((option) => option.id === value.selectedOptionId)
     ) {
-      return { formItemId: item.id, selectedOptionId: value.selectedOptionId };
+      return {
+        formItemId: item.id,
+        selectedOptionId: value.selectedOptionId,
+        measuredAt: value.measuredAt,
+        measuredAtTime: value.measuredAtTime,
+      };
     }
     throw new BadRequestException(
       `Response value does not match concept type ${concept.type}`
@@ -402,6 +511,7 @@ export class WorksService {
   private async buildSnapshot(
     workId: string,
     tenantId: string,
+    rootAsset: AssetEntity,
     template: FormTemplateEntity
   ): Promise<WorkTemplateSnapshot> {
     const sections = await this.sections.find({
@@ -415,15 +525,71 @@ export class WorksService {
     const conceptIds = templateItems.flatMap((item) =>
       item.conceptId ? [item.conceptId] : []
     );
-    const [concepts, options] = await Promise.all([
-      this.concepts.find({ where: { tenantId } }),
-      this.options.find({ where: { tenantId }, order: { order: 'ASC' } }),
-    ]);
+    const [concepts, options, descendants, assetTypeConcepts] =
+      await Promise.all([
+        this.concepts.find({ where: { tenantId } }),
+        this.options.find({ where: { tenantId }, order: { order: 'ASC' } }),
+        this.catalog.getAssetDescendants(
+          tenantId,
+          rootAsset.siteId,
+          rootAsset.id
+        ),
+        this.catalog.listAssetTypeConcepts(tenantId),
+      ]);
     const conceptById = new Map(
       concepts
         .filter((concept) => conceptIds.includes(concept.id))
         .map((concept) => [concept.id, concept])
     );
+    const assets = [rootAsset, ...descendants];
+    const assetOrder = new Map(assets.map((asset, index) => [asset.id, index]));
+    const assetDepth = new Map<string, number>([[rootAsset.id, 0]]);
+    for (const asset of descendants) {
+      assetDepth.set(asset.id, (assetDepth.get(asset.parentId ?? '') ?? 0) + 1);
+    }
+    const allowedConcepts = new Set(
+      assetTypeConcepts
+        .filter((relation) => relation.active)
+        .map((relation) => `${relation.assetTypeId}:${relation.conceptId}`)
+    );
+    const snapshotAsset = (asset: AssetEntity) => ({
+      assetId: asset.id,
+      assetCodeSnapshot: asset.code,
+      assetNameSnapshot: asset.name,
+      assetTypeIdSnapshot: asset.assetTypeId,
+      assetOrder: assetOrder.get(asset.id) ?? 0,
+      assetDepth: assetDepth.get(asset.id) ?? 0,
+    });
+    const conceptSnapshot = (concept: ConceptEntity) => ({
+      id: concept.id,
+      code: concept.code,
+      name: concept.name,
+      description: concept.description,
+      type: concept.type,
+      unit: concept.unit,
+      minValue: concept.minValue ?? null,
+      maxValue: concept.maxValue ?? null,
+      outOfRangeSeverityId: concept.outOfRangeSeverityId ?? null,
+      options: options
+        .filter((option) => option.conceptId === concept.id && option.active)
+        .map(
+          ({
+            id,
+            label,
+            value,
+            order,
+            generatesFinding,
+            suggestedSeverityId,
+          }) => ({
+            id,
+            label,
+            value,
+            order,
+            generatesFinding,
+            suggestedSeverityId: suggestedSeverityId ?? null,
+          })
+        ),
+    });
     return {
       workId,
       tenantId,
@@ -438,39 +604,29 @@ export class WorksService {
         items: templateItems
           .filter((item) => item.sectionId === section.id)
           .sort((a, b) => a.order - b.order)
-          .map((item) => {
+          .flatMap((item) => {
             const concept = item.conceptId
               ? conceptById.get(item.conceptId)
               : undefined;
-            return {
-              id: item.id,
+            const targetAssets =
+              item.type === FormItemType.TASK
+                ? [rootAsset]
+                : concept
+                ? assets.filter((asset) =>
+                    allowedConcepts.has(`${asset.assetTypeId}:${concept.id}`)
+                  )
+                : [];
+            return targetAssets.map((asset) => ({
+              id: workItemInstanceId(workId, asset.id, item.id),
+              formItemId: item.id,
+              ...snapshotAsset(asset),
               type: item.type,
               order: item.order,
               title: item.title,
               description: item.description,
               required: item.required,
-              concept: concept
-                ? {
-                    id: concept.id,
-                    code: concept.code,
-                    name: concept.name,
-                    description: concept.description,
-                    type: concept.type,
-                    unit: concept.unit,
-                    options: options
-                      .filter(
-                        (option) =>
-                          option.conceptId === concept.id && option.active
-                      )
-                      .map(({ id, label, value, order }) => ({
-                        id,
-                        label,
-                        value,
-                        order,
-                      })),
-                  }
-                : undefined,
-            };
+              concept: concept ? conceptSnapshot(concept) : undefined,
+            }));
           }),
       })),
     };

@@ -14,9 +14,11 @@ import {
   isGlobalAdmin,
 } from '../features/auth/auth-storage';
 import type { CurrentUser } from '../features/auth/models';
+import { useConnectivity } from '../hooks/use-connectivity';
 
 export function LoginPage() {
   const auth = useAuth();
+  const connectivity = useConnectivity();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectTo = safeRedirect(searchParams.get('redirect'));
@@ -35,6 +37,12 @@ export function LoginPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!connectivity.apiReachable) {
+      setError(
+        'Para iniciar una sesión nueva necesitas conexión con el servidor.'
+      );
+      return;
+    }
     setError(null);
     setIsSubmitting(true);
     try {
@@ -126,6 +134,13 @@ export function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            {!connectivity.apiReachable ? (
+              <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                {connectivity.browserOnline
+                  ? 'El servidor no está disponible. Una sesión validada previamente puede seguir trabajando offline.'
+                  : 'No hay conexión. Una sesión validada previamente puede seguir trabajando offline.'}
+              </p>
+            ) : null}
             <div className="flex flex-col gap-1.5">
               <label htmlFor="email" className="text-sm font-medium">
                 Correo electrónico
@@ -169,7 +184,7 @@ export function LoginPage() {
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !connectivity.apiReachable}
               className="mt-2 flex h-12 items-center justify-center gap-2 rounded-xl bg-slate-950 text-sm font-semibold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:pointer-events-none disabled:opacity-60"
             >
               {isSubmitting ? (

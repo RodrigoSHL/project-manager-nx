@@ -8,6 +8,12 @@ Las reglas funcionales y técnicas vigentes se mantienen en
 La guía detallada de usuarios, membresías, roles y flujo entre servicios está
 en
 [`docs/INSPECTION_TENANT_ACCESS.md`](../../docs/INSPECTION_TENANT_ACCESS.md).
+La sincronización offline Push/Pull, sus checkpoints y el registro de cambios
+del servidor se documentan en
+[`docs/offline-sync-v2.md`](../../docs/offline-sync-v2.md).
+La materialización de WorkItems por activo principal y descendientes se explica
+en
+[`docs/INSPECTION_DESCENDANT_WORK_ITEMS.md`](../../docs/INSPECTION_DESCENDANT_WORK_ITEMS.md).
 
 ## Contrato local
 
@@ -83,6 +89,8 @@ POST /api/tenants/:tenantId/sites/:siteId/assets/:assetId/works
 PUT /api/tenants/:tenantId/works/:workId/responses
 PATCH /api/tenants/:tenantId/works/:workId/status
 POST /api/tenants/:tenantId/works/:workId/finish
+POST /api/tenants/:tenantId/sync/push
+POST /api/tenants/:tenantId/sync/pull
 GET /api/platform/tenants
 GET /api/platform/tenants/:tenantId
 POST /api/platform/tenants
@@ -127,6 +135,13 @@ Los comentarios opcionales de cada tarea o concepto se almacenan en
 misma transacción que las respuestas. Las fotografías usan el `files-api`
 común mediante el BFF; se identifican por trabajo y `formItemId`, por lo que el
 binario no se guarda dentro de `inspection_db`.
+
+La sincronización offline usa dos rutas complementarias. `sync/push` recibe la
+Outbox del dispositivo de forma idempotente y `sync/pull` entrega, en lotes,
+los cambios registrados en `server_changes` después del checkpoint enviado.
+El alcance del Pull queda limitado al tenant autorizado y a los sitios pedidos
+por el cliente. Los triggers de PostgreSQL escriben el cambio dentro de la
+misma transacción que modifica el dominio.
 
 La administración global de clientes utiliza las rutas internas
 `/api/platform/tenants`. El BFF las publica como `/api/platform/tenants` y

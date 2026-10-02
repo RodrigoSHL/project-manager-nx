@@ -9,6 +9,8 @@ import {
   Settings,
   ShieldCheck,
   Zap,
+  Database,
+  RefreshCw,
 } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Button } from '../components/ui/button';
@@ -21,18 +23,35 @@ import {
   SheetTitle,
 } from '../components/ui/sheet';
 import { useTenantAccess } from '../features/tenants/tenant-access-context';
+import { ConnectivityStatus } from '../features/offline/components/connectivity-status';
+import { useOffline } from '../features/offline/offline-context';
 
-const navigation = [
+type NavigationItem = {
+  to: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  developmentOnly?: boolean;
+};
+
+const navigation: NavigationItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/assets', label: 'Activos', icon: Building2 },
   { to: '/works', label: 'Trabajos', icon: ClipboardList },
   { to: '/findings', label: 'Hallazgos', icon: AlertTriangle },
+  { to: '/sync', label: 'Sincronización', icon: RefreshCw },
+  {
+    to: '/offline-debug',
+    label: 'Datos locales',
+    icon: Database,
+    developmentOnly: true,
+  },
   { to: '/admin', label: 'Administración', icon: Settings },
 ];
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const auth = useAuth();
   const tenantAccess = useTenantAccess();
+  const { mode } = useOffline();
   return (
     <>
       <div className="flex h-16 items-center gap-3 border-b border-white/10 px-5">
@@ -47,9 +66,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       <nav className="flex flex-1 flex-col gap-1 p-3" aria-label="Principal">
         {navigation
-          .filter(
-            ({ to }) => to !== '/admin' || tenantAccess.canAdministerTenants
-          )
+          .filter(({ to, developmentOnly }) => {
+            if (developmentOnly && !import.meta.env.DEV) return false;
+            return to !== '/admin' || tenantAccess.canAdministerTenants;
+          })
           .map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
@@ -68,7 +88,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             </NavLink>
           ))}
 
-        {isGlobalAdmin(auth.user) ? (
+        {isGlobalAdmin(auth.user) && mode === 'REMOTE' ? (
           <>
             <p className="mt-5 border-t border-white/10 px-3 pt-4 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-slate-500">
               Control global
@@ -137,12 +157,15 @@ export function AppLayout() {
           >
             <Menu />
           </Button>
-          <div>
-            <p className="text-sm font-semibold text-slate-900">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-slate-900">
               Gestión de subestaciones
             </p>
-            <p className="text-xs text-slate-500">Etapa visual</p>
+            <p className="hidden text-xs text-slate-500 sm:block">
+              Etapa visual
+            </p>
           </div>
+          <ConnectivityStatus />
         </header>
 
         <main className="mx-auto w-full max-w-7xl p-4 md:p-8">

@@ -2,12 +2,14 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
   Put,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -23,6 +25,8 @@ import {
   FormTemplateMutationPayload,
   InspectionApiClient,
   SiteMutationPayload,
+  SyncPullPayload,
+  SyncPushPayload,
   WorkMutationPayload,
   WorkResponsesPayload,
 } from './inspection-api.client';
@@ -58,6 +62,99 @@ export class InspectionApiController {
     return this.client.listWorks(tenantId);
   }
 
+  @Get('tenants/:tenantId/analytics/summary')
+  analyticsSummary(
+    @Param('tenantId', ParseUUIDPipe) tenantId: string,
+    @Query() query: Record<string, string>,
+    @Request() request: ExpressRequestWithUser
+  ) {
+    return this.client.analytics(
+      this.analyticsTenant(request, tenantId),
+      'summary',
+      query
+    );
+  }
+
+  @Get('tenants/:tenantId/analytics/findings')
+  analyticsFindings(
+    @Param('tenantId', ParseUUIDPipe) tenantId: string,
+    @Query() query: Record<string, string>,
+    @Request() request: ExpressRequestWithUser
+  ) {
+    return this.client.analytics(
+      this.analyticsTenant(request, tenantId),
+      'findings',
+      query
+    );
+  }
+
+  @Get('tenants/:tenantId/analytics/measurements')
+  analyticsMeasurements(
+    @Param('tenantId', ParseUUIDPipe) tenantId: string,
+    @Query() query: Record<string, string>,
+    @Request() request: ExpressRequestWithUser
+  ) {
+    return this.client.analytics(
+      this.analyticsTenant(request, tenantId),
+      'measurements',
+      query
+    );
+  }
+
+  @Get('tenants/:tenantId/analytics/assets/:assetId/history')
+  analyticsAssetHistory(
+    @Param('tenantId', ParseUUIDPipe) tenantId: string,
+    @Param('assetId', ParseUUIDPipe) assetId: string,
+    @Query() query: Record<string, string>,
+    @Request() request: ExpressRequestWithUser
+  ) {
+    return this.client.analytics(
+      this.analyticsTenant(request, tenantId),
+      `assets/${encodeURIComponent(assetId)}/history`,
+      query
+    );
+  }
+
+  @Get('tenants/:tenantId/analytics/activity')
+  analyticsActivity(
+    @Param('tenantId', ParseUUIDPipe) tenantId: string,
+    @Query() query: Record<string, string>,
+    @Request() request: ExpressRequestWithUser
+  ) {
+    return this.client.analytics(
+      this.analyticsTenant(request, tenantId),
+      'activity',
+      query
+    );
+  }
+
+  @Get('tenants/:tenantId/analytics/concepts')
+  analyticsConcepts(
+    @Param('tenantId', ParseUUIDPipe) tenantId: string,
+    @Query() query: Record<string, string>,
+    @Request() request: ExpressRequestWithUser
+  ) {
+    return this.client.analytics(
+      this.analyticsTenant(request, tenantId),
+      'concepts',
+      query
+    );
+  }
+
+  private analyticsTenant(
+    request: ExpressRequestWithUser,
+    selectedTenantId: string
+  ): string {
+    if (request.user.roles.includes(UserRole.ADMIN)) return selectedTenantId;
+    if (
+      !request.tenantAccess ||
+      request.tenantAccess.tenantId !== selectedTenantId
+    ) {
+      throw new ForbiddenException('Tenant access denied');
+    }
+    return request.tenantAccess.tenantId;
+  }
+
   @Get('tenants/:tenantId/works/:workId')
   getWork(
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
@@ -72,9 +169,13 @@ export class InspectionApiController {
     @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
     @Param('siteId', new ParseUUIDPipe()) siteId: string,
     @Param('assetId', new ParseUUIDPipe()) assetId: string,
+    @Request() request: ExpressRequestWithUser,
     @Body() payload: WorkMutationPayload
   ) {
-    return this.client.createWork(tenantId, siteId, assetId, payload);
+    return this.client.createWork(tenantId, siteId, assetId, {
+      ...payload,
+      responsible: request.user.name.trim(),
+    });
   }
 
   @Put('tenants/:tenantId/works/:workId/responses')
@@ -104,6 +205,66 @@ export class InspectionApiController {
     @Body() payload: WorkResponsesPayload
   ) {
     return this.client.finishWork(tenantId, workId, payload);
+  }
+
+  @Put(
+    'tenants/:tenantId/works/:workId/finding-candidates/:candidateId/confirm'
+  )
+  @TenantRoles('TENANT_ADMIN', 'SUPERVISOR')
+  confirmFinding(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('workId', new ParseUUIDPipe()) workId: string,
+    @Param('candidateId', new ParseUUIDPipe()) candidateId: string,
+    @Body()
+    payload: {
+      title: string;
+      description?: string;
+      severityId?: string | null;
+      manHours?: number | null;
+      materials?: string;
+    }
+  ) {
+    return this.client.confirmFinding(tenantId, workId, candidateId, payload);
+  }
+
+  @Put(
+    'tenants/:tenantId/works/:workId/finding-candidates/:candidateId/discard'
+  )
+  @TenantRoles('TENANT_ADMIN', 'SUPERVISOR')
+  discardCandidate(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('workId', new ParseUUIDPipe()) workId: string,
+    @Param('candidateId', new ParseUUIDPipe()) candidateId: string,
+    @Body() payload: { reason?: string }
+  ) {
+    return this.client.discardCandidate(tenantId, workId, candidateId, payload);
+  }
+
+  @Post('tenants/:tenantId/works/:workId/review/finalize')
+  @TenantRoles('TENANT_ADMIN', 'SUPERVISOR')
+  finalizeReview(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('workId', new ParseUUIDPipe()) workId: string
+  ) {
+    return this.client.finalizeReview(tenantId, workId);
+  }
+
+  @Post('tenants/:tenantId/sync/push')
+  @TenantRoles('TENANT_ADMIN', 'SUPERVISOR', 'INSPECTOR')
+  pushSync(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Body() payload: SyncPushPayload
+  ) {
+    return this.client.pushSync(tenantId, payload);
+  }
+
+  @Post('tenants/:tenantId/sync/pull')
+  @TenantRoles('TENANT_ADMIN', 'SUPERVISOR', 'INSPECTOR', 'VIEWER')
+  pullSync(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Body() payload: SyncPullPayload
+  ) {
+    return this.client.pullSync(tenantId, payload);
   }
 
   @Get('tenants/:tenantId/sites')
@@ -328,6 +489,32 @@ export class InspectionApiController {
   @Get('tenants/:tenantId/concepts')
   listConcepts(@Param('tenantId', new ParseUUIDPipe()) tenantId: string) {
     return this.client.listConcepts(tenantId);
+  }
+
+  @Get('tenants/:tenantId/severity-levels')
+  listSeverityLevels(@Param('tenantId', new ParseUUIDPipe()) tenantId: string) {
+    return this.client.listSeverityLevels(tenantId);
+  }
+
+  @Post('tenants/:tenantId/severity-levels')
+  @TenantRoles('TENANT_ADMIN')
+  createSeverityLevel(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Body()
+    payload: { code: string; name: string; order: number; active?: boolean }
+  ) {
+    return this.client.createSeverityLevel(tenantId, payload);
+  }
+
+  @Patch('tenants/:tenantId/severity-levels/:severityId')
+  @TenantRoles('TENANT_ADMIN')
+  updateSeverityLevel(
+    @Param('tenantId', new ParseUUIDPipe()) tenantId: string,
+    @Param('severityId', new ParseUUIDPipe()) severityId: string,
+    @Body()
+    payload: { code?: string; name?: string; order?: number; active?: boolean }
+  ) {
+    return this.client.updateSeverityLevel(tenantId, severityId, payload);
   }
 
   @Post('tenants/:tenantId/concepts')

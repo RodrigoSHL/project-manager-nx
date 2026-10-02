@@ -6,8 +6,11 @@ import type {
   WorkItemAnnotation,
   WorkItemValue,
   WorkTemplateSnapshot,
+  Finding,
 } from './models';
 import { authenticatedFetch } from '../auth/authenticated-fetch';
+import type { SeverityLevel } from '../concepts/models';
+import type { FindingCandidate } from './models';
 
 export type WorkCatalogResponse = {
   works: Work[];
@@ -15,6 +18,9 @@ export type WorkCatalogResponse = {
   taskCompletions: TaskCompletion[];
   annotations: WorkItemAnnotation[];
   snapshots: WorkTemplateSnapshot[];
+  severityLevels: SeverityLevel[];
+  findingCandidates: FindingCandidate[];
+  findings: Finding[];
 };
 
 export type WorkResponsesPayload = {
@@ -23,9 +29,15 @@ export type WorkResponsesPayload = {
     valueNumber?: number;
     valueText?: string;
     selectedOptionId?: string;
+    measuredAt?: string;
+    measuredAtTime?: string | null;
   }>;
   taskCompletions: Array<{ formItemId: string; completed: boolean }>;
-  annotations: Array<{ formItemId: string; comment: string }>;
+  annotations: Array<{
+    formItemId: string;
+    comment: string;
+    isFinding?: boolean;
+  }>;
 };
 
 export class WorkApiError extends Error {
@@ -85,6 +97,49 @@ export const workApi = {
       { method: 'POST', body: JSON.stringify(payload) }
     );
   },
+
+  confirmFinding(
+    tenantId: string,
+    workId: string,
+    candidateId: string,
+    payload: {
+      title: string;
+      description?: string;
+      severityId?: string | null;
+      manHours?: number | null;
+      materials?: string;
+    }
+  ) {
+    return request<Finding>(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/finding-candidates/${encodeURIComponent(candidateId)}/confirm`,
+      { method: 'PUT', body: JSON.stringify(payload) }
+    );
+  },
+
+  discardCandidate(
+    tenantId: string,
+    workId: string,
+    candidateId: string,
+    reason?: string
+  ) {
+    return request<FindingCandidate>(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/finding-candidates/${encodeURIComponent(candidateId)}/discard`,
+      { method: 'PUT', body: JSON.stringify({ reason }) }
+    );
+  },
+
+  finalizeReview(tenantId: string, workId: string) {
+    return request<Work>(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/review/finalize`,
+      { method: 'POST' }
+    );
+  },
 };
 
 export function toWorkResponsesPayload(
@@ -96,10 +151,13 @@ export function toWorkResponsesPayload(
   const annotations: WorkResponsesPayload['annotations'] = [];
   for (const item of snapshot.sections.flatMap((section) => section.items)) {
     const value = values[item.id];
+    if (value?.isFinding && !value.comment?.trim())
+      throw new WorkApiError('Escribe un comentario para el hallazgo manual.');
     if (value?.comment?.trim()) {
       annotations.push({
         formItemId: item.id,
         comment: value.comment.trim(),
+        isFinding: value.isFinding ?? false,
       });
     }
     if (item.type === 'TASK') {
@@ -114,7 +172,14 @@ export function toWorkResponsesPayload(
     const concept = item.concept;
     if (!concept || !value) continue;
     if (concept.type === 'ANALOG' && Number.isFinite(value.valueNumber)) {
-      responses.push({ formItemId: item.id, valueNumber: value.valueNumber });
+      responses.push({
+        formItemId: item.id,
+        valueNumber: value.valueNumber,
+        measuredAt: value.measuredAt,
+        ...(value.measuredAtTime !== undefined
+          ? { measuredAtTime: value.measuredAtTime }
+          : {}),
+      });
     }
     if (concept.type === 'TEXT' && value.valueText?.trim()) {
       responses.push({

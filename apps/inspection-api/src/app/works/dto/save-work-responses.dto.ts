@@ -1,10 +1,12 @@
 import {
   IsArray,
   IsBoolean,
+  IsDateString,
   IsNumber,
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
   ValidateNested,
 } from 'class-validator';
@@ -25,6 +27,15 @@ export class ConceptResponseValueDto {
   @IsOptional()
   @IsUUID()
   selectedOptionId?: string;
+
+  @IsOptional()
+  @IsDateString({ strict: true })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  measuredAt?: string;
+
+  @IsOptional()
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/)
+  measuredAtTime?: string | null;
 }
 
 export class TaskCompletionValueDto {
@@ -42,6 +53,10 @@ export class WorkItemAnnotationValueDto {
   @IsString()
   @MaxLength(2000)
   comment!: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isFinding?: boolean;
 }
 
 export class SaveWorkResponsesDto {

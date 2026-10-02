@@ -25,7 +25,7 @@ export function PublicSector() {
         className="pointer-events-none absolute inset-0 opacity-5"
         style={{
           background:
-            'radial-gradient(ellipse 80% 50% at 50% 50%, oklch(0.82 0.18 190), transparent)',
+            'radial-gradient(ellipse 80% 50% at 50% 50%, var(--turquoise), transparent)',
         }}
         aria-hidden="true"
       />
@@ -39,17 +39,17 @@ export function PublicSector() {
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           className="relative overflow-hidden rounded-3xl p-8 sm:p-12 lg:p-16"
           style={{
-            background: 'oklch(0.12 0.018 240 / 0.7)',
+            background: 'var(--surface-raised)',
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
-            border: '1px solid oklch(0.82 0.18 190 / 0.2)',
-            boxShadow: '0 0 60px oklch(0.82 0.18 190 / 0.06), inset 0 1px 0 oklch(0.82 0.18 190 / 0.1)',
+            border: '1px solid color-mix(in oklch, var(--turquoise) 20%, var(--border))',
+            boxShadow: '0 0 60px color-mix(in oklch, var(--turquoise) 6%, transparent), inset 0 1px 0 color-mix(in oklch, var(--turquoise) 10%, transparent)',
           }}
         >
           {/* Decorative corner accent */}
           <div
             className="pointer-events-none absolute top-0 right-0 h-48 w-48 rounded-bl-full opacity-10"
-            style={{ background: 'oklch(0.82 0.18 190)' }}
+            style={{ background: 'var(--turquoise)' }}
             aria-hidden="true"
           />
 

@@ -52,6 +52,8 @@ export default function ProjectManagement() {
   const [createTicketOpen, setCreateTicketOpen] = React.useState(false)
   const [createTicketInitialStatus, setCreateTicketInitialStatus] = React.useState<ApiTicket['status']>('todo')
   const [createTicketInitialSprintId, setCreateTicketInitialSprintId] = React.useState<string | null | undefined>(undefined)
+  const [createTicketInitialType, setCreateTicketInitialType] = React.useState<ApiTicket['type']>('task')
+  const [createTicketInitialEpicId, setCreateTicketInitialEpicId] = React.useState<string | null>(null)
   const [ticketDetailOpen, setTicketDetailOpen] = React.useState(false)
   const [createSupportOpen, setCreateSupportOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState('')
@@ -116,6 +118,7 @@ export default function ProjectManagement() {
   }, [tickets, currentProject, searchQuery, filters, teamMembers])
 
   const sprintTickets = filteredTickets.filter(ticket => {
+    if (ticket.type === 'epic') return false
     if (ticket.sprintId !== activeSprint?.id) return false
     if (boardAssigneeFilters.length === 0) return true
 
@@ -131,9 +134,16 @@ export default function ProjectManagement() {
     setTicketDetailOpen(true)
   }
 
-  const handleCreateTicket = (status?: ApiTicket['status'], sprintId?: string | null) => {
+  const handleCreateTicket = (
+    status?: ApiTicket['status'],
+    sprintId?: string | null,
+    type: ApiTicket['type'] = 'task',
+    epicId: string | null = null,
+  ) => {
     setCreateTicketInitialStatus(status ?? 'todo')
     setCreateTicketInitialSprintId(sprintId)
+    setCreateTicketInitialType(type)
+    setCreateTicketInitialEpicId(epicId)
     setCreateTicketOpen(true)
   }
 
@@ -578,6 +588,8 @@ export default function ProjectManagement() {
               currentProject={currentProject}
               onTicketClick={handleTicketClick}
               onCreateTicket={(sprintId) => handleCreateTicket(undefined, sprintId)}
+              onCreateEpic={() => handleCreateTicket('backlog', null, 'epic')}
+              onCreateStory={(epicId) => handleCreateTicket('backlog', null, 'story', epicId)}
             />
           </div>
         )
@@ -882,6 +894,7 @@ export default function ProjectManagement() {
         open={ticketDetailOpen}
         projectId={currentProject}
         teamMembers={teamMembers}
+        tickets={tickets}
         onUpdated={handleTicketUpdated}
         onClose={() => {
           setTicketDetailOpen(false)
@@ -912,8 +925,11 @@ export default function ProjectManagement() {
         projectId={currentProject}
         sprints={sprints}
         teamMembers={teamMembers}
+        availableEpics={tickets.filter(ticket => ticket.type === 'epic')}
         initialStatus={createTicketInitialStatus}
         initialSprintId={createTicketInitialSprintId}
+        initialType={createTicketInitialType}
+        initialEpicId={createTicketInitialEpicId}
         onCreated={handleTicketCreated}
       />
 

@@ -10,11 +10,15 @@ import { assetCatalogApi } from '../assets/asset-catalog-api';
 import type { Tenant } from '../assets/models';
 import { useAuth } from '../auth/auth-context';
 import { isGlobalAdmin } from '../auth/auth-storage';
+import { useOffline } from '../offline/offline-context';
+import { localCatalogRepository } from '../../repositories/local-catalog-repository';
 
 type TenantAccessContextValue = {
+  accessibleTenants: Tenant[];
   administrableTenants: Tenant[];
   canAdministerTenants: boolean;
   canWriteTenant: (tenantId: string) => boolean;
+  canReviewTenant: (tenantId: string) => boolean;
   isLoading: boolean;
 };
 
@@ -24,6 +28,7 @@ const TenantAccessContext = createContext<TenantAccessContextValue | null>(
 
 export function TenantAccessProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
+  const { mode } = useOffline();
   const globalAdmin = isGlobalAdmin(auth.user);
   const [accessibleTenants, setAccessibleTenants] = useState<Tenant[]>([]);
   const [administrableTenants, setAdministrableTenants] = useState<Tenant[]>(
@@ -41,8 +46,11 @@ export function TenantAccessProvider({ children }: { children: ReactNode }) {
 
     const controller = new AbortController();
     setIsLoading(true);
-    assetCatalogApi
-      .listTenants(controller.signal)
+    const request =
+      mode === 'LOCAL'
+        ? localCatalogRepository.listTenants()
+        : assetCatalogApi.listTenants(controller.signal);
+    request
       .then((tenants) => {
         setAccessibleTenants(tenants);
         setAdministrableTenants(
@@ -63,20 +71,30 @@ export function TenantAccessProvider({ children }: { children: ReactNode }) {
         if (!controller.signal.aborted) setIsLoading(false);
       });
     return () => controller.abort();
-  }, [auth.status, auth.user?.userId, globalAdmin]);
+  }, [auth.status, auth.user?.userId, globalAdmin, mode]);
 
   const value = useMemo<TenantAccessContextValue>(
     () => ({
+      accessibleTenants,
       administrableTenants,
-      canAdministerTenants: globalAdmin || administrableTenants.length > 0,
+      canAdministerTenants:
+        mode === 'REMOTE' && (globalAdmin || administrableTenants.length > 0),
       canWriteTenant: (tenantId) => {
         if (globalAdmin) return true;
         const tenant = accessibleTenants.find((item) => item.id === tenantId);
         return Boolean(tenant && tenant.membershipRole !== 'VIEWER');
       },
+      canReviewTenant: (tenantId) => {
+        if (mode !== 'REMOTE') return false;
+        if (globalAdmin) return true;
+        const role = accessibleTenants.find(
+          (item) => item.id === tenantId
+        )?.membershipRole;
+        return role === 'TENANT_ADMIN' || role === 'SUPERVISOR';
+      },
       isLoading,
     }),
-    [accessibleTenants, administrableTenants, globalAdmin, isLoading]
+    [accessibleTenants, administrableTenants, globalAdmin, isLoading, mode]
   );
 
   return (

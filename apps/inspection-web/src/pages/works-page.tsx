@@ -18,6 +18,9 @@ import {
 } from '../features/works/work-formatters';
 import type { WorkStatus } from '../features/works/models';
 import { useWorkCatalog } from '../features/works/use-work-catalog';
+import { SyncStatusBadge } from '../features/offline/components/sync-status-badge';
+import { OfflineContentUnavailable } from '../features/offline/components/offline-content-unavailable';
+import { useOffline } from '../features/offline/offline-context';
 
 const allStatuses: WorkStatus[] = [
   'DRAFT',
@@ -27,6 +30,7 @@ const allStatuses: WorkStatus[] = [
 ];
 
 export function WorksPage() {
+  const { mode } = useOffline();
   const organization = useAssetCatalog();
   const catalog = useWorkCatalog(organization.tenantId);
   const [siteId, setSiteId] = useState('');
@@ -60,6 +64,13 @@ export function WorksPage() {
         .sort((a, b) => b.executionDate.localeCompare(a.executionDate)),
     [assetId, catalog.works, siteId, status, workTypeId]
   );
+  const localContentUnavailable =
+    mode === 'LOCAL' &&
+    !catalog.isLoading &&
+    (!organization.tenantId ||
+      !references ||
+      references.sites.length === 0 ||
+      references.assets.length === 0);
 
   return (
     <>
@@ -138,7 +149,13 @@ export function WorksPage() {
           </div>
         </section>
       ) : null}
-      {!catalog.isLoading && references && filteredWorks.length === 0 ? (
+      {localContentUnavailable ? (
+        <OfflineContentUnavailable subject="El catálogo de trabajos" />
+      ) : null}
+      {!localContentUnavailable &&
+      !catalog.isLoading &&
+      references &&
+      filteredWorks.length === 0 ? (
         <section className="mt-6 rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center">
           <ClipboardList className="mx-auto size-8 text-slate-400" />
           <h2 className="mt-3 font-semibold text-slate-900">
@@ -181,7 +198,10 @@ export function WorksPage() {
                           {work.title}
                         </h2>
                       </div>
-                      <WorkStatusBadge status={work.status} />
+                      <div className="flex flex-wrap gap-2">
+                        <WorkStatusBadge status={work.status} />
+                        <SyncStatusBadge work={work} />
+                      </div>
                     </div>
                     <div className="mt-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-2 lg:grid-cols-4">
                       <span>

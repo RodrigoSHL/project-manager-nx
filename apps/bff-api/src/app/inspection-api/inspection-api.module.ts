@@ -15,6 +15,6 @@ import { TenantRolesGuard } from './tenant-roles.guard';
     InspectionTenantAccessGuard,
     TenantRolesGuard,
   ],
-  exports: [InspectionApiClient],
+  exports: [InspectionApiClient, InspectionTenantAccessGuard, TenantRolesGuard],
 })
 export class InspectionApiModule {}

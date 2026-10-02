@@ -59,18 +59,39 @@ export type TenantResponse = {
   membershipRole?: TenantRole;
 };
 
+export type ReportCoverDefaults = {
+  content?: string | null;
+  requestedBy?: string | null;
+  preparedBy?: string | null;
+  approvedBy?: string | null;
+  distribution?: string | null;
+  receivedBy?: string | null;
+  introduction?: string | null;
+};
+
+export type TenantReportSettings = {
+  tenantId: string;
+  defaults: ReportCoverDefaults;
+  logoUrl: string | null;
+};
+
 export type ConceptMutationPayload = {
   code?: string;
   name?: string;
   description?: string | null;
   type?: 'ANALOG' | 'DIGITAL' | 'TEXT' | 'HIDDEN';
   unit?: string | null;
+  minValue?: number | null;
+  maxValue?: number | null;
+  outOfRangeSeverityId?: string | null;
   active?: boolean;
   options?: Array<{
     value: string;
     label: string;
     order: number;
     active?: boolean;
+    generatesFinding?: boolean;
+    suggestedSeverityId?: string | null;
   }>;
 };
 
@@ -117,7 +138,27 @@ export type WorkResponsesPayload = {
   annotations: Array<{
     formItemId: string;
     comment: string;
+    isFinding?: boolean;
   }>;
+};
+
+export type SyncPushPayload = {
+  tenantId: string;
+  deviceId: string;
+  changes: Array<{
+    outboxId: string;
+    entityType: 'WORK' | 'RESPONSE' | 'TASK_COMPLETION' | 'ANNOTATION';
+    entityId: string;
+    operation: 'CREATE' | 'UPDATE' | 'DELETE';
+    payload: Record<string, unknown>;
+    clientTimestamp: string;
+  }>;
+};
+
+export type SyncPullPayload = {
+  checkpoint: number;
+  deviceId: string;
+  siteIds: string[];
 };
 
 @Injectable()
@@ -126,6 +167,26 @@ export class InspectionApiClient {
 
   listTenants() {
     return this.get<TenantResponse[]>('/tenants');
+  }
+
+  getReportSettings(tenantId: string) {
+    return this.get<TenantReportSettings>(
+      `/tenants/${encodeURIComponent(tenantId)}/report-settings`
+    );
+  }
+
+  saveReportDefaults(tenantId: string, defaults: ReportCoverDefaults) {
+    return this.request<TenantReportSettings>(
+      `/tenants/${encodeURIComponent(tenantId)}/report-settings`,
+      { method: 'PUT', body: JSON.stringify({ defaults }) }
+    );
+  }
+
+  saveReportLogo(tenantId: string, logoUrl: string | null) {
+    return this.request<TenantReportSettings>(
+      `/tenants/${encodeURIComponent(tenantId)}/report-settings/logo`,
+      { method: 'PATCH', body: JSON.stringify({ logoUrl }) }
+    );
   }
 
   listAccessibleTenants(userId: string) {
@@ -196,11 +257,107 @@ export class InspectionApiClient {
     return this.get(`/tenants/${encodeURIComponent(tenantId)}/works`);
   }
 
+  analytics(
+    tenantId: string,
+    endpoint: string,
+    query: Record<string, string | undefined> = {}
+  ) {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(query)) {
+      if (value !== undefined) params.set(key, value);
+    }
+    const suffix = params.toString();
+    return this.get(
+      `/tenants/${encodeURIComponent(tenantId)}/analytics/${endpoint}${
+        suffix ? `?${suffix}` : ''
+      }`
+    );
+  }
+
   getWork(tenantId: string, workId: string) {
     return this.get(
       `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
         workId
       )}`
+    );
+  }
+
+  listReports(tenantId: string, workId: string) {
+    return this.get(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/reports`
+    );
+  }
+
+  getReport(tenantId: string, workId: string, reportId: string) {
+    return this.get(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/reports/${encodeURIComponent(reportId)}`
+    );
+  }
+
+  createReport(
+    tenantId: string,
+    workId: string,
+    payload: {
+      status: 'DRAFT' | 'FINAL';
+      reportSnapshot: Record<string, unknown>;
+      generatedBy?: string;
+    }
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/reports`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    );
+  }
+
+  confirmFinding(
+    tenantId: string,
+    workId: string,
+    candidateId: string,
+    payload: {
+      title: string;
+      description?: string;
+      severityId?: string | null;
+      manHours?: number | null;
+      materials?: string;
+    }
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/finding-candidates/${encodeURIComponent(candidateId)}/confirm`,
+      { method: 'PUT', body: JSON.stringify(payload) }
+    );
+  }
+
+  discardCandidate(
+    tenantId: string,
+    workId: string,
+    candidateId: string,
+    payload: { reason?: string }
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/finding-candidates/${encodeURIComponent(candidateId)}/discard`,
+      { method: 'PUT', body: JSON.stringify(payload) }
+    );
+  }
+
+  finalizeReview(tenantId: string, workId: string) {
+    return this.request(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/review/finalize`,
+      { method: 'POST' }
     );
   }
 
@@ -247,6 +404,20 @@ export class InspectionApiClient {
       )}/finish`,
       { method: 'POST', body: JSON.stringify(payload) }
     );
+  }
+
+  pushSync(tenantId: string, payload: SyncPushPayload) {
+    return this.request(`/tenants/${encodeURIComponent(tenantId)}/sync/push`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  pullSync(tenantId: string, payload: SyncPullPayload) {
+    return this.request(`/tenants/${encodeURIComponent(tenantId)}/sync/pull`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
   }
 
   listSites(tenantId: string) {
@@ -482,6 +653,33 @@ export class InspectionApiClient {
 
   listConcepts(tenantId: string) {
     return this.get(`/tenants/${encodeURIComponent(tenantId)}/concepts`);
+  }
+
+  listSeverityLevels(tenantId: string) {
+    return this.get(`/tenants/${encodeURIComponent(tenantId)}/severity-levels`);
+  }
+
+  createSeverityLevel(
+    tenantId: string,
+    payload: { code: string; name: string; order: number; active?: boolean }
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(tenantId)}/severity-levels`,
+      { method: 'POST', body: JSON.stringify(payload) }
+    );
+  }
+
+  updateSeverityLevel(
+    tenantId: string,
+    severityId: string,
+    payload: { code?: string; name?: string; order?: number; active?: boolean }
+  ) {
+    return this.request(
+      `/tenants/${encodeURIComponent(
+        tenantId
+      )}/severity-levels/${encodeURIComponent(severityId)}`,
+      { method: 'PATCH', body: JSON.stringify(payload) }
+    );
   }
 
   createConcept(tenantId: string, payload: Required<ConceptMutationPayload>) {

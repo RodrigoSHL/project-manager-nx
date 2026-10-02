@@ -69,7 +69,7 @@ export function Services() {
       <div
         className="pointer-events-none absolute left-0 top-1/2 h-80 w-80 -translate-y-1/2 rounded-full opacity-10"
         style={{
-          background: 'radial-gradient(circle, oklch(0.75 0.22 340) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, var(--pink) 0%, transparent 70%)',
         }}
         aria-hidden="true"
       />

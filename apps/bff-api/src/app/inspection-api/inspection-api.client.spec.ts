@@ -92,6 +92,34 @@ describe('InspectionApiClient', () => {
     );
   });
 
+  it('forwards incremental pull scope as JSON', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({ changes: [], checkpoint: 20, hasMore: false }),
+        {
+          status: 200,
+        }
+      )
+    );
+    const client = new InspectionApiClient();
+    const payload = {
+      checkpoint: 10,
+      deviceId: 'device-1',
+      siteIds: ['site-1'],
+    };
+
+    await client.pullSync('tenant-1', payload);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://inspection-api.test/api/tenants/tenant-1/sync/pull',
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  });
+
   it('forwards catalog associations and asset overrides', async () => {
     fetchMock.mockImplementation(async () =>
       Promise.resolve(
@@ -286,6 +314,38 @@ describe('InspectionApiClient', () => {
       {
         method: 'PUT',
         body: JSON.stringify(responses),
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  });
+
+  it('forwards an offline sync batch to inspection-api', async () => {
+    fetchMock.mockImplementation(
+      async () => new Response(JSON.stringify([]), { status: 200 })
+    );
+    const client = new InspectionApiClient();
+    const payload = {
+      tenantId: 'tenant-1',
+      deviceId: 'device-1',
+      changes: [
+        {
+          outboxId: 'outbox-1',
+          entityType: 'WORK' as const,
+          entityId: 'work-1',
+          operation: 'CREATE' as const,
+          payload: { id: 'work-1' },
+          clientTimestamp: '2026-09-15T12:00:00.000Z',
+        },
+      ],
+    };
+
+    await client.pushSync('tenant-1', payload);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://inspection-api.test/api/tenants/tenant-1/sync/push',
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
         headers: { 'Content-Type': 'application/json' },
       }
     );

@@ -6,6 +6,8 @@ export type WorkConceptOptionSnapshot = {
   label: string;
   value: string;
   order: number;
+  generatesFinding?: boolean;
+  suggestedSeverityId?: string | null;
 };
 
 export type WorkConceptSnapshot = {
@@ -15,11 +17,26 @@ export type WorkConceptSnapshot = {
   description?: string | null;
   type: ConceptType;
   unit?: string | null;
+  minValue?: number | null;
+  maxValue?: number | null;
+  outOfRangeSeverityId?: string | null;
   options: WorkConceptOptionSnapshot[];
 };
 
 export type WorkFormItemSnapshot = {
   id: string;
+  /** Template item that originated this immutable work item instance. */
+  formItemId?: string;
+  /**
+   * Asset evaluated by this item. These fields are optional only so snapshots
+   * created before asset-scoped work items remain readable.
+   */
+  assetId?: string;
+  assetCodeSnapshot?: string;
+  assetNameSnapshot?: string;
+  assetTypeIdSnapshot?: string;
+  assetOrder?: number;
+  assetDepth?: number;
   type: FormItemType;
   order: number;
   title?: string | null;

@@ -27,4 +27,10 @@ export class ConceptOptionEntity {
 
   @Column({ default: true })
   active!: boolean;
+
+  @Column({ name: 'generates_finding', type: 'boolean', default: false })
+  generatesFinding!: boolean;
+
+  @Column({ name: 'suggested_severity_id', type: 'uuid', nullable: true })
+  suggestedSeverityId?: string | null;
 }

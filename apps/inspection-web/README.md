@@ -4,6 +4,10 @@ Esqueleto visual de una aplicación para gestión de subestaciones y activos.
 
 Las reglas funcionales y técnicas vigentes se mantienen en
 [`docs/INSPECTION_RULES.md`](../../docs/INSPECTION_RULES.md).
+La evolución completa de la sincronización offline Push/Pull está en
+[`docs/offline-sync-v2.md`](../../docs/offline-sync-v2.md).
+La expansión de formularios por activo principal y descendientes está en
+[`docs/INSPECTION_DESCENDANT_WORK_ITEMS.md`](../../docs/INSPECTION_DESCENDANT_WORK_ITEMS.md).
 
 ## Ejecutar
 
@@ -57,12 +61,24 @@ de la red privada de Docker y no debe mezclarse con procesos Nx locales.
 - Constructor básico de plantillas dentro de Tipos de trabajo, con secciones,
   tareas, referencias a conceptos, orden mediante botones y vista previa
   dinámica. Las plantillas se almacenan en PostgreSQL mediante el BFF.
+- PWA instalable con Service Worker y application shell disponible sin red.
+- Descarga de sitios para guardar activos, catálogos y trabajos en IndexedDB.
+- Repositorios locales para continuar creando y editando trabajos sin
+  conexión.
+- Outbox persistente y sincronización manual Push/Pull con el servidor.
+- Checkpoint por tenant y dispositivo para descargar solamente cambios nuevos.
+- Detección de candidatos a conflicto que preserva los cambios locales sucios
+  en vez de sobrescribirlos con una versión remota.
+- Centro de sincronización con conteos enviados/recibidos, checkpoint y
+  conflictos detectados, filtrado por la empresa seleccionada.
 - Componentes reutilizables `Button`, `Sheet`, `PageHeader` y `EmptyState`.
 
-No existen todavía almacenamiento local, Service Worker, sincronización,
-hallazgos ni pautas reales. Los catálogos, plantillas, trabajos y respuestas se
-almacenan en PostgreSQL a través de `inspection-api` y el BFF, por lo que se
-conservan al refrescar el navegador.
+Los datos operativos descargados y los cambios pendientes se almacenan en
+IndexedDB mediante Dexie. Al sincronizar, el frontend envía su Outbox y luego
+consulta cambios remotos desde su último checkpoint. PostgreSQL sigue siendo
+la fuente compartida del servidor. Aún no existen resolución manual de
+conflictos, sincronización offline de fotografías ni sincronización automática
+en segundo plano.
 
 ## Estructura
 
@@ -79,12 +95,16 @@ src/
 │   ├── catalogs/     # Carga remota de catálogos administrativos
 │   ├── concepts/     # Cliente BFF, modelos, caché UI y componentes de conceptos
 │   ├── form-templates/ # Cliente BFF, modelos, caché UI, editor y vista previa
+│   ├── offline/      # Estado de conexión, modo local y modelos de sincronización
 │   ├── platform/     # Cliente BFF y gestión global de tenants
 │   ├── work-types/   # Modelos y componentes de tipos de trabajo permitidos
 │   └── works/        # Cliente BFF, ejecución de formularios y caché de pantalla
 ├── components/   # Componentes visuales reutilizables
 │   └── ui/       # Primitives compatibles con shadcn/ui
+├── db/           # Esquema Dexie e IndexedDB local
 ├── lib/          # Funciones pequeñas compartidas
+├── repositories/ # Contratos y acceso a datos remoto/local
+├── services/     # Orquestación Push/Pull y aplicación de cambios remotos
 ├── assets/       # Imágenes o archivos estáticos futuros
 ├── main.tsx      # Punto de entrada de React
 └── styles.css    # TailwindCSS y estilos globales mínimos
@@ -94,3 +114,8 @@ El JWT sigue el patrón vigente de `project-web` y `jira-web`: se conserva en
 `localStorage`, se valida contra el BFF al refrescar y se adjunta a las llamadas
 HTTP. Un administrador global puede acceder a todos los tenants; un usuario
 normal solo recibe los tenants que tiene asignados en Control global.
+
+El Service Worker conserva los archivos necesarios para abrir React sin red;
+IndexedDB conserva los datos del dominio. Son responsabilidades distintas: el
+primero permite cargar la aplicación y el segundo permite seguir viendo y
+editando la información previamente descargada.

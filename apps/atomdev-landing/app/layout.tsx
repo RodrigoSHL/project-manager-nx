@@ -5,9 +5,9 @@ const CONTACT_EMAIL = 'contacto@atomdev.cl'
 const SITE_URL = 'https://atomdev.cl'
 
 export const metadata: Metadata = {
-  title: 'Atom Dev | Desarrollo de software, Cloud y DevOps',
+  title: 'AtomDev | Software para empresas y minería',
   description:
-    'Diseñamos y desarrollamos soluciones de software modernas, escalables y confiables. Especialistas en .NET, desarrollo web, Cloud, DevOps y automatización.',
+    'Diseñamos software a medida para empresas e industria minera. Desarrollamos plataformas de inspección y gestión de activos como GridAssets, además de soluciones web, cloud y DevOps.',
   keywords: [
     'desarrollo de software',
     'cloud',
@@ -17,23 +17,27 @@ export const metadata: Metadata = {
     'Azure',
     'automatización',
     'software empresarial',
+    'software minero',
+    'software para minería',
+    'inspección de activos',
+    'GridAssets',
   ],
-  authors: [{ name: 'Atom Dev', url: SITE_URL }],
-  creator: 'Atom Dev',
+  authors: [{ name: 'AtomDev', url: SITE_URL }],
+  creator: 'AtomDev',
   openGraph: {
     type: 'website',
     locale: 'es_CL',
     url: SITE_URL,
-    siteName: 'Atom Dev',
-    title: 'Atom Dev | Desarrollo de software, Cloud y DevOps',
+    siteName: 'AtomDev',
+    title: 'AtomDev | Software para empresas y minería',
     description:
-      'Diseñamos y desarrollamos soluciones de software modernas, escalables y confiables. Especialistas en .NET, desarrollo web, Cloud, DevOps y automatización.',
+      'Diseñamos software a medida para empresas e industria minera, con plataformas de inspección y gestión de activos como GridAssets.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Atom Dev | Desarrollo de software, Cloud y DevOps',
+    title: 'AtomDev | Software para empresas y minería',
     description:
-      'Diseñamos y desarrollamos soluciones de software modernas, escalables y confiables.',
+      'Software a medida para empresas y minería. Conoce GridAssets, nuestra plataforma de inspección y gestión de activos.',
   },
   robots: {
     index: true,
@@ -43,8 +47,8 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'dark',
-  themeColor: '#07090f',
+  colorScheme: 'light dark',
+  themeColor: '#f5f7fa',
   width: 'device-width',
   initialScale: 1,
 }
@@ -57,10 +61,10 @@ export default function RootLayout({
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'Atom Dev',
+    name: 'AtomDev',
     url: SITE_URL,
     description:
-      'Empresa de desarrollo de software, cloud y DevOps. Especialistas en .NET, React, Azure y automatización.',
+      'Desarrollo de software para empresas y minería. Creamos plataformas de inspección y gestión de activos, además de soluciones web, cloud y DevOps.',
     contactPoint: {
       '@type': 'ContactPoint',
       email: CONTACT_EMAIL,
@@ -69,8 +73,13 @@ export default function RootLayout({
   }
 
   return (
-    <html lang="es" className="bg-background">
+    <html lang="es" className="dark bg-background" suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try { const savedTheme = localStorage.getItem('atomdev-theme'); document.documentElement.classList.toggle('dark', savedTheme !== 'light'); } catch { document.documentElement.classList.add('dark'); }`,
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

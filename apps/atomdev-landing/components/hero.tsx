@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, type Variants } from 'framer-motion'
-import { ArrowRight, ChevronDown } from 'lucide-react'
+import { ArrowRight, ChevronDown, ExternalLink } from 'lucide-react'
 import { AtomAnimation } from './atom-animation'
 import { useEffect, useState } from 'react'
 
@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1]
 
 const CONCEPTS = [
+  'Software minero',
   'Software empresarial',
   'Sector público',
   'Cloud',
@@ -50,7 +51,7 @@ export function Hero() {
       <div
         className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full opacity-10"
         style={{
-          background: 'radial-gradient(circle, oklch(0.82 0.18 190) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, var(--turquoise) 0%, transparent 70%)',
         }}
         aria-hidden="true"
       />
@@ -69,7 +70,7 @@ export function Hero() {
               variants={item}
               className="inline-flex items-center rounded-full border border-turquoise/30 bg-turquoise/10 px-4 py-1.5 text-xs font-semibold tracking-[0.18em] text-turquoise uppercase"
             >
-              INGENIERÍA DE SOFTWARE · CLOUD · DEVOPS
+              SOFTWARE · MINERÍA · CLOUD · DEVOPS
             </motion.span>
 
             {/* Title */}
@@ -88,9 +89,9 @@ export function Hero() {
               variants={item}
               className="max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg"
             >
-              Diseñamos soluciones digitales robustas, modernas y escalables,
-              cuidando cada componente desde el levantamiento de requerimientos
-              hasta su despliegue en producción.
+              Creamos software a medida para empresas e industria minera: desde
+              procesos de terreno e inspección hasta plataformas que convierten
+              datos operacionales en información útil para decidir.
             </motion.p>
 
             {/* Buttons */}
@@ -100,17 +101,20 @@ export function Hero() {
             >
               <button
                 onClick={() => scrollTo('contacto')}
-                className="inline-flex items-center gap-2 rounded-lg bg-turquoise px-6 py-3 text-sm font-semibold text-background shadow-lg transition-all duration-200 hover:bg-turquoise/90 hover:shadow-[0_0_24px_oklch(0.82_0.18_190/0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-turquoise/50 active:scale-[0.97]"
+                className="inline-flex items-center gap-2 rounded-lg bg-turquoise px-6 py-3 text-sm font-semibold text-background shadow-lg transition-all duration-200 hover:bg-turquoise/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-turquoise/50 active:scale-[0.97]"
               >
                 Cuéntanos tu proyecto
                 <ArrowRight size={16} />
               </button>
-              <button
-                onClick={() => scrollTo('proceso')}
-                className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.05] px-6 py-3 text-sm font-medium text-foreground transition-all duration-200 hover:border-white/20 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 active:scale-[0.97]"
+              <a
+                href="https://inspection.atomdev.cl/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-6 py-3 text-sm font-medium text-foreground transition-all duration-200 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97]"
               >
-                Conoce cómo trabajamos
-              </button>
+                Explora GridAssets
+                <ExternalLink size={15} />
+              </a>
             </motion.div>
           </motion.div>
 
@@ -130,7 +134,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.9 }}
-          className="mt-16 border-t border-white/[0.06] pt-8"
+          className="mt-16 border-t border-border pt-8"
         >
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 md:justify-between">
             {CONCEPTS.map((concept, i) => (
@@ -142,8 +146,8 @@ export function Hero() {
                   className="h-1 w-1 rounded-full"
                   style={{
                     background: i % 2 === 0
-                      ? 'oklch(0.82 0.18 190)'
-                      : 'oklch(0.75 0.22 340)',
+                      ? 'var(--turquoise)'
+                      : 'var(--pink)',
                   }}
                 />
                 {concept}

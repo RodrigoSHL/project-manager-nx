@@ -7,6 +7,8 @@ import { getDatabaseConfig } from './config/database.config';
 import { FormTemplatesModule } from './form-templates/form-templates.module';
 import { WorksModule } from './works/works.module';
 import { PlatformModule } from './platform/platform.module';
+import { SyncModule } from './sync/sync.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -15,6 +17,8 @@ import { PlatformModule } from './platform/platform.module';
     FormTemplatesModule,
     WorksModule,
     PlatformModule,
+    SyncModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

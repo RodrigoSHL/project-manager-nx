@@ -16,11 +16,14 @@ export type WorkItemPhotoPreview = WorkItemPhoto & { previewUrl: string };
 type WorkItemAdditionalInfoProps = {
   itemId: string;
   comment: string;
+  isFinding?: boolean;
   photos: WorkItemPhotoPreview[];
   readonly: boolean;
+  photosDisabled?: boolean;
   busy: boolean;
   error?: string;
   onCommentChange: (comment: string) => void;
+  onFindingChange?: (isFinding: boolean) => void;
   onUpload: (itemId: string, files: File[]) => Promise<void>;
   onDelete: (photo: WorkItemPhotoPreview) => Promise<void>;
 };
@@ -28,16 +31,19 @@ type WorkItemAdditionalInfoProps = {
 export function WorkItemAdditionalInfo({
   itemId,
   comment,
+  isFinding = false,
   photos,
   readonly,
+  photosDisabled = false,
   busy,
   error,
   onCommentChange,
+  onFindingChange,
   onUpload,
   onDelete,
 }: WorkItemAdditionalInfoProps) {
   const [expanded, setExpanded] = useState(
-    Boolean(comment.trim() || photos.length)
+    Boolean(comment.trim() || photos.length || isFinding)
   );
   const galleryInput = useRef<HTMLInputElement>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
@@ -61,6 +67,11 @@ export function WorkItemAdditionalInfo({
           {comment.trim() ? (
             <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs">
               Comentado
+            </span>
+          ) : null}
+          {isFinding ? (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-900">
+              Posible hallazgo
             </span>
           ) : null}
           {photos.length ? (
@@ -94,6 +105,22 @@ export function WorkItemAdditionalInfo({
             </span>
           </label>
 
+          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+            <input
+              type="checkbox"
+              checked={isFinding}
+              disabled={readonly}
+              onChange={(event) => onFindingChange?.(event.target.checked)}
+              className="size-4 accent-amber-700"
+            />
+            Marcar este comentario como posible hallazgo
+          </label>
+          {isFinding && !comment.trim() ? (
+            <p className="text-xs text-amber-800">
+              Escribe un comentario para guardar el hallazgo manual.
+            </p>
+          ) : null}
+
           {photos.length ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {photos.map((photo) => (
@@ -106,7 +133,7 @@ export function WorkItemAdditionalInfo({
                     alt={photo.originalName}
                     className="aspect-square w-full object-cover"
                   />
-                  {!readonly ? (
+                  {!readonly && !photosDisabled ? (
                     <button
                       type="button"
                       disabled={busy}
@@ -131,7 +158,7 @@ export function WorkItemAdditionalInfo({
             </p>
           )}
 
-          {!readonly ? (
+          {!readonly && !photosDisabled ? (
             <div className="flex flex-wrap gap-2">
               <input
                 ref={galleryInput}
@@ -180,6 +207,12 @@ export function WorkItemAdditionalInfo({
                 Tomar foto
               </Button>
             </div>
+          ) : null}
+          {photosDisabled && !readonly ? (
+            <p className="text-xs text-slate-500">
+              La carga de fotografías offline se incorporará con el motor de
+              sincronización.
+            </p>
           ) : null}
           {error ? <p className="text-sm text-red-700">{error}</p> : null}
         </div>

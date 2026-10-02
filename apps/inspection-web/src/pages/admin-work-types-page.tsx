@@ -127,6 +127,7 @@ export function AdminWorkTypesPage() {
             item={editing}
             itemName="tipo de trabajo"
             isSubmitting={catalog.isMutating}
+            suggestCodeFromName
             onCancel={() => setEditing(undefined)}
             onSubmit={save}
           />

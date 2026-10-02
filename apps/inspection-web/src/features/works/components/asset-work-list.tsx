@@ -4,6 +4,7 @@ import type { Asset } from '../../assets/models';
 import { formatWorkDate } from '../work-formatters';
 import { useWorkCatalog } from '../use-work-catalog';
 import { WorkStatusBadge } from './work-status-badge';
+import { SyncStatusBadge } from '../../offline/components/sync-status-badge';
 
 export function AssetWorkList({ asset }: { asset: Asset }) {
   const { works, catalog, isLoading } = useWorkCatalog(asset.tenantId);
@@ -48,6 +49,7 @@ export function AssetWorkList({ asset }: { asset: Asset }) {
                   </p>
                 </div>
                 <WorkStatusBadge status={work.status} />
+                <SyncStatusBadge work={work} />
                 <ChevronRight className="size-4 shrink-0 text-slate-400" />
               </Link>
             );

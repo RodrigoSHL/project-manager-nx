@@ -15,9 +15,13 @@ import { AssetDetail } from '../features/assets/components/asset-detail';
 import { AssetTree } from '../features/assets/components/asset-tree';
 import { formatSiteType } from '../features/assets/asset-formatters';
 import { useAssetCatalog } from '../features/assets/use-asset-catalog';
+import { OfflineSiteButton } from '../features/offline/components/offline-site-button';
+import { OfflineContentUnavailable } from '../features/offline/components/offline-content-unavailable';
+import { useOffline } from '../features/offline/offline-context';
 
 export function AssetsPage() {
   const catalog = useAssetCatalog();
+  const { mode } = useOffline();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -104,6 +108,11 @@ export function AssetsPage() {
             <span>Subestaciones y activos</span>
           </div>
         ) : null}
+        {tenant && site ? (
+          <div className="mt-4">
+            <OfflineSiteButton tenantId={tenant.id} siteId={site.id} />
+          </div>
+        ) : null}
       </section>
 
       {catalog.error ? (
@@ -126,6 +135,13 @@ export function AssetsPage() {
             <p className="mt-3 text-sm text-slate-600">Cargando catálogo...</p>
           </div>
         </section>
+      ) : null}
+
+      {mode === 'LOCAL' &&
+      !catalog.isLoading &&
+      !catalog.error &&
+      (!tenant || !site || assets.length === 0) ? (
+        <OfflineContentUnavailable subject="El catálogo de activos" />
       ) : null}
 
       {!catalog.error && tenant && site && assets.length > 0 ? (

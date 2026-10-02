@@ -31,6 +31,8 @@ export interface ConceptResponse {
   valueNumber?: number;
   valueText?: string;
   selectedOptionId?: string;
+  measuredAt?: string;
+  measuredAtTime?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -51,6 +53,7 @@ export interface WorkItemAnnotation {
   workId: string;
   formItemId: string;
   comment: string;
+  isFinding?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -78,6 +81,8 @@ export interface WorkConceptOptionSnapshot {
   label: string;
   value: string;
   order: number;
+  generatesFinding?: boolean;
+  suggestedSeverityId?: string | null;
 }
 
 export interface WorkConceptSnapshot {
@@ -87,11 +92,23 @@ export interface WorkConceptSnapshot {
   description?: string | null;
   type: ConceptType;
   unit?: string | null;
+  minValue?: number | null;
+  maxValue?: number | null;
+  outOfRangeSeverityId?: string | null;
   options: WorkConceptOptionSnapshot[];
 }
 
 export interface WorkFormItemSnapshot {
   id: string;
+  /** Template item that originated this immutable work item instance. */
+  formItemId?: string;
+  /** Optional only for backwards compatibility with historical snapshots. */
+  assetId?: string;
+  assetCodeSnapshot?: string;
+  assetNameSnapshot?: string;
+  assetTypeIdSnapshot?: string;
+  assetOrder?: number;
+  assetDepth?: number;
   type: 'CONCEPT' | 'TASK';
   order: number;
   title?: string | null;
@@ -140,13 +157,63 @@ export type CreateWorkInput = Pick<
 
 export type ResponseValue = Pick<
   ConceptResponse,
-  'valueNumber' | 'valueText' | 'selectedOptionId'
+  | 'valueNumber'
+  | 'valueText'
+  | 'selectedOptionId'
+  | 'measuredAt'
+  | 'measuredAtTime'
 >;
 
 export type WorkItemValue = ResponseValue & {
   completed?: boolean;
   comment?: string;
+  isFinding?: boolean;
 };
+
+export interface FindingCandidate {
+  id: string;
+  tenantId: string;
+  workId: string;
+  workItemId: string;
+  assetId: string;
+  conceptId?: string | null;
+  source: 'DIGITAL' | 'ANALOG' | 'MANUAL';
+  title: string;
+  description?: string | null;
+  measuredValue?: string | null;
+  minValue?: number | null;
+  maxValue?: number | null;
+  suggestedSeverityId?: string | null;
+  status: 'PENDING' | 'CONFIRMED' | 'DISCARDED';
+  discardReason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Finding {
+  id: string;
+  tenantId: string;
+  workId: string;
+  workItemId: string;
+  assetId: string;
+  conceptId?: string | null;
+  sourceCandidateId: string;
+  source: FindingCandidate['source'];
+  title: string;
+  description?: string | null;
+  measuredValue?: string | null;
+  minValue?: number | null;
+  maxValue?: number | null;
+  severityId?: string | null;
+  manHours?: number | null;
+  materials?: string | null;
+  assetNameSnapshot: string;
+  conceptNameSnapshot?: string | null;
+  unitSnapshot?: string | null;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export type FinishResult =
   | { ok: true }

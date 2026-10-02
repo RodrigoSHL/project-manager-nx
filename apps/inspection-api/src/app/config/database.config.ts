@@ -32,6 +32,22 @@ import { WorkItemAnnotationEntity } from '../works/entities/work-item-annotation
 import { CreateWorkItemAnnotations1799101200000 } from '../../migrations/1799101200000-CreateWorkItemAnnotations';
 import { AddTenantMembershipRoles1799101300000 } from '../../migrations/1799101300000-AddTenantMembershipRoles';
 import { ProvisionRequiredTenantCatalog1799101400000 } from '../../migrations/1799101400000-ProvisionRequiredTenantCatalog';
+import { CreateSyncOperations1799101500000 } from '../../migrations/1799101500000-CreateSyncOperations';
+import { SyncOperationEntity } from '../sync/entities/sync-operation.entity';
+import { ServerChangeEntity } from '../sync/entities/server-change.entity';
+import { CreateServerChanges1799101600000 } from '../../migrations/1799101600000-CreateServerChanges';
+import { CreateFindingCandidates1799101700000 } from '../../migrations/1799101700000-CreateFindingCandidates';
+import { SeverityLevelEntity } from '../catalog/entities/severity-level.entity';
+import { FindingCandidateEntity } from '../works/entities/finding-candidate.entity';
+import { FindingEntity } from '../works/entities/finding.entity';
+import { CreateFindings1799101800000 } from '../../migrations/1799101800000-CreateFindings';
+import { GeneratedReportEntity } from '../works/entities/generated-report.entity';
+import { CreateGeneratedReports1799101900000 } from '../../migrations/1799101900000-CreateGeneratedReports';
+import { PrepareAnalyticsHistory1799102000000 } from '../../migrations/1799102000000-PrepareAnalyticsHistory';
+import { IndexAnalyticsFindings1799102100000 } from '../../migrations/1799102100000-IndexAnalyticsFindings';
+import { TenantReportSettingsEntity } from '../catalog/entities/tenant-report-settings.entity';
+import { CreateTenantReportSettings1799102200000 } from '../../migrations/1799102200000-CreateTenantReportSettings';
+import { AddConceptResponseMeasurementTime1799102300000 } from '../../migrations/1799102300000-AddConceptResponseMeasurementTime';
 
 export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
   type: 'postgres',
@@ -68,6 +84,13 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     TaskCompletionEntity,
     TenantMembershipEntity,
     WorkItemAnnotationEntity,
+    SyncOperationEntity,
+    ServerChangeEntity,
+    SeverityLevelEntity,
+    FindingCandidateEntity,
+    FindingEntity,
+    GeneratedReportEntity,
+    TenantReportSettingsEntity,
   ],
   migrations: [
     CreateInspectionCatalog1799100000000,
@@ -85,6 +108,15 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     CreateWorkItemAnnotations1799101200000,
     AddTenantMembershipRoles1799101300000,
     ProvisionRequiredTenantCatalog1799101400000,
+    CreateSyncOperations1799101500000,
+    CreateServerChanges1799101600000,
+    CreateFindingCandidates1799101700000,
+    CreateFindings1799101800000,
+    CreateGeneratedReports1799101900000,
+    PrepareAnalyticsHistory1799102000000,
+    IndexAnalyticsFindings1799102100000,
+    CreateTenantReportSettings1799102200000,
+    AddConceptResponseMeasurementTime1799102300000,
   ],
   migrationsRun: process.env.INSPECTION_MIGRATIONS_RUN === 'true',
   synchronize: false,

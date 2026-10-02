@@ -79,6 +79,12 @@ export function TicketCard({ ticket, onClick, variant = 'board', isDragging = fa
             {ticket.title}
           </span>
 
+          {ticket.epic && (
+            <Badge variant="secondary" className="hidden xl:inline-flex max-w-40 truncate text-[10px] text-purple-600">
+              {ticket.epic.key}
+            </Badge>
+          )}
+
           {/* Priority Badge */}
           <Tooltip>
             <TooltipTrigger asChild>
@@ -164,6 +170,13 @@ export function TicketCard({ ticket, onClick, variant = 'board', isDragging = fa
         <h4 className="text-sm font-medium leading-snug mb-3 line-clamp-2 text-balance">
           {ticket.title}
         </h4>
+
+        {ticket.epic && (
+          <div className="mb-3 flex items-center gap-1.5 text-[10px] text-purple-600">
+            <Layers className="h-3 w-3" />
+            <span className="truncate">{ticket.epic.key} · {ticket.epic.title}</span>
+          </div>
+        )}
 
         {/* Labels */}
         {(ticket.labels?.length ?? 0) > 0 && (

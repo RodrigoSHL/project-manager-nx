@@ -5,10 +5,12 @@ import {
   IsEnum,
   IsInt,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   MaxLength,
   Min,
+  IsUUID,
   ValidateNested,
 } from 'class-validator';
 import { ConceptType } from '../entities/concept.entity';
@@ -31,6 +33,14 @@ export class ConceptOptionDto {
   @IsOptional()
   @IsBoolean()
   active?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  generatesFinding?: boolean;
+
+  @IsOptional()
+  @IsUUID()
+  suggestedSeverityId?: string | null;
 }
 
 export class CreateConceptDto {
@@ -56,6 +66,18 @@ export class CreateConceptDto {
   @IsString()
   @MaxLength(30)
   unit?: string | null;
+
+  @IsOptional()
+  @IsNumber()
+  minValue?: number | null;
+
+  @IsOptional()
+  @IsNumber()
+  maxValue?: number | null;
+
+  @IsOptional()
+  @IsUUID()
+  outOfRangeSeverityId?: string | null;
 
   @IsOptional()
   @IsBoolean()

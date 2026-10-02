@@ -32,6 +32,15 @@ export class ConceptEntity {
   @Column({ type: 'varchar', length: 30, nullable: true })
   unit?: string | null;
 
+  @Column({ name: 'min_value', type: 'double precision', nullable: true })
+  minValue?: number | null;
+
+  @Column({ name: 'max_value', type: 'double precision', nullable: true })
+  maxValue?: number | null;
+
+  @Column({ name: 'out_of_range_severity_id', type: 'uuid', nullable: true })
+  outOfRangeSeverityId?: string | null;
+
   @Column({ default: true })
   active!: boolean;
 }

@@ -27,11 +27,12 @@ export async function createTicketComment(
   projectId: string,
   ticketId: string,
   body: string,
+  parentCommentId?: string,
 ): Promise<ApiComment> {
   const response = await authenticatedFetch(commentUrl(projectId, ticketId), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ body }),
+    body: JSON.stringify({ body, ...(parentCommentId ? { parentCommentId } : {}) }),
   })
   return handleResponse<ApiComment>(response)
 }

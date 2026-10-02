@@ -13,7 +13,8 @@ export class CommentsService {
   ) {}
 
   async create(ticketId: string, dto: CreateCommentDto): Promise<Comment> {
-    const comment = this.commentsRepository.create({ ...dto, ticketId });
+    if (dto.parentCommentId) await this.findOne(ticketId, dto.parentCommentId);
+    const comment = this.commentsRepository.create({ ...dto, ticketId, parentCommentId: dto.parentCommentId ?? null });
     return this.commentsRepository.save(comment);
   }
 

@@ -59,6 +59,19 @@ describe('jira-web comment service', () => {
     )
   })
 
+  it('creates a reply linked to the original comment', async () => {
+    mockedFetch.mockResolvedValue(jsonResponse({ ...comment, parentCommentId: 'parent-1' }, 201))
+    await createTicketComment('project-1', 'ticket-1', 'Respuesta', 'parent-1')
+    expect(mockedFetch).toHaveBeenCalledWith(
+      '/api/projects/project-1/tickets/ticket-1/comments',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: 'Respuesta', parentCommentId: 'parent-1' }),
+      },
+    )
+  })
+
   it('updates a comment using its resource URL', async () => {
     mockedFetch.mockResolvedValue(jsonResponse({ ...comment, body: 'Editado' }))
 

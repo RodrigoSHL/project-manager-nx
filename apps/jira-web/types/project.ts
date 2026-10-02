@@ -37,6 +37,7 @@ export interface ApiComment {
   id: string
   ticketId: string
   authorId: string
+  parentCommentId: string | null
   body: string
   createdAt: string
   updatedAt: string

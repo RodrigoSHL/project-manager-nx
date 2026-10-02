@@ -169,6 +169,14 @@ iniciar la API y las registra en su tabla `migrations`, igual que en inspection-
 el enum y admite bases donde esos valores ya existen. El rollback exige que los
 roles nuevos no estén asignados; PostgreSQL rechaza la conversión si están en uso.
 
+### Respuestas a comentarios
+
+`comments.parentCommentId` relaciona una respuesta con otro comentario del mismo
+ticket. La API valida esa pertenencia al crear la respuesta; editar un comentario
+solo cambia su contenido. La migración `AddCommentReplies` añade la columna,
+el índice y la clave foránea. Si se elimina el comentario original, `ON DELETE
+SET NULL` conserva sus respuestas como comentarios independientes.
+
 ### TaskStatus
 - `todo` - Por hacer
 - `in_progress` - En progreso

@@ -15,6 +15,7 @@ import { Comment } from '../comments/entities/comment.entity';
 import { Subtask } from '../subtasks/entities/subtask.entity';
 import { TicketSupportDetail } from '../support-details/entities/ticket-support-detail.entity';
 import { AddProjectTeamRoles1790812800000 } from '../../migrations/1790812800000-AddProjectTeamRoles';
+import { AddCommentReplies1790938800000 } from '../../migrations/1790938800000-AddCommentReplies';
 
 export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
   type: 'postgres',
@@ -40,7 +41,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     Subtask,
     TicketSupportDetail,
   ],
-  migrations: [AddProjectTeamRoles1790812800000],
+  migrations: [AddProjectTeamRoles1790812800000, AddCommentReplies1790938800000],
   migrationsRun: process.env.PROJECT_MIGRATIONS_RUN === 'true',
   synchronize: process.env.TYPEORM_SYNCHRONIZE
     ? process.env.TYPEORM_SYNCHRONIZE === 'true'

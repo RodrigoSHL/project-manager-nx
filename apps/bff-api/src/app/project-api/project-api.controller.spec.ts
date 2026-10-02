@@ -12,11 +12,11 @@ describe('ProjectApiController workspace role permissions', () => {
   const projectId = 'project-1';
   const ticketId = 'ticket-1';
   let controller: ProjectApiController;
-  let client: { forwardJsonRequest: jest.Mock; createTicketComment: jest.Mock };
+  let client: { forwardJsonRequest: jest.Mock; createTicketComment: jest.Mock; findTicket: jest.Mock };
   let access: { assertProjectAccess: jest.Mock; assertProjectWriteAccess: jest.Mock };
 
   beforeEach(() => {
-    client = { forwardJsonRequest: jest.fn(), createTicketComment: jest.fn().mockResolvedValue({ id: 'comment-1' }) };
+    client = { forwardJsonRequest: jest.fn(), createTicketComment: jest.fn().mockResolvedValue({ id: 'comment-1' }), findTicket: jest.fn().mockResolvedValue({ id: ticketId }) };
     access = {
       assertProjectAccess: jest.fn().mockResolvedValue(undefined),
       assertProjectWriteAccess: jest.fn().mockRejectedValue(new ForbiddenException()),
@@ -40,6 +40,18 @@ describe('ProjectApiController workspace role permissions', () => {
     await expect(controller.createTicketComment(projectId, ticketId, { body: '  Comentario  ' }, request))
       .resolves.toEqual({ id: 'comment-1' });
     expect(access.assertProjectAccess).toHaveBeenCalledWith(projectId, request.user);
-    expect(client.createTicketComment).toHaveBeenCalledWith(projectId, ticketId, 'Comentario', request.user);
+    expect(client.createTicketComment).toHaveBeenCalledWith(projectId, ticketId, 'Comentario', request.user, undefined);
+  });
+
+  it('allows a viewer to reply while preserving the authenticated author', async () => {
+    await controller.createTicketComment(projectId, ticketId, { body: 'Respuesta', parentCommentId: 'parent-1' }, request);
+    expect(client.createTicketComment).toHaveBeenCalledWith(projectId, ticketId, 'Respuesta', request.user, 'parent-1');
+  });
+
+  it('rejects replies when the ticket does not belong to the accessible project', async () => {
+    client.findTicket.mockRejectedValue(new ForbiddenException());
+    await expect(controller.createTicketComment(projectId, ticketId, { body: 'Respuesta', parentCommentId: 'parent-1' }, request))
+      .rejects.toBeInstanceOf(ForbiddenException);
+    expect(client.createTicketComment).not.toHaveBeenCalled();
   });
 });

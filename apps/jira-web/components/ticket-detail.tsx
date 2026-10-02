@@ -19,6 +19,7 @@ import {
   Loader2,
   LifeBuoy,
   Pencil,
+  Reply,
   Paperclip,
   Upload,
   Download,
@@ -71,6 +72,7 @@ import {
   updateTicketComment,
 } from '@/services/commentService'
 import { useAuth } from '@/contexts/auth-context'
+import { buildCommentThreads } from '@/lib/comment-threads'
 import {
   parseCommentMentions,
   serializeCommentMentions,
@@ -177,6 +179,9 @@ export function TicketDetail({
 
   const [newComment, setNewComment] = React.useState('')
   const [newCommentMentions, setNewCommentMentions] = React.useState<CommentMention[]>([])
+  const [replyingToCommentId, setReplyingToCommentId] = React.useState<string | null>(null)
+  const [replyComment, setReplyComment] = React.useState('')
+  const [replyCommentMentions, setReplyCommentMentions] = React.useState<CommentMention[]>([])
   const [comments, setComments] = React.useState<ApiComment[]>([])
   const [commentsLoading, setCommentsLoading] = React.useState(false)
   const [commentSaving, setCommentSaving] = React.useState(false)
@@ -207,6 +212,9 @@ export function TicketDetail({
     setIsEditingAcceptanceCriteria(false)
     setNewComment('')
     setNewCommentMentions([])
+    setReplyingToCommentId(null)
+    setReplyComment('')
+    setReplyCommentMentions([])
     setLabelInput('')
     setShowLabelInput(false)
     setCommentError(null)
@@ -358,8 +366,17 @@ export function TicketDetail({
 
   // ── Comment helpers ────────────────────────────────────────────────────────
 
-  const addComment = async () => {
-    const body = serializeCommentMentions(newComment, newCommentMentions).trim()
+  const cancelReply = () => {
+    setReplyingToCommentId(null)
+    setReplyComment('')
+    setReplyCommentMentions([])
+  }
+
+  const addComment = async (parentCommentId?: string) => {
+    const body = serializeCommentMentions(
+      parentCommentId ? replyComment : newComment,
+      parentCommentId ? replyCommentMentions : newCommentMentions,
+    ).trim()
     if (!body || commentSaving) return
     if (body.length > 5000) {
       setCommentError('El comentario supera el límite de 5000 caracteres.')
@@ -369,10 +386,13 @@ export function TicketDetail({
     setCommentSaving(true)
     setCommentError(null)
     try {
-      const created = await createTicketComment(projectId, ticket.id, body)
+      const created = await createTicketComment(projectId, ticket.id, body, parentCommentId)
       setComments(prev => [...prev, created])
-      setNewComment('')
-      setNewCommentMentions([])
+      if (parentCommentId) cancelReply()
+      else {
+        setNewComment('')
+        setNewCommentMentions([])
+      }
     } catch (error) {
       setCommentError(error instanceof Error ? error.message : 'No se pudo publicar el comentario.')
     } finally {
@@ -381,6 +401,7 @@ export function TicketDetail({
   }
 
   const startEditingComment = (comment: ApiComment) => {
+    cancelReply()
     const parsed = parseCommentMentions(comment.body)
     setEditingCommentId(comment.id)
     setEditingCommentBody(parsed.text)
@@ -418,7 +439,10 @@ export function TicketDetail({
     setCommentError(null)
     try {
       await deleteTicketComment(projectId, ticket.id, commentId)
-      setComments(prev => prev.filter(comment => comment.id !== commentId))
+      setComments(prev => prev.filter(comment => comment.id !== commentId).map(comment =>
+        comment.parentCommentId === commentId ? { ...comment, parentCommentId: null } : comment
+      ))
+      if (replyingToCommentId === commentId) cancelReply()
     } catch (error) {
       setCommentError(error instanceof Error ? error.message : 'No se pudo eliminar el comentario.')
     } finally {
@@ -1077,18 +1101,23 @@ export function TicketDetail({
 
               {!commentsLoading && comments.length > 0 && (
                 <div className="space-y-4">
-                  {comments.map(comment => {
+                  {buildCommentThreads(comments).map(({ comment, parent, depth }) => {
                     const author = getCommentAuthor(comment.authorId)
                     const isOwnComment = comment.authorId === user.userId
                     const wasEdited = comment.updatedAt !== comment.createdAt
 
                     return (
-                      <div key={comment.id} className="flex gap-3">
+                      <div key={comment.id} className={cn('flex gap-3', depth > 0 && 'border-l-2 pl-3')} style={{ marginLeft: Math.min(depth, 2) * 16 }}>
                         <Avatar className="h-8 w-8 shrink-0">
                           {author.avatar && <AvatarImage src={author.avatar} alt={author.name} />}
                           <AvatarFallback className="text-xs">{getInitials(author.name)}</AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">
+                          {parent && (
+                            <p className="mb-1 text-[11px] text-muted-foreground">
+                              En respuesta a {getCommentAuthor(parent.authorId).name}
+                            </p>
+                          )}
                           <div className="mb-1 flex items-center gap-2">
                             <span className="text-sm font-medium">{isOwnComment ? 'Tú' : author.name}</span>
                             <span className="text-xs text-muted-foreground">{formatDate(comment.createdAt)}</span>
@@ -1163,6 +1192,45 @@ export function TicketDetail({
                             <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
                               {renderCommentBody(comment.body)}
                             </p>
+                          )}
+                          {editingCommentId !== comment.id && replyingToCommentId !== comment.id && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="mt-1 h-7 px-2 text-xs text-muted-foreground"
+                              disabled={commentSaving}
+                              onClick={() => {
+                                cancelReply()
+                                setReplyingToCommentId(comment.id)
+                                setCommentError(null)
+                              }}
+                            >
+                              <Reply className="mr-1 h-3.5 w-3.5" />
+                              Responder
+                            </Button>
+                          )}
+                          {replyingToCommentId === comment.id && (
+                            <div className="mt-2 space-y-2 rounded-lg border p-3">
+                              <p className="text-xs text-muted-foreground">Responder a {author.name}</p>
+                              <CommentMentionEditor
+                                value={replyComment}
+                                mentions={replyCommentMentions}
+                                onChange={(value, mentions) => { setReplyComment(value); setReplyCommentMentions(mentions) }}
+                                onSubmit={() => void addComment(comment.id)}
+                                onCancel={cancelReply}
+                                teamMembers={teamMembers}
+                                placeholder="Escribe una respuesta..."
+                                disabled={commentSaving}
+                                autoFocus
+                              />
+                              <div className="flex justify-end gap-2">
+                                <Button variant="ghost" size="sm" disabled={commentSaving} onClick={cancelReply}>Cancelar</Button>
+                                <Button size="sm" disabled={!replyComment.trim() || commentSaving} onClick={() => void addComment(comment.id)}>
+                                  {commentSaving && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                                  Responder
+                                </Button>
+                              </div>
+                            </div>
                           )}
                         </div>
                       </div>

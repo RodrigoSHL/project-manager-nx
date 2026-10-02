@@ -13,6 +13,14 @@ export class Comment {
   @Column({ type: 'uuid' })
   authorId: string;
 
+  @Column({ type: 'uuid', nullable: true })
+  @Index('IDX_comments_parentCommentId')
+  parentCommentId: string | null;
+
+  @ManyToOne(() => Comment, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'parentCommentId', foreignKeyConstraintName: 'FK_comments_parentCommentId' })
+  parentComment: Comment | null;
+
   @Column({ type: 'text' })
   body: string;
 

@@ -17,7 +17,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { ExpressRequestWithUser } from '../auth/types/express-request-with-user';
 import { UserRole } from '../user-api/user-api.client';
-import { CommentBodyDto } from './dto/comment-body.dto';
+import { CommentBodyDto, CreateCommentBodyDto } from './dto/comment-body.dto';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { ProjectAccessService } from './project-access.service';
 import { ProjectApiClient } from './project-api.client';
@@ -271,6 +271,7 @@ export class ProjectApiController {
     @Request() req: ExpressRequestWithUser,
   ) {
     await this.projectAccessService.assertProjectAccess(projectId, req.user);
+    await this.projectApiClient.findTicket(projectId, ticketId);
     return this.projectApiClient.findTicketComments(projectId, ticketId);
   }
 
@@ -279,15 +280,17 @@ export class ProjectApiController {
   async createTicketComment(
     @Param('projectId') projectId: string,
     @Param('ticketId') ticketId: string,
-    @Body() dto: CommentBodyDto,
+    @Body() dto: CreateCommentBodyDto,
     @Request() req: ExpressRequestWithUser,
   ) {
     await this.projectAccessService.assertProjectAccess(projectId, req.user);
+    await this.projectApiClient.findTicket(projectId, ticketId);
     return this.projectApiClient.createTicketComment(
       projectId,
       ticketId,
       dto.body.trim(),
       req.user,
+      dto.parentCommentId,
     );
   }
 
@@ -300,6 +303,7 @@ export class ProjectApiController {
     @Request() req: ExpressRequestWithUser,
   ) {
     await this.projectAccessService.assertProjectAccess(projectId, req.user);
+    await this.projectApiClient.findTicket(projectId, ticketId);
     return this.projectApiClient.updateTicketComment(
       projectId,
       ticketId,
@@ -318,6 +322,7 @@ export class ProjectApiController {
     @Request() req: ExpressRequestWithUser,
   ) {
     await this.projectAccessService.assertProjectAccess(projectId, req.user);
+    await this.projectApiClient.findTicket(projectId, ticketId);
     return this.projectApiClient.deleteTicketComment(
       projectId,
       ticketId,

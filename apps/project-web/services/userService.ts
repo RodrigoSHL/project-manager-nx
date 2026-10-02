@@ -37,18 +37,20 @@ export interface CreateWorkspaceDto {
   description?: string;
 }
 
+export type WorkspaceRole = 'owner' | 'admin' | 'member' | 'viewer';
+
 export interface WorkspaceMember {
   id: string;
   workspaceId: string;
   userId: string;
-  role: 'owner' | 'admin' | 'member' | 'viewer';
+  role: WorkspaceRole;
   joinedAt: string;
   user?: User;
 }
 
 export interface AddMemberDto {
   userId: string;
-  role?: 'owner' | 'admin' | 'member' | 'viewer';
+  role?: WorkspaceRole;
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {
@@ -125,7 +127,7 @@ export const WorkspaceService = {
       body: JSON.stringify(dto),
     }).then(handleResponse<WorkspaceMember>),
 
-  updateMemberRole: (workspaceId: string, userId: string, role: string): Promise<WorkspaceMember> =>
+  updateMemberRole: (workspaceId: string, userId: string, role: WorkspaceRole): Promise<WorkspaceMember> =>
     authenticatedFetch(`${API_BASE_URL}/workspaces/${workspaceId}/members/${userId}/role`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },

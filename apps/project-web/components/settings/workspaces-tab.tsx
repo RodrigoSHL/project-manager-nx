@@ -1,17 +1,17 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Building2, Users, Trash2, ChevronRight, Copy, Check, Loader2, UserPlus, Crown, Shield, Eye, User as UserIcon, FolderOpen, Link2, Unlink } from "lucide-react"
+import { Plus, Building2, Users, Trash2, ChevronRight, Copy, Check, Loader2, UserPlus, Crown, Shield, Eye, User as UserIcon, FolderOpen, Link2, Unlink, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { WorkspaceService, UserService, type Workspace, type WorkspaceMember, type User } from "@/services/userService"
+import { WorkspaceService, UserService, type Workspace, type WorkspaceMember, type WorkspaceRole, type User } from "@/services/userService"
 import { ProjectService } from "@/services/projectService"
 import { type Project } from "@/types/project"
 import { EditTeamMembersDialog } from "@/components/edit-team-members-dialog"
@@ -62,6 +62,12 @@ export function WorkspacesTab() {
   const [selectedRole, setSelectedRole] = React.useState<string>("member")
   const [addingMember, setAddingMember] = React.useState(false)
   const [addMemberError, setAddMemberError] = React.useState("")
+
+  // Form edit workspace role
+  const [editingMember, setEditingMember] = React.useState<WorkspaceMember | null>(null)
+  const [editedRole, setEditedRole] = React.useState<WorkspaceRole>("member")
+  const [updatingRole, setUpdatingRole] = React.useState(false)
+  const [roleError, setRoleError] = React.useState("")
 
   // Projects in workspace
   const [wsProjects, setWsProjects] = React.useState<Project[]>([])
@@ -136,6 +142,31 @@ export function WorkspacesTab() {
     if (!selectedWs) return
     await WorkspaceService.removeMember(selectedWs.id, userId)
     setMembers(prev => prev.filter(m => m.userId !== userId))
+  }
+
+  const openRoleEditor = (member: WorkspaceMember) => {
+    setEditingMember(member)
+    setEditedRole(member.role)
+    setRoleError("")
+  }
+
+  const handleUpdateRole = async () => {
+    if (!editingMember || updatingRole || editedRole === editingMember.role) return
+    setUpdatingRole(true)
+    setRoleError("")
+    try {
+      const updated = await WorkspaceService.updateMemberRole(
+        editingMember.workspaceId, editingMember.userId, editedRole
+      )
+      setMembers(prev => prev.map(member =>
+        member.id === updated.id ? { ...member, role: updated.role } : member
+      ))
+      setEditingMember(null)
+    } catch (e: unknown) {
+      setRoleError(e instanceof Error ? e.message : "No se pudo actualizar el rol. Intenta nuevamente.")
+    } finally {
+      setUpdatingRole(false)
+    }
   }
 
   const handleLinkProject = async () => {
@@ -322,6 +353,16 @@ export function WorkspacesTab() {
                           {email && <div className="text-xs text-muted-foreground truncate">{email}</div>}
                         </div>
                         <RoleBadge role={m.role} />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openRoleEditor(m)}
+                          aria-label={`Editar rol de ${name}`}
+                        >
+                          <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                          Editar rol
+                        </Button>
                         <button
                           onClick={() => handleRemoveMember(m.userId)}
                           className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-1 rounded"
@@ -486,6 +527,43 @@ export function WorkspacesTab() {
             <Button onClick={handleAddMember} disabled={addingMember || !selectedUserId}>
               {addingMember ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Añadir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Editar rol del workspace */}
+      <Dialog open={editingMember !== null} onOpenChange={open => {
+        if (!open && !updatingRole) setEditingMember(null)
+      }}>
+        <DialogContent className="sm:max-w-sm" showCloseButton={!updatingRole}>
+          <DialogHeader>
+            <DialogTitle>Editar rol del workspace</DialogTitle>
+            <DialogDescription>
+              {editingMember?.user?.name ?? editingMember?.userId} · {selectedWs?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-workspace-role">Rol</Label>
+              <Select value={editedRole} onValueChange={value => setEditedRole(value as WorkspaceRole)} disabled={updatingRole}>
+                <SelectTrigger id="edit-workspace-role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(roleConfig).map(([role, config]) => (
+                    <SelectItem key={role} value={role}>{config.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {roleError && <p role="alert" className="text-xs text-destructive">{roleError}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingMember(null)} disabled={updatingRole}>Cancelar</Button>
+            <Button onClick={handleUpdateRole} disabled={updatingRole || editedRole === editingMember?.role}>
+              {updatingRole ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {updatingRole ? "Guardando..." : "Guardar"}
             </Button>
           </DialogFooter>
         </DialogContent>

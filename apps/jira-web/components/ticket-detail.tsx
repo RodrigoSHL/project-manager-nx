@@ -30,6 +30,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Textarea } from '@/components/ui/textarea'
+import { CommentMentionEditor } from '@/components/comment-mention-editor'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -70,6 +71,11 @@ import {
   updateTicketComment,
 } from '@/services/commentService'
 import { useAuth } from '@/contexts/auth-context'
+import {
+  parseCommentMentions,
+  serializeCommentMentions,
+  type CommentMention,
+} from '@/lib/comment-mentions'
 import {
   findTeamMemberByAssigneeId,
   getTeamMemberAssigneeId,
@@ -170,12 +176,14 @@ export function TicketDetail({
   const [showLabelInput, setShowLabelInput] = React.useState(false)
 
   const [newComment, setNewComment] = React.useState('')
+  const [newCommentMentions, setNewCommentMentions] = React.useState<CommentMention[]>([])
   const [comments, setComments] = React.useState<ApiComment[]>([])
   const [commentsLoading, setCommentsLoading] = React.useState(false)
   const [commentSaving, setCommentSaving] = React.useState(false)
   const [commentError, setCommentError] = React.useState<string | null>(null)
   const [editingCommentId, setEditingCommentId] = React.useState<string | null>(null)
   const [editingCommentBody, setEditingCommentBody] = React.useState('')
+  const [editingCommentMentions, setEditingCommentMentions] = React.useState<CommentMention[]>([])
   const [attachments, setAttachments] = React.useState<ApiTicketAttachment[]>([])
   const [attachmentsLoading, setAttachmentsLoading] = React.useState(false)
   const [attachmentAction, setAttachmentAction] = React.useState<string | null>(null)
@@ -198,11 +206,13 @@ export function TicketDetail({
     setIsEditingDescription(false)
     setIsEditingAcceptanceCriteria(false)
     setNewComment('')
+    setNewCommentMentions([])
     setLabelInput('')
     setShowLabelInput(false)
     setCommentError(null)
     setEditingCommentId(null)
     setEditingCommentBody('')
+    setEditingCommentMentions([])
     setAttachments([])
     setAttachmentError(null)
     setAttachmentAction(null)
@@ -349,8 +359,12 @@ export function TicketDetail({
   // ── Comment helpers ────────────────────────────────────────────────────────
 
   const addComment = async () => {
-    const body = newComment.trim()
+    const body = serializeCommentMentions(newComment, newCommentMentions).trim()
     if (!body || commentSaving) return
+    if (body.length > 5000) {
+      setCommentError('El comentario supera el límite de 5000 caracteres.')
+      return
+    }
 
     setCommentSaving(true)
     setCommentError(null)
@@ -358,6 +372,7 @@ export function TicketDetail({
       const created = await createTicketComment(projectId, ticket.id, body)
       setComments(prev => [...prev, created])
       setNewComment('')
+      setNewCommentMentions([])
     } catch (error) {
       setCommentError(error instanceof Error ? error.message : 'No se pudo publicar el comentario.')
     } finally {
@@ -366,14 +381,20 @@ export function TicketDetail({
   }
 
   const startEditingComment = (comment: ApiComment) => {
+    const parsed = parseCommentMentions(comment.body)
     setEditingCommentId(comment.id)
-    setEditingCommentBody(comment.body)
+    setEditingCommentBody(parsed.text)
+    setEditingCommentMentions(parsed.mentions)
     setCommentError(null)
   }
 
   const saveComment = async (commentId: string) => {
-    const body = editingCommentBody.trim()
+    const body = serializeCommentMentions(editingCommentBody, editingCommentMentions).trim()
     if (!body || commentSaving) return
+    if (body.length > 5000) {
+      setCommentError('El comentario supera el límite de 5000 caracteres.')
+      return
+    }
 
     setCommentSaving(true)
     setCommentError(null)
@@ -382,6 +403,7 @@ export function TicketDetail({
       setComments(prev => prev.map(comment => comment.id === commentId ? updated : comment))
       setEditingCommentId(null)
       setEditingCommentBody('')
+      setEditingCommentMentions([])
     } catch (error) {
       setCommentError(error instanceof Error ? error.message : 'No se pudo editar el comentario.')
     } finally {
@@ -420,6 +442,24 @@ export function TicketDetail({
       .slice(0, 2)
       .map(part => part[0]?.toUpperCase())
       .join('') || 'U'
+  }
+
+  const renderCommentBody = (body: string) => {
+    const { text, mentions } = parseCommentMentions(body)
+    const parts: React.ReactNode[] = []
+    let cursor = 0
+    for (const mention of mentions) {
+      parts.push(text.slice(cursor, mention.start))
+      const member = teamMembers.find(candidate => candidate.id === mention.memberId)
+      parts.push(
+        <span key={`${mention.start}-${mention.memberId}`} className="rounded bg-primary/10 px-0.5 font-medium text-primary" title={member?.email}>
+          {text.slice(mention.start, mention.end)}
+        </span>
+      )
+      cursor = mention.end
+    }
+    parts.push(text.slice(cursor))
+    return parts
   }
 
   const addAttachment = async (file?: File) => {
@@ -999,19 +1039,17 @@ export function TicketDetail({
                   <AvatarFallback className="text-xs">{getInitials(user.name)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 space-y-2">
-                  <Textarea
+                  <CommentMentionEditor
                     placeholder="Escribe un comentario..."
                     value={newComment}
-                    onChange={e => setNewComment(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void addComment()
-                    }}
+                    mentions={newCommentMentions}
+                    onChange={(value, mentions) => { setNewComment(value); setNewCommentMentions(mentions) }}
+                    onSubmit={() => void addComment()}
+                    teamMembers={teamMembers}
                     disabled={commentSaving}
-                    maxLength={5000}
-                    className="min-h-20 resize-none"
                   />
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-muted-foreground">⌘ + Enter para enviar</span>
+                    <span className="text-[11px] text-muted-foreground">Escribe @ para etiquetar · ⌘ + Enter para enviar</span>
                     <Button size="sm" disabled={!newComment.trim() || commentSaving} onClick={() => void addComment()}>
                       {commentSaving && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
                       Publicar
@@ -1083,21 +1121,19 @@ export function TicketDetail({
 
                           {editingCommentId === comment.id ? (
                             <div className="space-y-2">
-                              <Textarea
+                              <CommentMentionEditor
                                 value={editingCommentBody}
-                                onChange={event => setEditingCommentBody(event.target.value)}
-                                onKeyDown={event => {
-                                  if (event.key === 'Escape') {
-                                    setEditingCommentId(null)
-                                    setEditingCommentBody('')
-                                  }
-                                  if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-                                    void saveComment(comment.id)
-                                  }
+                                mentions={editingCommentMentions}
+                                onChange={(value, mentions) => { setEditingCommentBody(value); setEditingCommentMentions(mentions) }}
+                                onSubmit={() => void saveComment(comment.id)}
+                                onCancel={() => {
+                                  setEditingCommentId(null)
+                                  setEditingCommentBody('')
+                                  setEditingCommentMentions([])
                                 }}
+                                teamMembers={teamMembers}
+                                placeholder="Edita tu comentario..."
                                 disabled={commentSaving}
-                                maxLength={5000}
-                                className="min-h-20 resize-none"
                                 autoFocus
                               />
                               <div className="flex justify-end gap-2">
@@ -1108,6 +1144,7 @@ export function TicketDetail({
                                   onClick={() => {
                                     setEditingCommentId(null)
                                     setEditingCommentBody('')
+                                    setEditingCommentMentions([])
                                   }}
                                 >
                                   Cancelar
@@ -1124,7 +1161,7 @@ export function TicketDetail({
                             </div>
                           ) : (
                             <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
-                              {comment.body}
+                              {renderCommentBody(comment.body)}
                             </p>
                           )}
                         </div>

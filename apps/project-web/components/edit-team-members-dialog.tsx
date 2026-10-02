@@ -44,6 +44,9 @@ const TEAM_ROLES = [
   { value: 'qa', label: 'QA' },
   { value: 'designer', label: 'Designer' },
   { value: 'architect', label: 'Architect' },
+  { value: 'member', label: 'Miembro' },
+  { value: 'analyst', label: 'Analista' },
+  { value: 'technician', label: 'Técnico' },
 ]
 
 function getInitials(name: string) {

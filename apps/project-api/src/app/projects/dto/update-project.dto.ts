@@ -1,7 +1,8 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateProjectDto, CreateRepositoryDto, CreateTeamMemberDto, CreateTaskDto, CreateEnvironmentDto, CreateCloudServiceDto, CreateUsefulLinkDto } from './create-project.dto';
-import { IsOptional, IsArray, ValidateNested, IsString, IsUUID } from 'class-validator';
+import { IsOptional, IsArray, ValidateNested, IsString, IsUUID, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
+import { TeamRole } from '../entities/team-member.entity';
 
 // DTOs para operaciones granulares
 export class UpdateRepositoryDto {
@@ -36,6 +37,7 @@ export class UpdateTeamMemberDto {
   email?: string;
 
   @IsOptional()
+  @IsEnum(TeamRole)
   role?: string;
 
   @IsOptional()
@@ -309,4 +311,4 @@ export class GranularUpdateProjectDto {
 }
 
 // UpdateProjectDto ahora incluye el campo opcional shortName heredado de CreateProjectDto.
-export class UpdateProjectDto extends PartialType(CreateProjectDto) {} 
+export class UpdateProjectDto extends PartialType(CreateProjectDto) {}

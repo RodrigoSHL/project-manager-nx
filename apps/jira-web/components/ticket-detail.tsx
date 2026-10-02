@@ -74,6 +74,7 @@ import { useAuth } from '@/contexts/auth-context'
 import {
   findTeamMemberByAssigneeId,
   getTeamMemberAssigneeId,
+  getTeamRoleLabel,
 } from '@/lib/team-members'
 import {
   TICKET_ATTACHMENT_ACCEPT,
@@ -663,7 +664,7 @@ export function TicketDetail({
                           </Avatar>
                           <span className="truncate">{member.name}</span>
                           <span className="text-[10px] text-muted-foreground shrink-0 capitalize">
-                            {member.role.replace('_', ' ')}
+                            {getTeamRoleLabel(member.role)}
                           </span>
                         </div>
                       </SelectItem>

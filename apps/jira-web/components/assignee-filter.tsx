@@ -10,7 +10,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { getTeamMemberAssigneeId } from '@/lib/team-members'
+import { getTeamMemberAssigneeId, getTeamRoleLabel } from '@/lib/team-members'
 import type { ApiTeamMember } from '@/types/project'
 
 interface AssigneeFilterProps {
@@ -86,7 +86,7 @@ export function AssigneeFilter({ members, values, onChange }: AssigneeFilterProp
                 <TooltipContent>
                   <p>{member.name}</p>
                   <p className="text-[10px] text-muted-foreground">
-                    {member.role.replaceAll('_', ' ')}
+                    {getTeamRoleLabel(member.role)}
                   </p>
                 </TooltipContent>
               </Tooltip>

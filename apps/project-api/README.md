@@ -149,6 +149,9 @@ GET    /projects/business-unit/:businessUnit - Proyectos por unidad de negocio
 - `critical` - Crítica
 
 ### TeamRole
+- `member` - Miembro
+- `analyst` - Analista
+- `technician` - Técnico
 - `tech_lead` - Tech Lead
 - `developer` - Desarrollador
 - `devops` - DevOps
@@ -157,6 +160,13 @@ GET    /projects/business-unit/:businessUnit - Proyectos por unidad de negocio
 - `qa` - QA
 - `designer` - Diseñador
 - `architect` - Arquitecto
+
+Miembro, Analista y Técnico se guardan como `member`, `analyst` y `technician`.
+Cuando `TYPEORM_SYNCHRONIZE=true`, TypeORM actualiza el enum al iniciar la API.
+Con sincronización desactivada, ejecutar
+[20261001-add-project-team-roles.sql](../../docker/migrations/20261001-add-project-team-roles.sql)
+en la base de project-api antes de guardar estos roles. El script puede repetirse
+y conserva las asignaciones existentes.
 
 ### TaskStatus
 - `todo` - Por hacer
@@ -251,4 +261,4 @@ DATABASE_PASSWORD=secure_password
 - [ ] Exportación de datos
 - [ ] API de búsqueda avanzada
 - [ ] Cache con Redis
-- [ ] Monitoreo y alertas 
+- [ ] Monitoreo y alertas

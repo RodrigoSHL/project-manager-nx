@@ -172,7 +172,10 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
       'scrum_master': 'Scrum Master',
       'qa': 'QA',
       'designer': 'Designer',
-      'architect': 'Architect'
+      'architect': 'Architect',
+      'member': 'Miembro',
+      'analyst': 'Analista',
+      'technician': 'Técnico',
     }
     return roleMap[role] || role
   }

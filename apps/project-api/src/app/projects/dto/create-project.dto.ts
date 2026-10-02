@@ -1,6 +1,7 @@
 import { IsString, IsOptional, IsEnum, IsDateString, IsArray, ValidateNested, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ProjectStatus, ProjectPriority } from '../entities/project.entity';
+import { TeamRole } from '../entities/team-member.entity';
 
 export class CreateRepositoryDto {
   @IsString()
@@ -41,7 +42,7 @@ export class CreateTeamMemberDto {
   @IsString()
   email: string;
 
-  @IsEnum(['tech_lead', 'developer', 'devops', 'product_owner', 'scrum_master', 'qa', 'designer', 'architect'])
+  @IsEnum(TeamRole)
   role: string;
 
   @IsOptional()
@@ -206,4 +207,4 @@ export class CreateProjectDto {
   @ValidateNested({ each: true })
   @Type(() => CreateUsefulLinkDto)
   usefulLinks?: CreateUsefulLinkDto[];
-} 
+}

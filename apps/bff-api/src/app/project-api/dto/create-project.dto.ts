@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsDateString, IsEnum, IsOptional, IsString, IsUUID, ValidateNested } from 'class-validator';
+import { IsArray, IsDateString, IsEnum, IsIn, IsOptional, IsString, IsUUID, ValidateNested } from 'class-validator';
 
 enum ProjectStatus {
   PLANNING = 'planning',
@@ -57,7 +57,7 @@ class CreateTeamMemberDto {
   @IsString()
   email: string;
 
-  @IsEnum(['tech_lead', 'developer', 'devops', 'product_owner', 'scrum_master', 'qa', 'designer', 'architect'])
+  @IsIn(['tech_lead', 'developer', 'devops', 'product_owner', 'scrum_master', 'qa', 'designer', 'architect', 'member', 'analyst', 'technician'])
   role: string;
 
   @IsOptional()

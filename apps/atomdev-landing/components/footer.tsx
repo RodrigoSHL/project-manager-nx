@@ -1,10 +1,12 @@
 'use client'
 
 import { Mail } from 'lucide-react'
+import { BrandLogo } from './brand-logo'
 
 const NAV_LINKS = [
   { label: 'Inicio', href: '#inicio' },
   { label: 'Servicios', href: '#servicios' },
+  { label: 'Minería / GridAssets', href: '#gridassets' },
   { label: 'Tecnologías', href: '#tecnologias' },
   { label: 'Cómo trabajamos', href: '#proceso' },
   { label: 'Contacto', href: '#contacto' },
@@ -13,24 +15,6 @@ const NAV_LINKS = [
 const CONTACT_EMAIL = 'contacto@atomdev.cl'
 // TODO: reemplazar con URL real de LinkedIn
 const LINKEDIN_URL = 'https://www.linkedin.com/company/atomdev'
-
-function AtomIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="-22 -22 44 44"
-      width={22}
-      height={22}
-      className={className}
-      aria-hidden="true"
-      fill="none"
-    >
-      <ellipse cx={0} cy={0} rx={18} ry={7} stroke="currentColor" strokeWidth={1.2} />
-      <ellipse cx={0} cy={0} rx={18} ry={7} stroke="currentColor" strokeWidth={1.2} transform="rotate(60)" />
-      <ellipse cx={0} cy={0} rx={18} ry={7} stroke="currentColor" strokeWidth={1.2} transform="rotate(-60)" />
-      <circle cx={0} cy={0} r={3.5} fill="currentColor" />
-    </svg>
-  )
-}
 
 export function Footer() {
   const year = new Date().getFullYear()
@@ -41,7 +25,7 @@ export function Footer() {
   }
 
   return (
-    <footer className="relative border-t border-white/[0.06]">
+    <footer className="relative border-t border-border">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
           {/* Brand */}
@@ -49,16 +33,13 @@ export function Footer() {
             <a
               href="#inicio"
               onClick={(e) => { e.preventDefault(); handleNavClick('#inicio') }}
-              className="flex items-center gap-2 group"
-              aria-label="Atom Dev – inicio"
+              className="flex items-center group"
+              aria-label="AtomDev – inicio"
             >
-              <AtomIcon className="text-turquoise" />
-              <span className="text-base font-bold tracking-widest text-foreground">
-                ATOM<span className="text-turquoise">.</span>DEV
-              </span>
+              <BrandLogo className="h-9 w-[148px]" />
             </a>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              Ingeniería de software, cloud y automatización.
+              Ingeniería de software para empresas, minería y operaciones en terreno.
             </p>
           </div>
 
@@ -94,7 +75,7 @@ export function Footer() {
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-turquoise focus-visible:outline-none"
-              aria-label="LinkedIn de Atom Dev (abre en nueva pestaña)"
+              aria-label="LinkedIn de AtomDev (abre en nueva pestaña)"
             >
               {/* LinkedIn icon inline */}
               <svg xmlns="http://www.w3.org/2000/svg" width={14} height={14} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -108,9 +89,9 @@ export function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-10 border-t border-white/[0.05] pt-6 flex flex-col items-center justify-between gap-3 sm:flex-row">
+        <div className="mt-10 border-t border-border pt-6 flex flex-col items-center justify-between gap-3 sm:flex-row">
           <p className="text-xs text-muted-foreground/60">
-            &copy; {year} Atom Dev. Todos los derechos reservados.
+            &copy; {year} AtomDev. Todos los derechos reservados.
           </p>
           <p className="text-xs text-muted-foreground/40">
             Diseñado y desarrollado con precisión atómica.

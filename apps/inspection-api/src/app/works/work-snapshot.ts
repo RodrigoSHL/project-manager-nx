@@ -1,0 +1,63 @@
+import type { ConceptType } from '../catalog/entities/concept.entity';
+import type { FormItemType } from '../form-templates/entities/form-item.entity';
+
+export type WorkConceptOptionSnapshot = {
+  id: string;
+  label: string;
+  value: string;
+  order: number;
+  generatesFinding?: boolean;
+  suggestedSeverityId?: string | null;
+};
+
+export type WorkConceptSnapshot = {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  type: ConceptType;
+  unit?: string | null;
+  minValue?: number | null;
+  maxValue?: number | null;
+  outOfRangeSeverityId?: string | null;
+  options: WorkConceptOptionSnapshot[];
+};
+
+export type WorkFormItemSnapshot = {
+  id: string;
+  /** Template item that originated this immutable work item instance. */
+  formItemId?: string;
+  /**
+   * Asset evaluated by this item. These fields are optional only so snapshots
+   * created before asset-scoped work items remain readable.
+   */
+  assetId?: string;
+  assetCodeSnapshot?: string;
+  assetNameSnapshot?: string;
+  assetTypeIdSnapshot?: string;
+  assetOrder?: number;
+  assetDepth?: number;
+  type: FormItemType;
+  order: number;
+  title?: string | null;
+  description?: string | null;
+  required: boolean;
+  concept?: WorkConceptSnapshot;
+};
+
+export type WorkFormSectionSnapshot = {
+  id: string;
+  title: string;
+  description?: string | null;
+  order: number;
+  items: WorkFormItemSnapshot[];
+};
+
+export type WorkTemplateSnapshot = {
+  workId: string;
+  tenantId: string;
+  formTemplateId: string;
+  formTemplateVersion: number;
+  name: string;
+  sections: WorkFormSectionSnapshot[];
+};

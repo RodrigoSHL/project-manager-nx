@@ -1,0 +1,274 @@
+import { useEffect, useMemo, useState } from 'react';
+import { X } from 'lucide-react';
+import { Button } from '../../../components/ui/button';
+import {
+  assetAdminSchema,
+  assetToAdminForm,
+  emptyAssetAdminForm,
+  type AssetAdminForm,
+} from '../asset-admin-schema';
+import type { AssetType } from '../../asset-types/models';
+import type { Asset } from '../models';
+
+type AssetAdminFormProps = {
+  asset: Asset | null;
+  assets: Asset[];
+  assetTypes: AssetType[];
+  initialParentId?: string | null;
+  isSubmitting: boolean;
+  onCancel: () => void;
+  onSubmit: (form: AssetAdminForm) => Promise<void>;
+};
+
+const statusOptions: Array<{ value: Asset['status']; label: string }> = [
+  { value: 'ACTIVE', label: 'Activo' },
+  { value: 'OUT_OF_SERVICE', label: 'Fuera de servicio' },
+  { value: 'INACTIVE', label: 'Inactivo' },
+];
+
+export function AssetAdminForm({
+  asset,
+  assets,
+  assetTypes,
+  initialParentId = null,
+  isSubmitting,
+  onCancel,
+  onSubmit,
+}: AssetAdminFormProps) {
+  const [form, setForm] = useState<AssetAdminForm>(emptyAssetAdminForm);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const substationType = assetTypes.find(
+      (item) => item.code === 'SUBSTATION' && item.active
+    );
+    const firstChildType = assetTypes.find(
+      (item) => item.code !== 'SUBSTATION' && item.active
+    );
+    setForm(
+      asset
+        ? assetToAdminForm(asset)
+        : {
+            ...emptyAssetAdminForm,
+            parentId: initialParentId,
+            assetTypeId: initialParentId
+              ? firstChildType?.id ?? ''
+              : substationType?.id ?? '',
+          }
+    );
+    setError(null);
+  }, [asset, assetTypes, initialParentId]);
+
+  function updateField<K extends keyof AssetAdminForm>(
+    field: K,
+    value: AssetAdminForm[K]
+  ) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const result = assetAdminSchema.safeParse({
+      ...form,
+      description: form.description?.trim() || null,
+    });
+
+    if (!result.success) {
+      setError(result.error.issues[0]?.message ?? 'Revisa los campos.');
+      return;
+    }
+
+    setError(null);
+    try {
+      await onSubmit(result.data);
+    } catch {
+      // The mutation hook exposes the server error in the page.
+    }
+  }
+
+  const unavailableParentIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (!asset) return ids;
+
+    ids.add(asset.id);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const item of assets) {
+        if (item.parentId && ids.has(item.parentId) && !ids.has(item.id)) {
+          ids.add(item.id);
+          changed = true;
+        }
+      }
+    }
+    return ids;
+  }, [asset, assets]);
+  const availableParents = assets.filter(
+    (item) => !unavailableParentIds.has(item.id)
+  );
+  const isParentLocked = !asset && Boolean(initialParentId);
+  const isCreatingRoot = !asset && !initialParentId;
+  const substationType = assetTypes.find(
+    (item) => item.code === 'SUBSTATION' && item.active
+  );
+  const initialParent = initialParentId
+    ? assets.find((item) => item.id === initialParentId)
+    : null;
+
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="font-semibold text-slate-950">
+            {asset
+              ? 'Editar activo'
+              : initialParent
+              ? `Agregar activo a ${initialParent.code}`
+              : 'Nueva subestación'}
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Los activos raíz deben ser subestaciones. Los demás se vinculan a un
+            activo padre.
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label="Cerrar formulario"
+          onClick={onCancel}
+        >
+          <X />
+        </Button>
+      </div>
+
+      <form className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
+        <label className="text-sm font-medium text-slate-700">
+          Código / TAG
+          <input
+            required
+            value={form.code}
+            onChange={(event) => updateField('code', event.target.value)}
+            className="mt-2 h-11 w-full rounded-lg border border-slate-300 px-3 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+            maxLength={60}
+          />
+        </label>
+
+        <label className="text-sm font-medium text-slate-700">
+          Nombre
+          <input
+            required
+            value={form.name}
+            onChange={(event) => updateField('name', event.target.value)}
+            className="mt-2 h-11 w-full rounded-lg border border-slate-300 px-3 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+            maxLength={180}
+          />
+        </label>
+
+        <label className="text-sm font-medium text-slate-700">
+          Tipo de activo
+          {isCreatingRoot ? (
+            <input
+              readOnly
+              value={
+                substationType
+                  ? `${substationType.code} · ${substationType.name}`
+                  : 'Preparando tipo Subestación…'
+              }
+              className="mt-2 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-slate-700"
+            />
+          ) : (
+            <select
+              required
+              value={form.assetTypeId}
+              onChange={(event) =>
+                updateField('assetTypeId', event.target.value)
+              }
+              className="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+            >
+              <option value="">Selecciona un tipo</option>
+              {assetTypes
+                .filter((item) => item.active)
+                .map((assetType) => (
+                  <option key={assetType.id} value={assetType.id}>
+                    {assetType.code} · {assetType.name}
+                  </option>
+                ))}
+            </select>
+          )}
+        </label>
+
+        <label className="text-sm font-medium text-slate-700">
+          Estado
+          <select
+            value={form.status}
+            onChange={(event) =>
+              updateField('status', event.target.value as Asset['status'])
+            }
+            className="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+          >
+            {statusOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="text-sm font-medium text-slate-700 md:col-span-2">
+          Activo padre
+          <select
+            value={form.parentId ?? ''}
+            onChange={(event) =>
+              updateField('parentId', event.target.value || null)
+            }
+            disabled={isParentLocked}
+            className="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+          >
+            <option value="">Sin padre · nodo raíz</option>
+            {availableParents.map((parent) => (
+              <option key={parent.id} value={parent.id}>
+                {parent.code} · {parent.name}
+              </option>
+            ))}
+          </select>
+          {isParentLocked && initialParent ? (
+            <span className="mt-1 block text-xs font-normal text-slate-500">
+              Se agregará dentro de {initialParent.name}.
+            </span>
+          ) : null}
+        </label>
+
+        <label className="text-sm font-medium text-slate-700 md:col-span-2">
+          Descripción
+          <textarea
+            value={form.description ?? ''}
+            onChange={(event) =>
+              updateField('description', event.target.value || null)
+            }
+            className="mt-2 min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+            maxLength={2000}
+          />
+        </label>
+
+        {error ? (
+          <p className="md:col-span-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </p>
+        ) : null}
+
+        <div className="flex flex-wrap justify-end gap-3 md:col-span-2">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            disabled={isSubmitting || (isCreatingRoot && !substationType)}
+          >
+            {isSubmitting ? 'Guardando...' : 'Guardar activo'}
+          </Button>
+        </div>
+      </form>
+    </section>
+  );
+}

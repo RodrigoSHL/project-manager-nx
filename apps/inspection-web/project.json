@@ -1,0 +1,9 @@
+{
+  "name": "inspection-web",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/inspection-web/src",
+  "projectType": "application",
+  "tags": [],
+  "// targets": "to see all targets run: nx show project inspection-web --web",
+  "targets": {}
+}

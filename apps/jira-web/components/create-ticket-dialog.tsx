@@ -36,8 +36,11 @@ interface CreateTicketDialogProps {
   projectId: string
   sprints: ApiSprint[]
   teamMembers?: ApiTeamMember[]
+  availableEpics?: ApiTicket[]
   initialStatus?: ApiTicket['status']
   initialSprintId?: string | null
+  initialType?: ApiTicket['type']
+  initialEpicId?: string | null
   onCreated: (ticket: ApiTicket) => void
 }
 
@@ -72,8 +75,11 @@ export function CreateTicketDialog({
   projectId,
   sprints,
   teamMembers = [],
+  availableEpics = [],
   initialStatus,
   initialSprintId,
+  initialType,
+  initialEpicId,
   onCreated,
 }: CreateTicketDialogProps) {
   const [title, setTitle] = React.useState('')
@@ -84,6 +90,7 @@ export function CreateTicketDialog({
   const [type, setType] = React.useState<ApiTicket['type']>('task')
   const [sprintId, setSprintId] = React.useState<string>('none')
   const [assigneeId, setAssigneeId] = React.useState<string>('none')
+  const [epicId, setEpicId] = React.useState<string>('none')
   const [storyPoints, setStoryPoints] = React.useState('')
   const [dueDate, setDueDate] = React.useState('')
   const [saving, setSaving] = React.useState(false)
@@ -99,15 +106,16 @@ export function CreateTicketDialog({
     setAcceptanceCriteria('')
     setStatus(initialStatus === 'cancelled' ? 'todo' : (initialStatus ?? 'todo'))
     setPriority('medium')
-    setType('task')
+    setType(initialType ?? 'task')
     // undefined = no preference (default to active sprint); null = explicitly no sprint (backlog)
     setSprintId(initialSprintId !== undefined ? (initialSprintId ?? 'none') : (activeSprint?.id ?? 'none'))
     setAssigneeId('none')
+    setEpicId(initialEpicId ?? 'none')
     setStoryPoints('')
     setDueDate('')
     setError('')
     setTemplateMessage('')
-  }, [open, initialStatus, initialSprintId, activeSprint?.id])
+  }, [open, initialStatus, initialSprintId, initialType, initialEpicId, activeSprint?.id])
 
   const handleCopyTemplate = async () => {
     setError('')
@@ -169,6 +177,10 @@ export function CreateTicketDialog({
       setError('El título del ticket es obligatorio.')
       return
     }
+    if (type === 'story' && epicId === 'none') {
+      setError('Selecciona la épica a la que pertenece la historia de usuario.')
+      return
+    }
     setSaving(true)
     setError('')
     try {
@@ -179,8 +191,9 @@ export function CreateTicketDialog({
         status,
         priority,
         type,
-        sprintId: sprintId === 'none' ? null : sprintId,
+        sprintId: type === 'epic' || sprintId === 'none' ? null : sprintId,
         assigneeId: assigneeId === 'none' ? null : assigneeId,
+        epicId: type === 'story' ? epicId : null,
         storyPoints: storyPoints ? parseInt(storyPoints, 10) : null,
         dueDate: dueDate || null,
       })
@@ -271,6 +284,30 @@ export function CreateTicketDialog({
             </div>
           </div>
 
+          {type === 'story' && (
+            <div className="space-y-1.5">
+              <Label>Épica *</Label>
+              <Select value={epicId} onValueChange={setEpicId} disabled={saving}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona una épica" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none" disabled>Selecciona una épica</SelectItem>
+                  {availableEpics.map(epic => (
+                    <SelectItem key={epic.id} value={epic.id}>
+                      {epic.key} · {epic.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {availableEpics.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Primero debes crear una épica en este proyecto.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Status / Sprint row */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -288,7 +325,7 @@ export function CreateTicketDialog({
             </div>
             <div className="space-y-1.5">
               <Label>Sprint</Label>
-              <Select value={sprintId} onValueChange={setSprintId} disabled={saving}>
+              <Select value={type === 'epic' ? 'none' : sprintId} onValueChange={setSprintId} disabled={saving || type === 'epic'}>
                 <SelectTrigger>
                   <SelectValue placeholder="Sin sprint" />
                 </SelectTrigger>

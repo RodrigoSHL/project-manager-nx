@@ -50,8 +50,56 @@ export class TicketsService {
     return `${project.key}-${count + 1}`;
   }
 
+  private async assertValidEpic(
+    projectId: string,
+    type: TicketType,
+    epicId?: string | null,
+  ): Promise<void> {
+    if (type !== TicketType.STORY) {
+      if (epicId) {
+        throw new BadRequestException(
+          'Solo las historias de usuario pueden vincularse a una épica',
+        );
+      }
+      return;
+    }
+
+    if (!epicId) {
+      throw new BadRequestException(
+        'La historia de usuario debe estar vinculada a una épica',
+      );
+    }
+
+    const epic = await this.ticketsRepository.findOne({
+      where: { id: epicId, projectId, type: TicketType.EPIC },
+    });
+    if (!epic) {
+      throw new BadRequestException(
+        'La épica seleccionada no existe o pertenece a otro proyecto',
+      );
+    }
+  }
+
+  private async assertEpicHasNoStories(ticket: Ticket): Promise<void> {
+    if (ticket.type !== TicketType.EPIC) return;
+
+    const stories = await this.ticketsRepository.count({
+      where: { epicId: ticket.id },
+    });
+    if (stories > 0) {
+      throw new BadRequestException(
+        'La épica tiene historias vinculadas. Reasígnalas antes de continuar',
+      );
+    }
+  }
+
   async create(projectId: string, dto: CreateTicketDto): Promise<Ticket> {
     await this.assertProjectMemberAssignee(projectId, dto.assigneeId);
+    await this.assertValidEpic(
+      projectId,
+      dto.type ?? TicketType.TASK,
+      dto.epicId,
+    );
     const key = await this.generateKey(projectId);
     const ticket = this.ticketsRepository.create({ ...dto, projectId, key });
     const saved = await this.ticketsRepository.save(ticket);
@@ -67,7 +115,7 @@ export class TicketsService {
   findByProject(projectId: string): Promise<Ticket[]> {
     return this.ticketsRepository.find({
       where: { projectId },
-      relations: ['labels'],
+      relations: ['labels', 'epic'],
       order: { createdAt: 'DESC' },
     });
   }
@@ -75,7 +123,7 @@ export class TicketsService {
   async findOne(projectId: string, id: string): Promise<Ticket> {
     const ticket = await this.ticketsRepository.findOne({
       where: { id, projectId },
-      relations: ['labels', 'sprint'],
+      relations: ['labels', 'sprint', 'epic'],
     });
     if (!ticket) throw new NotFoundException(`Ticket ${id} not found`);
     return ticket;
@@ -86,12 +134,26 @@ export class TicketsService {
     if (dto.assigneeId !== undefined) {
       await this.assertProjectMemberAssignee(projectId, dto.assigneeId);
     }
+
+    if (dto.type !== undefined || dto.epicId !== undefined) {
+      const nextType = dto.type ?? ticket.type;
+      const nextEpicId = nextType === TicketType.STORY
+        ? (dto.epicId !== undefined ? dto.epicId : ticket.epicId)
+        : null;
+
+      if (ticket.type === TicketType.EPIC && nextType !== TicketType.EPIC) {
+        await this.assertEpicHasNoStories(ticket);
+      }
+      await this.assertValidEpic(projectId, nextType, nextEpicId);
+      dto.epicId = nextEpicId;
+    }
     Object.assign(ticket, dto);
     return this.ticketsRepository.save(ticket);
   }
 
   async remove(projectId: string, id: string): Promise<void> {
     const ticket = await this.findOne(projectId, id);
+    await this.assertEpicHasNoStories(ticket);
     await this.ticketsRepository.remove(ticket);
   }
 }

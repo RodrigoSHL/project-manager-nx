@@ -18,7 +18,7 @@ export function CTA() {
           className="h-[500px] w-[500px] rounded-full opacity-12"
           style={{
             background:
-              'radial-gradient(circle, oklch(0.82 0.18 190 / 0.4) 0%, oklch(0.75 0.22 340 / 0.2) 50%, transparent 70%)',
+              'radial-gradient(circle, color-mix(in oklch, var(--turquoise) 38%, transparent) 0%, color-mix(in oklch, var(--pink) 20%, transparent) 50%, transparent 70%)',
             filter: 'blur(40px)',
           }}
         />
@@ -33,7 +33,7 @@ export function CTA() {
             style={{
               width: size,
               height: size,
-              border: '1px solid oklch(0.82 0.18 190 / 0.1)',
+              border: '1px solid color-mix(in oklch, var(--turquoise) 10%, transparent)',
             }}
             animate={{ scale: [1, 1.06, 1], opacity: [0.5, 0.2, 0.5] }}
             transition={{
@@ -74,7 +74,7 @@ export function CTA() {
           <div className="flex flex-wrap items-center justify-center gap-4">
             <button
               onClick={scrollToContact}
-              className="inline-flex items-center gap-2 rounded-lg bg-turquoise px-7 py-3.5 text-sm font-semibold text-background shadow-lg transition-all duration-200 hover:bg-turquoise/90 hover:shadow-[0_0_28px_oklch(0.82_0.18_190/0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-turquoise/50 active:scale-[0.97]"
+              className="inline-flex items-center gap-2 rounded-lg bg-turquoise px-7 py-3.5 text-sm font-semibold text-background shadow-lg transition-all duration-200 hover:bg-turquoise/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-turquoise/50 active:scale-[0.97]"
             >
               Hablemos de tu proyecto
               <ArrowRight size={16} />
@@ -82,7 +82,7 @@ export function CTA() {
 
             <a
               href={`mailto:${CONTACT_EMAIL}`}
-              className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.05] px-7 py-3.5 text-sm font-medium text-muted-foreground transition-all duration-200 hover:border-white/20 hover:bg-white/[0.08] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-7 py-3.5 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <Mail size={16} />
               Enviar un correo

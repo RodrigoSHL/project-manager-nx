@@ -1,0 +1,227 @@
+import type {
+  ConceptResponse,
+  CreateWorkInput,
+  TaskCompletion,
+  Work,
+  WorkItemAnnotation,
+  WorkItemValue,
+  WorkTemplateSnapshot,
+  Finding,
+} from './models';
+import { authenticatedFetch } from '../auth/authenticated-fetch';
+import type { SeverityLevel } from '../concepts/models';
+import type { FindingCandidate } from './models';
+
+export type WorkCatalogResponse = {
+  works: Work[];
+  responses: ConceptResponse[];
+  taskCompletions: TaskCompletion[];
+  annotations: WorkItemAnnotation[];
+  snapshots: WorkTemplateSnapshot[];
+  severityLevels: SeverityLevel[];
+  findingCandidates: FindingCandidate[];
+  findings: Finding[];
+};
+
+export type WorkResponsesPayload = {
+  responses: Array<{
+    formItemId: string;
+    valueNumber?: number;
+    valueText?: string;
+    selectedOptionId?: string;
+    measuredAt?: string;
+    measuredAtTime?: string | null;
+  }>;
+  taskCompletions: Array<{ formItemId: string; completed: boolean }>;
+  annotations: Array<{
+    formItemId: string;
+    comment: string;
+    isFinding?: boolean;
+  }>;
+};
+
+export class WorkApiError extends Error {
+  constructor(message: string, readonly missingLabels: string[] = []) {
+    super(message);
+  }
+}
+
+const baseUrl = (
+  import.meta.env.VITE_INSPECTION_API_URL || '/api/inspection'
+).replace(/\/$/, '');
+
+export const workApi = {
+  list(tenantId: string) {
+    return request<WorkCatalogResponse>(
+      `/tenants/${encodeURIComponent(tenantId)}/works`
+    );
+  },
+
+  create(input: CreateWorkInput) {
+    const { tenantId, siteId, assetId, ...payload } = input;
+    return request<{ work: Work; snapshot: WorkTemplateSnapshot }>(
+      `/tenants/${encodeURIComponent(tenantId)}/sites/${encodeURIComponent(
+        siteId
+      )}/assets/${encodeURIComponent(assetId)}/works`,
+      { method: 'POST', body: JSON.stringify(payload) }
+    );
+  },
+
+  saveResponses(
+    tenantId: string,
+    workId: string,
+    payload: WorkResponsesPayload
+  ) {
+    return request(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/responses`,
+      { method: 'PUT', body: JSON.stringify(payload) }
+    );
+  },
+
+  start(tenantId: string, workId: string) {
+    return request<Work>(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/status`,
+      { method: 'PATCH', body: JSON.stringify({ status: 'IN_PROGRESS' }) }
+    );
+  },
+
+  finish(tenantId: string, workId: string, payload: WorkResponsesPayload) {
+    return request<Work>(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/finish`,
+      { method: 'POST', body: JSON.stringify(payload) }
+    );
+  },
+
+  confirmFinding(
+    tenantId: string,
+    workId: string,
+    candidateId: string,
+    payload: {
+      title: string;
+      description?: string;
+      severityId?: string | null;
+      manHours?: number | null;
+      materials?: string;
+    }
+  ) {
+    return request<Finding>(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/finding-candidates/${encodeURIComponent(candidateId)}/confirm`,
+      { method: 'PUT', body: JSON.stringify(payload) }
+    );
+  },
+
+  discardCandidate(
+    tenantId: string,
+    workId: string,
+    candidateId: string,
+    reason?: string
+  ) {
+    return request<FindingCandidate>(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/finding-candidates/${encodeURIComponent(candidateId)}/discard`,
+      { method: 'PUT', body: JSON.stringify({ reason }) }
+    );
+  },
+
+  finalizeReview(tenantId: string, workId: string) {
+    return request<Work>(
+      `/tenants/${encodeURIComponent(tenantId)}/works/${encodeURIComponent(
+        workId
+      )}/review/finalize`,
+      { method: 'POST' }
+    );
+  },
+};
+
+export function toWorkResponsesPayload(
+  snapshot: WorkTemplateSnapshot,
+  values: Record<string, WorkItemValue>
+): WorkResponsesPayload {
+  const responses: WorkResponsesPayload['responses'] = [];
+  const taskCompletions: WorkResponsesPayload['taskCompletions'] = [];
+  const annotations: WorkResponsesPayload['annotations'] = [];
+  for (const item of snapshot.sections.flatMap((section) => section.items)) {
+    const value = values[item.id];
+    if (value?.isFinding && !value.comment?.trim())
+      throw new WorkApiError('Escribe un comentario para el hallazgo manual.');
+    if (value?.comment?.trim()) {
+      annotations.push({
+        formItemId: item.id,
+        comment: value.comment.trim(),
+        isFinding: value.isFinding ?? false,
+      });
+    }
+    if (item.type === 'TASK') {
+      if (value) {
+        taskCompletions.push({
+          formItemId: item.id,
+          completed: value.completed === true,
+        });
+      }
+      continue;
+    }
+    const concept = item.concept;
+    if (!concept || !value) continue;
+    if (concept.type === 'ANALOG' && Number.isFinite(value.valueNumber)) {
+      responses.push({
+        formItemId: item.id,
+        valueNumber: value.valueNumber,
+        measuredAt: value.measuredAt,
+        ...(value.measuredAtTime !== undefined
+          ? { measuredAtTime: value.measuredAtTime }
+          : {}),
+      });
+    }
+    if (concept.type === 'TEXT' && value.valueText?.trim()) {
+      responses.push({
+        formItemId: item.id,
+        valueText: value.valueText.trim(),
+      });
+    }
+    if (concept.type === 'DIGITAL' && value.selectedOptionId) {
+      responses.push({
+        formItemId: item.id,
+        selectedOptionId: value.selectedOptionId,
+      });
+    }
+  }
+  return { responses, taskCompletions, annotations };
+}
+
+async function request<T = unknown>(
+  path: string,
+  init: RequestInit = {}
+): Promise<T> {
+  let response: Response;
+  try {
+    response = await authenticatedFetch(`${baseUrl}${path}`, {
+      ...init,
+      headers: {
+        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+        ...init.headers,
+      },
+    });
+  } catch {
+    throw new WorkApiError('No fue posible conectar con el servidor.');
+  }
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as {
+      message?: string | string[];
+      missingLabels?: string[];
+    } | null;
+    const message = Array.isArray(body?.message)
+      ? body.message.join(', ')
+      : body?.message ?? 'No fue posible completar la operación.';
+    throw new WorkApiError(message, body?.missingLabels ?? []);
+  }
+  return response.json() as Promise<T>;
+}

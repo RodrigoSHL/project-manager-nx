@@ -1,0 +1,40 @@
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { CatalogController } from './catalog.controller';
+import { CatalogService } from './catalog.service';
+import { AssetEntity } from './entities/asset.entity';
+import { AssetTypeEntity } from './entities/asset-type.entity';
+import { WorkTypeEntity } from './entities/work-type.entity';
+import { AssetTypeWorkTypeEntity } from './entities/asset-type-work-type.entity';
+import { AssetWorkTypeEntity } from './entities/asset-work-type.entity';
+import { SiteEntity } from './entities/site.entity';
+import { TenantEntity } from './entities/tenant.entity';
+import { ConceptEntity } from './entities/concept.entity';
+import { ConceptOptionEntity } from './entities/concept-option.entity';
+import { AssetTypeConceptEntity } from './entities/asset-type-concept.entity';
+import { ActiveTenantGuard } from './guards/active-tenant.guard';
+import { SeverityLevelEntity } from './entities/severity-level.entity';
+import { TenantReportSettingsEntity } from './entities/tenant-report-settings.entity';
+
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([
+      TenantEntity,
+      SiteEntity,
+      AssetEntity,
+      AssetTypeEntity,
+      WorkTypeEntity,
+      AssetTypeWorkTypeEntity,
+      AssetWorkTypeEntity,
+      ConceptEntity,
+      ConceptOptionEntity,
+      AssetTypeConceptEntity,
+      SeverityLevelEntity,
+      TenantReportSettingsEntity,
+    ]),
+  ],
+  controllers: [CatalogController],
+  providers: [CatalogService, ActiveTenantGuard],
+  exports: [CatalogService, ActiveTenantGuard],
+})
+export class CatalogModule {}

@@ -33,6 +33,11 @@ async function bootstrap() {
   Logger.log(`🚀 BFF API running on: http://localhost:${port}`);
   Logger.log(`👤 User API: ${process.env.USER_API_URL || 'http://localhost:3001'}`);
   Logger.log(`📊 Project API: ${process.env.PROJECT_API_URL || 'http://localhost:3002'}`);
+  Logger.log(
+    `Inspection API: ${
+      process.env.INSPECTION_API_URL || 'http://localhost:3005/api'
+    }`
+  );
 }
 
 bootstrap();

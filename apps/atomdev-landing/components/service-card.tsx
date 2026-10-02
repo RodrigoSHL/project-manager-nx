@@ -27,8 +27,8 @@ export function ServiceCard({
 
   const colorVar =
     accentColor === 'turquoise'
-      ? 'oklch(0.82 0.18 190)'
-      : 'oklch(0.75 0.22 340)'
+      ? 'var(--turquoise)'
+      : 'var(--pink)'
 
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     const rect = cardRef.current?.getBoundingClientRect()
@@ -68,13 +68,13 @@ export function ServiceCard({
         className="absolute inset-0 rounded-2xl transition-all duration-300"
         style={{
           background: hovered
-            ? `linear-gradient(135deg, ${colorVar}08, oklch(0.13 0.018 240 / 0.85))`
-            : 'oklch(0.13 0.018 240 / 0.6)',
+            ? `linear-gradient(135deg, color-mix(in oklch, ${colorVar} 5%, transparent), var(--surface-raised))`
+            : 'var(--surface-glass)',
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
-          border: `1px solid ${hovered ? `${colorVar}35` : 'oklch(1 0 0 / 0.07)'}`,
+          border: `1px solid ${hovered ? `color-mix(in oklch, ${colorVar} 35%, transparent)` : 'var(--border)'}`,
           boxShadow: hovered
-            ? `0 4px 32px ${colorVar}18, inset 0 1px 0 ${colorVar}15`
+            ? `0 4px 32px color-mix(in oklch, ${colorVar} 12%, transparent), inset 0 1px 0 color-mix(in oklch, ${colorVar} 10%, transparent)`
             : 'none',
         }}
       />
@@ -85,8 +85,8 @@ export function ServiceCard({
         <div
           className="flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110"
           style={{
-            background: `${colorVar}18`,
-            boxShadow: hovered ? `0 0 20px ${colorVar}30` : 'none',
+            background: `color-mix(in oklch, ${colorVar} 10%, transparent)`,
+            boxShadow: hovered ? `0 0 20px color-mix(in oklch, ${colorVar} 18%, transparent)` : 'none',
           }}
         >
           <Icon size={24} style={{ color: colorVar }} />
@@ -109,9 +109,9 @@ export function ServiceCard({
               key={tag}
               className="rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors duration-200"
               style={{
-                background: `${colorVar}12`,
+                background: `color-mix(in oklch, ${colorVar} 8%, transparent)`,
                 color: colorVar,
-                border: `1px solid ${colorVar}25`,
+                border: `1px solid color-mix(in oklch, ${colorVar} 16%, transparent)`,
               }}
             >
               {tag}

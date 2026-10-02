@@ -70,8 +70,8 @@ export class UserApiClient {
     return response.json() as Promise<UserApiUser>;
   }
 
-  async findAllUsers() {
-    return this.get('/users');
+  async findAllUsers(): Promise<UserApiUser[]> {
+    return this.get<UserApiUser[]>('/users');
   }
 
   async findOneUser(id: string) {

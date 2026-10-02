@@ -40,6 +40,14 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -122,6 +130,7 @@ interface TicketDetailProps {
   onClose: () => void
   projectId: string
   teamMembers?: ApiTeamMember[]
+  tickets?: ApiTicket[]
   onUpdated: (ticket: ApiTicket) => void
 }
 
@@ -133,10 +142,14 @@ export function TicketDetail({
   onClose,
   projectId,
   teamMembers = [],
+  tickets = [],
   onUpdated,
 }: TicketDetailProps) {
   const { user } = useAuth()
   const [saving, setSaving] = React.useState(false)
+  const [saveError, setSaveError] = React.useState<string | null>(null)
+  const [storyTypeDialogOpen, setStoryTypeDialogOpen] = React.useState(false)
+  const [storyEpicId, setStoryEpicId] = React.useState('none')
 
   const [title, setTitle] = React.useState('')
   const [isEditingTitle, setIsEditingTitle] = React.useState(false)
@@ -182,6 +195,9 @@ export function TicketDetail({
     setAttachments([])
     setAttachmentError(null)
     setAttachmentAction(null)
+    setSaveError(null)
+    setStoryTypeDialogOpen(false)
+    setStoryEpicId('none')
   }, [ticket?.id])
 
   React.useEffect(() => {
@@ -241,6 +257,10 @@ export function TicketDetail({
     bgColor: 'bg-muted',
   }
   const selectedAssignee = findTeamMemberByAssigneeId(teamMembers, ticket.assigneeId)
+  const availableEpics = tickets.filter(candidate => candidate.type === 'epic' && candidate.id !== ticket.id)
+  const epicStories = ticket.type === 'epic'
+    ? tickets.filter(candidate => candidate.type === 'story' && candidate.epicId === ticket.id)
+    : []
 
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString('es-ES', {
@@ -250,13 +270,17 @@ export function TicketDetail({
 
   // ── API helpers ────────────────────────────────────────────────────────────
 
-  const patch = async (data: Parameters<typeof updateTicket>[2]) => {
+  const patch = async (data: Parameters<typeof updateTicket>[2]): Promise<boolean> => {
     setSaving(true)
+    setSaveError(null)
     try {
       const updated = await updateTicket(projectId, ticket.id, data)
       onUpdated(updated)
+      return true
     } catch (err) {
       console.error('Error saving ticket', err)
+      setSaveError(err instanceof Error ? err.message : 'No se pudo guardar el ticket.')
+      return false
     } finally {
       setSaving(false)
     }
@@ -423,6 +447,7 @@ export function TicketDetail({
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onClose}>
       <SheetContent className="w-full sm:max-w-2xl p-0 flex flex-col">
 
@@ -456,7 +481,17 @@ export function TicketDetail({
                       <DropdownMenuItem
                         key={option.value}
                         onClick={() => {
-                          if (option.value !== ticket.type) patch({ type: option.value })
+                          if (option.value === ticket.type) return
+                          if (option.value === 'story') {
+                            if (availableEpics.length === 0) {
+                              setSaveError('Crea primero una épica para poder convertir este ticket en historia.')
+                              return
+                            }
+                            setStoryEpicId(ticket.epicId ?? 'none')
+                            setStoryTypeDialogOpen(true)
+                            return
+                          }
+                          patch({ type: option.value })
                         }}
                       >
                         <span className={cn('mr-2 flex h-5 w-5 items-center justify-center rounded', optionType.bgColor)}>
@@ -524,6 +559,32 @@ export function TicketDetail({
 
             {/* ── Meta grid ─────────────────────────────────────────────────── */}
             <div className="grid grid-cols-2 gap-4 mb-6">
+
+              {ticket.type === 'story' && (
+                <div className="space-y-1.5 col-span-2">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Épica
+                  </label>
+                  <Select
+                    value={ticket.epicId ?? 'none'}
+                    onValueChange={value => {
+                      if (value !== 'none') patch({ epicId: value })
+                    }}
+                  >
+                    <SelectTrigger className="w-full h-9">
+                      <SelectValue placeholder="Selecciona una épica" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none" disabled>Selecciona una épica</SelectItem>
+                      {availableEpics.map(epic => (
+                        <SelectItem key={epic.id} value={epic.id}>
+                          {epic.key} · {epic.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -633,6 +694,37 @@ export function TicketDetail({
                 </Select>
               </div>
             </div>
+
+            {saveError && (
+              <p className="mb-6 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {saveError}
+              </p>
+            )}
+
+            {ticket.type === 'epic' && (
+              <div className="mb-6 rounded-lg border border-purple-500/20 bg-purple-500/5 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-medium uppercase tracking-wider text-purple-600">
+                    Historias de usuario
+                  </p>
+                  <Badge variant="secondary">{epicStories.length}</Badge>
+                </div>
+                {epicStories.length > 0 ? (
+                  <div className="space-y-2">
+                    {epicStories.map(story => (
+                      <div key={story.id} className="flex items-center gap-2 rounded-md bg-background px-3 py-2 text-sm">
+                        <BookOpen className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                        <span className="font-mono text-xs text-muted-foreground">{story.key}</span>
+                        <span className="truncate">{story.title}</span>
+                        <Badge variant="outline" className="ml-auto text-[10px]">{story.status}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Esta épica aún no tiene historias vinculadas.</p>
+                )}
+              </div>
+            )}
 
             {/* ── Description ───────────────────────────────────────────────── */}
             <div className="mb-6">
@@ -1011,5 +1103,49 @@ export function TicketDetail({
         </ScrollArea>
       </SheetContent>
     </Sheet>
+
+    <Dialog open={storyTypeDialogOpen} onOpenChange={setStoryTypeDialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Convertir en historia de usuario</DialogTitle>
+          <DialogDescription>
+            Selecciona la épica a la que pertenecerá este ticket.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-1.5 py-2">
+          <label className="text-sm font-medium">Épica *</label>
+          <Select value={storyEpicId} onValueChange={setStoryEpicId} disabled={saving}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecciona una épica" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none" disabled>Selecciona una épica</SelectItem>
+              {availableEpics.map(epic => (
+                <SelectItem key={epic.id} value={epic.id}>
+                  {epic.key} · {epic.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setStoryTypeDialogOpen(false)} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button
+            disabled={saving || storyEpicId === 'none'}
+            onClick={async () => {
+              if (await patch({ type: 'story', epicId: storyEpicId })) {
+                setStoryTypeDialogOpen(false)
+              }
+            }}
+          >
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Convertir
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }

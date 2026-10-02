@@ -22,6 +22,7 @@ import { typeConfig } from '@/lib/mock-data'
 import type { ApiTicket, ApiSprint } from '@/types/project'
 
 interface BacklogViewProps {
+  canWrite: boolean
   tickets: ApiTicket[]
   sprints: ApiSprint[]
   currentProject: string
@@ -32,6 +33,7 @@ interface BacklogViewProps {
 }
 
 export function BacklogView({
+  canWrite,
   tickets,
   sprints,
   currentProject,
@@ -129,10 +131,10 @@ export function BacklogView({
             </p>
           </div>
           <div className="flex-1" />
-          <Button variant="outline" size="sm" onClick={onCreateEpic}>
+          {canWrite && <Button variant="outline" size="sm" onClick={onCreateEpic}>
             <Plus className="h-3.5 w-3.5" />
             Crear épica
-          </Button>
+          </Button>}
         </div>
 
         {epics.length > 0 ? (
@@ -158,10 +160,10 @@ export function BacklogView({
                     </div>
                     <Progress value={progress} className="h-1.5" />
                   </div>
-                  <Button variant="outline" size="sm" className="w-full" onClick={() => onCreateStory(epic.id)}>
+                  {canWrite && <Button variant="outline" size="sm" className="w-full" onClick={() => onCreateStory(epic.id)}>
                     <Plus className="h-3.5 w-3.5" />
                     Crear historia en esta épica
-                  </Button>
+                  </Button>}
                 </div>
               )
             })}
@@ -262,7 +264,7 @@ export function BacklogView({
                   </div>
                 </div>
 
-                <Button
+                {canWrite && <Button
                   variant="outline"
                   size="sm"
                   className="shrink-0 gap-1.5"
@@ -273,7 +275,7 @@ export function BacklogView({
                 >
                   <Plus className="h-3.5 w-3.5" />
                   Añadir
-                </Button>
+                </Button>}
               </div>
 
               {/* Sprint Goal */}
@@ -350,13 +352,13 @@ export function BacklogView({
                       <p className="text-sm text-muted-foreground mb-2">
                         No hay tickets en este sprint
                       </p>
-                      <Button
+                      {canWrite && <Button
                         variant="outline"
                         size="sm"
                         onClick={() => onCreateTicket(sprint.id)}
                       >
                         Crear ticket
-                      </Button>
+                      </Button>}
                     </div>
                   )}
                 </div>
@@ -430,7 +432,7 @@ export function BacklogView({
             })}
           </div>
 
-          <Button
+          {canWrite && <Button
             variant="outline"
             size="sm"
             className="shrink-0 gap-1.5"
@@ -441,7 +443,7 @@ export function BacklogView({
           >
             <Plus className="h-3.5 w-3.5" />
             Añadir
-          </Button>
+          </Button>}
         </div>
 
         {/* Backlog Tickets */}

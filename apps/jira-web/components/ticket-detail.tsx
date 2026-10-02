@@ -32,7 +32,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Sheet,
   SheetContent,
@@ -63,7 +62,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { typeConfig } from '@/lib/mock-data'
 import type { ApiComment, ApiTicket, ApiTeamMember, ApiTicketAttachment } from '@/types/project'
-import { updateTicket } from '@/services/ticketService'
+import { deleteTicket, updateTicket } from '@/services/ticketService'
 import {
   createTicketComment,
   deleteTicketComment,
@@ -126,6 +125,7 @@ const typeIcons: Record<string, React.ElementType> = {
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface TicketDetailProps {
+  canWrite: boolean
   ticket: ApiTicket | null
   open: boolean
   onClose: () => void
@@ -133,11 +133,14 @@ interface TicketDetailProps {
   teamMembers?: ApiTeamMember[]
   tickets?: ApiTicket[]
   onUpdated: (ticket: ApiTicket) => void
+  onDeleted: (ticketId: string) => void
+  onSelectTicket: (ticket: ApiTicket) => void
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function TicketDetail({
+  canWrite,
   ticket,
   open,
   onClose,
@@ -145,6 +148,8 @@ export function TicketDetail({
   teamMembers = [],
   tickets = [],
   onUpdated,
+  onDeleted,
+  onSelectTicket,
 }: TicketDetailProps) {
   const { user } = useAuth()
   const [saving, setSaving] = React.useState(false)
@@ -176,6 +181,11 @@ export function TicketDetail({
   const [attachmentAction, setAttachmentAction] = React.useState<string | null>(null)
   const [attachmentError, setAttachmentError] = React.useState<string | null>(null)
   const attachmentInputRef = React.useRef<HTMLInputElement>(null)
+  const contentRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    contentRef.current?.scrollTo({ top: 0 })
+  }, [ticket?.id])
 
   React.useEffect(() => {
     if (!ticket) return
@@ -272,6 +282,7 @@ export function TicketDetail({
   // ── API helpers ────────────────────────────────────────────────────────────
 
   const patch = async (data: Parameters<typeof updateTicket>[2]): Promise<boolean> => {
+    if (!canWrite) return false
     setSaving(true)
     setSaveError(null)
     try {
@@ -282,6 +293,20 @@ export function TicketDetail({
       console.error('Error saving ticket', err)
       setSaveError(err instanceof Error ? err.message : 'No se pudo guardar el ticket.')
       return false
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const removeTicket = async () => {
+    if (!canWrite || !window.confirm(`¿Eliminar el ticket ${ticket.key}?`)) return
+    setSaving(true)
+    setSaveError(null)
+    try {
+      await deleteTicket(projectId, ticket.id)
+      onDeleted(ticket.id)
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'No se pudo eliminar el ticket.')
     } finally {
       setSaving(false)
     }
@@ -398,7 +423,7 @@ export function TicketDetail({
   }
 
   const addAttachment = async (file?: File) => {
-    if (!file || attachmentAction) return
+    if (!canWrite || !file || attachmentAction) return
     setAttachmentAction('upload')
     setAttachmentError(null)
     try {
@@ -426,7 +451,7 @@ export function TicketDetail({
   }
 
   const removeAttachment = async (attachment: ApiTicketAttachment) => {
-    if (attachmentAction || !window.confirm(`¿Eliminar ${attachment.originalName}?`)) return
+    if (!canWrite || attachmentAction || !window.confirm(`¿Eliminar ${attachment.originalName}?`)) return
     setAttachmentAction(attachment.id)
     setAttachmentError(null)
     try {
@@ -450,7 +475,7 @@ export function TicketDetail({
   return (
     <>
     <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-2xl p-0 flex flex-col">
+      <SheetContent className="h-dvh w-full sm:max-w-[850px] gap-0 overflow-hidden p-0">
 
         {/* Header — pr-14 leaves space for Radix's built-in close button */}
         <SheetHeader className="px-6 py-4 border-b shrink-0 pr-14">
@@ -458,7 +483,7 @@ export function TicketDetail({
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <DropdownMenu>
+              {canWrite ? <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
@@ -503,7 +528,7 @@ export function TicketDetail({
                     )
                   })}
                 </DropdownMenuContent>
-              </DropdownMenu>
+              </DropdownMenu> : <span className={cn('flex h-8 w-8 items-center justify-center rounded-md', type.bgColor)}><TypeIcon className={cn('h-4 w-4', type.color)} /></span>}
               <span className="text-sm font-mono text-muted-foreground">{ticket.key}</span>
               {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
             </div>
@@ -512,7 +537,7 @@ export function TicketDetail({
               <Button variant="ghost" size="icon" className="h-8 w-8">
                 <Share2 className="h-4 w-4" />
               </Button>
-              <DropdownMenu>
+              {canWrite && <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-8 w-8">
                     <MoreHorizontal className="h-4 w-4" />
@@ -524,22 +549,22 @@ export function TicketDetail({
                     Copiar enlace
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive">
+                  <DropdownMenuItem className="text-destructive" onClick={() => void removeTicket()}>
                     <Trash2 className="h-4 w-4 mr-2" />
                     Eliminar
                   </DropdownMenuItem>
                 </DropdownMenuContent>
-              </DropdownMenu>
+              </DropdownMenu>}
             </div>
           </div>
         </SheetHeader>
 
-        <ScrollArea className="flex-1">
+        <div ref={contentRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain" tabIndex={0}>
           <div className="px-6 py-4">
 
             {/* ── Title ─────────────────────────────────────────────────────── */}
             <div className="mb-6">
-              {isEditingTitle ? (
+              {canWrite && isEditingTitle ? (
                 <Input
                   value={title}
                   onChange={e => setTitle(e.target.value)}
@@ -550,8 +575,8 @@ export function TicketDetail({
                 />
               ) : (
                 <h2
-                  className="text-xl font-semibold cursor-text hover:bg-accent/50 rounded px-1 -mx-1 py-0.5 transition-colors"
-                  onClick={() => setIsEditingTitle(true)}
+                  className={cn('text-xl font-semibold rounded px-1 -mx-1 py-0.5 transition-colors', canWrite && 'cursor-text hover:bg-accent/50')}
+                  onClick={() => { if (canWrite) setIsEditingTitle(true) }}
                 >
                   {title || ticket.title}
                 </h2>
@@ -567,6 +592,7 @@ export function TicketDetail({
                     Épica
                   </label>
                   <Select
+                    disabled={!canWrite}
                     value={ticket.epicId ?? 'none'}
                     onValueChange={value => {
                       if (value !== 'none') patch({ epicId: value })
@@ -592,6 +618,7 @@ export function TicketDetail({
                   Estado
                 </label>
                 <Select
+                  disabled={!canWrite}
                   value={ticket.status}
                   onValueChange={v => patch({ status: v as ApiTicket['status'] })}
                 >
@@ -616,6 +643,7 @@ export function TicketDetail({
                   Prioridad
                 </label>
                 <Select
+                  disabled={!canWrite}
                   value={ticket.priority}
                   onValueChange={v => patch({ priority: v as ApiTicket['priority'] })}
                 >
@@ -640,6 +668,7 @@ export function TicketDetail({
                   Asignado
                 </label>
                 <Select
+                  disabled={!canWrite}
                   value={selectedAssignee ? getTeamMemberAssigneeId(selectedAssignee) : 'unassigned'}
                   onValueChange={v => patch({ assigneeId: v === 'unassigned' ? null : v })}
                 >
@@ -678,6 +707,7 @@ export function TicketDetail({
                   Story Points
                 </label>
                 <Select
+                  disabled={!canWrite}
                   value={ticket.storyPoints?.toString() ?? 'none'}
                   onValueChange={v => patch({ storyPoints: v === 'none' ? null : Number(v) })}
                 >
@@ -713,12 +743,17 @@ export function TicketDetail({
                 {epicStories.length > 0 ? (
                   <div className="space-y-2">
                     {epicStories.map(story => (
-                      <div key={story.id} className="flex items-center gap-2 rounded-md bg-background px-3 py-2 text-sm">
+                      <button
+                        key={story.id}
+                        type="button"
+                        className="flex w-full items-center gap-2 rounded-md bg-background px-3 py-2 text-left text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        onClick={() => onSelectTicket(story)}
+                      >
                         <BookOpen className="h-3.5 w-3.5 text-green-600 shrink-0" />
                         <span className="font-mono text-xs text-muted-foreground">{story.key}</span>
-                        <span className="truncate">{story.title}</span>
-                        <Badge variant="outline" className="ml-auto text-[10px]">{story.status}</Badge>
-                      </div>
+                        <span className="min-w-0 flex-1 truncate">{story.title}</span>
+                        <Badge variant="outline" className="ml-auto shrink-0 text-[10px]">{story.status}</Badge>
+                      </button>
                     ))}
                   </div>
                 ) : (
@@ -732,7 +767,7 @@ export function TicketDetail({
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">
                 Descripción
               </label>
-              {isEditingDescription ? (
+              {canWrite && isEditingDescription ? (
                 <Textarea
                   value={description}
                   onChange={e => setDescription(e.target.value)}
@@ -744,13 +779,13 @@ export function TicketDetail({
               ) : (
                 <div
                   className={cn(
-                    'p-3 rounded-lg bg-muted/50 min-h-20 cursor-text text-sm leading-relaxed',
-                    'hover:bg-muted/80 transition-colors',
+                    'p-3 rounded-lg bg-muted/50 min-h-20 text-sm leading-relaxed',
+                    canWrite && 'cursor-text hover:bg-muted/80 transition-colors',
                     !description && 'text-muted-foreground italic',
                   )}
-                  onClick={() => setIsEditingDescription(true)}
+                  onClick={() => { if (canWrite) setIsEditingDescription(true) }}
                 >
-                  {description || 'Haz clic para añadir descripción...'}
+                  {description || (canWrite ? 'Haz clic para añadir descripción...' : 'Sin descripción')}
                 </div>
               )}
             </div>
@@ -759,7 +794,7 @@ export function TicketDetail({
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">
                 Criterios de aceptación
               </label>
-              {isEditingAcceptanceCriteria ? (
+              {canWrite && isEditingAcceptanceCriteria ? (
                 <Textarea
                   value={acceptanceCriteria}
                   onChange={e => setAcceptanceCriteria(e.target.value)}
@@ -771,13 +806,13 @@ export function TicketDetail({
               ) : (
                 <div
                   className={cn(
-                    'p-3 rounded-lg bg-muted/50 min-h-20 cursor-text text-sm leading-relaxed whitespace-pre-wrap',
-                    'hover:bg-muted/80 transition-colors',
+                    'p-3 rounded-lg bg-muted/50 min-h-20 text-sm leading-relaxed whitespace-pre-wrap',
+                    canWrite && 'cursor-text hover:bg-muted/80 transition-colors',
                     !acceptanceCriteria && 'text-muted-foreground italic',
                   )}
-                  onClick={() => setIsEditingAcceptanceCriteria(true)}
+                  onClick={() => { if (canWrite) setIsEditingAcceptanceCriteria(true) }}
                 >
-                  {acceptanceCriteria || 'Haz clic para añadir criterios de aceptación...'}
+                  {acceptanceCriteria || (canWrite ? 'Haz clic para añadir criterios de aceptación...' : 'Sin criterios de aceptación')}
                 </div>
               )}
             </div>
@@ -791,16 +826,16 @@ export function TicketDetail({
                 {localLabels.map(label => (
                   <Badge key={label.id} variant="secondary" className="text-xs gap-1 pr-1">
                     {label.name}
-                    <button
+                    {canWrite && <button
                       className="ml-0.5 rounded-full hover:bg-foreground/10 p-0.5 transition-colors"
                       onClick={() => removeLabel(label.id)}
                     >
                       <X className="h-2.5 w-2.5" />
-                    </button>
+                    </button>}
                   </Badge>
                 ))}
 
-                {showLabelInput ? (
+                {canWrite && (showLabelInput ? (
                   <Input
                     className="h-6 w-28 text-xs px-2"
                     placeholder="Etiqueta..."
@@ -823,7 +858,7 @@ export function TicketDetail({
                     <Plus className="h-3 w-3 mr-1" />
                     Añadir
                   </Button>
-                )}
+                ))}
               </div>
             </div>
 
@@ -857,14 +892,14 @@ export function TicketDetail({
                   <Paperclip className="h-4 w-4" />
                   <h3 className="text-sm font-semibold">Archivos ({attachments.length})</h3>
                 </div>
-                <input
+                {canWrite && <input
                   ref={attachmentInputRef}
                   type="file"
                   accept={TICKET_ATTACHMENT_ACCEPT}
                   className="hidden"
                   onChange={event => void addAttachment(event.target.files?.[0])}
-                />
-                <Button
+                />}
+                {canWrite && <Button
                   type="button"
                   variant="outline"
                   size="sm"
@@ -877,7 +912,7 @@ export function TicketDetail({
                     <Upload className="mr-2 h-3.5 w-3.5" />
                   )}
                   Adjuntar
-                </Button>
+                </Button>}
               </div>
 
               <p className="mb-3 text-xs text-muted-foreground">
@@ -932,7 +967,7 @@ export function TicketDetail({
                           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                           <span className="sr-only">Descargar {attachment.originalName}</span>
                         </Button>
-                        <Button
+                        {canWrite && <Button
                           type="button"
                           variant="ghost"
                           size="icon"
@@ -942,7 +977,7 @@ export function TicketDetail({
                         >
                           <Trash2 className="h-4 w-4" />
                           <span className="sr-only">Eliminar {attachment.originalName}</span>
-                        </Button>
+                        </Button>}
                       </div>
                     )
                   })}
@@ -1101,7 +1136,7 @@ export function TicketDetail({
             </div>
 
           </div>
-        </ScrollArea>
+        </div>
       </SheetContent>
     </Sheet>
 

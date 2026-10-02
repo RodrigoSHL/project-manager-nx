@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-import { getProjects } from '@/services/projectService'
+import { getProjectPermissions, getProjects } from '@/services/projectService'
 import { createTicket } from '@/services/ticketService'
 import type { ApiProject, ApiTicket } from '@/types/project'
 
@@ -96,10 +96,18 @@ export default function SupportPortalPage() {
   const [error, setError]                 = React.useState('')
 
   React.useEffect(() => {
+    let cancelled = false
     getProjects()
-      .then(setProjects)
+      .then(async allProjects => {
+        const checks = await Promise.all(allProjects.map(async project => {
+          try { return (await getProjectPermissions(project.id)).canWrite ? project : null }
+          catch { return null }
+        }))
+        if (!cancelled) setProjects(checks.filter((project): project is ApiProject => project !== null))
+      })
       .catch(console.error)
-      .finally(() => setLoadingProjects(false))
+      .finally(() => { if (!cancelled) setLoadingProjects(false) })
+    return () => { cancelled = true }
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -108,6 +116,10 @@ export default function SupportPortalPage() {
     setSubmitting(true)
     setError('')
     try {
+      if (!(await getProjectPermissions(selectedProject.id)).canWrite) {
+        setError('No tienes permiso para crear tickets en este proyecto.')
+        return
+      }
       const description_full = [
         description.trim(),
         contactName  ? `\n\n**Contacto:** ${contactName}`   : '',
@@ -238,7 +250,7 @@ export default function SupportPortalPage() {
                   </div>
                 ) : projects.length === 0 ? (
                   <Card className="p-8 text-center">
-                    <p className="text-muted-foreground text-sm">No hay proyectos disponibles</p>
+                    <p className="text-muted-foreground text-sm">No tienes proyectos con permiso para crear tickets.</p>
                   </Card>
                 ) : (
                   <div className="grid gap-3">

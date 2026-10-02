@@ -10,6 +10,7 @@ import { statusConfig } from '@/lib/mock-data'
 import type { ApiTeamMember, ApiTicket } from '@/types/project'
 
 interface KanbanBoardProps {
+  canWrite: boolean
   tickets: ApiTicket[]
   onTicketClick: (ticket: ApiTicket) => void
   onCreateTicket: (status: ApiTicket['status']) => void
@@ -19,11 +20,12 @@ interface KanbanBoardProps {
 
 const columns = ['todo', 'in_progress', 'in_review', 'done'] as const satisfies readonly ApiTicket['status'][]
 
-export function KanbanBoard({ tickets, onTicketClick, onCreateTicket, onStatusChange, teamMembers = [] }: KanbanBoardProps) {
+export function KanbanBoard({ tickets, onTicketClick, onCreateTicket, onStatusChange, teamMembers = [], canWrite }: KanbanBoardProps) {
   const [draggedTicket, setDraggedTicket] = React.useState<ApiTicket | null>(null)
   const [dragOverColumn, setDragOverColumn] = React.useState<ApiTicket['status'] | null>(null)
 
   const handleDragStart = (e: React.DragEvent, ticket: ApiTicket) => {
+    if (!canWrite) return
     setDraggedTicket(ticket)
     e.dataTransfer.effectAllowed = 'move'
   }
@@ -38,6 +40,7 @@ export function KanbanBoard({ tickets, onTicketClick, onCreateTicket, onStatusCh
   }
 
   const handleDrop = (e: React.DragEvent, status: ApiTicket['status']) => {
+    if (!canWrite) return
     e.preventDefault()
     setDragOverColumn(null)
     if (draggedTicket && draggedTicket.status !== status) {
@@ -83,14 +86,14 @@ export function KanbanBoard({ tickets, onTicketClick, onCreateTicket, onStatusCh
                   {columnTickets.length}
                 </span>
               </div>
-              <Button
+              {canWrite && <Button
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7 text-muted-foreground hover:text-foreground"
                 onClick={() => onCreateTicket(status)}
               >
                 <Plus className="h-4 w-4" />
-              </Button>
+              </Button>}
             </div>
 
             {/* Column Content */}
@@ -99,10 +102,10 @@ export function KanbanBoard({ tickets, onTicketClick, onCreateTicket, onStatusCh
                 {columnTickets.map((ticket) => (
                   <div
                     key={ticket.id}
-                    draggable
+                    draggable={canWrite}
                     onDragStart={(e) => handleDragStart(e, ticket)}
                     onDragEnd={handleDragEnd}
-                    className="cursor-grab active:cursor-grabbing"
+                    className={canWrite ? 'cursor-grab active:cursor-grabbing' : undefined}
                   >
                     <TicketCard
                       ticket={ticket}
@@ -120,14 +123,14 @@ export function KanbanBoard({ tickets, onTicketClick, onCreateTicket, onStatusCh
                       <Plus className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <p className="text-sm text-muted-foreground mb-2">No hay tickets</p>
-                    <Button
+                    {canWrite && <Button
                       variant="outline"
                       size="sm"
                       className="text-xs"
                       onClick={() => onCreateTicket(status)}
                     >
                       Crear ticket
-                    </Button>
+                    </Button>}
                   </div>
                 )}
               </div>

@@ -32,6 +32,7 @@ interface TopBarProps {
   currentProject: string
   onProjectChange: (projectId: string) => void
   onCreateTicket: () => void
+  canWrite: boolean
   searchQuery: string
   onSearchChange: (query: string) => void
   projects?: ApiProject[]
@@ -51,6 +52,7 @@ export function TopBar({
   currentProject,
   onProjectChange,
   onCreateTicket,
+  canWrite,
   searchQuery,
   onSearchChange,
   filters,
@@ -193,14 +195,14 @@ export function TopBar({
         )}
 
         {/* Create Ticket */}
-        <Button 
+        {canWrite && <Button
           size="sm" 
           className="h-9 gap-1.5 font-medium shadow-sm"
           onClick={onCreateTicket}
         >
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">Crear ticket</span>
-        </Button>
+        </Button>}
 
         {/* Theme Toggle */}
         {mounted && (

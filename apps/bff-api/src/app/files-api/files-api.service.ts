@@ -126,7 +126,7 @@ export class FilesApiService {
           'Only images, PDF, Word, Excel, PowerPoint, CSV and text files are allowed'
         );
       }
-      await this.authorizeJiraTicket(projectId, body.ownerId, user);
+      await this.authorizeJiraTicket(projectId, body.ownerId, user, true);
       metadata.category = category;
       metadata.projectId = projectId;
       metadata.uploadedBy = user.userId;
@@ -332,7 +332,7 @@ export class FilesApiService {
     if (this.isTicketAttachment(file)) {
       const projectId = String(file.metadata?.projectId || '');
       this.assertUuid(projectId, 'metadata.projectId');
-      await this.authorizeJiraTicket(projectId, String(file.ownerId), user);
+      await this.authorizeJiraTicket(projectId, String(file.ownerId), user, requireEditable);
       return;
     }
     if (this.isTravelerDocument(file)) {
@@ -444,9 +444,11 @@ export class FilesApiService {
   private async authorizeJiraTicket(
     projectId: string,
     ticketId: string,
-    user: AuthenticatedUser
+    user: AuthenticatedUser,
+    requireEditable = false
   ): Promise<void> {
-    await this.projectAccess.assertProjectAccess(projectId, user);
+    if (requireEditable) await this.projectAccess.assertProjectWriteAccess(projectId, user);
+    else await this.projectAccess.assertProjectAccess(projectId, user);
     await this.projectApi.findTicket(projectId, ticketId);
   }
 

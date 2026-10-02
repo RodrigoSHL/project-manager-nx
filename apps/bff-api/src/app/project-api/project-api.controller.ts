@@ -66,13 +66,18 @@ export class ProjectApiController {
     return this.projectApiClient.findAllTechnologies();
   }
 
+  @Get(':projectId/permissions')
+  getProjectPermissions(@Param('projectId') projectId: string, @Request() req: ExpressRequestWithUser) {
+    return this.projectAccessService.getProjectPermissions(projectId, req.user);
+  }
+
   @Post(':projectId/sprints')
   async createSprint(
     @Param('projectId') projectId: string,
     @Body() dto: Record<string, unknown>,
     @Request() req: ExpressRequestWithUser,
   ) {
-    await this.projectAccessService.assertProjectAccess(projectId, req.user);
+    await this.projectAccessService.assertProjectWriteAccess(projectId, req.user);
     return this.projectApiClient.forwardJsonRequest(
       'POST',
       `/projects/${encodeURIComponent(projectId)}/sprints`,
@@ -112,7 +117,7 @@ export class ProjectApiController {
     @Body() dto: Record<string, unknown>,
     @Request() req: ExpressRequestWithUser,
   ) {
-    await this.projectAccessService.assertProjectAccess(projectId, req.user);
+    await this.projectAccessService.assertProjectWriteAccess(projectId, req.user);
     return this.projectApiClient.forwardJsonRequest(
       'PATCH',
       `/projects/${encodeURIComponent(projectId)}/sprints/${encodeURIComponent(sprintId)}`,
@@ -126,7 +131,7 @@ export class ProjectApiController {
     @Param('sprintId') sprintId: string,
     @Request() req: ExpressRequestWithUser,
   ) {
-    await this.projectAccessService.assertProjectAccess(projectId, req.user);
+    await this.projectAccessService.assertProjectWriteAccess(projectId, req.user);
     return this.projectApiClient.forwardJsonRequest(
       'PATCH',
       `/projects/${encodeURIComponent(projectId)}/sprints/${encodeURIComponent(sprintId)}/activate`,
@@ -139,7 +144,7 @@ export class ProjectApiController {
     @Param('sprintId') sprintId: string,
     @Request() req: ExpressRequestWithUser,
   ) {
-    await this.projectAccessService.assertProjectAccess(projectId, req.user);
+    await this.projectAccessService.assertProjectWriteAccess(projectId, req.user);
     return this.projectApiClient.forwardJsonRequest(
       'DELETE',
       `/projects/${encodeURIComponent(projectId)}/sprints/${encodeURIComponent(sprintId)}`,
@@ -152,7 +157,7 @@ export class ProjectApiController {
     @Body() dto: Record<string, unknown>,
     @Request() req: ExpressRequestWithUser,
   ) {
-    await this.projectAccessService.assertProjectAccess(projectId, req.user);
+    await this.projectAccessService.assertProjectWriteAccess(projectId, req.user);
     return this.projectApiClient.forwardJsonRequest(
       'POST',
       `/projects/${encodeURIComponent(projectId)}/tickets`,
@@ -192,7 +197,7 @@ export class ProjectApiController {
     @Body() dto: Record<string, unknown>,
     @Request() req: ExpressRequestWithUser,
   ) {
-    await this.projectAccessService.assertProjectAccess(projectId, req.user);
+    await this.projectAccessService.assertProjectWriteAccess(projectId, req.user);
     return this.projectApiClient.forwardJsonRequest(
       'PATCH',
       `/projects/${encodeURIComponent(projectId)}/tickets/${encodeURIComponent(ticketId)}`,
@@ -206,11 +211,57 @@ export class ProjectApiController {
     @Param('ticketId') ticketId: string,
     @Request() req: ExpressRequestWithUser,
   ) {
-    await this.projectAccessService.assertProjectAccess(projectId, req.user);
+    await this.projectAccessService.assertProjectWriteAccess(projectId, req.user);
     return this.projectApiClient.forwardJsonRequest(
       'DELETE',
       `/projects/${encodeURIComponent(projectId)}/tickets/${encodeURIComponent(ticketId)}`,
     );
+  }
+
+  @Get(':projectId/tickets/:ticketId/support-detail')
+  async findSupportDetail(
+    @Param('projectId') projectId: string,
+    @Param('ticketId') ticketId: string,
+    @Request() req: ExpressRequestWithUser,
+  ) {
+    await this.projectAccessService.assertProjectAccess(projectId, req.user);
+    await this.projectApiClient.findTicket(projectId, ticketId);
+    return this.projectApiClient.forwardJsonRequest('GET', `/projects/${encodeURIComponent(projectId)}/tickets/${encodeURIComponent(ticketId)}/support-detail`);
+  }
+
+  @Post(':projectId/tickets/:ticketId/support-detail')
+  async createSupportDetail(
+    @Param('projectId') projectId: string,
+    @Param('ticketId') ticketId: string,
+    @Body() dto: Record<string, unknown>,
+    @Request() req: ExpressRequestWithUser,
+  ) {
+    await this.projectAccessService.assertProjectWriteAccess(projectId, req.user);
+    await this.projectApiClient.findTicket(projectId, ticketId);
+    return this.projectApiClient.forwardJsonRequest('POST', `/projects/${encodeURIComponent(projectId)}/tickets/${encodeURIComponent(ticketId)}/support-detail`, dto);
+  }
+
+  @Patch(':projectId/tickets/:ticketId/support-detail')
+  async updateSupportDetail(
+    @Param('projectId') projectId: string,
+    @Param('ticketId') ticketId: string,
+    @Body() dto: Record<string, unknown>,
+    @Request() req: ExpressRequestWithUser,
+  ) {
+    await this.projectAccessService.assertProjectWriteAccess(projectId, req.user);
+    await this.projectApiClient.findTicket(projectId, ticketId);
+    return this.projectApiClient.forwardJsonRequest('PATCH', `/projects/${encodeURIComponent(projectId)}/tickets/${encodeURIComponent(ticketId)}/support-detail`, dto);
+  }
+
+  @Delete(':projectId/tickets/:ticketId/support-detail')
+  async removeSupportDetail(
+    @Param('projectId') projectId: string,
+    @Param('ticketId') ticketId: string,
+    @Request() req: ExpressRequestWithUser,
+  ) {
+    await this.projectAccessService.assertProjectWriteAccess(projectId, req.user);
+    await this.projectApiClient.findTicket(projectId, ticketId);
+    return this.projectApiClient.forwardJsonRequest('DELETE', `/projects/${encodeURIComponent(projectId)}/tickets/${encodeURIComponent(ticketId)}/support-detail`);
   }
 
   @Get(':projectId/tickets/:ticketId/comments')

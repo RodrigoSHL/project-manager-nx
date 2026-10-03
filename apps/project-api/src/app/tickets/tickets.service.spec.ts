@@ -6,6 +6,7 @@ import { TeamMember } from '../projects/entities/team-member.entity';
 import { TicketSupportDetail } from '../support-details/entities/ticket-support-detail.entity';
 import { Ticket, TicketStatus, TicketType } from './entities/ticket.entity';
 import { TicketsService } from './tickets.service';
+import { Sprint } from '../sprints/entities/sprint.entity';
 
 describe('TicketsService', () => {
   let service: TicketsService;
@@ -28,6 +29,7 @@ describe('TicketsService', () => {
   const teamMembersRepository = {
     findOne: jest.fn(),
   };
+  const sprintsRepository = { findOne: jest.fn() };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -51,6 +53,7 @@ describe('TicketsService', () => {
           provide: getRepositoryToken(TeamMember),
           useValue: teamMembersRepository,
         },
+        { provide: getRepositoryToken(Sprint), useValue: sprintsRepository },
       ],
     }).compile();
 
@@ -195,6 +198,44 @@ describe('TicketsService', () => {
       assigneeId: '00000000-0000-4000-8000-000000000099',
     })).rejects.toBeInstanceOf(BadRequestException);
 
+    expect(ticketsRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('replaces the loaded sprint relation when moving a backlog ticket', async () => {
+    ticketsRepository.findOne.mockResolvedValue({
+      id: 'ticket-1', projectId: 'project-1', type: TicketType.TASK,
+      sprintId: 'old-sprint', sprint: { id: 'old-sprint' }, status: TicketStatus.BACKLOG,
+    });
+    const sprint = { id: 'active-sprint', projectId: 'project-1', isActive: true };
+    sprintsRepository.findOne.mockResolvedValue(sprint);
+
+    const updated = await service.update('project-1', 'ticket-1', {
+      sprintId: 'active-sprint', status: TicketStatus.TODO,
+    });
+
+    expect(sprintsRepository.findOne).toHaveBeenCalledWith({ where: { id: 'active-sprint', projectId: 'project-1' } });
+    expect(updated).toMatchObject({ sprintId: 'active-sprint', sprint, status: TicketStatus.TODO });
+    expect(ticketsRepository.save).toHaveBeenCalledWith(expect.objectContaining({ sprintId: sprint.id, sprint }));
+  });
+
+  it('clears the loaded sprint relation when returning a ticket to the backlog', async () => {
+    ticketsRepository.findOne.mockResolvedValue({
+      id: 'ticket-1', projectId: 'project-1', type: TicketType.TASK,
+      sprintId: 'old-sprint', sprint: { id: 'old-sprint' },
+    });
+
+    const updated = await service.update('project-1', 'ticket-1', { sprintId: null, status: TicketStatus.BACKLOG });
+
+    expect(updated).toMatchObject({ sprintId: null, sprint: null, status: TicketStatus.BACKLOG });
+    expect(sprintsRepository.findOne).not.toHaveBeenCalled();
+  });
+
+  it('rejects a sprint outside the ticket project', async () => {
+    ticketsRepository.findOne.mockResolvedValue({ id: 'ticket-1', projectId: 'project-1', type: TicketType.TASK });
+    sprintsRepository.findOne.mockResolvedValue(null);
+
+    await expect(service.update('project-1', 'ticket-1', { sprintId: 'foreign-sprint' }))
+      .rejects.toBeInstanceOf(BadRequestException);
     expect(ticketsRepository.save).not.toHaveBeenCalled();
   });
 });

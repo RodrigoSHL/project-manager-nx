@@ -13,6 +13,7 @@ import {
   Bug,
   BookOpen,
   LifeBuoy,
+  Loader2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -27,6 +28,7 @@ interface BacklogViewProps {
   sprints: ApiSprint[]
   currentProject: string
   onTicketClick: (ticket: ApiTicket) => void
+  onMoveTicketToSprint: (ticket: ApiTicket, sprintId: string) => Promise<void>
   onCreateTicket: (sprintId?: string | null) => void
   onCreateEpic: () => void
   onCreateStory: (epicId: string) => void
@@ -38,6 +40,7 @@ export function BacklogView({
   sprints,
   currentProject,
   onTicketClick,
+  onMoveTicketToSprint,
   onCreateTicket,
   onCreateEpic,
   onCreateStory,
@@ -49,6 +52,12 @@ export function BacklogView({
     epics: true,
   })
   const epicsContentId = React.useId()
+  const [movingTicketId, setMovingTicketId] = React.useState<string | null>(null)
+  const [moveError, setMoveError] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    setMoveError(null)
+  }, [currentProject])
 
   const projectSprints = sprints
     .filter((s) => s.projectId === currentProject)
@@ -59,12 +68,26 @@ export function BacklogView({
       )
     })
   const epics = tickets.filter((ticket) => ticket.type === 'epic')
+  const activeSprint = projectSprints.find(sprint => sprint.isActive)
   const backlogTickets = tickets.filter(
     (t) => t.type !== 'epic' && (!t.sprintId || t.status === 'backlog')
   )
 
   const toggleSection = (section: string) => {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }))
+  }
+
+  const moveToActiveSprint = async (ticket: ApiTicket) => {
+    if (!canWrite || !activeSprint || movingTicketId) return
+    setMovingTicketId(ticket.id)
+    setMoveError(null)
+    try {
+      await onMoveTicketToSprint(ticket, activeSprint.id)
+    } catch (error) {
+      setMoveError(error instanceof Error ? error.message : 'No se pudo mover el ticket al sprint.')
+    } finally {
+      setMovingTicketId(null)
+    }
   }
 
   const formatDate = (dateStr: string | null) => {
@@ -296,7 +319,7 @@ export function BacklogView({
                   }}
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  Añadir
+                  Crear ticket
                 </Button>}
               </div>
 
@@ -402,6 +425,11 @@ export function BacklogView({
 
       {/* Backlog Section */}
       <section className="space-y-3">
+        {moveError && (
+          <p role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {moveError}
+          </p>
+        )}
         {/* Backlog Header */}
         <div
           className="flex items-center gap-3 p-4 rounded-xl bg-card border cursor-pointer hover:border-primary/30 transition-colors"
@@ -464,11 +492,16 @@ export function BacklogView({
             }}
           >
             <Plus className="h-3.5 w-3.5" />
-            Añadir
+            Crear ticket
           </Button>}
         </div>
 
         {/* Backlog Tickets */}
+        {canWrite && !activeSprint && (
+          <p className="text-xs text-muted-foreground ml-10">
+            Activa un sprint desde Sprint actual para mover tickets del backlog.
+          </p>
+        )}
         {expandedSections.backlog && (
           <div className="space-y-2 ml-10">
             {backlogTickets.length > 0 ? (
@@ -477,7 +510,7 @@ export function BacklogView({
                 return (
                   <div
                     key={ticket.id}
-                    className="group flex items-center gap-3 px-4 py-2.5 rounded-lg border bg-card hover:border-primary/30 hover:bg-accent/30 transition-all duration-150 cursor-pointer"
+                    className="group flex flex-wrap items-center gap-3 px-4 py-2.5 rounded-lg border bg-card hover:border-primary/30 hover:bg-accent/30 transition-all duration-150 cursor-pointer"
                     onClick={() => onTicketClick(ticket)}
                   >
                     {/* Type Icon */}
@@ -496,7 +529,7 @@ export function BacklogView({
                     </span>
 
                     {/* Title */}
-                    <span className="flex-1 text-sm font-medium truncate">
+                    <span className="min-w-0 flex-1 text-sm font-medium truncate">
                       {ticket.title}
                     </span>
 
@@ -523,6 +556,23 @@ export function BacklogView({
 
                     {/* Assignee Avatar */}
                     <div className="h-5 w-5 rounded-full border-2 border-dashed border-muted-foreground/30 shrink-0" />
+                    {canWrite && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full sm:w-auto"
+                        disabled={!activeSprint || movingTicketId !== null}
+                        title={activeSprint ? `Mover a ${activeSprint.name}` : 'Activa un sprint para mover este ticket'}
+                        aria-label={`Mover ${ticket.key} al sprint actual`}
+                        onClick={event => {
+                          event.stopPropagation()
+                          void moveToActiveSprint(ticket)
+                        }}
+                      >
+                        {movingTicketId === ticket.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+                        Mover al sprint actual
+                      </Button>
+                    )}
                   </div>
                 )
               })

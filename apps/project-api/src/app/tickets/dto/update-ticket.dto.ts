@@ -34,7 +34,7 @@ export class UpdateTicketDto {
 
   @IsUUID()
   @IsOptional()
-  sprintId?: string;
+  sprintId?: string | null;
 
   @IsUUID()
   @IsOptional()

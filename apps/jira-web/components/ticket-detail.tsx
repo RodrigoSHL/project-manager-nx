@@ -27,6 +27,7 @@ import {
   Image as ImageIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getTicketSprintUpdate } from '@/lib/ticket-sprint'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -63,7 +64,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { typeConfig } from '@/lib/mock-data'
-import type { ApiComment, ApiTicket, ApiTeamMember, ApiTicketAttachment } from '@/types/project'
+import type { ApiComment, ApiTicket, ApiSprint, ApiTeamMember, ApiTicketAttachment } from '@/types/project'
 import { deleteTicket, updateTicket } from '@/services/ticketService'
 import {
   createTicketComment,
@@ -140,6 +141,7 @@ interface TicketDetailProps {
   projectId: string
   teamMembers?: ApiTeamMember[]
   tickets?: ApiTicket[]
+  sprints?: ApiSprint[]
   onUpdated: (ticket: ApiTicket) => void
   onDeleted: (ticketId: string) => void
   onSelectTicket: (ticket: ApiTicket) => void
@@ -155,6 +157,7 @@ export function TicketDetail({
   projectId,
   teamMembers = [],
   tickets = [],
+  sprints = [],
   onUpdated,
   onDeleted,
   onSelectTicket,
@@ -286,6 +289,8 @@ export function TicketDetail({
     bgColor: 'bg-muted',
   }
   const selectedAssignee = findTeamMemberByAssigneeId(teamMembers, ticket.assigneeId)
+  const projectSprints = sprints.filter(sprint => sprint.projectId === projectId)
+  const selectedSprint = projectSprints.find(sprint => sprint.id === ticket.sprintId)
   const availableEpics = tickets.filter(candidate => candidate.type === 'epic' && candidate.id !== ticket.id)
   const epicStories = ticket.type === 'epic'
     ? tickets.filter(candidate => candidate.type === 'story' && candidate.epicId === ticket.id)
@@ -649,6 +654,37 @@ export function TicketDetail({
 
             {/* ── Meta grid ─────────────────────────────────────────────────── */}
             <div className="grid grid-cols-2 gap-4 mb-6">
+
+              {ticket.type !== 'epic' && (
+                <div className="space-y-1.5 col-span-2">
+                  <label htmlFor="ticket-sprint" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Sprint
+                  </label>
+                  <Select
+                    disabled={!canWrite || saving}
+                    value={ticket.sprintId ?? 'none'}
+                    onValueChange={value => patch(getTicketSprintUpdate(ticket, value === 'none' ? null : value))}
+                  >
+                    <SelectTrigger id="ticket-sprint" className="w-full h-9">
+                      <SelectValue placeholder="Selecciona un sprint" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin sprint (Backlog)</SelectItem>
+                      {ticket.sprintId && !selectedSprint && (
+                        <SelectItem value={ticket.sprintId} disabled>Sprint no disponible</SelectItem>
+                      )}
+                      {projectSprints.map(sprint => (
+                        <SelectItem key={sprint.id} value={sprint.id}>
+                          {sprint.name}{sprint.isActive ? ' · En curso' : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Se guarda al seleccionar. Los tickets en Backlog pasan a To Do al asignar un sprint.
+                  </p>
+                </div>
+              )}
 
               {ticket.type === 'story' && (
                 <div className="space-y-1.5 col-span-2">

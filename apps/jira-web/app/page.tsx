@@ -3,6 +3,7 @@
 import * as React from 'react'
 import { Layers, LayoutGrid, Zap, Ticket as TicketIcon, BarChart3, Plus, Calendar, Pencil, Trash2, Bug, BookOpen, CheckSquare, LifeBuoy } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getTicketSprintUpdate } from '@/lib/ticket-sprint'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { AppSidebar } from '@/components/app-sidebar'
 import { MobileSidebar } from '@/components/mobile-sidebar'
@@ -164,6 +165,13 @@ export default function ProjectManagement() {
   const handleTicketUpdated = (ticket: ApiTicket) => {
     setTickets(prev => prev.map(t => t.id === ticket.id ? ticket : t))
     setSelectedTicket(ticket)
+  }
+
+  const handleMoveTicketToSprint = async (ticket: ApiTicket, sprintId: string) => {
+    if (!canWrite || ticket.type === 'epic') return
+    const updated = await updateTicket(currentProject, ticket.id, getTicketSprintUpdate(ticket, sprintId))
+    setTickets(prev => prev.map(t => t.id === updated.id ? updated : t))
+    setSelectedTicket(prev => prev?.id === updated.id ? updated : prev)
   }
 
   const handleStatusChange = async (ticketId: string, status: ApiTicket['status']) => {
@@ -600,6 +608,7 @@ export default function ProjectManagement() {
               sprints={sprints}
               currentProject={currentProject}
               onTicketClick={handleTicketClick}
+              onMoveTicketToSprint={handleMoveTicketToSprint}
               onCreateTicket={(sprintId) => handleCreateTicket(undefined, sprintId)}
               onCreateEpic={() => handleCreateTicket('backlog', null, 'epic')}
               onCreateStory={(epicId) => handleCreateTicket('backlog', null, 'story', epicId)}
@@ -913,6 +922,7 @@ export default function ProjectManagement() {
         projectId={currentProject}
         teamMembers={teamMembers}
         tickets={tickets}
+        sprints={sprints}
         onUpdated={handleTicketUpdated}
         onSelectTicket={handleTicketClick}
         onDeleted={ticketId => {

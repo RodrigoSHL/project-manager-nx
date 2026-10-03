@@ -7,6 +7,7 @@ import { TicketSupportDetail } from '../support-details/entities/ticket-support-
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { TeamMember } from '../projects/entities/team-member.entity';
+import { Sprint } from '../sprints/entities/sprint.entity';
 
 @Injectable()
 export class TicketsService {
@@ -19,6 +20,8 @@ export class TicketsService {
     private readonly supportDetailsRepository: Repository<TicketSupportDetail>,
     @InjectRepository(TeamMember)
     private readonly teamMembersRepository: Repository<TeamMember>,
+    @InjectRepository(Sprint)
+    private readonly sprintsRepository: Repository<Sprint>,
   ) {}
 
   private async assertProjectMemberAssignee(
@@ -131,6 +134,16 @@ export class TicketsService {
 
   async update(projectId: string, id: string, dto: UpdateTicketDto): Promise<Ticket> {
     const ticket = await this.findOne(projectId, id);
+    if (dto.sprintId !== undefined) {
+      const sprint = dto.sprintId === null
+        ? null
+        : await this.sprintsRepository.findOne({ where: { id: dto.sprintId, projectId } });
+      if (dto.sprintId !== null && !sprint) {
+        throw new BadRequestException('El sprint seleccionado no existe o pertenece a otro proyecto');
+      }
+      // Keep the loaded relation in sync so TypeORM saves the selected sprintId.
+      ticket.sprint = sprint;
+    }
     if (dto.assigneeId !== undefined) {
       await this.assertProjectMemberAssignee(projectId, dto.assigneeId);
     }

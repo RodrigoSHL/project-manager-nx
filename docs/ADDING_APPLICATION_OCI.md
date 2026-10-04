@@ -54,6 +54,13 @@ Antes de crear archivos, completar una matriz:
 
 Cada API necesita un puerto interno único. Los frontends pueden usar `3000` dentro de sus respectivos contenedores.
 
+`mailer-api` usa `3006` y no necesita base, frontend, BFF ni dominio público.
+Es un servicio opcional del perfil Compose `mailer`, seleccionable por nombre o
+con `bash scripts/deploy-oci.sh --profile mailer-backend`. `platform-full` conserva
+la selección anterior; agregar Mailer explícitamente cuando tenga sus secretos.
+Antes de iniciarlo, configurar `MAILER_SERVICE_TOKEN`, `RESEND_API_KEY` y el
+remitente verificado en `.env.deploy`. Ver [contrato y configuración](../apps/mailer-api/README.md).
+
 ## 2. Implementar el API NestJS
 
 El target Nx debe producir `dist/apps/<api>/main.js`, porque `Dockerfile.api` copia esa ruta.

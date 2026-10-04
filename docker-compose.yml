@@ -28,6 +28,30 @@ services:
       timeout: 10s
       retries: 3
 
+  mailer-api:
+    profiles: [mailer]
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+      args:
+        APP: mailer-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      MAILER_API_PORT: 3006
+      API_PREFIX: api
+      MAILER_PROVIDER: ${MAILER_PROVIDER:-noop}
+      MAILER_SERVICE_TOKEN: ${MAILER_SERVICE_TOKEN:-}
+      MAILER_FROM_EMAIL: ${MAILER_FROM_EMAIL:-onboarding@resend.dev}
+      MAILER_FROM_NAME: ${MAILER_FROM_NAME:-Project Manager}
+      MAILER_TIMEOUT_MS: ${MAILER_TIMEOUT_MS:-10000}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3006/api/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
 volumes:
   postgres_data:
     driver: local

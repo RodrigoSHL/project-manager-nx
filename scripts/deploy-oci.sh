@@ -37,6 +37,7 @@ CANONICAL_SERVICES=(
   travel-planner-api
   files-api
   inspection-api
+  mailer-api
   bff-api
   inspection-web
   inspection-web-qa
@@ -70,7 +71,7 @@ Opciones:
   --profile PERFIL       travel-full, travel-frontend, travel-backend,
                          inspection-full, inspection-frontend,
                          inspection-qa-frontend,
-                         inspection-backend, platform-full o custom
+                         inspection-backend, mailer-backend, platform-full o custom
   --services LISTA       Servicios separados por coma; implica perfil custom
   --key RUTA             Clave privada SSH (también ATOMDEV_SSH_KEY)
   --dry-run              Preflight y rsync simulado; no cambia producción
@@ -147,7 +148,8 @@ select_profile_interactively() {
   printf '  7) Solo frontend Inspection QA y Caddy\n'
   printf '  8) Plataforma completa (APIs, BFF y frontends)\n'
   printf '  9) Selección personalizada\n'
-  read -r -p 'Selecciona [1-9]: ' selection
+  printf ' 10) Mailer API\n'
+  read -r -p 'Selecciona [1-10]: ' selection
 
   case "$selection" in
     1) PROFILE="travel-full" ;;
@@ -159,6 +161,7 @@ select_profile_interactively() {
     7) PROFILE="inspection-qa-frontend" ;;
     8) PROFILE="platform-full" ;;
     9) PROFILE="custom" ;;
+    10) PROFILE="mailer-backend" ;;
     *) die "Selección inválida" ;;
   esac
 }
@@ -195,6 +198,9 @@ resolve_services() {
       ;;
     inspection-backend)
       raw_services="inspection-api,bff-api"
+      ;;
+    mailer-backend)
+      raw_services="mailer-api"
       ;;
     platform-full)
       raw_services="project-api,user-api,travel-planner-api,files-api,inspection-api,bff-api,inspection-web,project-web,jira-web,travel-planner-app,atomdev-landing"
@@ -732,6 +738,15 @@ cd "$REMOTE_DIR"
 
 docker compose --env-file .env.deploy -f docker-compose.prod.yml ps
 
+if printf '%s\n' "${SERVICES[@]}" | grep -qx mailer-api; then
+  MAILER_CONTAINER=$(docker compose --env-file .env.deploy -f docker-compose.prod.yml ps -q mailer-api)
+  test -n "$MAILER_CONTAINER"
+  docker exec "$MAILER_CONTAINER" node -e "Promise.all([fetch('http://127.0.0.1:3006/api/health'),fetch('http://127.0.0.1:3006/api/emails',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})]).then(r=>{console.log('MAILER_HEALTH='+r[0].status);console.log('MAILER_WITHOUT_TOKEN='+r[1].status);if(r[0].status!==200||r[1].status!==401)process.exit(1)}).catch(()=>process.exit(1))"
+  if [[ ${#SERVICES[@]} -eq 1 ]]; then
+    exit 0
+  fi
+fi
+
 BFF_CONTAINER=$(docker compose --env-file .env.deploy -f docker-compose.prod.yml ps -q bff-api)
 docker exec "$BFF_CONTAINER" node -e "Promise.all([fetch('http://127.0.0.1:3000/health'),fetch('http://127.0.0.1:3000/api/trips'),fetch('http://travel-planner-api:3003/api'),fetch('http://user-api:3001/api/health'),fetch('http://files-api:3004/api/health'),fetch('http://inspection-api:3005/api/health'),fetch('http://127.0.0.1:3000/api/inspection/tenants')]).then(r=>{console.log('BFF_HEALTH='+r[0].status);console.log('TRIPS_WITHOUT_JWT='+r[1].status);console.log('TRAVEL_UPSTREAM='+r[2].status);console.log('USER_UPSTREAM='+r[3].status);console.log('FILES_UPSTREAM='+r[4].status);console.log('INSPECTION_UPSTREAM='+r[5].status);console.log('INSPECTION_WITHOUT_JWT='+r[6].status);if(r[0].status!==200||r[1].status!==401||r[2].status!==200||r[3].status!==200||r[4].status!==200||r[5].status!==200||r[6].status!==401)process.exit(1)})"
 
@@ -769,6 +784,10 @@ REMOTE
 }
 
 verify_external() {
+  if [[ ${#SERVICES[@]} -eq 1 && "${SERVICES[0]}" == mailer-api ]]; then
+    log "Mailer API es interno; verificado dentro de su contenedor"
+    return 0
+  fi
   log "Ejecutando smoke tests HTTPS externos"
   expect_http_status TRAVEL_ROOT https://travel.atomdev.cl/ 200
   expect_http_status TRAVEL_LOGIN https://travel.atomdev.cl/login 200

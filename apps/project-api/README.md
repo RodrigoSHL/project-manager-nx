@@ -177,6 +177,83 @@ solo cambia su contenido. La migración `AddCommentReplies` añade la columna,
 el índice y la clave foránea. Si se elimina el comentario original, `ON DELETE
 SET NULL` conserva sus respuestas como comentarios independientes.
 
+### Notificaciones de menciones en Jira
+
+Al crear un comentario o respuesta, Project API detecta las menciones persistidas
+por el selector de Jira Web (`@{member:<uuid>:<nombre codificado>}`). Al editar,
+detecta las menciones añadidas. Escribir un nombre como texto libre no identifica
+a una cuenta. Los miembros deben estar activos y vinculados mediante `userId` a
+un usuario real; no se notifica al autor de su propio comentario.
+
+El comentario y sus eventos se guardan en una misma transacción PostgreSQL. Una
+restricción única limita el aviso a uno por comentario/usuario, incluso al quitar
+y volver a añadir una mención. No se generan avisos retroactivos para comentarios
+anteriores a la activación. La migración `AddCommentMentionNotifications` crea la
+tabla e índices; `PROJECT_MIGRATIONS_RUN=true` la aplica al iniciar sobre el esquema
+existente. En una base nueva de desarrollo, la sincronización también la crea.
+
+Un worker interno reclama un evento cada cinco segundos con `FOR UPDATE SKIP
+LOCKED` y una reserva de dos minutos. Comprueba la mención actual, proyecto,
+miembro activo, roles del usuario y acceso al workspace antes de enviar. Usa el
+email actual de User API y llama directamente a la plantilla de Mailer API.
+Los administradores mantienen el acceso global existente. El BFF sigue atendiendo
+los comentarios de Jira Web y aplica sus controles de acceso habituales.
+
+Activación:
+
+```env
+# Project API: el mismo token configurado en Mailer
+JIRA_MENTION_EMAILS_ENABLED=true
+MAILER_API_URL=http://localhost:3006/api
+MAILER_SERVICE_TOKEN=<token interno compartido>
+USER_API_URL=http://localhost:3001/api
+# Mailer API: destino del botón del correo
+JIRA_WEB_URL=http://localhost:4201
+```
+
+Los ejemplos dejan los avisos desactivados. En producción, usar
+`JIRA_WEB_URL=https://jira.atomdev.cl` y las variables/secretos en `.env.deploy`.
+Compose configura las URLs internas de Project API; ejecutar Mailer junto con
+Project API y User API, y reconstruir Jira Web para habilitar la navegación.
+
+```sh
+docker compose --env-file .env.deploy -f docker-compose.prod.yml \
+  --profile mailer up -d --build mailer-api project-api jira-web
+```
+
+El contenido se congela antes del primer envío para conservar idéntico payload y
+clave `jira-mention/<comment-id>/<user-id>` en los reintentos. Si cambia el email
+del usuario se omite el evento, evitando enviarlo a la dirección anterior. Los
+fallos transitorios usan backoff de 5 segundos hasta 10 minutos, máximo ocho
+intentos dentro de 23 horas; los permanentes terminan como `failed`. Esta ventana
+queda dentro de las 24 horas de idempotencia de Resend. No se reintenta después
+de esa ventana, ni se altera el remitente/configuración durante un reintento.
+`sent` con código `accepted` significa aceptación del proveedor, no entrega.
+
+Para diagnosticar eventos, consultar `status`, `attempts`, `lastCode` y
+`nextAttemptAt` en `comment_mention_notifications`. Los estados terminales son
+`sent`, `failed` y `skipped`; no hay UI para reenvío manual ni webhooks de entrega.
+La tabla conserva contenido del correo; eliminar un comentario elimina sus eventos
+mediante FK en cascada. Los logs contienen solo ID del evento y código del error.
+
+Validación completa en una base temporal local, con User API de prueba y Mailer
+real usando un proveedor simulado (no consume cuota ni envía correo):
+
+```sh
+docker run -d --name jira-mention-validation \
+  -e POSTGRES_PASSWORD=mention-validation-only -e POSTGRES_DB=jira_mention_validation \
+  -p 127.0.0.1:31547:5432 postgres:15-alpine
+JIRA_MENTION_TEST_DATABASE_URL=postgres://postgres:mention-validation-only@127.0.0.1:31547/jira_mention_validation \
+  npx ts-node --project tsconfig.base.json \
+  --compiler-options '{"module":"CommonJS","esModuleInterop":true}' scripts/verify-jira-mention-flow.ts
+docker rm -f jira-mention-validation
+```
+
+El script exige exactamente esa base en localhost/127.0.0.1, crea fixtures y prueba
+migración up/down, cola persistente, deduplicación, permisos, réplicas concurrentes,
+contrato HTTP de plantilla, reintentos, respuestas y borrado en cascada. Usar una
+base vacía por ejecución.
+
 ### TaskStatus
 - `todo` - Por hacer
 - `in_progress` - En progreso

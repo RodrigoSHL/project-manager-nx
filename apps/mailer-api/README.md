@@ -43,6 +43,48 @@ bandeja. `noop` devuelve `simulated`, sin enviar ni guardar el correo.
 Health verifica que el proceso arrancó con configuración válida; no consulta
 Resend ni comprueba DNS, validez de la API key o cuotas disponibles.
 
+## Plantilla de menciones de Jira / FlowBoard
+
+`POST /api/emails/templates/jira-comment-mention` usa el mismo token interno y
+`Idempotency-Key` que el envío genérico. Genera HTML responsive y texto plano con
+la marca FlowBoard, quién te mencionó, el ticket, el comentario y el botón
+**Ver comentario**. Escapa el contenido y construye el enlace con IDs, sin aceptar
+URLs del consumidor. No requiere User API ni Project API para renderizarla.
+
+```json
+{
+  "to": ["recipient@example.com"],
+  "recipientName": "Sebastián",
+  "authorName": "Carolina",
+  "projectName": "Project Manager NX",
+  "ticketKey": "PM-142",
+  "ticketTitle": "Integrar notificaciones",
+  "commentText": "@Sebastián, ¿puedes revisar este cambio?",
+  "workspaceId": "00000000-0000-4000-8000-000000000001",
+  "projectId": "00000000-0000-4000-8000-000000000002",
+  "ticketId": "00000000-0000-4000-8000-000000000003",
+  "commentId": "00000000-0000-4000-8000-000000000004"
+}
+```
+
+Un destinatario por solicitud; nombres/proyecto hasta 255 caracteres, clave de
+ticket hasta 20, título hasta 500 y comentario hasta 6.000. Los cuatro IDs deben
+ser UUID. La notificación automática se configura en
+[Project API](../project-api/README.md#notificaciones-de-menciones-en-jira).
+
+Configurar `JIRA_WEB_URL` en Mailer: `https://jira.atomdev.cl` en producción o
+`http://localhost:4201` para desarrollo. Se valida al arrancar: HTTPS para URLs
+externas, HTTP permitido únicamente en localhost/127.0.0.1. Jira Web selecciona
+el workspace/proyecto accesible, abre el ticket y destaca el comentario; si hace
+falta iniciar sesión, conserva esos parámetros durante el login.
+
+Para regenerar la [vista previa](../../docs/email-previews/jira-comment-mention.html)
+con datos ficticios, sin enviar correos:
+
+```sh
+npx ts-node --compiler-options '{"module":"CommonJS"}' scripts/preview-jira-mention-email.ts
+```
+
 ## Configuración
 
 La API carga `.env` desde el directorio de ejecución mediante `ConfigModule`.

@@ -28,6 +28,7 @@ describe('Mailer HTTP API', () => {
           MAILER_FROM_EMAIL: 'sender@example.com',
           MAILER_FROM_NAME: 'Project Manager',
           API_PREFIX: 'api',
+          JIRA_WEB_URL: 'https://jira.atomdev.cl',
         })
       )
       .overrideProvider(MAIL_PROVIDER)
@@ -171,5 +172,71 @@ describe('Mailer HTTP API', () => {
       retryable: true,
       retryAfterSeconds: 5,
     });
+  });
+
+  const id = '00000000-0000-4000-8000-000000000001';
+  const mention = {
+    to: ['recipient@example.com'],
+    recipientName: 'Sebastián',
+    authorName: 'Carolina',
+    projectName: 'Project Manager',
+    ticketKey: 'PM-142',
+    ticketTitle: 'Revisar integración',
+    commentText: 'Hola @Sebastián',
+    workspaceId: id,
+    projectId: id,
+    ticketId: id,
+    commentId: id,
+  };
+  function postMention(
+    body: unknown,
+    auth = `Bearer ${token}`,
+    key = 'jira-mention/comment/recipient'
+  ) {
+    return fetch(`${baseUrl}/api/emails/templates/jira-comment-mention`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: auth,
+        'Idempotency-Key': key,
+      },
+      body: JSON.stringify(body),
+    });
+  }
+
+  it('renders the mention template through the same injected mail provider', async () => {
+    const response = await postMention(mention);
+    expect(response.status).toBe(200);
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: mention.to,
+        from: 'Project Manager <sender@example.com>',
+        idempotencyKey: 'jira-mention/comment/recipient',
+        subject: '[PM-142] Carolina te mencionó en un comentario',
+        html: expect.stringContaining('Ver comentario'),
+        text: expect.stringContaining('https://jira.atomdev.cl/'),
+      })
+    );
+  });
+
+  it.each([
+    { ...mention, to: ['a@example.com', 'b@example.com'] },
+    { ...mention, commentId: 'bad' },
+    { ...mention, authorName: 'Header\n' },
+    { ...mention, ticketKey: 'PM-1\n' },
+    { ...mention, commentText: '' },
+    { ...mention, commentText: 'x'.repeat(6001) },
+    { ...mention, ticketUrl: 'https://evil.example' },
+  ])('rejects malformed mention template inputs', async (body) => {
+    expect((await postMention(body)).status).toBe(400);
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('protects templates with the service token and required idempotency', async () => {
+    expect((await postMention(mention, 'Bearer wrong')).status).toBe(401);
+    expect((await postMention(mention, `Bearer ${token}`, '')).status).toBe(
+      400
+    );
+    expect(send).not.toHaveBeenCalled();
   });
 });

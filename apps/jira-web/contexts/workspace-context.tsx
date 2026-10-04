@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { WorkspaceService, type Workspace } from '@/services/userService'
+import { parseTicketLink } from '@/lib/ticket-link'
 
 interface WorkspaceContextValue {
   workspaces: Workspace[]
@@ -25,6 +26,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [workspaces, setWorkspaces] = React.useState<Workspace[]>([])
   const [selectedWorkspace, setSelectedWorkspaceState] = React.useState<Workspace | null>(null)
   const [loading, setLoading] = React.useState(true)
+  const appliedTicketLink = React.useRef(false)
 
   const load = React.useCallback(async () => {
     setLoading(true)
@@ -34,7 +36,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
       const savedId = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null
       const saved = savedId ? data.find(w => w.id === savedId) : null
-      setSelectedWorkspaceState(saved ?? data[0] ?? null)
+      const link = appliedTicketLink.current ? null : parseTicketLink(window.location.search)
+      const linked = link ? data.find(w => w.id === link.workspaceId) : null
+      appliedTicketLink.current = true
+      setSelectedWorkspaceState(linked ?? saved ?? data[0] ?? null)
     } catch {
       // sin workspaces disponibles
     } finally {

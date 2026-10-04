@@ -24,6 +24,8 @@ describe('Mailer configuration and provider selection', () => {
     { MAILER_FROM_NAME: 'name\r\nheader' },
     { MAILER_TIMEOUT_MS: 'NaN' },
     { MAILER_API_PORT: '0' },
+    { JIRA_WEB_URL: 'javascript:alert(1)' },
+    { JIRA_WEB_URL: 'http://external.example' },
   ])('fails closed for invalid configuration', (overrides) => {
     expect(
       () => new MailerConfig(testConfig({ ...valid, ...overrides }))

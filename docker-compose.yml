@@ -39,6 +39,7 @@ services:
     environment:
       NODE_ENV: development
       MAILER_API_PORT: 3006
+      JIRA_WEB_URL: ${JIRA_WEB_URL:-http://localhost:4201}
       API_PREFIX: api
       MAILER_PROVIDER: ${MAILER_PROVIDER:-noop}
       MAILER_SERVICE_TOKEN: ${MAILER_SERVICE_TOKEN:-}

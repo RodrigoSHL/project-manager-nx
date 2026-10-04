@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { isEmail } from 'class-validator';
+import { parseJiraWebUrl } from './templates/jira-comment-mention.template';
 
 @Injectable()
 export class MailerConfig {
@@ -10,8 +11,12 @@ export class MailerConfig {
   readonly resendApiKey: string;
   readonly timeoutMs: number;
   readonly port: number;
+  readonly jiraWebUrl: string;
 
   constructor(config: ConfigService) {
+    this.jiraWebUrl = parseJiraWebUrl(
+      config.get<string>('JIRA_WEB_URL') || 'https://jira.atomdev.cl'
+    ).toString();
     this.provider = config.get<string>('MAILER_PROVIDER') || 'resend';
     if (!['resend', 'noop'].includes(this.provider)) {
       throw new Error('MAILER_PROVIDER must be resend or noop');

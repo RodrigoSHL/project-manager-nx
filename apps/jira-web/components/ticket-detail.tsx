@@ -136,6 +136,7 @@ const typeIcons: Record<string, React.ElementType> = {
 interface TicketDetailProps {
   canWrite: boolean
   ticket: ApiTicket | null
+  highlightedCommentId?: string
   open: boolean
   onClose: () => void
   projectId: string
@@ -152,6 +153,7 @@ interface TicketDetailProps {
 export function TicketDetail({
   canWrite,
   ticket,
+  highlightedCommentId,
   open,
   onClose,
   projectId,
@@ -255,6 +257,14 @@ export function TicketDetail({
       cancelled = true
     }
   }, [open, projectId, ticket?.id])
+
+  React.useEffect(() => {
+    if (!open || commentsLoading || !highlightedCommentId || !comments.some(comment => comment.id === highlightedCommentId)) return
+    const frame = requestAnimationFrame(() => {
+      document.getElementById(`comment-${highlightedCommentId}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [open, commentsLoading, comments, highlightedCommentId])
 
   React.useEffect(() => {
     if (!open || !ticket) return
@@ -1143,7 +1153,7 @@ export function TicketDetail({
                     const wasEdited = comment.updatedAt !== comment.createdAt
 
                     return (
-                      <div key={comment.id} className={cn('flex gap-3', depth > 0 && 'border-l-2 pl-3')} style={{ marginLeft: Math.min(depth, 2) * 16 }}>
+                      <div key={comment.id} id={`comment-${comment.id}`} className={cn('flex gap-3', depth > 0 && 'border-l-2 pl-3', highlightedCommentId === comment.id && 'rounded-lg bg-primary/5 p-3 ring-1 ring-primary/30')} style={{ marginLeft: Math.min(depth, 2) * 16 }}>
                         <Avatar className="h-8 w-8 shrink-0">
                           {author.avatar && <AvatarImage src={author.avatar} alt={author.name} />}
                           <AvatarFallback className="text-xs">{getInitials(author.name)}</AvatarFallback>

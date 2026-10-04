@@ -37,6 +37,10 @@ services:
       DATABASE_USERNAME: ${DATABASE_USERNAME:-project_user}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD is required}
       PROJECT_MIGRATIONS_RUN: "true"
+      JIRA_MENTION_EMAILS_ENABLED: ${JIRA_MENTION_EMAILS_ENABLED:-false}
+      MAILER_API_URL: http://mailer-api:3006/api
+      MAILER_SERVICE_TOKEN: ${MAILER_SERVICE_TOKEN:-}
+      USER_API_URL: http://user-api:3001/api
       DATABASE_SSL: ${DATABASE_SSL:-false}
       TYPEORM_SYNCHRONIZE: "false"
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost,http://localhost:8081,http://localhost:8082}
@@ -148,6 +152,7 @@ services:
     environment:
       NODE_ENV: production
       MAILER_API_PORT: 3006
+      JIRA_WEB_URL: ${JIRA_WEB_URL:-https://jira.atomdev.cl}
       API_PREFIX: api
       MAILER_PROVIDER: ${MAILER_PROVIDER:-resend}
       MAILER_SERVICE_TOKEN: ${MAILER_SERVICE_TOKEN:-}

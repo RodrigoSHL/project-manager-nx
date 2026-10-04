@@ -4,6 +4,7 @@ import * as React from 'react'
 import { Layers, LayoutGrid, Zap, Ticket as TicketIcon, BarChart3, Plus, Calendar, Pencil, Trash2, Bug, BookOpen, CheckSquare, LifeBuoy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getTicketSprintUpdate } from '@/lib/ticket-sprint'
+import { parseTicketLink } from '@/lib/ticket-link'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { AppSidebar } from '@/components/app-sidebar'
 import { MobileSidebar } from '@/components/mobile-sidebar'
@@ -58,6 +59,8 @@ export default function ProjectManagement() {
   const [createTicketInitialType, setCreateTicketInitialType] = React.useState<ApiTicket['type']>('task')
   const [createTicketInitialEpicId, setCreateTicketInitialEpicId] = React.useState<string | null>(null)
   const [ticketDetailOpen, setTicketDetailOpen] = React.useState(false)
+  const [highlightedCommentId, setHighlightedCommentId] = React.useState<string | undefined>()
+  const openedLinkedTicket = React.useRef(false)
   const [createSupportOpen, setCreateSupportOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState('')
   const [filters, setFilters] = React.useState({
@@ -75,13 +78,19 @@ export default function ProjectManagement() {
       return
     }
     setLoadingProjects(true)
+    let cancelled = false
     getProjectsByWorkspace(selectedWorkspace.id)
       .then((data) => {
+        if (cancelled) return
         setApiProjects(data)
-        setCurrentProject(prev => data.find(p => p.id === prev) ? prev : (data[0]?.id ?? ''))
+        const link = parseTicketLink(window.location.search)
+        const linkedProject = !openedLinkedTicket.current && link?.workspaceId === selectedWorkspace.id
+          ? data.find(p => p.id === link.projectId) : undefined
+        setCurrentProject(prev => linkedProject?.id ?? (data.find(p => p.id === prev) ? prev : (data[0]?.id ?? '')))
       })
       .catch(console.error)
-      .finally(() => setLoadingProjects(false))
+      .finally(() => { if (!cancelled) setLoadingProjects(false) })
+    return () => { cancelled = true }
   }, [selectedWorkspace])
 
   React.useEffect(() => {
@@ -108,6 +117,18 @@ export default function ProjectManagement() {
       .catch(console.error)
     return () => { cancelled = true }
   }, [currentProject])
+
+  React.useEffect(() => {
+    if (openedLinkedTicket.current) return
+    const link = parseTicketLink(window.location.search)
+    if (!link || selectedWorkspace?.id !== link.workspaceId || currentProject !== link.projectId) return
+    const ticket = tickets.find(item => item.id === link.ticketId && item.projectId === link.projectId)
+    if (!ticket) return
+    openedLinkedTicket.current = true
+    setHighlightedCommentId(link.commentId)
+    setSelectedTicket(ticket)
+    setTicketDetailOpen(true)
+  }, [tickets, currentProject, selectedWorkspace])
 
   const activeSprint = sprints.find(s => s.projectId === currentProject && s.isActive)
 
@@ -140,6 +161,7 @@ export default function ProjectManagement() {
   })
 
   const handleTicketClick = (ticket: ApiTicket) => {
+    setHighlightedCommentId(undefined)
     setSelectedTicket(ticket)
     setTicketDetailOpen(true)
   }
@@ -918,6 +940,7 @@ export default function ProjectManagement() {
       {/* Ticket Detail Panel */}
       <TicketDetail
         ticket={selectedTicket}
+        highlightedCommentId={highlightedCommentId}
         open={ticketDetailOpen}
         projectId={currentProject}
         teamMembers={teamMembers}

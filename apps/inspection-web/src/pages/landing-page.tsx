@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+const atomdevHref = 'https://atomdev.cl';
 const contactEmail = 'contacto@atomdev.cl';
 const demoHref = `mailto:${contactEmail}?subject=${encodeURIComponent(
   'Quiero conocer GridAssets'
@@ -267,6 +268,16 @@ export function LandingPage() {
                     Explorar el producto <ChevronRight className="size-4" />
                   </a>
                 </div>
+                <p className="mt-6 text-sm text-slate-500">
+                  Producto desarrollado por{' '}
+                  <a
+                    href={atomdevHref}
+                    className="inline-flex items-center gap-1 font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 transition hover:text-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600"
+                  >
+                    AtomDev
+                    <ArrowUpRight aria-hidden="true" className="size-3.5" />
+                  </a>
+                </p>
               </div>
             </div>
 
@@ -894,8 +905,16 @@ export function LandingPage() {
               Inspecciones, activos e historial técnico conectados para equipos
               que trabajan en terreno.
             </p>
-            <p className="mt-5 text-xs text-slate-500">
-              GridAssets es un producto de AtomDev.
+            <p className="mt-5 text-sm text-slate-400">
+              GridAssets es un producto desarrollado por{' '}
+              <a
+                href={atomdevHref}
+                className="inline-flex items-center gap-1 font-semibold text-slate-200 underline decoration-slate-600 underline-offset-4 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+              >
+                AtomDev
+                <ArrowUpRight aria-hidden="true" className="size-3.5" />
+              </a>
+              .
             </p>
           </div>
           <div className="flex flex-wrap gap-x-7 gap-y-3 text-sm font-medium text-slate-300">

@@ -9,9 +9,9 @@ para presentar al cliente está en
 Ofrecer **Multifaena por 15 UF mensuales + IVA** para un despliegue gradual;
 incluye hasta tres faenas de **una misma empresa/tenant** y los diez usuarios
 que estima al inicio. Presentar **Multifaena ampliada por 19 UF** como la
-elección para desplegar las tres faenas de inmediato, sumar personas o manejar
+elección para operar hasta cinco faenas, sumar personas o manejar
 más evidencias, con acompañamiento definido. La opción de 10 UF permanece
-para una sola faena. Más de tres faenas o varios tenants requieren una
+para una sola faena. Más de cinco faenas o varios tenants requieren una
 cotización corporativa específica. Estas cifras de usuarios y almacenamiento son una **propuesta
 comercial**, no límites que el producto aplique hoy.
 
@@ -25,7 +25,7 @@ para preparar la operación, pero no es un contador de facturación.
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
 | Una faena | 10 UF | 1 | 5 | 500 registros | 10 GB | Inicio autogestionado |
 | Multifaena | 15 UF | Hasta 3 | 10 | 2.500 registros | 20 GB | Primera pauta guiada, dos sesiones iniciales de 60 min y revisión mensual de indicadores de 30 min |
-| Multifaena ampliada | 19 UF | Hasta 3 | 20 | 5.000 registros | 40 GB | Dos pautas guiadas, tres sesiones iniciales de 60 min, portada estándar configurada, revisión mensual de 60 min y una hora trimestral de optimización de la configuración |
+| Multifaena ampliada | 19 UF | Hasta 5 | 20 | 5.000 registros | 40 GB | Dos pautas guiadas, tres sesiones iniciales de 60 min en total, portada estándar configurada, revisión mensual de 60 min en total y una hora trimestral de optimización de la configuración |
 
 Los valores de inventario son **supuestos de capacidad y carga inicial**; no
 son topes automáticos ni cargos por registrar un activo más. Los GB son
@@ -34,6 +34,12 @@ usuario es una persona con cuenta propia activa, compartida entre las faenas
 del tenant; no se recomiendan cuentas compartidas. Una faena es un sitio
 operacional dentro de un tenant: áreas, subestaciones y componentes dentro de
 ese sitio no se cobran como faenas.
+
+La progresión comercial es **1, 3 y 5 faenas**. Usuarios, inventario de
+referencia, evidencias y horas de acompañamiento son totales de cada plan,
+compartidos entre sus faenas; no se multiplican por sitio. El plan de 19 UF
+permite crecer de tres a cinco faenas manteniendo una sola suscripción. Su
+capacidad y margen deben validarse con el volumen agregado de las cinco.
 
 ### Servicios iniciales y ampliaciones
 
@@ -45,18 +51,22 @@ ese sitio no se cobran como faenas.
   pauta guiada y las dos sesiones de capacitación ya están incluidas en la
   mensualidad de la landing; no duplicar esos servicios en el cargo inicial.
 - Opción de 19 UF: **12 UF una vez** por carga asistida de hasta 250 registros,
-  hasta tres sitios y comprobación de dos flujos. La segunda pauta requiere
+  configuración de hasta cinco sitios y comprobación de dos flujos. Los 250
+  registros y las tres sesiones iniciales son totales del despliegue; no se
+  incluye una sesión por faena. La capacitación adicional se cotiza aparte.
+  La segunda pauta requiere
   estimar horas si se solicita construcción completa.
-- El plan ampliado ofrece servicios de adopción, **no funciones del producto
+- El plan ampliado ofrece más faenas y servicios de adopción, **no funciones del producto
   ocultas en los otros planes**. La hora trimestral cubre parametrización y
   asesoría, no desarrollo de código; no se acumula. La portada del informe se
   configura con la capacidad que ya existe.
 - Para cualquier opción, proponer **0,5 UF/mes por cada usuario nominativo
   adicional**. Desde 19 usuarios en el plan de 15 UF, conviene el ampliado de
-  19 UF, que incluye 20 cuentas y más capacidad. Un paquete de **10 GB
+  19 UF, que incluye 20 cuentas, hasta cinco faenas y más capacidad. Un paquete de **10 GB
   adicionales por +1 UF/mes** solo debe ofrecerse tras verificar capacidad
   y respaldos. No aplicar cargos retroactivos ni por sobrepasos sin acuerdo
-  previo. Si hay cuatro o más faenas, cotizar el despliegue corporativo;
+  previo. Para cuatro o cinco faenas, ofrecer el ampliado; para seis o más
+  faenas o varios tenants, cotizar el despliegue corporativo;
   no multiplicar automáticamente el precio de un sitio.
 
 La importación masiva de activos desde Excel **no está identificada como
@@ -67,7 +77,8 @@ catálogo trae miles de registros, cotizar la migración como proyecto separado.
 La diferencia entre 19 y 15 UF es **4 UF/mes, 48 UF/año**. Si el cliente
 necesita veinte usuarios, diez cuentas adicionales en Multifaena costarían
 5 UF/mes: la ampliada ya ahorra 1 UF/mes frente a ese armado y añade
-almacenamiento y servicio. La contrapartida para AtomDev es tiempo humano:
+dos faenas adicionales, almacenamiento y servicio. La contrapartida para
+AtomDev es el volumen agregado de hasta cinco faenas y tiempo humano:
 una sesión extra de arranque, media hora más de revisión mensual, una hora
 trimestral y una segunda pauta guiada. Medir las horas reales para mantener
 el margen. Si el cliente seguirá con diez personas, pocas fotos y solo una
@@ -111,6 +122,9 @@ aproximadamente CLP 7.396.193 y CLP 7.724.912 respectivamente. Una meta de
 respaldos, soporte recurrente y operación sumen **como máximo 4,5 UF/mes**
 para ese cliente. Es una *meta*, no un costo constatado. Registrar desde el
 piloto horas de soporte, ocupación, crecimiento de archivos y costos reales.
+Para el plan ampliado de 19 UF, la misma meta deja **5,7 UF/mes** para costos
+directos. Evaluar ese presupuesto con el uso combinado de hasta cinco faenas;
+sumar sitios no implica que el soporte o el volumen de evidencias sean gratis.
 
 Ejemplo para dimensionar evidencias: **180 trabajos/mes × 4 fotos × 2 MB =
 1,44 GB/mes**, alrededor de **17,3 GB en doce meses** sin contar metadatos ni
@@ -211,8 +225,13 @@ de GridAssets por el valor de un desarrollo puntual.
    15 UF como referencia para tres faenas. Cualquier descuento debe dejar
    intacta la capacidad de soporte.
 5. Al cierre del piloto, cotejar margen real y uso. Si la empresa necesita
-   más de 10 usuarios, 20 GB, mucha carga inicial o soporte intensivo,
-   pasar a Multifaena ampliada o cotización corporativa.
+   cuatro o cinco faenas, más de 10 usuarios o 20 GB, evaluar Multifaena
+   ampliada. Para más de cinco faenas, varios tenants o una carga inicial y
+   soporte que excedan lo incluido, cotizar el alcance adicional o corporativo.
+
+Actualizar la landing al publicar esta oferta: incorporar el plan de 19 UF
+con hasta cinco faenas y reservar Corporativo para más de cinco faenas o
+varios tenants. La landing actual todavía muestra Corporativo desde cuatro.
 
 Esta oferta es una recomendación de AtomDev. Antes de emitir una cotización
 vinculante, confirmar capacidad de infraestructura, condiciones de respaldo,

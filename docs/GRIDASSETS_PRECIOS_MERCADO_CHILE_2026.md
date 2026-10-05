@@ -34,7 +34,15 @@ volumen de datos y el soporte se dimensionan en la propuesta comercial.
 | ------------------------ | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Una faena                | Desde 10 UF/mes + IVA             | 1 faena, todas las funciones actuales (incluido offline, informes y analítica) y puesta en marcha autogestionada.                                                             |
 | Multifaena · recomendado | Desde 15 UF/mes + IVA             | Hasta 3 faenas, las mismas funciones, configuración guiada de la primera pauta, 2 sesiones remotas de arranque de 60 minutos y revisión mensual de indicadores de 30 minutos. |
-| Corporativo              | Cotización                        | Más de 3 faenas o despliegue y soporte de mayor alcance.                                                                                                                      |
+| Multifaena ampliada      | Desde 19 UF/mes + IVA             | Hasta 5 faenas de una misma empresa, 20 usuarios y 40 GB acumulados propuestos; dos pautas guiadas, tres sesiones de arranque de 60 minutos en total, revisión mensual de 60 minutos y una hora trimestral de optimización. |
+| Corporativo              | Cotización                        | Más de 5 faenas, varias empresas o despliegue y soporte de mayor alcance.                                                                                                     |
+
+La oferta de planes incorpora la revisión comercial del 4 de octubre de 2026.
+Usuarios, almacenamiento y acompañamiento se comparten entre las faenas de
+cada plan. El inventario y los GB siguen sujetos a dimensionamiento; consultar
+la cotización y la estrategia comercial para los cargos de preparación y
+condiciones completas. Esta revisión de la oferta no actualiza por sí sola
+los precios de terceros investigados el 30 de septiembre.
 
 El [SII informa que la UF del 30 de septiembre de 2026 vale
 $41.057,20](https://www.sii.cl/valores_y_fechas/uf/uf2026.htm). Con ese valor,

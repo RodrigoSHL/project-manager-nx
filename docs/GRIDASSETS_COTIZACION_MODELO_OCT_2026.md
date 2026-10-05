@@ -17,12 +17,12 @@ conexión y sincronizarse al recuperarla.
 | --- | ---: | ---: | ---: |
 | Suscripción mensual | **10 UF + IVA** | **15 UF + IVA** | **19 UF + IVA** |
 | Suscripción de 12 meses | 120 UF + IVA | 180 UF + IVA | 228 UF + IVA |
-| Faenas en una empresa | 1 | Hasta 3 | Hasta 3 |
+| Faenas en una empresa | 1 | Hasta 3 | Hasta 5 |
 | Usuarios nominativos incluidos | 5 | 10 | 20 |
 | Inventario considerado para dimensionamiento¹ | 500 | 2.500 | 5.000 |
 | Capacidad de evidencias propuesta² | 10 GB | 20 GB | 40 GB |
-| Inicio | Autogestionado | Primera pauta guiada y dos sesiones remotas de 60 min | Dos pautas guiadas, tres sesiones remotas de 60 min (una por faena) y configuración de la portada estándar del informe |
-| Revisión de indicadores | — | 30 min remotos al mes | 60 min remotos al mes, comparando las tres faenas |
+| Inicio | Autogestionado | Primera pauta guiada y dos sesiones remotas de 60 min | Dos pautas guiadas, tres sesiones remotas de 60 min en total para el despliegue y configuración de la portada estándar del informe |
+| Revisión de indicadores | — | 30 min remotos al mes | 60 min remotos al mes en total, comparando las faenas del plan |
 | Optimización de configuración | — | Durante las sesiones iniciales | 1 hora remota por trimestre para revisar pautas, permisos y adopción³ |
 | Preparación y carga inicial asistida | Opcional, a cotizar | **8 UF + IVA una vez** | **12 UF + IVA una vez** |
 
@@ -42,7 +42,9 @@ existentes; no es acumulable ni incluye desarrollo de código.
 Todos los planes incluyen las funciones disponibles de jerarquía de activos,
 pautas configurables, ejecución de trabajos, hallazgos, informes y analítica.
 La diferencia está en el número de faenas y en el volumen de operación y
-acompañamiento. Para más de tres faenas o varias empresas legales se prepara
+acompañamiento. Los usuarios, el inventario de referencia, la capacidad de
+evidencias y las horas de acompañamiento son totales del plan, compartidos
+entre sus faenas. Para más de cinco faenas o varias empresas legales se prepara
 una propuesta corporativa específica.
 
 ### Elección según el despliegue
@@ -56,12 +58,16 @@ de los sitios, la carga de hasta 100 registros entregados por la empresa y la
 validación conjunta del primer flujo. La guía de la primera pauta y las dos
 sesiones iniciales ya están incluidas en la suscripción.
 
-Si la empresa prevé desplegar **las tres faenas desde el inicio**, incorporar
+Si la empresa necesita **cuatro o cinco faenas**, incorporar
 más equipos de trabajo o registrar más fotografías, recomendamos
 **Multifaena ampliada por 19 UF mensuales + IVA**. Incluye diez usuarios más
-y el doble de capacidad presupuestada. Con veinte usuarios, Multifaena más
+y el doble de capacidad presupuestada, con alcance de hasta cinco faenas de
+la misma empresa. Con veinte usuarios, Multifaena más
 diez cuentas adicionales costaría 20 UF/mes: la ampliada cuesta 19 UF/mes y
-añade acompañamiento. Su preparación inicial es de **12 UF + IVA una vez**.
+añade faenas y acompañamiento. Su preparación inicial es de **12 UF + IVA una
+vez**, para configurar hasta cinco sitios y cargar hasta 250 registros en
+total. Las tres sesiones iniciales se distribuyen entre los responsables del
+despliegue; la capacitación adicional se cotiza por separado.
 
 Como primer paso, proponemos **60 días de piloto pagado** en Multifaena.
 El precio del piloto es 15 UF por mes, más las 8 UF de preparación inicial;
@@ -70,10 +76,12 @@ piloto revisaremos con su equipo la pauta, el tiempo de elaboración del
 informe y la trazabilidad de mediciones y hallazgos. Si se acuerda una
 suscripción de doce meses, los dos meses del piloto se cuentan dentro de ese
 primer año; no se agregan al plazo ni se facturan por segunda vez.
-Si el piloto cubre las tres faenas desde el primer día, la opción ampliada
+Si el piloto requiere cuatro o cinco faenas, o el mayor alcance de usuarios
+y evidencias del plan ampliado, esta opción
 costaría **50 UF + IVA** por los dos meses y la preparación inicial. También
-puede iniciarse en Multifaena y acordarse la ampliación antes de sumar usuarios
-o evidencias. Si se amplía durante el piloto, las **8 UF ya pagadas por
+puede iniciarse en Multifaena y acordarse la ampliación antes de superar sus
+tres faenas, usuarios o capacidad de evidencias. Si se amplía durante el
+piloto, las **8 UF ya pagadas por
 preparación** se abonan al cargo inicial de 12 UF del plan ampliado: solo se
 paga la diferencia de 4 UF si se utiliza su alcance adicional. La nueva
 mensualidad comienza en el siguiente período de facturación acordado.

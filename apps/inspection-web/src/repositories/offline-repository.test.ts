@@ -1,6 +1,8 @@
 import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { inspectionDb } from '../db/inspection-db';
+import type { Asset } from '../features/assets/models';
+import type { LocalWork } from '../features/offline/models';
 import type { OutboxItem } from '../features/offline/models';
 import { offlineRepository } from './offline-repository';
 
@@ -40,7 +42,95 @@ describe('offlineRepository tenant scope', () => {
       conflicts: 1,
     });
   });
+
+  it('cuenta solo la copia local de la empresa seleccionada', async () => {
+    await inspectionDb.assets.bulkAdd([
+      asset('tenant-1', 'asset-1'),
+      asset('tenant-2', 'asset-2'),
+    ]);
+    await inspectionDb.works.bulkAdd([
+      work('tenant-1', 'work-1', 'LOCAL_ONLY'),
+      work('tenant-2', 'work-2', 'MODIFIED'),
+    ]);
+    await inspectionDb.fileReferences.bulkAdd([
+      {
+        id: 'file-1',
+        tenantId: 'tenant-1',
+        workId: 'work-1',
+        workItemId: 'item-1',
+        mimeType: 'image/jpeg',
+        originalName: 'a.jpg',
+        size: 12,
+        status: 'REMOTE_ONLY',
+      },
+      {
+        id: 'file-2',
+        tenantId: 'tenant-2',
+        workId: 'work-2',
+        workItemId: 'item-2',
+        mimeType: 'image/jpeg',
+        originalName: 'b.jpg',
+        size: 12,
+        status: 'REMOTE_ONLY',
+      },
+    ]);
+
+    await expect(offlineRepository.getStats('tenant-1')).resolves.toMatchObject(
+      {
+        assets: 1,
+        works: 1,
+        localOnly: 1,
+        modified: 0,
+        files: 1,
+      }
+    );
+    await expect(offlineRepository.getStats('tenant-2')).resolves.toMatchObject(
+      {
+        assets: 1,
+        works: 1,
+        localOnly: 0,
+        modified: 1,
+        files: 1,
+      }
+    );
+  });
 });
+
+function asset(tenantId: string, id: string): Asset {
+  return {
+    id,
+    tenantId,
+    siteId: `site-${tenantId}`,
+    code: id,
+    name: id,
+    assetTypeId: 'type-1',
+    parentId: null,
+    status: 'ACTIVE',
+  };
+}
+
+function work(
+  tenantId: string,
+  id: string,
+  syncStatus: LocalWork['syncStatus']
+): LocalWork {
+  return {
+    id,
+    tenantId,
+    siteId: `site-${tenantId}`,
+    assetId: `asset-${tenantId}`,
+    workTypeId: 'work-type-1',
+    formTemplateId: 'form-1',
+    formTemplateVersion: 1,
+    title: id,
+    executionDate: '2026-10-04',
+    responsible: 'Tester',
+    status: 'DRAFT',
+    createdAt: '2026-10-04T00:00:00Z',
+    updatedAt: '2026-10-04T00:00:00Z',
+    syncStatus,
+  };
+}
 
 function outbox(tenantId: string, id: string): OutboxItem {
   return {

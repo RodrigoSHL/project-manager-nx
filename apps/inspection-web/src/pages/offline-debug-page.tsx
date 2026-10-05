@@ -5,6 +5,12 @@ import { Button } from '../components/ui/button';
 import { useOffline } from '../features/offline/offline-context';
 import { offlineRepository } from '../repositories/offline-repository';
 import { useConnectivity } from '../hooks/use-connectivity';
+import { useAuth } from '../features/auth/auth-context';
+import { useTenantAccess } from '../features/tenants/tenant-access-context';
+import {
+  organizationSelectionStorage,
+  resolveAvailableSelection,
+} from '../features/tenants/organization-selection-storage';
 
 type Counts = {
   assets: number;
@@ -16,26 +22,65 @@ type Counts = {
   files: number;
 };
 
+const emptyCounts: Counts = {
+  assets: 0,
+  works: 0,
+  templates: 0,
+  responses: 0,
+  localOnly: 0,
+  modified: 0,
+  files: 0,
+};
+
 export function OfflineDebugPage() {
   const offline = useOffline();
   const connectivity = useConnectivity();
-  const emptyCounts = {
-    assets: 0,
-    works: 0,
-    templates: 0,
-    responses: 0,
-    localOnly: 0,
-    modified: 0,
-    files: 0,
-  };
+  const auth = useAuth();
+  const tenantAccess = useTenantAccess();
+  const userId = auth.user?.userId ?? '';
+  const [tenantId, setTenantId] = useState('');
   const [counts, setCounts] = useState<Counts>(emptyCounts);
   const [usage, setUsage] = useState<string>('No disponible');
+
   useEffect(() => {
-    void offlineRepository.getStats().then(setCounts);
+    setTenantId((current) =>
+      resolveAvailableSelection(
+        tenantAccess.accessibleTenants,
+        current,
+        organizationSelectionStorage.getTenantId(userId)
+      )
+    );
+  }, [tenantAccess.accessibleTenants, userId]);
+
+  useEffect(() => {
+    if (!tenantId) {
+      setCounts(emptyCounts);
+      return;
+    }
+    let active = true;
+    setCounts(emptyCounts);
+    void offlineRepository.getStats(tenantId).then((stats) => {
+      if (active) setCounts(stats);
+    });
+    return () => {
+      active = false;
+    };
+  }, [tenantId, offline.offlineSites, offline.pendingSummary]);
+
+  useEffect(() => {
     void navigator.storage
       ?.estimate()
       .then((value) => setUsage(formatBytes(value.usage ?? 0)));
-  }, [offline.offlineSites, offline.pendingSummary]);
+  }, []);
+
+  const downloadedSites = offline.offlineSites.filter(
+    (item) => item.tenantId === tenantId
+  );
+
+  function handleTenantChange(nextTenantId: string) {
+    organizationSelectionStorage.rememberTenant(userId, nextTenantId);
+    setTenantId(nextTenantId);
+  }
 
   async function clear() {
     if (
@@ -54,6 +99,22 @@ export function OfflineDebugPage() {
         title="Almacenamiento local"
         description="Diagnóstico del contenido guardado en IndexedDB para trabajo sin conexión."
       />
+      <section className="mb-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <label className="text-sm font-medium text-slate-700">
+          Tenant / Empresa
+          <select
+            value={tenantId}
+            onChange={(event) => handleTenantChange(event.target.value)}
+            className="mt-2 block h-11 w-full max-w-md rounded-lg border border-slate-300 bg-white px-3 text-slate-900"
+          >
+            {tenantAccess.accessibleTenants.map((tenant) => (
+              <option key={tenant.id} value={tenant.id}>
+                {tenant.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </section>
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Metric label="Activos" value={counts.assets} />
         <Metric label="Trabajos" value={counts.works} />
@@ -99,8 +160,8 @@ export function OfflineDebugPage() {
           </p>
         ) : null}
         <div className="mt-5 divide-y divide-slate-100 rounded-lg border border-slate-200">
-          {offline.offlineSites.length ? (
-            offline.offlineSites.map((item) => (
+          {downloadedSites.length ? (
+            downloadedSites.map((item) => (
               <div
                 key={item.id}
                 className="flex flex-wrap justify-between gap-2 p-3 text-sm"
@@ -121,7 +182,7 @@ export function OfflineDebugPage() {
             ))
           ) : (
             <p className="p-4 text-sm text-slate-500">
-              Todavía no hay sitios descargados.
+              No hay sitios descargados para esta empresa.
             </p>
           )}
         </div>

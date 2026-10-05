@@ -42,7 +42,7 @@ export const offlineRepository = {
     await inspectionDb.delete();
     await inspectionDb.open();
   },
-  async getStats() {
+  async getStats(tenantId: string) {
     const [
       assets,
       works,
@@ -58,35 +58,43 @@ export const offlineRepository = {
       modifiedTasks,
       files,
     ] = await Promise.all([
-      inspectionDb.assets.count(),
-      inspectionDb.works.count(),
-      inspectionDb.formTemplates.count(),
-      inspectionDb.conceptResponses.count(),
+      inspectionDb.assets.where('tenantId').equals(tenantId).count(),
+      inspectionDb.works.where('tenantId').equals(tenantId).count(),
+      inspectionDb.formTemplates.where('tenantId').equals(tenantId).count(),
+      inspectionDb.conceptResponses.where('tenantId').equals(tenantId).count(),
       inspectionDb.works
-        .filter((item) => item.syncStatus === 'LOCAL_ONLY')
+        .where('[tenantId+syncStatus]')
+        .equals([tenantId, 'LOCAL_ONLY'])
         .count(),
       inspectionDb.works
-        .filter((item) => item.syncStatus === 'MODIFIED')
+        .where('[tenantId+syncStatus]')
+        .equals([tenantId, 'MODIFIED'])
         .count(),
       inspectionDb.conceptResponses
-        .filter((item) => item.syncStatus === 'LOCAL_ONLY')
+        .where('[tenantId+syncStatus]')
+        .equals([tenantId, 'LOCAL_ONLY'])
         .count(),
       inspectionDb.conceptResponses
-        .filter((item) => item.syncStatus === 'MODIFIED')
+        .where('[tenantId+syncStatus]')
+        .equals([tenantId, 'MODIFIED'])
         .count(),
       inspectionDb.annotations
-        .filter((item) => item.syncStatus === 'LOCAL_ONLY')
+        .where('[tenantId+syncStatus]')
+        .equals([tenantId, 'LOCAL_ONLY'])
         .count(),
       inspectionDb.annotations
-        .filter((item) => item.syncStatus === 'MODIFIED')
+        .where('[tenantId+syncStatus]')
+        .equals([tenantId, 'MODIFIED'])
         .count(),
       inspectionDb.taskCompletions
-        .filter((item) => item.syncStatus === 'LOCAL_ONLY')
+        .where('[tenantId+syncStatus]')
+        .equals([tenantId, 'LOCAL_ONLY'])
         .count(),
       inspectionDb.taskCompletions
-        .filter((item) => item.syncStatus === 'MODIFIED')
+        .where('[tenantId+syncStatus]')
+        .equals([tenantId, 'MODIFIED'])
         .count(),
-      inspectionDb.fileReferences.count(),
+      inspectionDb.fileReferences.where('tenantId').equals(tenantId).count(),
     ]);
     return {
       assets,

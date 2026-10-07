@@ -30,6 +30,7 @@ const emptyPendingSummary: PendingSyncSummary = {
   responses: 0,
   taskCompletions: 0,
   annotations: 0,
+  photos: 0,
   items: [],
 };
 

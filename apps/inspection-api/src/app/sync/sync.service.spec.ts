@@ -94,6 +94,11 @@ describe('SyncService idempotency', () => {
       sequence: 1,
       payload: { tenantId },
     });
+    // The selected sequence is cast to text; ordering by its output alias
+    // would sort 1, 10, 2 and break the client's sequence validation.
+    expect(query.mock.calls[1][0]).toContain(
+      'ORDER BY "server_changes"."sequence" ASC'
+    );
   });
 
   it('rejects a pull scope containing a site from another tenant', async () => {
@@ -113,6 +118,64 @@ describe('SyncService idempotency', () => {
       })
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(query).toHaveBeenCalledTimes(1);
+  });
+
+  it('maps catalog sort_order to order without changing finding or snapshot fields', async () => {
+    const entityTypes = [
+      'FORM_SECTION',
+      'FORM_ITEM',
+      'CONCEPT_OPTION',
+      'SEVERITY_LEVEL',
+      'FINDING',
+      'WORK',
+    ];
+    const rows = entityTypes.map((entityType, index) => ({
+      sequence: String(index + 1),
+      entity_type: entityType,
+      entity_id: workId,
+      operation: 'UPDATE',
+      changed_at: '2026-10-05T12:00:00Z',
+      payload:
+        entityType === 'WORK'
+          ? {
+              id: workId,
+              tenant_id: tenantId,
+              form_snapshot: { sections: [{ order: 3 }] },
+            }
+          : { id: workId, tenant_id: tenantId, sort_order: index + 1 },
+    }));
+    const query = jest
+      .fn()
+      .mockResolvedValueOnce([{ sequence: '6' }])
+      .mockResolvedValueOnce(rows);
+    const service = new SyncService(
+      { query } as unknown as DataSource,
+      {} as SyncWorkProcessor,
+      {} as SyncChangeParser,
+      {} as Repository<SyncOperationEntity>
+    );
+    const result = await service.pull(tenantId, {
+      checkpoint: 0,
+      deviceId,
+      siteIds: [],
+    });
+    result.changes.slice(0, 4).forEach((change, index) => {
+      expect(change.payload).toEqual({
+        id: workId,
+        tenantId,
+        order: index + 1,
+      });
+    });
+    expect(result.changes[4].payload).toEqual({
+      id: workId,
+      tenantId,
+      sortOrder: 5,
+    });
+    expect(result.changes[5].payload).toEqual({
+      id: workId,
+      tenantId,
+      formSnapshot: { sections: [{ order: 3 }] },
+    });
   });
 });
 

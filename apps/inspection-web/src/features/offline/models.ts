@@ -54,7 +54,7 @@ export interface PendingChangeItem {
   id: string;
   tenantId: string;
   workId: string;
-  kind: PendingChangeKind;
+  kind: PendingChangeKind | 'PHOTO';
   label: string;
   syncStatus: Exclude<LocalSyncStatus, 'SYNCED'>;
   updatedAt: string;
@@ -73,6 +73,7 @@ export interface PendingSyncSummary {
   responses: number;
   taskCompletions: number;
   annotations: number;
+  photos: number;
   items: PendingChangeItem[];
 }
 
@@ -196,7 +197,16 @@ export interface LocalFileReference {
   mimeType: string;
   originalName: string;
   size: number;
-  status: 'REMOTE_ONLY' | 'LOCAL_ONLY' | 'PENDING_UPLOAD';
+  status: 'REMOTE_ONLY' | 'LOCAL_ONLY' | 'PENDING_UPLOAD' | 'ERROR';
+  createdAt?: string;
+  updatedAt?: string;
+  attempts?: number;
+  lastError?: string;
+}
+
+export interface LocalFileBlob {
+  id: string;
+  blob: Blob;
 }
 
 export type LocalWorkTypeConfiguration = AssetWorkTypeConfiguration & {

@@ -40,7 +40,10 @@ const storedFile = {
 describe('FilesApiService Jira attachments', () => {
   let service: FilesApiService;
   let projectApi: { findTicket: jest.Mock };
-  let projectAccess: { assertProjectAccess: jest.Mock; assertProjectWriteAccess: jest.Mock };
+  let projectAccess: {
+    assertProjectAccess: jest.Mock;
+    assertProjectWriteAccess: jest.Mock;
+  };
   let inspectionApi: { hasTenantAccess: jest.Mock; getWork: jest.Mock };
   let fetchMock: jest.MockedFunction<typeof fetch>;
 
@@ -161,12 +164,18 @@ describe('FilesApiService Jira attachments', () => {
       new ForbiddenException('Workspace role cannot modify project tickets')
     );
 
-    await expect(service.upload(file, {
-      application: 'jira-web',
-      ownerType: 'ticket',
-      ownerId: ticketId,
-      metadata: JSON.stringify({ projectId }),
-    }, user)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.upload(
+        file,
+        {
+          application: 'jira-web',
+          ownerType: 'ticket',
+          ownerId: ticketId,
+          metadata: JSON.stringify({ projectId }),
+        },
+        user
+      )
+    ).rejects.toBeInstanceOf(ForbiddenException);
 
     expect(projectApi.findTicket).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
@@ -305,12 +314,16 @@ describe('FilesApiService Jira attachments', () => {
   });
 
   it('rejects a viewer deleting a Jira attachment', async () => {
-    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify(storedFile), { status: 200 }));
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(storedFile), { status: 200 })
+    );
     projectAccess.assertProjectWriteAccess.mockRejectedValueOnce(
       new ForbiddenException('Workspace role cannot modify project tickets')
     );
 
-    await expect(service.remove(storedFile.id, user)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(service.remove(storedFile.id, user)).rejects.toBeInstanceOf(
+      ForbiddenException
+    );
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -432,6 +445,140 @@ describe('FilesApiService Jira attachments', () => {
       )
     ).rejects.toBeInstanceOf(ForbiddenException);
 
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('accepts an offline photo captured before a work was finished', async () => {
+    inspectionApi.getWork.mockResolvedValue({
+      work: { status: 'FINISHED', updatedAt: '2026-10-04T15:00:00.000Z' },
+      snapshot: { sections: [{ items: [{ id: formItemId }] }] },
+    });
+    fetchMock
+      .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: 'uploaded-photo' }), { status: 201 })
+      );
+
+    await expect(
+      service.upload(
+        { ...file, mimetype: 'image/jpeg', originalname: 'equipo.jpg' },
+        {
+          application: 'inspection-web',
+          ownerType: 'work',
+          ownerId: workId,
+          metadata: JSON.stringify({
+            category: 'work-item-photo',
+            tenantId,
+            formItemId,
+            clientPhotoId: '4722dc92-daf4-4e1a-8f9c-04c53b23a284',
+            capturedAt: '2026-10-04T14:00:00.000Z',
+          }),
+        },
+        user
+      )
+    ).resolves.toEqual({ id: 'uploaded-photo' });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects an offline photo captured after the work was finished', async () => {
+    inspectionApi.getWork.mockResolvedValue({
+      work: { status: 'FINISHED', updatedAt: '2026-10-04T15:00:00.000Z' },
+      snapshot: { sections: [{ items: [{ id: formItemId }] }] },
+    });
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify([]), { status: 200 })
+    );
+
+    await expect(
+      service.upload(
+        { ...file, mimetype: 'image/jpeg', originalname: 'equipo.jpg' },
+        {
+          application: 'inspection-web',
+          ownerType: 'work',
+          ownerId: workId,
+          metadata: JSON.stringify({
+            category: 'work-item-photo',
+            tenantId,
+            formItemId,
+            clientPhotoId: '4722dc92-daf4-4e1a-8f9c-04c53b23a284',
+            capturedAt: '2026-10-04T16:00:00.000Z',
+          }),
+        },
+        user
+      )
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns an existing offline photo instead of uploading it twice', async () => {
+    inspectionApi.getWork.mockResolvedValue({
+      work: { status: 'REVIEWED' },
+      snapshot: { sections: [{ items: [{ id: formItemId }] }] },
+    });
+    const existing = {
+      id: 'uploaded-photo',
+      application: 'inspection-web',
+      ownerType: 'work',
+      ownerId: workId,
+      originalName: 'equipo.jpg',
+      mimeType: 'image/jpeg',
+      size: 3,
+      metadata: {
+        category: 'work-item-photo',
+        tenantId,
+        formItemId,
+        clientPhotoId: '4722dc92-daf4-4e1a-8f9c-04c53b23a284',
+      },
+    };
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify([existing]), { status: 200 })
+    );
+
+    await expect(
+      service.upload(
+        { ...file, mimetype: 'image/jpeg', originalname: 'equipo.jpg' },
+        {
+          application: 'inspection-web',
+          ownerType: 'work',
+          ownerId: workId,
+          metadata: JSON.stringify({
+            category: 'work-item-photo',
+            tenantId,
+            formItemId,
+            clientPhotoId: existing.metadata.clientPhotoId,
+            capturedAt: '2026-10-04T14:00:00.000Z',
+          }),
+        },
+        user
+      )
+    ).resolves.toEqual(existing);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not expose a duplicate upload shortcut to a read-only tenant member', async () => {
+    inspectionApi.hasTenantAccess.mockResolvedValueOnce({
+      hasAccess: true,
+      role: 'VIEWER',
+    });
+
+    await expect(
+      service.upload(
+        { ...file, mimetype: 'image/jpeg', originalname: 'equipo.jpg' },
+        {
+          application: 'inspection-web',
+          ownerType: 'work',
+          ownerId: workId,
+          metadata: JSON.stringify({
+            category: 'work-item-photo',
+            tenantId,
+            formItemId,
+            clientPhotoId: '4722dc92-daf4-4e1a-8f9c-04c53b23a284',
+            capturedAt: '2026-10-04T14:00:00.000Z',
+          }),
+        },
+        user
+      )
+    ).rejects.toBeInstanceOf(ForbiddenException);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

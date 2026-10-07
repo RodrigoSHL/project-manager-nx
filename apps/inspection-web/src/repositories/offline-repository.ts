@@ -112,7 +112,7 @@ export const offlineRepository = {
     };
   },
   async getPendingSummary(tenantId?: string): Promise<PendingSyncSummary> {
-    const [outbox, snapshots] = await Promise.all([
+    const [outbox, snapshots, photos] = await Promise.all([
       (tenantId
         ? inspectionDb.outbox.where('tenantId').equals(tenantId)
         : inspectionDb.outbox.toCollection()
@@ -127,6 +127,12 @@ export const offlineRepository = {
       tenantId
         ? inspectionDb.snapshots.where('tenantId').equals(tenantId).toArray()
         : inspectionDb.snapshots.toArray(),
+      (tenantId
+        ? inspectionDb.fileReferences.where('tenantId').equals(tenantId)
+        : inspectionDb.fileReferences.toCollection()
+      )
+        .filter((item) => item.status !== 'REMOTE_ONLY')
+        .toArray(),
     ]);
     const itemLabels = new Map(
       snapshots.flatMap((snapshot) =>
@@ -142,8 +148,8 @@ export const offlineRepository = {
         )
       )
     );
-    const items: PendingChangeItem[] = outbox
-      .map((item) => {
+    const items: PendingChangeItem[] = [
+      ...outbox.map((item) => {
         const payload = item.payload;
         const workId =
           item.entityType === 'WORK'
@@ -179,8 +185,28 @@ export const offlineRepository = {
           attempts: item.attempts,
           lastError: item.lastError,
         };
-      })
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+      }),
+      ...photos.map(
+        (photo): PendingChangeItem => ({
+          id: photo.id,
+          tenantId: photo.tenantId,
+          workId: photo.workId,
+          kind: 'PHOTO',
+          label: photo.originalName,
+          syncStatus: 'LOCAL_ONLY',
+          updatedAt: photo.updatedAt ?? photo.createdAt ?? '',
+          operation: 'CREATE',
+          status:
+            photo.status === 'ERROR'
+              ? 'ERROR'
+              : photo.status === 'PENDING_UPLOAD'
+              ? 'SENDING'
+              : 'PENDING',
+          attempts: photo.attempts ?? 0,
+          lastError: photo.lastError,
+        })
+      ),
+    ].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     return {
       total: items.length,
       localOnly: items.filter((item) => item.operation === 'CREATE').length,
@@ -195,6 +221,7 @@ export const offlineRepository = {
       taskCompletions: items.filter((item) => item.kind === 'TASK_COMPLETION')
         .length,
       annotations: items.filter((item) => item.kind === 'ANNOTATION').length,
+      photos: photos.length,
       items,
     };
   },

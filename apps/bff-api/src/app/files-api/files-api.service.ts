@@ -134,8 +134,19 @@ export class FilesApiService {
     if (inspectionPhoto) {
       const tenantId = String(metadata.tenantId || '');
       const formItemId = String(metadata.formItemId || '');
+      const clientPhotoId = String(metadata.clientPhotoId || '');
+      const capturedAt = String(metadata.capturedAt || '');
       this.assertUuid(tenantId, 'metadata.tenantId');
       this.assertUuid(formItemId, 'metadata.formItemId');
+      if (clientPhotoId) {
+        this.assertUuid(clientPhotoId, 'metadata.clientPhotoId');
+        if (
+          !Number.isFinite(Date.parse(capturedAt)) ||
+          Date.parse(capturedAt) > Date.now() + 5 * 60 * 1000
+        ) {
+          throw new BadRequestException('metadata.capturedAt must be a date');
+        }
+      }
       if (category !== WORK_PHOTO_CATEGORY) {
         throw new BadRequestException(
           'metadata.category must be work-item-photo'
@@ -146,12 +157,36 @@ export class FilesApiService {
           'Only JPG, PNG and WebP images are allowed'
         );
       }
+      if (clientPhotoId) {
+        await this.authorizeInspectionWork(
+          tenantId,
+          body.ownerId,
+          user,
+          formItemId,
+          true,
+          undefined,
+          true
+        );
+        const existing = await this.json<FileRecord[]>(
+          `/files?application=${INSPECTION_APPLICATION}&ownerType=${WORK_OWNER_TYPE}&ownerId=${encodeURIComponent(
+            body.ownerId
+          )}`
+        );
+        const duplicate = existing.find(
+          (stored) =>
+            this.isInspectionWorkPhoto(stored) &&
+            stored.metadata?.tenantId === tenantId &&
+            stored.metadata?.clientPhotoId === clientPhotoId
+        );
+        if (duplicate) return duplicate;
+      }
       await this.authorizeInspectionWork(
         tenantId,
         body.ownerId,
         user,
         formItemId,
-        true
+        true,
+        clientPhotoId ? capturedAt : undefined
       );
       metadata.category = WORK_PHOTO_CATEGORY;
       metadata.tenantId = tenantId;
@@ -332,7 +367,12 @@ export class FilesApiService {
     if (this.isTicketAttachment(file)) {
       const projectId = String(file.metadata?.projectId || '');
       this.assertUuid(projectId, 'metadata.projectId');
-      await this.authorizeJiraTicket(projectId, String(file.ownerId), user, requireEditable);
+      await this.authorizeJiraTicket(
+        projectId,
+        String(file.ownerId),
+        user,
+        requireEditable
+      );
       return;
     }
     if (this.isTravelerDocument(file)) {
@@ -409,7 +449,9 @@ export class FilesApiService {
     workId: string,
     user: AuthenticatedUser,
     formItemId?: string,
-    requireEditable = false
+    requireEditable = false,
+    offlineCapturedAt?: string,
+    skipClosedStatusCheck = false
   ) {
     if (!user.roles.includes(UserRole.ADMIN)) {
       const { hasAccess, role } = await this.inspectionApi.hasTenantAccess(
@@ -422,7 +464,7 @@ export class FilesApiService {
       }
     }
     const result = (await this.inspectionApi.getWork(tenantId, workId)) as {
-      work: { status: string };
+      work: { status: string; updatedAt?: string };
       snapshot: { sections: Array<{ items: Array<{ id: string }> }> };
     };
     if (
@@ -435,7 +477,13 @@ export class FilesApiService {
     }
     if (
       requireEditable &&
-      ['FINISHED', 'REVIEWED'].includes(result.work.status)
+      !skipClosedStatusCheck &&
+      (result.work.status === 'REVIEWED' ||
+        (result.work.status === 'FINISHED' &&
+          (!offlineCapturedAt ||
+            !Number.isFinite(Date.parse(result.work.updatedAt || '')) ||
+            Date.parse(offlineCapturedAt) >
+              Date.parse(result.work.updatedAt || '') + 5 * 60 * 1000)))
     ) {
       throw new ForbiddenException('Closed works cannot modify photos');
     }
@@ -447,7 +495,8 @@ export class FilesApiService {
     user: AuthenticatedUser,
     requireEditable = false
   ): Promise<void> {
-    if (requireEditable) await this.projectAccess.assertProjectWriteAccess(projectId, user);
+    if (requireEditable)
+      await this.projectAccess.assertProjectWriteAccess(projectId, user);
     else await this.projectAccess.assertProjectAccess(projectId, user);
     await this.projectApi.findTicket(projectId, ticketId);
   }

@@ -125,7 +125,7 @@ export class SyncService {
          AND "sequence" > $2
          AND "sequence" <= $3
          AND ("site_id" IS NULL OR "site_id" = ANY($4::uuid[]))
-       ORDER BY "sequence" ASC
+       ORDER BY "server_changes"."sequence" ASC
        LIMIT $5`,
       [
         tenantId,
@@ -154,7 +154,7 @@ export class SyncService {
         ...(row.operation === 'DELETE'
           ? {}
           : {
-              payload: this.camelize(row.payload) as Record<string, unknown>,
+              payload: this.pullPayload(row.entity_type, row.payload),
             }),
         serverUpdatedAt: new Date(row.changed_at).toISOString(),
       })),
@@ -322,6 +322,24 @@ export class SyncService {
       throw new Error('Server change sequence exceeds the supported range');
     }
     return sequence;
+  }
+
+  private pullPayload(entityType: string, value: Record<string, unknown>) {
+    const payload = this.camelize(value) as Record<string, unknown>;
+    if (
+      [
+        'FORM_SECTION',
+        'FORM_ITEM',
+        'CONCEPT_OPTION',
+        'SEVERITY_LEVEL',
+      ].includes(entityType) &&
+      'sortOrder' in payload
+    ) {
+      const { sortOrder, ...fields } = payload;
+      return { ...fields, order: sortOrder };
+    }
+    // Findings use sortOrder; nested work snapshots already use domain names.
+    return payload;
   }
 
   private camelize(value: unknown): unknown {

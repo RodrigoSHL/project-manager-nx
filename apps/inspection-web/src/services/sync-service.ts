@@ -9,6 +9,12 @@ import type {
 import { outboxRepository } from '../repositories/outbox-repository';
 import { applyRemoteChanges } from './apply-remote-changes';
 import { checkApiReachability } from './connectivity-service';
+import { localPhotoRepository } from '../repositories/local-photo-repository';
+import {
+  listWorkPhotos,
+  uploadWorkPhoto,
+} from '../features/works/work-photo-api';
+import type { WorkItemPhoto } from '../features/works/models';
 
 export const SYNC_BATCH_SIZE = 50;
 
@@ -90,6 +96,16 @@ export class SyncService {
         checkpoint: await this.latestCheckpoint(tenantId, deviceId),
       };
     }
+    const photoPush = await this.pushPendingPhotos(tenantId, onProgress);
+    if (photoPush.failed > 0) {
+      return {
+        pushed: push.synced + photoPush.synced,
+        pulled: 0,
+        conflicts: 0,
+        errors: photoPush.failed,
+        checkpoint: await this.latestCheckpoint(tenantId, deviceId),
+      };
+    }
 
     let pulled = 0;
     let conflicts = 0;
@@ -134,12 +150,70 @@ export class SyncService {
     await this.finalizeAcknowledged(tenantId);
 
     return {
-      pushed: push.synced,
+      pushed: push.synced + photoPush.synced,
       pulled,
       conflicts,
       errors: 0,
       checkpoint,
     };
+  }
+
+  async pushPendingPhotos(
+    tenantId: string,
+    onProgress?: (progress: SyncProgress) => void
+  ): Promise<PushSummary> {
+    const pending = await localPhotoRepository.retryable(tenantId);
+    const total = pending.length;
+    let processed = 0;
+    let synced = 0;
+    let failed = 0;
+    const remoteByWork = new Map<string, WorkItemPhoto[]>();
+    onProgress?.({ phase: 'PUSHING', processed, total });
+
+    for (const reference of pending) {
+      await localPhotoRepository.markUploading(reference.id);
+      try {
+        let remote = remoteByWork.get(reference.workId);
+        if (!remote) {
+          remote = await listWorkPhotos(tenantId, reference.workId);
+          remoteByWork.set(reference.workId, remote);
+        }
+        let uploaded = remote.find(
+          (photo) => photo.metadata.clientPhotoId === reference.id
+        );
+        if (!uploaded) {
+          const stored = await localPhotoRepository.blob(reference.id);
+          if (!stored)
+            throw new Error(
+              'El archivo local de esta foto no está disponible.'
+            );
+          uploaded = await uploadWorkPhoto(
+            tenantId,
+            reference.workId,
+            reference.workItemId,
+            new File([stored.blob], reference.originalName, {
+              type: reference.mimeType,
+            }),
+            {
+              clientPhotoId: reference.id,
+              capturedAt: reference.createdAt ?? new Date().toISOString(),
+            }
+          );
+          remote.push(uploaded);
+        }
+        await localPhotoRepository.markUploaded(reference.id, uploaded.id);
+        synced += 1;
+      } catch (error) {
+        await localPhotoRepository.markError(
+          reference.id,
+          error instanceof Error ? error.message : 'No se pudo subir la foto.'
+        );
+        failed += 1;
+      }
+      processed += 1;
+      onProgress?.({ phase: 'PUSHING', processed, total });
+    }
+    return { total, synced, failed };
   }
 
   createBatches(items: OutboxItem[]) {

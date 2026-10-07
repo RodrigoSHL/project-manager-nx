@@ -24,6 +24,7 @@ import {
   deleteWorkPhoto,
   listWorkPhotos,
   loadWorkPhotoUrl,
+  PhotoNetworkError,
   uploadWorkPhoto,
 } from '../work-photo-api';
 import {
@@ -31,6 +32,10 @@ import {
   type WorkItemPhotoPreview,
 } from './work-item-additional-info';
 import { useOffline } from '../../offline/offline-context';
+import {
+  localPhotoAsWorkPhoto,
+  localPhotoRepository,
+} from '../../../repositories/local-photo-repository';
 
 type WorkExecutionFormProps = {
   work: Work;
@@ -59,7 +64,7 @@ export function WorkExecutionForm({
   onStart,
   onFinish,
 }: WorkExecutionFormProps) {
-  const { mode } = useOffline();
+  const { mode, refresh: refreshOfflineState } = useOffline();
   const localMode = mode === 'LOCAL';
   const [values, setValues] = useState<Record<string, WorkItemValue>>({});
   const [notice, setNotice] = useState<string | null>(null);
@@ -118,41 +123,116 @@ export function WorkExecutionForm({
   }, [annotations, responses, taskCompletions, work.id]);
 
   useEffect(() => {
-    if (localMode) {
-      setPhotos([]);
-      setPhotoErrors({});
-      return;
-    }
     let cancelled = false;
     const workPreviewUrls = new Set<string>();
     previewUrls.current = workPreviewUrls;
+    setPhotos([]);
     async function loadPhotos() {
       try {
-        const records = await listWorkPhotos(work.tenantId, work.id);
-        const loaded = await Promise.allSettled(
-          records.map(async (photo) => ({
-            ...photo,
-            previewUrl: await loadWorkPhotoUrl(photo.id),
-          }))
+        const references = await localPhotoRepository.list(
+          work.tenantId,
+          work.id
         );
-        if (cancelled) {
-          loaded.forEach((result) => {
-            if (result.status === 'fulfilled') {
-              URL.revokeObjectURL(result.value.previewUrl);
+        let remote: Awaited<ReturnType<typeof listWorkPhotos>> = [];
+        let remoteError = false;
+        if (!localMode) {
+          try {
+            remote = await listWorkPhotos(work.tenantId, work.id);
+          } catch {
+            remoteError = true;
+          }
+        }
+        const locallyLoaded = await Promise.allSettled(
+          references.map(async (reference) => {
+            const stored = await localPhotoRepository.blob(reference.id);
+            if (!stored) return null;
+            const alreadyUploaded = remote.find(
+              (photo) => photo.metadata.clientPhotoId === reference.id
+            );
+            if (alreadyUploaded && reference.status !== 'REMOTE_ONLY') {
+              await localPhotoRepository.markUploaded(
+                reference.id,
+                alreadyUploaded.id
+              );
             }
-          });
+            const currentReference = alreadyUploaded
+              ? {
+                  ...reference,
+                  remoteFileId: alreadyUploaded.id,
+                  status: 'REMOTE_ONLY' as const,
+                }
+              : reference;
+            return {
+              ...localPhotoAsWorkPhoto(currentReference),
+              previewUrl: URL.createObjectURL(stored.blob),
+              localId: reference.id,
+              canDelete:
+                currentReference.status === 'PENDING_UPLOAD'
+                  ? false
+                  : currentReference.status !== 'REMOTE_ONLY' || !localMode,
+              pendingUpload: currentReference.status !== 'REMOTE_ONLY',
+            } satisfies WorkItemPhotoPreview;
+          })
+        );
+        const allLocalPhotos = locallyLoaded.flatMap((result) =>
+          result.status === 'fulfilled' && result.value ? [result.value] : []
+        );
+        const localPhotos = allLocalPhotos.filter((photo, index) => {
+          const first = allLocalPhotos.findIndex(
+            (candidate) => candidate.id === photo.id
+          );
+          if (first === index) return true;
+          URL.revokeObjectURL(photo.previewUrl);
+          return false;
+        });
+        const loadedIds = new Set(localPhotos.map((photo) => photo.id));
+        const remotelyLoaded = await Promise.allSettled(
+          remote
+            .filter((photo) => !loadedIds.has(photo.id))
+            .map(async (photo) => ({
+              ...photo,
+              previewUrl: await loadWorkPhotoUrl(photo.id),
+              canDelete: true,
+            }))
+        );
+        const loaded = [
+          ...localPhotos,
+          ...remotelyLoaded.flatMap((result) =>
+            result.status === 'fulfilled' ? [result.value] : []
+          ),
+        ];
+        if (cancelled) {
+          loaded.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
           return;
         }
-        const available = loaded.flatMap((result) =>
-          result.status === 'fulfilled' ? [result.value] : []
-        );
+        const available = loaded;
         available.forEach((photo) => workPreviewUrls.add(photo.previewUrl));
-        setPhotos(available);
-        if (available.length !== records.length) {
+        setPhotos((current) => {
+          const availableIds = new Set(available.map((photo) => photo.id));
+          return [
+            ...available,
+            ...current.filter(
+              (photo) =>
+                photo.ownerId === work.id &&
+                workPreviewUrls.has(photo.previewUrl) &&
+                !availableIds.has(photo.id)
+            ),
+          ];
+        });
+        if (
+          remoteError ||
+          [...locallyLoaded, ...remotelyLoaded].some(
+            (result) => result.status === 'rejected'
+          ) ||
+          (localMode && references.length !== localPhotos.length)
+        ) {
           setPhotoErrors((current) => ({
             ...current,
-            general: 'Algunas fotografías no se pudieron cargar.',
+            general:
+              'Algunas fotografías no están disponibles en este dispositivo.',
           }));
+        } else {
+          setPhotoErrors((current) => ({ ...current, general: '' }));
         }
       } catch (error) {
         if (!cancelled) {
@@ -185,15 +265,62 @@ export function WorkExecutionForm({
     setPhotoErrors((current) => ({ ...current, [itemId]: '' }));
     try {
       for (const file of files) {
-        const photo = await uploadWorkPhoto(
-          work.tenantId,
-          work.id,
-          itemId,
-          file
-        );
-        const previewUrl = await loadWorkPhotoUrl(photo.id);
+        const identity = {
+          id: crypto.randomUUID(),
+          capturedAt: new Date().toISOString(),
+        };
+        async function saveLocally() {
+          const reference = await localPhotoRepository.save(
+            work.tenantId,
+            work.id,
+            itemId,
+            file,
+            identity
+          );
+          const previewUrl = URL.createObjectURL(file);
+          previewUrls.current.add(previewUrl);
+          setPhotos((current) => [
+            ...current,
+            {
+              ...localPhotoAsWorkPhoto(reference),
+              previewUrl,
+              localId: reference.id,
+              canDelete: true,
+              pendingUpload: true,
+            },
+          ]);
+          await refreshOfflineState().catch(() => undefined);
+        }
+        if (localMode) {
+          await saveLocally();
+          continue;
+        }
+        let photo;
+        try {
+          photo = await uploadWorkPhoto(work.tenantId, work.id, itemId, file, {
+            clientPhotoId: identity.id,
+            capturedAt: identity.capturedAt,
+          });
+        } catch (error) {
+          if (!(error instanceof PhotoNetworkError)) throw error;
+          await saveLocally();
+          continue;
+        }
+        const previewUrl = URL.createObjectURL(file);
         previewUrls.current.add(previewUrl);
-        setPhotos((current) => [...current, { ...photo, previewUrl }]);
+        setPhotos((current) => [
+          ...current,
+          { ...photo, previewUrl, canDelete: true },
+        ]);
+        try {
+          await localPhotoRepository.cacheRemote(photo, file);
+        } catch {
+          setPhotoErrors((current) => ({
+            ...current,
+            [itemId]:
+              'La foto se subió, pero no quedó disponible sin conexión en este dispositivo.',
+          }));
+        }
       }
     } catch (error) {
       setPhotoErrors((current) => ({
@@ -210,7 +337,30 @@ export function WorkExecutionForm({
     setPhotoBusyItems((current) => [...new Set([...current, itemId])]);
     setPhotoErrors((current) => ({ ...current, [itemId]: '' }));
     try {
-      await deleteWorkPhoto(photo.id);
+      const localReference = photo.localId
+        ? (await localPhotoRepository.list(work.tenantId, work.id)).find(
+            (item) => item.id === photo.localId
+          )
+        : undefined;
+      if (localReference && localReference.status !== 'REMOTE_ONLY') {
+        await localPhotoRepository.removeLocal(
+          work.tenantId,
+          work.id,
+          localReference.id
+        );
+        await refreshOfflineState();
+      } else if (localMode) {
+        throw new Error(
+          'La foto sincronizada solo se puede eliminar con conexión.'
+        );
+      } else {
+        await deleteWorkPhoto(photo.id);
+        await localPhotoRepository.removeRemoteCopy(
+          work.tenantId,
+          work.id,
+          photo.id
+        );
+      }
       URL.revokeObjectURL(photo.previewUrl);
       previewUrls.current.delete(photo.previewUrl);
       setPhotos((current) => current.filter((item) => item.id !== photo.id));
@@ -323,7 +473,6 @@ export function WorkExecutionForm({
               (photo) => photo.metadata.formItemId === item.id
             )}
             readonly={readonly}
-            photosDisabled={localMode}
             busy={photoBusyItems.includes(item.id)}
             error={photoErrors[item.id]}
             onCommentChange={(comment) => update(item.id, { comment })}
@@ -469,7 +618,6 @@ export function WorkExecutionForm({
             (photo) => photo.metadata.formItemId === item.id
           )}
           readonly={readonly}
-          photosDisabled={localMode}
           busy={photoBusyItems.includes(item.id)}
           error={photoErrors[item.id]}
           onCommentChange={(comment) => update(item.id, { comment })}

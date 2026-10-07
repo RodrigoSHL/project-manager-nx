@@ -94,6 +94,39 @@ describe('offlineRepository tenant scope', () => {
       }
     );
   });
+
+  it('muestra las fotos pendientes solamente en la empresa correspondiente', async () => {
+    await inspectionDb.fileReferences.bulkAdd([
+      {
+        id: 'local-photo-1',
+        tenantId: 'tenant-1',
+        workId: 'work-1',
+        workItemId: 'item-1',
+        mimeType: 'image/jpeg',
+        originalName: 'equipo.jpg',
+        size: 4,
+        status: 'LOCAL_ONLY',
+      },
+      {
+        id: 'local-photo-2',
+        tenantId: 'tenant-2',
+        workId: 'work-2',
+        workItemId: 'item-2',
+        mimeType: 'image/jpeg',
+        originalName: 'otro.jpg',
+        size: 4,
+        status: 'LOCAL_ONLY',
+      },
+    ]);
+
+    await expect(
+      offlineRepository.getPendingSummary('tenant-1')
+    ).resolves.toMatchObject({
+      total: 1,
+      photos: 1,
+      items: [{ id: 'local-photo-1', kind: 'PHOTO', label: 'equipo.jpg' }],
+    });
+  });
 });
 
 function asset(tenantId: string, id: string): Asset {

@@ -11,7 +11,11 @@ import type {
   OfflineCatalogBundle,
 } from '../features/offline/models';
 import { workApi } from '../features/works/work-api';
-import { listWorkPhotos } from '../features/works/work-photo-api';
+import {
+  listWorkPhotos,
+  loadWorkPhotoBlob,
+} from '../features/works/work-photo-api';
+import { localPhotoRepository } from '../repositories/local-photo-repository';
 
 export async function cacheSiteForOffline(tenantId: string, siteId: string) {
   const id = offlineSiteKey(tenantId, siteId);
@@ -70,7 +74,7 @@ export async function cacheSiteForOffline(tenantId: string, siteId: string) {
     );
     const workIds = new Set(works.map((work) => work.id));
     const photoGroups = await Promise.all(
-      works.map((work) => listWorkPhotos(tenantId, work.id).catch(() => []))
+      works.map((work) => listWorkPhotos(tenantId, work.id))
     );
     const bundle: OfflineCatalogBundle = {
       tenant,
@@ -97,7 +101,9 @@ export async function cacheSiteForOffline(tenantId: string, siteId: string) {
       findingCandidates: (workCatalog.findingCandidates ?? []).filter((item) =>
         workIds.has(item.workId)
       ),
-      findings: (workCatalog.findings ?? []).filter((item) => workIds.has(item.workId)),
+      findings: (workCatalog.findings ?? []).filter((item) =>
+        workIds.has(item.workId)
+      ),
       assetTypeConcepts,
       templates: forms.templates,
       sections: forms.sections,
@@ -118,6 +124,26 @@ export async function cacheSiteForOffline(tenantId: string, siteId: string) {
       photos: photoGroups.flat(),
     };
     await saveBundle(bundle);
+    for (const photo of bundle.photos) {
+      if (await inspectionDb.fileBlobs.get(photo.id)) continue;
+      const existingLocalCopy = await inspectionDb.fileReferences
+        .where('[tenantId+workId]')
+        .equals([tenantId, photo.ownerId])
+        .filter(
+          (item) => item.remoteFileId === photo.id && item.id !== photo.id
+        )
+        .first();
+      if (
+        existingLocalCopy &&
+        (await inspectionDb.fileBlobs.get(existingLocalCopy.id))
+      ) {
+        continue;
+      }
+      await localPhotoRepository.cacheRemote(
+        photo,
+        await loadWorkPhotoBlob(photo.id)
+      );
+    }
     const downloadedAt = new Date().toISOString();
     await inspectionDb.offlineSites.put({
       id,
@@ -209,6 +235,16 @@ async function saveBundle(bundle: OfflineCatalogBundle) {
         .where('tenantId')
         .equals(bundle.tenant.id)
         .toArray();
+      const existingFileReferences = await inspectionDb.fileReferences
+        .where('tenantId')
+        .equals(bundle.tenant.id)
+        .toArray();
+      const locallyRepresentedRemoteIds = new Set(
+        existingFileReferences
+          .filter((item) => item.id !== item.remoteFileId)
+          .map((item) => item.remoteFileId)
+          .filter((id): id is string => Boolean(id))
+      );
       await Promise.all([
         inspectionDb.workTypeConfigurations.bulkDelete(
           existingConfigurations.map((item) => item.recordId)
@@ -236,7 +272,9 @@ async function saveBundle(bundle: OfflineCatalogBundle) {
         inspectionDb.formSections.bulkPut(bundle.sections),
         inspectionDb.formItems.bulkPut(bundle.items),
         inspectionDb.snapshots.bulkPut(bundle.snapshots),
-        inspectionDb.fileReferences.bulkPut(files),
+        inspectionDb.fileReferences.bulkPut(
+          files.filter((file) => !locallyRepresentedRemoteIds.has(file.id))
+        ),
       ]);
       await putUnlessLocallyChanged(inspectionDb.works, remoteWorks);
       await putUnlessLocallyChanged(inspectionDb.conceptResponses, responses);

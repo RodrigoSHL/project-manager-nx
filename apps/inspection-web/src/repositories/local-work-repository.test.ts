@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { inspectionDb } from '../db/inspection-db';
 import { localWorkRepository } from './local-work-repository';
 import { offlineRepository } from './offline-repository';
+import { applyRemoteChanges } from '../services/apply-remote-changes';
 
 const tenantId = 'tenant-a';
 const siteId = 'site-a';
@@ -75,6 +76,68 @@ describe('localWorkRepository', () => {
   });
 
   afterEach(async () => inspectionDb.delete());
+
+  it('creates offline works in template order after Pull sends legacy sortOrder aliases', async () => {
+    const sectionRecords = [
+      { id: 'a-conclusion', title: 'Conclusión', sortOrder: 3 },
+      { id: 'b-ventilation', title: 'Ventilación', sortOrder: 2 },
+      { id: 'z-visual', title: 'Inspección Visual', sortOrder: 1 },
+    ];
+    await inspectionDb.formSections.clear();
+    await inspectionDb.formItems.clear();
+    const changes = sectionRecords.flatMap((section, index) => [
+      {
+        sequence: index * 2 + 1,
+        entityType: 'FORM_SECTION' as const,
+        entityId: section.id,
+        operation: 'CREATE' as const,
+        payload: { ...section, tenantId, formTemplateId: 'template-a' },
+        serverUpdatedAt: '2026-10-05T12:00:00Z',
+      },
+      {
+        sequence: index * 2 + 2,
+        entityType: 'FORM_ITEM' as const,
+        entityId: `item-${section.id}`,
+        operation: 'CREATE' as const,
+        payload: {
+          id: `item-${section.id}`,
+          tenantId,
+          sectionId: section.id,
+          type: 'TASK',
+          sortOrder: 1,
+          required: true,
+        },
+        serverUpdatedAt: '2026-10-05T12:00:00Z',
+      },
+    ]);
+    await applyRemoteChanges({
+      tenantId,
+      deviceId: 'device',
+      currentCheckpoint: 0,
+      response: { changes, checkpoint: 6, hasMore: false },
+    });
+    const work = await localWorkRepository.create({
+      tenantId,
+      siteId,
+      assetId,
+      workTypeId,
+      title: 'Inspección visual nueva',
+      executionDate: '2026-10-05',
+      responsible: 'Inspector',
+      status: 'DRAFT',
+    });
+    const snapshot = await inspectionDb.snapshots.get(work.id);
+    expect(
+      snapshot?.sections.map((section) => [section.title, section.order])
+    ).toEqual([
+      ['Inspección Visual', 1],
+      ['Ventilación', 2],
+      ['Conclusión', 3],
+    ]);
+    expect(snapshot?.sections.map((section) => section.items[0].order)).toEqual(
+      [1, 1, 1]
+    );
+  });
 
   it('materializa el candidato offline sin agregarlo al outbox y lo elimina al normalizar', async () => {
     await inspectionDb.concepts.update('concept-a', {

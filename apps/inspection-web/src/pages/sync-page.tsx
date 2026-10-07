@@ -16,7 +16,7 @@ import { Button } from '../components/ui/button';
 import { useConnectivity } from '../hooks/use-connectivity';
 import { useOffline } from '../features/offline/offline-context';
 import type {
-  PendingChangeKind,
+  PendingChangeItem,
   PendingSyncSummary,
 } from '../features/offline/models';
 import { useTenantAccess } from '../features/tenants/tenant-access-context';
@@ -27,11 +27,12 @@ import {
 } from '../features/tenants/organization-selection-storage';
 import { offlineRepository } from '../repositories/offline-repository';
 
-const kindLabels: Record<PendingChangeKind, string> = {
+const kindLabels: Record<PendingChangeItem['kind'], string> = {
   WORK: 'Trabajo',
   RESPONSE: 'Respuesta',
   TASK_COMPLETION: 'Tarea',
   ANNOTATION: 'Comentario',
+  PHOTO: 'Fotografía',
 };
 
 const emptyPendingSummary: PendingSyncSummary = {
@@ -43,6 +44,7 @@ const emptyPendingSummary: PendingSyncSummary = {
   responses: 0,
   taskCompletions: 0,
   annotations: 0,
+  photos: 0,
   items: [],
 };
 
@@ -222,6 +224,11 @@ export function SyncPage() {
           icon={MessageSquareText}
           label="Comentarios"
           value={pendingSummary.annotations}
+        />
+        <Metric
+          icon={Cloud}
+          label="Fotografías"
+          value={pendingSummary.photos}
         />
       </section>
 

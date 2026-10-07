@@ -71,6 +71,8 @@ export interface WorkItemPhoto {
     tenantId: string;
     formItemId: string;
     uploadedBy?: string;
+    clientPhotoId?: string;
+    capturedAt?: string;
   };
   createdAt: string;
   updatedAt: string;

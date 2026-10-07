@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
+import { repairLocalFormOrder } from './repair-local-form-order';
 import type { Asset, Site, Tenant } from '../features/assets/models';
 import type { AssetType } from '../features/asset-types/models';
 import type {
@@ -16,6 +17,7 @@ import type {
   LocalConceptResponse,
   DeviceMetadata,
   LocalFileReference,
+  LocalFileBlob,
   LocalTaskCompletion,
   LocalWork,
   LocalWorkItemAnnotation,
@@ -54,6 +56,7 @@ export class InspectionDatabase extends Dexie {
   annotations!: EntityTable<LocalWorkItemAnnotation, 'id'>;
   snapshots!: EntityTable<WorkTemplateSnapshot, 'workId'>;
   fileReferences!: EntityTable<LocalFileReference, 'id'>;
+  fileBlobs!: EntityTable<LocalFileBlob, 'id'>;
   offlineSites!: EntityTable<OfflineSiteRecord, 'id'>;
   outbox!: EntityTable<OutboxItem, 'id'>;
   deviceMetadata!: EntityTable<DeviceMetadata, 'id'>;
@@ -146,6 +149,10 @@ export class InspectionDatabase extends Dexie {
     this.version(5).stores({
       findings: 'id, tenantId, [tenantId+workId], sourceCandidateId',
     });
+    this.version(6).stores({
+      fileBlobs: 'id',
+    });
+    this.version(7).stores({}).upgrade(repairLocalFormOrder);
   }
 }
 

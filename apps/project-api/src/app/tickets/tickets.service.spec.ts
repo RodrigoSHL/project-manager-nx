@@ -1,7 +1,7 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Project } from '../projects/entities/project.entity';
 import { TeamMember } from '../projects/entities/team-member.entity';
 import { TicketSupportDetail } from '../support-details/entities/ticket-support-detail.entity';
 import { Ticket, TicketStatus, TicketType } from './entities/ticket.entity';
@@ -19,9 +19,6 @@ describe('TicketsService', () => {
     findOne: jest.fn(),
     remove: jest.fn(),
   };
-  const projectsRepository = {
-    findOne: jest.fn(),
-  };
   const supportDetailsRepository = {
     create: jest.fn(),
     save: jest.fn(),
@@ -30,6 +27,11 @@ describe('TicketsService', () => {
     findOne: jest.fn(),
   };
   const sprintsRepository = { findOne: jest.fn() };
+  const manager = {
+    query: jest.fn(),
+    getRepository: jest.fn(),
+  };
+  const dataSource = { transaction: jest.fn() };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -42,12 +44,8 @@ describe('TicketsService', () => {
           useValue: ticketsRepository,
         },
         {
-          provide: getRepositoryToken(Project),
-          useValue: projectsRepository,
-        },
-        {
-          provide: getRepositoryToken(TicketSupportDetail),
-          useValue: supportDetailsRepository,
+          provide: DataSource,
+          useValue: dataSource,
         },
         {
           provide: getRepositoryToken(TeamMember),
@@ -58,10 +56,41 @@ describe('TicketsService', () => {
     }).compile();
 
     service = module.get(TicketsService);
-    projectsRepository.findOne.mockResolvedValue({ id: 'project-1', key: 'WEB' });
+    manager.query.mockResolvedValue([{ key: 'WEB', lastTicketNumber: 1 }]);
+    manager.getRepository.mockImplementation(entity => entity === Ticket ? ticketsRepository : supportDetailsRepository);
+    dataSource.transaction.mockImplementation(callback => callback(manager));
     ticketsRepository.count.mockResolvedValue(0);
     ticketsRepository.create.mockImplementation(data => data);
     ticketsRepository.save.mockImplementation(ticket => Promise.resolve(ticket));
+    supportDetailsRepository.create.mockImplementation(data => data);
+    supportDetailsRepository.save.mockImplementation(detail => Promise.resolve(detail));
+  });
+
+  it('uses the allocated number instead of counting existing tickets', async () => {
+    manager.query.mockResolvedValue([{ key: 'SP2', lastTicketNumber: 45 }]);
+    ticketsRepository.count.mockResolvedValue(34);
+    expect(await service.create('project-1', { title: 'After deleted tickets' }))
+      .toMatchObject({ key: 'SP2-45' });
+    expect(ticketsRepository.count).not.toHaveBeenCalled();
+    expect(manager.query).toHaveBeenCalledWith(expect.stringContaining('RETURNING'), ['project-1']);
+  });
+
+  it('rejects a missing project before saving', async () => {
+    manager.query.mockResolvedValue([]);
+    await expect(service.create('missing', { title: 'Missing' })).rejects.toBeInstanceOf(NotFoundException);
+    expect(ticketsRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('rejects a project without a key before saving', async () => {
+    manager.query.mockResolvedValue([{ key: null, lastTicketNumber: 1 }]);
+    await expect(service.create('project-1', { title: 'Missing key' })).rejects.toBeInstanceOf(BadRequestException);
+    expect(ticketsRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('creates support details using the ticket transaction', async () => {
+    const saved = await service.create('project-1', { title: 'Support', type: TicketType.SUPPORT });
+    expect(manager.getRepository).toHaveBeenCalledWith(TicketSupportDetail);
+    expect(supportDetailsRepository.save).toHaveBeenCalledWith({ ticketId: saved.id, isBillable: true });
   });
 
   it('creates a ticket assigned to an active project member', async () => {
@@ -243,7 +272,7 @@ describe('TicketsService', () => {
     sprintsRepository.findOne.mockResolvedValue(null);
     await expect(service.create('project-1', { title: 'Invalid sprint', type: TicketType.SUPPORT, sprintId })).rejects.toBeInstanceOf(BadRequestException);
     expect(sprintsRepository.findOne).toHaveBeenCalledWith({ where: { id: sprintId, projectId: 'project-1' } });
-    expect(projectsRepository.findOne).not.toHaveBeenCalled();
+    expect(dataSource.transaction).not.toHaveBeenCalled();
     expect(ticketsRepository.save).not.toHaveBeenCalled();
     expect(supportDetailsRepository.save).not.toHaveBeenCalled();
   });

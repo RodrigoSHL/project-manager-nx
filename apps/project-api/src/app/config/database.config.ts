@@ -18,6 +18,7 @@ import { AddProjectTeamRoles1790812800000 } from '../../migrations/1790812800000
 import { AddCommentReplies1790938800000 } from '../../migrations/1790938800000-AddCommentReplies';
 import { CommentMentionNotification } from '../comments/entities/comment-mention-notification.entity';
 import { AddCommentMentionNotifications1791072000000 } from '../../migrations/1791072000000-AddCommentMentionNotifications';
+import { AddProjectTicketCounter1791547200000 } from '../../migrations/1791547200000-AddProjectTicketCounter';
 
 export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
   type: 'postgres',
@@ -48,6 +49,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     AddProjectTeamRoles1790812800000,
     AddCommentReplies1790938800000,
     AddCommentMentionNotifications1791072000000,
+    AddProjectTicketCounter1791547200000,
   ],
   migrationsRun: process.env.PROJECT_MIGRATIONS_RUN === 'true',
   synchronize: process.env.TYPEORM_SYNCHRONIZE

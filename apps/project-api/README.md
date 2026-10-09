@@ -169,6 +169,39 @@ iniciar la API y las registra en su tabla `migrations`, igual que en inspection-
 el enum y admite bases donde esos valores ya existen. El rollback exige que los
 roles nuevos no estén asignados; PostgreSQL rechaza la conversión si están en uso.
 
+### Numeración de tickets
+
+`projects.lastTicketNumber` guarda el último número asignado a un ticket del
+proyecto. Es un campo interno y no se incluye en las lecturas habituales de
+proyectos. La migración `AddProjectTicketCounter` lo inicializa con el mayor
+sufijo numérico de los tickets existentes, conservando sus claves y cualquier
+contador previo más alto.
+
+La creación incrementa el contador mediante `UPDATE ... RETURNING` y guarda el
+ticket en la misma transacción. PostgreSQL coordina las solicitudes concurrentes
+por proyecto. Los detalles de soporte también se guardan en esa transacción;
+si falla cualquiera de los pasos, se revierten el ticket y el incremento.
+Eliminar tickets nunca reduce el contador. Las importaciones que escriban
+directamente en la BD deben mantener este contador al menos en el mayor número
+importado.
+
+Compose ejecuta la migración al iniciar con `PROJECT_MIGRATIONS_RUN=true`.
+Desplegar `project-api` con backup previo. La columna es compatible con la imagen
+anterior y puede conservarse si hay que revertir la imagen; la imagen anterior
+vuelve a tener el defecto de numeración por cantidad de tickets.
+
+Las pruebas de integración crean y eliminan un esquema aislado en una base
+temporal local; requieren explícitamente la base `ticket_counter_validation`:
+
+```sh
+docker run -d --rm --name ticket-counter-validation \
+  -e POSTGRES_PASSWORD=validation-only -e POSTGRES_DB=ticket_counter_validation \
+  -p 127.0.0.1:55439:5432 postgres:15-alpine
+TICKET_COUNTER_TEST_DATABASE_URL=postgres://postgres:validation-only@127.0.0.1:55439/ticket_counter_validation \
+  npx jest --config apps/project-api/jest.config.ts --runInBand
+docker stop ticket-counter-validation
+```
+
 ### Respuestas a comentarios
 
 `comments.parentCommentId` relaciona una respuesta con otro comentario del mismo

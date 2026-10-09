@@ -97,6 +97,7 @@ export class TicketsService {
   }
 
   async create(projectId: string, dto: CreateTicketDto): Promise<Ticket> {
+    await this.findProjectSprint(projectId, dto.sprintId);
     await this.assertProjectMemberAssignee(projectId, dto.assigneeId);
     await this.assertValidEpic(
       projectId,
@@ -129,18 +130,27 @@ export class TicketsService {
       relations: ['labels', 'sprint', 'epic'],
     });
     if (!ticket) throw new NotFoundException(`Ticket ${id} not found`);
+    // Legacy invalid links must not expose another project's sprint.
+    if (ticket.sprint && ticket.sprint.projectId !== ticket.projectId) {
+      ticket.sprint = null;
+      ticket.sprintId = null;
+    }
     return ticket;
+  }
+
+  private async findProjectSprint(projectId: string, sprintId?: string | null) {
+    if (sprintId === undefined || sprintId === null) return null;
+    const sprint = await this.sprintsRepository.findOne({ where: { id: sprintId, projectId } });
+    if (!sprint) {
+      throw new BadRequestException('El sprint seleccionado no existe o pertenece a otro proyecto');
+    }
+    return sprint;
   }
 
   async update(projectId: string, id: string, dto: UpdateTicketDto): Promise<Ticket> {
     const ticket = await this.findOne(projectId, id);
     if (dto.sprintId !== undefined) {
-      const sprint = dto.sprintId === null
-        ? null
-        : await this.sprintsRepository.findOne({ where: { id: dto.sprintId, projectId } });
-      if (dto.sprintId !== null && !sprint) {
-        throw new BadRequestException('El sprint seleccionado no existe o pertenece a otro proyecto');
-      }
+      const sprint = await this.findProjectSprint(projectId, dto.sprintId);
       // Keep the loaded relation in sync so TypeORM saves the selected sprintId.
       ticket.sprint = sprint;
     }

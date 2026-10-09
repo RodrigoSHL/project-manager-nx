@@ -238,4 +238,47 @@ describe('TicketsService', () => {
       .rejects.toBeInstanceOf(BadRequestException);
     expect(ticketsRepository.save).not.toHaveBeenCalled();
   });
+
+  it.each(['foreign-sprint', 'missing-sprint'])('rejects creation with %s before any write', async (sprintId) => {
+    sprintsRepository.findOne.mockResolvedValue(null);
+    await expect(service.create('project-1', { title: 'Invalid sprint', type: TicketType.SUPPORT, sprintId })).rejects.toBeInstanceOf(BadRequestException);
+    expect(sprintsRepository.findOne).toHaveBeenCalledWith({ where: { id: sprintId, projectId: 'project-1' } });
+    expect(projectsRepository.findOne).not.toHaveBeenCalled();
+    expect(ticketsRepository.save).not.toHaveBeenCalled();
+    expect(supportDetailsRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('allows creation in an inactive sprint belonging to the project', async () => {
+    const sprint = { id: 'own-sprint', projectId: 'project-1', isActive: false };
+    sprintsRepository.findOne.mockResolvedValue(sprint);
+    expect(await service.create('project-1', { title: 'Valid sprint', sprintId: sprint.id })).toMatchObject({ sprintId: sprint.id });
+    expect(sprintsRepository.findOne).toHaveBeenCalledWith({ where: { id: sprint.id, projectId: 'project-1' } });
+  });
+
+  it('does not disclose a foreign sprint on a legacy ticket', async () => {
+    ticketsRepository.findOne.mockResolvedValue({ id: 'ticket-1', projectId: 'project-1', sprintId: 'foreign', sprint: { id: 'foreign', projectId: 'project-2', name: 'Private sprint' } });
+    expect(await service.findOne('project-1', 'ticket-1')).toMatchObject({ sprintId: null, sprint: null });
+    expect(ticketsRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('preserves a valid sprint on reads and unrelated updates', async () => {
+    const sprint = { id: 'own', projectId: 'project-1' };
+    ticketsRepository.findOne.mockResolvedValue({ id: 'ticket-1', projectId: 'project-1', sprintId: sprint.id, sprint });
+    expect(await service.update('project-1', 'ticket-1', { title: 'Renamed' })).toMatchObject({ sprintId: sprint.id, sprint });
+    expect(sprintsRepository.findOne).not.toHaveBeenCalled();
+  });
+
+  it('preserves a valid sprint when the route UUID uses uppercase', async () => {
+    const canonicalId = '8b087a16-a4b1-494d-9123-e228073c289e';
+    const sprint = { id: 'own', projectId: canonicalId };
+    ticketsRepository.findOne.mockImplementation(async () => ({ id: 'ticket-1', projectId: canonicalId, sprintId: sprint.id, sprint }));
+    expect(await service.findOne(canonicalId.toUpperCase(), 'ticket-1')).toMatchObject({ sprintId: sprint.id, sprint });
+    expect(await service.update(canonicalId.toUpperCase(), 'ticket-1', { title: 'Renamed' })).toMatchObject({ sprintId: sprint.id, sprint });
+    expect(ticketsRepository.save).toHaveBeenCalledWith(expect.objectContaining({ sprintId: sprint.id, sprint }));
+  });
+
+  it('allows explicit null when creating a backlog ticket', async () => {
+    expect(await service.create('project-1', { title: 'Backlog', sprintId: null })).toMatchObject({ sprintId: null });
+    expect(sprintsRepository.findOne).not.toHaveBeenCalled();
+  });
 });

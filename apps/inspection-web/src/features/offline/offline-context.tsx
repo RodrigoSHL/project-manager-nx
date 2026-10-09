@@ -18,8 +18,10 @@ import type { PendingSyncSummary } from './models';
 import { useConnectivity } from '../../hooks/use-connectivity';
 import { syncService } from '../../services/sync-service';
 import type { SyncProgress, SyncSummary } from './models';
+import { accountStorageKey } from '../auth/document-session';
+import Dexie from 'dexie';
 
-const modeKey = 'inspection-data-source';
+const modeKey = accountStorageKey('inspection-data-source');
 
 const emptyPendingSummary: PendingSyncSummary = {
   total: 0,
@@ -50,6 +52,7 @@ type OfflineContextValue = {
   syncProgress: SyncProgress | null;
   lastSyncSummary: SyncSummary | null;
   syncError: string | null;
+  hasLegacyLocalData: boolean;
 };
 
 const OfflineContext = createContext<OfflineContextValue | null>(null);
@@ -70,6 +73,10 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     null
   );
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [hasLegacyLocalData, setHasLegacyLocalData] = useState(false);
+  useEffect(() => {
+    void Dexie.exists('gridassets-inspection').then(setHasLegacyLocalData);
+  }, []);
   const refresh = useCallback(async () => {
     const [sites, pending] = await Promise.all([
       offlineRepository.listSites(),
@@ -142,6 +149,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       syncProgress,
       lastSyncSummary,
       syncError,
+      hasLegacyLocalData,
     }),
     [
       cacheSite,
@@ -156,6 +164,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       refresh,
       setMode,
       syncError,
+      hasLegacyLocalData,
       syncProgress,
       syncTenantId,
       synchronize,

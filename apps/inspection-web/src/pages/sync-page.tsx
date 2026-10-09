@@ -66,6 +66,7 @@ export function SyncPage() {
     syncProgress,
     lastSyncSummary,
     syncError,
+    hasLegacyLocalData,
   } = useOffline();
   const userId = auth.user?.userId ?? '';
   const [tenantId, setTenantId] = useState('');
@@ -146,6 +147,15 @@ export function SyncPage() {
         title="Sincronización"
         description="Envía y descarga cambios únicamente para la empresa seleccionada."
       />
+
+      {hasLegacyLocalData ? (
+        <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          Los datos offline de una versión anterior están conservados, pero no
+          pueden asociarse automáticamente a esta cuenta. Si tenías cambios
+          pendientes, solicita su recuperación antes de borrar los datos del
+          navegador.
+        </p>
+      ) : null}
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <label className="block text-sm font-medium text-slate-700">

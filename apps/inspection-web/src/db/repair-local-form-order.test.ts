@@ -94,7 +94,7 @@ describe('form order recovery', () => {
         ].join(','),
       ])
     );
-    const legacy = new Dexie('gridassets-inspection');
+    const legacy = new Dexie(inspectionDb.name);
     legacy.version(6).stores(schema);
     await legacy.open();
     await legacy.table('formTemplates').bulkPut(templates);

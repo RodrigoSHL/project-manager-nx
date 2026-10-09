@@ -7,7 +7,7 @@ import {
   ShieldCheck,
   Zap,
 } from 'lucide-react';
-import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../features/auth/auth-context';
 import {
   canAccessOperation,
@@ -20,7 +20,6 @@ import { safeRedirect } from '@project-manager/security-navigation';
 export function LoginPage() {
   const auth = useAuth();
   const connectivity = useConnectivity();
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectTo = safeRedirect(searchParams.get('redirect'), window.location.origin, '/dashboard');
   const [email, setEmail] = useState('');
@@ -53,7 +52,7 @@ export function LoginPage() {
         setError('Tu cuenta no tiene permisos para ingresar a GridAssets.');
         return;
       }
-      navigate(destinationFor(user, redirectTo), { replace: true });
+      window.location.replace(destinationFor(user, redirectTo));
     } catch (cause) {
       setError(
         cause instanceof Error

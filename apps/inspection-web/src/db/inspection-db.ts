@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie';
 import { repairLocalFormOrder } from './repair-local-form-order';
+import { accountStorageKey, assertDocumentSession } from '../features/auth/document-session';
 import type { Asset, Site, Tenant } from '../features/assets/models';
 import type { AssetType } from '../features/asset-types/models';
 import type {
@@ -64,7 +65,31 @@ export class InspectionDatabase extends Dexie {
   syncConflictCandidates!: EntityTable<SyncConflictCandidate, 'id'>;
 
   constructor() {
-    super('gridassets-inspection');
+    // The legacy unowned database is retained, never assigned to a new login.
+    super(accountStorageKey('gridassets-inspection'));
+    this.use({
+      stack: 'dbcore',
+      name: 'account-session',
+      create: (core) => ({
+        ...core,
+        transaction: (...args) => {
+          assertDocumentSession();
+          return core.transaction(...args);
+        },
+        table: (name) => {
+          const table = core.table(name);
+          return {
+            ...table,
+            get: (request) => { assertDocumentSession(); return table.get(request); },
+            getMany: (request) => { assertDocumentSession(); return table.getMany(request); },
+            query: (request) => { assertDocumentSession(); return table.query(request); },
+            count: (request) => { assertDocumentSession(); return table.count(request); },
+            openCursor: (request) => { assertDocumentSession(); return table.openCursor(request); },
+            mutate: (request) => { assertDocumentSession(); return table.mutate(request); },
+          };
+        },
+      }),
+    });
     this.version(1).stores({
       tenants: 'id, name',
       sites: 'id, tenantId, [tenantId+id], [tenantId+active]',

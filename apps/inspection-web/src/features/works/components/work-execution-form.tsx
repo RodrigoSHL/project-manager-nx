@@ -433,7 +433,7 @@ export function WorkExecutionForm({
       return (
         <div
           key={item.id}
-          className={`rounded-lg border p-4 ${
+          className={`min-w-0 rounded-lg border p-4 ${
             itemCandidates.length
               ? 'border-amber-300 bg-amber-50/40'
               : 'border-slate-200 bg-slate-50'
@@ -449,7 +449,7 @@ export function WorkExecutionForm({
               }
               className="mt-0.5 size-5 shrink-0"
             />
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-medium text-slate-800">
                 {item.title ?? 'Actividad'}
                 {item.required ? ' *' : ''}
@@ -629,13 +629,13 @@ export function WorkExecutionForm({
   }
 
   return (
-    <section className="mt-6 rounded-xl border border-slate-200 bg-white shadow-sm">
+    <section className="mt-6 min-w-0 break-words rounded-xl border border-slate-200 bg-white shadow-sm">
       <header className="border-b border-slate-200 p-4 sm:p-6">
         <div className="flex items-start gap-3">
           <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-700">
             <ClipboardCheck className="size-5" />
           </span>
-          <div>
+          <div className="min-w-0">
             <h2 className="font-semibold text-slate-950">{snapshot.name}</h2>
             <p className="mt-1 text-sm text-slate-500">
               Plantilla conservada · versión {snapshot.formTemplateVersion}
@@ -644,14 +644,14 @@ export function WorkExecutionForm({
         </div>
       </header>
 
-      <div className="grid gap-8 p-4 sm:p-6">
+      <div className="grid min-w-0 gap-8 p-4 sm:p-6">
         {photoErrors.general ? (
           <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
             {photoErrors.general}
           </p>
         ) : null}
         {formSections.map((section) => (
-          <section key={section.id}>
+          <section key={section.id} className="min-w-0">
             <div className="border-b border-slate-200 pb-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Sección {section.order}
@@ -666,16 +666,16 @@ export function WorkExecutionForm({
               ) : null}
             </div>
 
-            <div className="mt-5 grid gap-6">
+            <div className="mt-5 grid min-w-0 gap-6">
               {section.assetGroups.map((group) =>
                 group.assetDepth === 0 ? (
-                  <div key={group.assetId} className="grid gap-6">
+                  <div key={group.assetId} className="grid min-w-0 gap-6">
                     {group.items.map(renderItem)}
                   </div>
                 ) : (
                   <details
                     key={group.assetId}
-                    className="group rounded-xl border border-slate-200 bg-slate-50/60"
+                    className="group min-w-0 rounded-xl border border-slate-200 bg-slate-50/60"
                   >
                     <summary className="flex cursor-pointer list-none items-start justify-between gap-3 px-4 py-4 marker:content-none sm:px-5">
                       <div className="min-w-0">
@@ -699,7 +699,7 @@ export function WorkExecutionForm({
                         <ChevronDown className="size-4 text-slate-500 transition-transform group-open:rotate-180" />
                       </span>
                     </summary>
-                    <div className="grid gap-6 border-t border-slate-200 bg-white p-4 sm:p-5">
+                    <div className="grid min-w-0 gap-6 border-t border-slate-200 bg-white p-4 sm:p-5">
                       {group.items.map(renderItem)}
                     </div>
                   </details>

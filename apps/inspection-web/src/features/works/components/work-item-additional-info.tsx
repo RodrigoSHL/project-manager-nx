@@ -57,29 +57,35 @@ export function WorkItemAdditionalInfo({
   }
 
   return (
-    <div className="mt-4 border-t border-slate-200 pt-3">
+    <div className="mt-4 min-w-0 border-t border-slate-200 pt-3">
       <button
         type="button"
         aria-expanded={expanded}
         onClick={() => setExpanded((current) => !current)}
-        className="flex min-h-10 w-full items-center justify-between gap-3 rounded-md px-1 text-left text-sm font-medium text-slate-600 hover:text-slate-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+        className="flex min-h-10 w-full min-w-0 items-center justify-between gap-3 rounded-md px-1 text-left text-sm font-medium text-slate-600 hover:text-slate-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
       >
-        <span className="flex min-w-0 items-center gap-2">
-          <MessageSquareText className="size-4 shrink-0" />
-          <span className="truncate">Comentario y fotografías</span>
-          {comment.trim() ? (
-            <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs">
-              Comentado
-            </span>
-          ) : null}
-          {isFinding ? (
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-900">
-              Posible hallazgo
-            </span>
-          ) : null}
-          {photos.length ? (
-            <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs">
-              {photos.length} {photos.length === 1 ? 'foto' : 'fotos'}
+        <span className="flex min-w-0 flex-1 flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          <span className="flex min-w-0 max-w-full items-center gap-2">
+            <MessageSquareText className="size-4 shrink-0" />
+            <span className="min-w-0 break-words">Comentario y fotografías</span>
+          </span>
+          {comment.trim() || isFinding || photos.length ? (
+            <span className="flex min-w-0 flex-wrap gap-2">
+              {comment.trim() ? (
+                <span className="whitespace-nowrap rounded-full bg-slate-200 px-2 py-0.5 text-xs">
+                  Comentado
+                </span>
+              ) : null}
+              {isFinding ? (
+                <span className="whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-900">
+                  Posible hallazgo
+                </span>
+              ) : null}
+              {photos.length ? (
+                <span className="whitespace-nowrap rounded-full bg-slate-200 px-2 py-0.5 text-xs">
+                  {photos.length} {photos.length === 1 ? 'foto' : 'fotos'}
+                </span>
+              ) : null}
             </span>
           ) : null}
         </span>
@@ -91,8 +97,8 @@ export function WorkItemAdditionalInfo({
       </button>
 
       {expanded ? (
-        <div className="mt-3 grid gap-4 rounded-lg bg-slate-50 p-3 sm:p-4">
-          <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+        <div className="mt-3 grid min-w-0 gap-4 rounded-lg bg-slate-50 p-3 sm:p-4">
+          <label className="grid min-w-0 gap-1.5 text-sm font-medium text-slate-700">
             Comentario de la revisión
             <textarea
               rows={3}
@@ -101,22 +107,24 @@ export function WorkItemAdditionalInfo({
               disabled={readonly}
               placeholder="Agrega una observación opcional sobre este punto."
               onChange={(event) => onCommentChange(event.target.value)}
-              className="w-full resize-y rounded-lg border border-slate-300 bg-white p-3 text-sm font-normal outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-100"
+              className="w-full min-w-0 resize-y rounded-lg border border-slate-300 bg-white p-3 text-sm font-normal outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-100"
             />
             <span className="text-right text-xs font-normal text-slate-400">
               {comment.length}/2000
             </span>
           </label>
 
-          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+          <label className="flex min-w-0 items-start gap-2 text-sm font-medium text-slate-700">
             <input
               type="checkbox"
               checked={isFinding}
               disabled={readonly}
               onChange={(event) => onFindingChange?.(event.target.checked)}
-              className="size-4 accent-amber-700"
+              className="mt-0.5 size-4 shrink-0 accent-amber-700"
             />
-            Marcar este comentario como posible hallazgo
+            <span className="min-w-0 break-words">
+              Marcar este comentario como posible hallazgo
+            </span>
           </label>
           {isFinding && !comment.trim() ? (
             <p className="text-xs text-amber-800">
@@ -125,11 +133,11 @@ export function WorkItemAdditionalInfo({
           ) : null}
 
           {photos.length ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {photos.map((photo) => (
                 <figure
                   key={photo.id}
-                  className="group relative overflow-hidden rounded-lg border border-slate-200 bg-white"
+                  className="group relative min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-white"
                 >
                   <img
                     src={photo.previewUrl}

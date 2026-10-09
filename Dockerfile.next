@@ -14,6 +14,7 @@ RUN npm ci
 
 COPY nx.json tsconfig.base.json jest.preset.js jest.config.ts eslint.config.mjs ./
 COPY apps ./apps
+COPY libs ./libs
 
 ARG APP
 ARG NEXT_PUBLIC_API_URL

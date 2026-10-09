@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { safeRedirect } from '@project-manager/security-navigation';
 import {
   ArrowRight,
   CalendarDays,
@@ -18,7 +19,7 @@ type Mode = 'login' | 'register';
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect') ?? '/';
+  const redirectTo = safeRedirect(searchParams.get('redirect'), typeof window === 'undefined' ? 'http://localhost' : window.location.origin);
 
   const [mode, setMode] = useState<Mode>('login');
   const [name, setName] = useState('');

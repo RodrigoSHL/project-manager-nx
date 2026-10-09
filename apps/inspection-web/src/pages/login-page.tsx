@@ -15,13 +15,14 @@ import {
 } from '../features/auth/auth-storage';
 import type { CurrentUser } from '../features/auth/models';
 import { useConnectivity } from '../hooks/use-connectivity';
+import { safeRedirect } from '@project-manager/security-navigation';
 
 export function LoginPage() {
   const auth = useAuth();
   const connectivity = useConnectivity();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const redirectTo = safeRedirect(searchParams.get('redirect'));
+  const redirectTo = safeRedirect(searchParams.get('redirect'), window.location.origin, '/dashboard');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -204,12 +205,6 @@ export function LoginPage() {
       </div>
     </main>
   );
-}
-
-function safeRedirect(value: string | null) {
-  return value?.startsWith('/') && !value.startsWith('//')
-    ? value
-    : '/dashboard';
 }
 
 function destinationFor(user: CurrentUser | null, redirectTo: string) {

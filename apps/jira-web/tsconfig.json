@@ -21,6 +21,7 @@
       }
     ],
     "paths": {
+      "@project-manager/security-navigation": ["../../libs/security-navigation/src/index.ts"],
       "@/*": ["./*"]
     }
   },

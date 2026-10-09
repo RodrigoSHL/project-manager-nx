@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { safeRedirect } from "@project-manager/security-navigation"
 import {
   ArrowRight,
   FolderKanban,
@@ -20,14 +21,10 @@ interface LoginResponse {
   user?: CurrentUser
 }
 
-function safeRedirect(value: string | null): string {
-  return value?.startsWith("/") && !value.startsWith("//") ? value : "/"
-}
-
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectTo = safeRedirect(searchParams.get("redirect"))
+  const redirectTo = safeRedirect(searchParams.get("redirect"), typeof window === "undefined" ? "http://localhost" : window.location.origin)
   const reason = searchParams.get("reason")
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")

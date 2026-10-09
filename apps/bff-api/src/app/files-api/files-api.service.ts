@@ -226,7 +226,7 @@ export class FilesApiService {
     else if (!ticketAttachment && !inspectionPhoto) {
       const tripId = String(metadata.tripId || '');
       this.assertUuid(tripId, 'metadata.tripId');
-      await this.travelApi.getActivity(tripId, body.ownerId, user);
+      await this.travelApi.getEditableActivity(tripId, body.ownerId, user);
     }
 
     const form = new FormData();
@@ -397,7 +397,11 @@ export class FilesApiService {
       throw new ForbiddenException('The file is not an activity asset');
     const tripId = String(file.metadata?.tripId || '');
     this.assertUuid(tripId, 'metadata.tripId');
-    await this.travelApi.getActivity(tripId, String(file.ownerId), user);
+    if (requireEditable) {
+      await this.travelApi.getEditableActivity(tripId, String(file.ownerId), user);
+    } else {
+      await this.travelApi.getActivity(tripId, String(file.ownerId), user);
+    }
   }
 
   private isActivityAsset(file: FileRecord) {

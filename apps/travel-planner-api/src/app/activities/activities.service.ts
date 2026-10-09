@@ -52,6 +52,11 @@ export class ActivitiesService {
     return this.present(activity);
   }
 
+  async findEditable(userId: string, tripId: string, id: string): Promise<Activity> {
+    await this.tripsService.assertCanEdit(userId, tripId);
+    return this.present(await this.findActivity(tripId, id));
+  }
+
   async update(
     userId: string,
     tripId: string,

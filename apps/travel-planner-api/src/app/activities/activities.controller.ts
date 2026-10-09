@@ -54,6 +54,15 @@ export class ActivitiesController {
     return this.activitiesService.update(user.id, tripId, id, dto);
   }
 
+  @Get(':id/edit-access')
+  findEditable(
+    @CurrentUser() user: RequestUser,
+    @Param('tripId') tripId: string,
+    @Param('id') id: string,
+  ) {
+    return this.activitiesService.findEditable(user.id, tripId, id);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(

@@ -277,7 +277,7 @@ export default function ProjectManagement() {
           <Card className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
-                <Zap className="h-5 w-5 text-primary" />
+                <Zap className="h-5 w-5 text-brand-foreground" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{inProgressCount}</p>
@@ -374,7 +374,7 @@ export default function ProjectManagement() {
     }
 
     const ticketTypeConfig: Record<string, { label: string; Icon: React.ElementType; className: string; bgClassName: string }> = {
-      task: { label: 'Task', Icon: CheckSquare, className: 'text-primary', bgClassName: 'bg-primary/10' },
+      task: { label: 'Task', Icon: CheckSquare, className: 'text-brand-foreground', bgClassName: 'bg-primary/10' },
       bug: { label: 'Bug', Icon: Bug, className: 'text-destructive', bgClassName: 'bg-destructive/10' },
       story: { label: 'Story', Icon: BookOpen, className: 'text-emerald-400', bgClassName: 'bg-emerald-400/10' },
       epic: { label: 'Epic', Icon: Layers, className: 'text-purple-400', bgClassName: 'bg-purple-400/10' },

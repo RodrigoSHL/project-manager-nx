@@ -48,7 +48,7 @@ export function SprintInfo({ sprint, tickets, onEdit }: SprintInfoProps) {
   }
 
   return (
-    <Card className="p-5 mb-6">
+    <Card className="p-5 mb-6 border-t-2 border-t-primary">
       <div className="flex flex-col lg:flex-row lg:items-center gap-6">
         {/* Sprint Header */}
         <div className="flex-1 min-w-0">
@@ -77,8 +77,8 @@ export function SprintInfo({ sprint, tickets, onEdit }: SprintInfoProps) {
           </div>
 
           {sprint.goal && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50">
-              <Target className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-accent">
+              <Target className="h-4 w-4 text-brand-foreground mt-0.5 shrink-0" />
               <p className="text-sm">{sprint.goal}</p>
             </div>
           )}

@@ -491,7 +491,7 @@ export function TicketDetail({
       parts.push(text.slice(cursor, mention.start))
       const member = teamMembers.find(candidate => candidate.id === mention.memberId)
       parts.push(
-        <span key={`${mention.start}-${mention.memberId}`} className="rounded bg-primary/10 px-0.5 font-medium text-primary" title={member?.email}>
+        <span key={`${mention.start}-${mention.memberId}`} className="rounded bg-primary/10 px-0.5 font-medium text-brand-foreground" title={member?.email}>
           {text.slice(mention.start, mention.end)}
         </span>
       )

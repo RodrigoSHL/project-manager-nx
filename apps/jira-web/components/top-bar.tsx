@@ -1,8 +1,9 @@
 'use client'
 
 import * as React from 'react'
-import { Search, Plus, Moon, Sun, Bell, Menu, SlidersHorizontal, LogOut, Shield } from 'lucide-react'
-import { useTheme } from 'next-themes'
+import { Search, Plus, Bell, Menu, SlidersHorizontal, LogOut, Shield } from 'lucide-react'
+import { FlowBoardLogo } from '@/components/brand-logo'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -61,9 +62,7 @@ export function TopBar({
   activeSprint = null,
   teamMembers = [],
 }: TopBarProps) {
-  const { theme, setTheme } = useTheme()
   const { user, logout } = useAuth()
-  const [mounted, setMounted] = React.useState(false)
   const project = projects.find(p => p.id === currentProject)
   const initials = user.name
     .split(/\s+/)
@@ -72,17 +71,17 @@ export function TopBar({
     .map(part => part[0]?.toUpperCase())
     .join('') || user.email[0]?.toUpperCase() || 'U'
 
-  React.useEffect(() => {
-    setMounted(true)
-  }, [])
-
   return (
-    <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 lg:px-6">
+    <header className="sticky top-0 z-40 flex min-h-14 min-w-0 shrink-0 flex-wrap items-center gap-2 border-b border-b-primary/20 bg-background/95 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/60 lg:gap-3 lg:px-6">
       {/* Mobile Menu Button */}
       {isMobile && (
-        <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuClick}>
-          <Menu className="h-5 w-5" />
-        </Button>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <Button variant="ghost" size="icon" className="size-10" aria-label="Abrir menú" onClick={onMenuClick}>
+            <Menu className="h-5 w-5" />
+          </Button>
+          <FlowBoardLogo className="size-8 shrink-0" alt="FlowBoard" />
+          <span className="hidden truncate font-semibold sm:inline">FlowBoard</span>
+        </div>
       )}
 
       {/* Project Selector (Desktop) */}
@@ -116,7 +115,7 @@ export function TopBar({
           </Select>
 
           {activeSprint && (
-            <Badge variant="outline" className="h-7 px-2.5 font-normal text-xs gap-1.5">
+            <Badge variant="outline" className="hidden h-7 max-w-40 gap-1.5 truncate border-primary/30 bg-accent px-2.5 text-xs font-normal text-accent-foreground 2xl:inline-flex">
               <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
               {activeSprint.name}
             </Badge>
@@ -125,12 +124,13 @@ export function TopBar({
       )}
 
       {/* Search */}
-      <div className="flex-1 flex justify-center max-w-md mx-auto">
+      <div className="order-last flex min-w-0 basis-full justify-center xl:order-none xl:mx-auto xl:max-w-md xl:flex-1 xl:basis-auto">
         <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
             placeholder="Buscar tickets..."
+            aria-label="Buscar tickets"
             className="w-full pl-9 h-9 bg-secondary border-0 focus-visible:ring-1"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -140,7 +140,7 @@ export function TopBar({
 
       {/* Filters (Desktop) */}
       {!isMobile && (
-        <div className="hidden xl:flex items-center gap-2">
+        <div className="hidden 2xl:flex items-center gap-2">
           <Select value={filters.assignee} onValueChange={(v) => onFilterChange('assignee', v)}>
             <SelectTrigger className="w-[140px] h-8 text-xs border-dashed">
               <SelectValue placeholder="Asignado" />
@@ -186,10 +186,10 @@ export function TopBar({
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-2">
+      <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
         {/* Filters Mobile */}
         {isMobile && (
-          <Button variant="ghost" size="icon" className="h-9 w-9">
+          <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Filtros">
             <SlidersHorizontal className="h-4 w-4" />
           </Button>
         )}
@@ -199,29 +199,17 @@ export function TopBar({
           size="sm" 
           className="h-9 gap-1.5 font-medium shadow-sm"
           onClick={onCreateTicket}
+          aria-label="Crear ticket"
         >
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">Crear ticket</span>
         </Button>}
 
         {/* Theme Toggle */}
-        {mounted && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          >
-            {theme === 'dark' ? (
-              <Sun className="h-4 w-4" />
-            ) : (
-              <Moon className="h-4 w-4" />
-            )}
-          </Button>
-        )}
+        <ThemeToggle className="size-10" />
 
         {/* Notifications */}
-        <Button variant="ghost" size="icon" className="h-9 w-9 relative">
+        <Button variant="ghost" size="icon" className="h-9 w-9 relative" aria-label="Notificaciones">
           <Bell className="h-4 w-4" />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-destructive" />
         </Button>
@@ -229,9 +217,9 @@ export function TopBar({
         {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" aria-label="Menú de usuario">
               <Avatar className="h-8 w-8">
-                <AvatarFallback>{initials}</AvatarFallback>
+                <AvatarFallback className="bg-accent text-brand-foreground">{initials}</AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>

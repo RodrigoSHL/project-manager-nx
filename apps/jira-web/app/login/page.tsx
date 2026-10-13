@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { canAccessJiraWeb, setAccessToken, type CurrentUser } from '@/lib/auth'
 import { FlowBoardLogo } from '@/components/brand-logo'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? '/api'
 
@@ -82,13 +83,13 @@ function LoginForm() {
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-muted/30 p-3 sm:p-6">
-      <div className="pointer-events-none absolute -left-24 -top-24 size-80 rounded-full bg-indigo-300/20 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 -right-20 size-96 rounded-full bg-cyan-300/20 blur-3xl" />
+      <div className="pointer-events-none absolute -left-24 -top-24 size-80 rounded-full bg-primary/15 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 -right-20 size-96 rounded-full bg-primary/10 blur-3xl" />
 
       <div className="relative z-10 grid w-full max-w-5xl overflow-hidden rounded-[32px] border bg-background/90 shadow-2xl shadow-foreground/10 backdrop-blur-xl lg:grid-cols-[1.05fr_0.95fr]">
-        <aside className="relative hidden min-h-[650px] overflow-hidden bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 p-10 text-white lg:flex lg:flex-col lg:justify-between">
+        <aside className="relative hidden min-h-[650px] overflow-hidden bg-gradient-to-br from-slate-950 via-brand-panel to-slate-900 p-10 text-white lg:flex lg:flex-col lg:justify-between">
           <div className="absolute -right-20 -top-20 size-72 rounded-full border-[48px] border-white/[0.05]" />
-          <div className="absolute bottom-20 left-8 size-52 rounded-full bg-cyan-400/10 blur-3xl" />
+          <div className="absolute bottom-20 left-8 size-52 rounded-full bg-primary/15 blur-3xl" />
 
           <div className="relative flex items-center gap-2.5 text-sm font-semibold">
             <FlowBoardLogo className="size-9 shrink-0" />
@@ -109,25 +110,29 @@ function LoginForm() {
 
             <div className="mt-9 grid grid-cols-2 gap-3">
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <Layers3 className="mb-3 size-5 text-indigo-300" />
+                <Layers3 className="mb-3 size-5 text-violet-300" />
                 <p className="text-sm font-semibold">Trabajo organizado</p>
-                <p className="mt-1 text-xs text-slate-400">Backlog, sprints y tickets.</p>
+                <p className="mt-1 text-xs text-slate-300">Backlog, sprints y tickets.</p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <Gauge className="mb-3 size-5 text-cyan-300" />
+                <Gauge className="mb-3 size-5 text-violet-300" />
                 <p className="text-sm font-semibold">Avance visible</p>
-                <p className="mt-1 text-xs text-slate-400">Prioridades y estado en tiempo real.</p>
+                <p className="mt-1 text-xs text-slate-300">Prioridades y estado en tiempo real.</p>
               </div>
             </div>
           </div>
 
-          <p className="relative text-xs text-white/40">FlowBoard · Gestión ágil de proyectos</p>
+          <p className="relative text-xs text-slate-300">FlowBoard · Gestión ágil de proyectos</p>
         </aside>
 
-        <section className="flex min-h-[600px] flex-col justify-center px-6 py-10 sm:px-12 lg:px-14">
+        <section className="relative flex min-h-[600px] min-w-0 flex-col justify-center px-6 py-10 sm:px-12 lg:px-14">
+          <ThemeToggle className="absolute right-4 top-4 size-10" />
           <div className="mb-8 flex flex-col items-start gap-2">
-            <FlowBoardLogo className="mb-3 size-12 shadow-lg lg:hidden" />
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Bienvenido de vuelta</p>
+            <div className="mb-3 flex items-center gap-2.5 lg:hidden">
+              <FlowBoardLogo className="size-10 shrink-0 shadow-lg" />
+              <span className="font-semibold">FlowBoard</span>
+            </div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand-foreground">Bienvenido de vuelta</p>
             <h2 className="text-3xl font-bold tracking-tight">Inicia sesión</h2>
             <p className="text-sm leading-relaxed text-muted-foreground">
               Usa una cuenta con rol de usuario.
@@ -145,7 +150,7 @@ function LoginForm() {
                 value={email}
                 onChange={event => setEmail(event.target.value)}
                 placeholder="tu@empresa.com"
-                className="h-11 rounded-xl border border-input bg-background px-3.5 text-sm shadow-sm outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
+                className="h-11 min-w-0 rounded-xl border border-input bg-background px-3.5 text-sm shadow-sm outline-none transition focus:border-ring focus:ring-4 focus:ring-ring/20"
               />
             </div>
 
@@ -159,7 +164,7 @@ function LoginForm() {
                 value={password}
                 onChange={event => setPassword(event.target.value)}
                 placeholder="••••••••"
-                className="h-11 rounded-xl border border-input bg-background px-3.5 text-sm shadow-sm outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
+                className="h-11 min-w-0 rounded-xl border border-input bg-background px-3.5 text-sm shadow-sm outline-none transition focus:border-ring focus:ring-4 focus:ring-ring/20"
               />
             </div>
 
@@ -172,7 +177,7 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
-              className="mt-2 flex h-12 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-lg transition hover:-translate-y-0.5 hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-60"
+              className="mt-2 flex h-12 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/15 outline-none transition hover:-translate-y-0.5 hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-60"
             >
               {loading ? <Loader2 className="size-4 animate-spin" /> : <ArrowRight className="size-4" />}
               Iniciar sesión

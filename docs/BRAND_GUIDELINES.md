@@ -44,6 +44,26 @@ alcanza 6,14:1 de contraste; los enlaces usan un tono más oscuro en modo claro,
 porque el verde principal sobre blanco solo alcanza 2,40:1. Las combinaciones de
 texto y los estados hover mantienen al menos 4,5:1 de contraste.
 
+## Detalles violetas de FlowBoard
+
+FlowBoard extiende el violeta de su tablero a las acciones principales, enlaces,
+foco de teclado, selección de proyecto y navegación. El login y el portal de
+soporte comparten el mismo logo y ofrecen selector de tema. Los estados de los
+tickets y los colores configurados por proyecto conservan su significado.
+
+| Uso | Tema claro | Tema oscuro |
+| --- | --- | --- |
+| Fondo de acción | `#a78bfa` | `#a78bfa` |
+| Texto sobre acción | `#21143d` | `#21143d` |
+| Enlace y texto de marca | `#6d28d9` | `#c4b5fd` |
+| Fondo de selección | `#f3efff` | `#272039` |
+| Texto de selección | `#6d28d9` | `#ddd6fe` |
+
+El texto oscuro sobre la acción alcanza 6,26:1 de contraste. El violeta claro
+del logo se reserva para fondos e iconos; los textos usan `brand-foreground`
+para mantener contraste en superficies claras. Las selecciones alcanzan
+6,29:1 en modo claro y 11,19:1 en oscuro.
+
 ## Fuentes y regeneración
 
 - GridAssets: `apps/inspection-web/public/gridassets-icon.svg`.

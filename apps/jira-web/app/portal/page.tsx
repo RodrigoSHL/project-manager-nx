@@ -11,6 +11,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
+import { FlowBoardLogo } from '@/components/brand-logo'
+import { ThemeToggle } from '@/components/theme-toggle'
 import {
   Select,
   SelectContent,
@@ -65,7 +67,7 @@ function StepIndicator({ step, current }: { step: number; current: number }) {
     <div className={cn(
       'flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold border-2 transition-all',
       done  && 'bg-primary border-primary text-primary-foreground',
-      active && 'border-primary text-primary bg-primary/5',
+      active && 'border-primary text-brand-foreground bg-primary/5',
       !done && !active && 'border-border text-muted-foreground',
     )}>
       {done ? <CheckCircle2 className="h-4 w-4" /> : step}
@@ -152,22 +154,21 @@ export default function SupportPortalPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Top bar */}
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center gap-3">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-sky-500/10">
-            <LifeBuoy className="h-4.5 w-4.5 text-sky-500" />
-          </div>
-          <div className="flex-1">
+      <header className="border-b border-primary/20 bg-card/80 backdrop-blur-sm sticky top-0 z-10">
+        <div className="max-w-2xl mx-auto px-4 min-h-14 flex flex-wrap items-center gap-3 py-2">
+          <FlowBoardLogo className="size-8 shrink-0" alt="FlowBoard" />
+          <div className="min-w-0 flex-1">
             <span className="font-semibold text-sm">Portal de Soporte</span>
             <span className="hidden sm:inline text-muted-foreground text-sm"> · FlowBoard</span>
           </div>
+          <ThemeToggle className="size-10 shrink-0" />
           {selectedProject && step !== 3 && (
-            <Badge variant="outline" className="text-xs gap-1.5">
+            <Badge variant="outline" className="max-w-full text-xs gap-1.5">
               <span
-                className="w-2 h-2 rounded-sm"
+                className="w-2 h-2 shrink-0 rounded-sm"
                 style={{ backgroundColor: selectedProject.color ?? '#6366f1' }}
               />
-              {selectedProject.name}
+              <span className="truncate">{selectedProject.name}</span>
             </Badge>
           )}
         </div>
@@ -260,7 +261,7 @@ export default function SupportPortalPage() {
                         type="button"
                         onClick={() => { setSelectedProject(project); setStep(2) }}
                         className={cn(
-                          'flex items-center gap-4 p-4 rounded-xl border text-left',
+                          'flex min-w-0 w-full items-center gap-3 p-4 rounded-xl border text-left',
                           'hover:border-primary/40 hover:bg-accent/40 transition-all duration-150',
                           'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
                         )}
@@ -269,7 +270,7 @@ export default function SupportPortalPage() {
                           className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0 text-white font-bold text-sm"
                           style={{ backgroundColor: project.color ?? '#6366f1' }}
                         >
-                          {project.shortName ?? project.name.slice(0, 2).toUpperCase()}
+                          {project.shortName?.slice(0, 2) ?? project.name.slice(0, 2).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-sm truncate">{project.name}</p>

@@ -256,7 +256,7 @@ export function BacklogView({
 
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 rounded-md bg-primary/10">
-                    <Zap className="h-4 w-4 text-primary" />
+                    <Zap className="h-4 w-4 text-brand-foreground" />
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold">{sprint.name}</h3>
@@ -379,7 +379,7 @@ export function BacklogView({
 
                           {/* Story Points */}
                           {ticket.storyPoints && (
-                            <div className="h-5 w-5 flex items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-bold border border-primary/20 shrink-0">
+                            <div className="h-5 w-5 flex items-center justify-center rounded-full bg-primary/10 text-brand-foreground text-[10px] font-bold border border-primary/20 shrink-0">
                               {ticket.storyPoints}
                             </div>
                           )}
@@ -549,7 +549,7 @@ export function BacklogView({
 
                     {/* Story Points */}
                     {ticket.storyPoints && (
-                      <div className="h-5 w-5 flex items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-bold border border-primary/20 shrink-0">
+                      <div className="h-5 w-5 flex items-center justify-center rounded-full bg-primary/10 text-brand-foreground text-[10px] font-bold border border-primary/20 shrink-0">
                         {ticket.storyPoints}
                       </div>
                     )}

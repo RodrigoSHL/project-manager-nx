@@ -88,8 +88,8 @@ function AssetTreeNode({
         className={cn(
           'group flex min-h-12 items-center gap-1 rounded-lg border border-transparent pr-2 transition-colors',
           isSelected
-            ? 'border-amber-300 bg-amber-50'
-            : 'hover:border-slate-200 hover:bg-slate-50'
+            ? 'border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40'
+            : 'hover:border-slate-200 dark:hover:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-950'
         )}
       >
         <button
@@ -98,9 +98,9 @@ function AssetTreeNode({
             isExpanded ? `Contraer ${asset.name}` : `Expandir ${asset.name}`
           }
           className={cn(
-            'grid size-10 shrink-0 place-items-center rounded-md text-slate-500',
+            'grid size-10 shrink-0 place-items-center rounded-md text-slate-500 dark:text-slate-400',
             hasChildren
-              ? 'hover:bg-slate-200 hover:text-slate-800'
+              ? 'hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-800 dark:hover:text-slate-200'
               : 'cursor-default'
           )}
           onClick={() => hasChildren && onToggle(asset.id)}
@@ -126,17 +126,17 @@ function AssetTreeNode({
             className={cn(
               'grid size-8 shrink-0 place-items-center rounded-md',
               isSubstation
-                ? 'bg-slate-900 text-white'
-                : 'bg-slate-100 text-slate-600'
+                ? 'bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-950'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
             )}
           >
             <Icon className="size-4" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-medium text-slate-900">
+            <span className="block truncate text-sm font-medium text-slate-900 dark:text-slate-100">
               {asset.name}
             </span>
-            <span className="block text-xs text-slate-500">
+            <span className="block text-xs text-slate-500 dark:text-slate-400">
               {asset.code} · {formatAssetStatus(asset.status)}
             </span>
           </span>
@@ -144,7 +144,7 @@ function AssetTreeNode({
       </div>
 
       {hasChildren && isExpanded ? (
-        <ul className="ml-5 border-l border-slate-200 pl-2">
+        <ul className="ml-5 border-l border-slate-200 dark:border-slate-800 pl-2">
           {children.map((child) => (
             <AssetTreeNode
               key={child.id}
@@ -189,10 +189,10 @@ export function AssetTree(props: AssetTreeProps) {
       <div className="grid min-h-64 place-items-center px-6 text-center">
         <div>
           <SearchX className="mx-auto size-8 text-slate-400" />
-          <p className="mt-3 text-sm font-medium text-slate-700">
+          <p className="mt-3 text-sm font-medium text-slate-700 dark:text-slate-200">
             No encontramos activos
           </p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             Prueba con otro nombre o código.
           </p>
         </div>

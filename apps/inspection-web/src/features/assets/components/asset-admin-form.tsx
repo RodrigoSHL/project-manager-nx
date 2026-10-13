@@ -116,17 +116,17 @@ export function AssetAdminForm({
     : null;
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="font-semibold text-slate-950">
+          <h2 className="font-semibold text-slate-950 dark:text-slate-100">
             {asset
               ? 'Editar activo'
               : initialParent
               ? `Agregar activo a ${initialParent.code}`
               : 'Nueva subestación'}
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Los activos raíz deben ser subestaciones. Los demás se vinculan a un
             activo padre.
           </p>
@@ -143,29 +143,29 @@ export function AssetAdminForm({
       </div>
 
       <form className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
-        <label className="text-sm font-medium text-slate-700">
+        <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
           Código / TAG
           <input
             required
             value={form.code}
             onChange={(event) => updateField('code', event.target.value)}
-            className="mt-2 h-11 w-full rounded-lg border border-slate-300 px-3 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+            className="mt-2 h-11 w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 text-slate-900 dark:text-slate-100 outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
             maxLength={60}
           />
         </label>
 
-        <label className="text-sm font-medium text-slate-700">
+        <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
           Nombre
           <input
             required
             value={form.name}
             onChange={(event) => updateField('name', event.target.value)}
-            className="mt-2 h-11 w-full rounded-lg border border-slate-300 px-3 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+            className="mt-2 h-11 w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 text-slate-900 dark:text-slate-100 outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
             maxLength={180}
           />
         </label>
 
-        <label className="text-sm font-medium text-slate-700">
+        <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
           Tipo de activo
           {isCreatingRoot ? (
             <input
@@ -175,7 +175,7 @@ export function AssetAdminForm({
                   ? `${substationType.code} · ${substationType.name}`
                   : 'Preparando tipo Subestación…'
               }
-              className="mt-2 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-slate-700"
+              className="mt-2 h-11 w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3 text-slate-700 dark:text-slate-200"
             />
           ) : (
             <select
@@ -184,7 +184,7 @@ export function AssetAdminForm({
               onChange={(event) =>
                 updateField('assetTypeId', event.target.value)
               }
-              className="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+              className="mt-2 h-11 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-slate-900 dark:text-slate-100 outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
             >
               <option value="">Selecciona un tipo</option>
               {assetTypes
@@ -198,14 +198,14 @@ export function AssetAdminForm({
           )}
         </label>
 
-        <label className="text-sm font-medium text-slate-700">
+        <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
           Estado
           <select
             value={form.status}
             onChange={(event) =>
               updateField('status', event.target.value as Asset['status'])
             }
-            className="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+            className="mt-2 h-11 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-slate-900 dark:text-slate-100 outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
           >
             {statusOptions.map((option) => (
               <option key={option.value} value={option.value}>
@@ -215,7 +215,7 @@ export function AssetAdminForm({
           </select>
         </label>
 
-        <label className="text-sm font-medium text-slate-700 md:col-span-2">
+        <label className="text-sm font-medium text-slate-700 dark:text-slate-200 md:col-span-2">
           Activo padre
           <select
             value={form.parentId ?? ''}
@@ -223,7 +223,7 @@ export function AssetAdminForm({
               updateField('parentId', event.target.value || null)
             }
             disabled={isParentLocked}
-            className="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+            className="mt-2 h-11 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-slate-900 dark:text-slate-100 outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
           >
             <option value="">Sin padre · nodo raíz</option>
             {availableParents.map((parent) => (
@@ -233,26 +233,26 @@ export function AssetAdminForm({
             ))}
           </select>
           {isParentLocked && initialParent ? (
-            <span className="mt-1 block text-xs font-normal text-slate-500">
+            <span className="mt-1 block text-xs font-normal text-slate-500 dark:text-slate-400">
               Se agregará dentro de {initialParent.name}.
             </span>
           ) : null}
         </label>
 
-        <label className="text-sm font-medium text-slate-700 md:col-span-2">
+        <label className="text-sm font-medium text-slate-700 dark:text-slate-200 md:col-span-2">
           Descripción
           <textarea
             value={form.description ?? ''}
             onChange={(event) =>
               updateField('description', event.target.value || null)
             }
-            className="mt-2 min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+            className="mt-2 min-h-24 w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
             maxLength={2000}
           />
         </label>
 
         {error ? (
-          <p className="md:col-span-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="md:col-span-2 rounded-lg bg-red-50 dark:bg-red-950/40 px-3 py-2 text-sm text-red-700 dark:text-red-300">
             {error}
           </p>
         ) : null}

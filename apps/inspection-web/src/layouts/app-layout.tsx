@@ -13,6 +13,7 @@ import {
 import { NavLink, Outlet } from 'react-router-dom';
 import { MobileNavigation } from '../components/mobile-navigation';
 import { GridAssetsLogo } from '../components/gridassets-logo';
+import { ThemeToggle } from '../components/theme-toggle';
 import { useAuth } from '../features/auth/auth-context';
 import { isGlobalAdmin } from '../features/auth/auth-storage';
 import {
@@ -75,7 +76,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               className={({ isActive }) =>
                 `flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm transition-colors ${
                   isActive
-                    ? 'bg-white/10 font-medium text-white'
+                    ? 'bg-amber-400/10 font-medium text-amber-300 ring-1 ring-inset ring-amber-300/25'
                     : 'text-slate-300 hover:bg-white/5 hover:text-white'
                 }`
               }
@@ -87,7 +88,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
         {isGlobalAdmin(auth.user) && mode === 'REMOTE' ? (
           <>
-            <p className="mt-5 border-t border-white/10 px-3 pt-4 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-slate-500">
+            <p className="mt-5 border-t border-white/10 px-3 pt-4 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-slate-400">
               Control global
             </p>
             <NavLink
@@ -135,7 +136,7 @@ export function AppLayout() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-950">
+    <div className="min-h-screen bg-slate-100 text-slate-950 dark:bg-slate-950 dark:text-slate-100">
       <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col bg-slate-950 md:flex">
         <SidebarContent />
       </aside>
@@ -153,17 +154,18 @@ export function AppLayout() {
       </Sheet>
 
       <div className="md:pl-64">
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-slate-200 bg-white px-4 md:h-16 md:px-8">
+        <header className="sticky top-0 z-20 flex min-h-14 min-w-0 items-center gap-2 border-b border-slate-200 bg-white px-4 py-1.5 md:min-h-16 md:gap-3 md:px-8 dark:border-slate-800 dark:bg-slate-900">
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-900">
+            <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
               <span className="md:hidden">GridAssets</span>
               <span className="hidden md:inline">Gestión de subestaciones</span>
             </p>
-            <p className="hidden text-xs text-slate-500 sm:block">
+            <p className="hidden text-xs text-slate-500 sm:block dark:text-slate-400">
               Inspecciones y activos
             </p>
           </div>
           <ConnectivityStatus />
+          <ThemeToggle />
         </header>
 
         <main className="mx-auto w-full min-w-0 max-w-7xl p-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:p-8">

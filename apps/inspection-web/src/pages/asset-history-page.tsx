@@ -48,86 +48,86 @@ export function AssetHistoryPage() {
         to={`${
           returnToMeasurements ? '/analytics/measurements' : '/dashboard'
         }?${backParams.toString()}`}
-        className="text-sm font-medium text-slate-600 hover:text-slate-950"
+        className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-slate-100"
       >
         ← Volver {returnToMeasurements ? 'al comparador' : 'al dashboard'}
       </Link>
       {mode !== 'REMOTE' ? (
-        <p className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
+        <p className="mt-6 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-6 text-sm text-amber-900 dark:text-amber-200">
           El historial analítico requiere conexión al servidor.
         </p>
       ) : history.loading || access.isLoading ? (
-        <p className="mt-6 rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
+        <p className="mt-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 text-sm text-slate-600 dark:text-slate-300">
           Cargando historial…
         </p>
       ) : history.error ? (
         <p
           role="alert"
-          className="mt-6 rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700"
+          className="mt-6 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-6 text-sm text-red-700 dark:text-red-300"
         >
           {history.error}
         </p>
       ) : history.data ? (
         <div className="mt-6 space-y-6">
-          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               {history.data.asset.assetType}
             </p>
-            <h2 className="mt-1 text-xl font-semibold text-slate-950">
+            <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-100">
               {history.data.asset.name}
             </h2>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               {history.data.asset.code} · {history.data.asset.path}
             </p>
-            <div className="mt-5 grid gap-4 border-t border-slate-100 pt-5 sm:grid-cols-3">
+            <div className="mt-5 grid gap-4 border-t border-slate-100 dark:border-slate-800 pt-5 sm:grid-cols-3">
               <p>
-                <strong className="block text-2xl text-slate-950">
+                <strong className="block text-2xl text-slate-950 dark:text-slate-100">
                   {history.data.summary.works}
                 </strong>
-                <span className="text-sm text-slate-500">Trabajos</span>
+                <span className="text-sm text-slate-500 dark:text-slate-400">Trabajos</span>
               </p>
               <p>
-                <strong className="block text-2xl text-slate-950">
+                <strong className="block text-2xl text-slate-950 dark:text-slate-100">
                   {history.data.summary.findings}
                 </strong>
-                <span className="text-sm text-slate-500">Hallazgos</span>
+                <span className="text-sm text-slate-500 dark:text-slate-400">Hallazgos</span>
               </p>
               <p>
-                <strong className="block text-base text-slate-950">
+                <strong className="block text-base text-slate-950 dark:text-slate-100">
                   {formatMeasurementDate(history.data.summary.lastInspectionAt)}
                 </strong>
-                <span className="text-sm text-slate-500">
+                <span className="text-sm text-slate-500 dark:text-slate-400">
                   Última inspección
                 </span>
               </p>
             </div>
           </section>
           <div className="grid gap-6 lg:grid-cols-2">
-            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
               <h2 className="font-semibold">Historial de trabajos</h2>
               {history.data.works.length ? (
-                <ul className="mt-4 divide-y divide-slate-100">
+                <ul className="mt-4 divide-y divide-slate-100 dark:divide-slate-800">
                   {history.data.works.map((work) => (
                     <li
                       key={work.id}
-                      className="border-l-2 border-slate-200 py-3 pl-4"
+                      className="border-l-2 border-slate-200 dark:border-slate-800 py-3 pl-4"
                     >
-                      <p className="text-xs font-medium text-slate-500">
+                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
                         {formatMeasurementDate(work.executionDate)}
                       </p>
                       <Link
-                        className="font-medium text-slate-900 hover:underline"
+                        className="font-medium text-slate-900 dark:text-slate-100 hover:underline"
                         to={`/works/${encodeURIComponent(
                           work.id
                         )}?tenantId=${encodeURIComponent(tenantId)}`}
                       >
                         {work.title}
                       </Link>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         {work.status} · Trabajo {work.id.slice(0, 8)}…
                       </p>
                       {work.workAssetId !== id && (
-                        <p className="mt-1 text-xs text-slate-600">
+                        <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
                           Trabajo del activo padre que incluyó este activo en su
                           formulario.
                         </p>
@@ -136,21 +136,21 @@ export function AssetHistoryPage() {
                   ))}
                 </ul>
               ) : (
-                <p className="mt-4 text-sm text-slate-500">
+                <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
                   Sin trabajos en este período.
                 </p>
               )}
             </section>
-            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
               <h2 className="font-semibold">Historial de hallazgos</h2>
               {history.data.findings.length ? (
-                <ul className="mt-4 divide-y divide-slate-100">
+                <ul className="mt-4 divide-y divide-slate-100 dark:divide-slate-800">
                   {history.data.findings.map((finding) => (
                     <li
                       key={finding.id}
-                      className="border-l-2 border-slate-200 py-3 pl-4"
+                      className="border-l-2 border-slate-200 dark:border-slate-800 py-3 pl-4"
                     >
-                      <p className="text-xs font-medium text-slate-500">
+                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
                         {formatMeasurementDate(finding.workDate)}
                       </p>
                       <Link
@@ -159,24 +159,24 @@ export function AssetHistoryPage() {
                         )}?tenantId=${encodeURIComponent(
                           tenantId
                         )}#finding-${encodeURIComponent(finding.id)}`}
-                        className="font-medium text-slate-900 hover:underline"
+                        className="font-medium text-slate-900 dark:text-slate-100 hover:underline"
                       >
                         {finding.title}
                       </Link>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         {finding.severityName}
                       </p>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="mt-4 text-sm text-slate-500">
+                <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
                   Sin hallazgos en este período.
                 </p>
               )}
             </section>
           </div>
-          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
             <h2 className="font-semibold">Mediciones disponibles</h2>
             {history.data.analogConcepts.length ? (
               <ul className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -189,7 +189,7 @@ export function AssetHistoryPage() {
                         conceptId: concept.conceptId,
                         assetIds: id,
                       }).toString()}`}
-                      className="block rounded-lg border border-slate-200 p-3 text-sm text-slate-800 hover:border-slate-400 hover:bg-slate-50"
+                      className="block rounded-lg border border-slate-200 dark:border-slate-800 p-3 text-sm text-slate-800 dark:text-slate-200 hover:border-slate-400 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-950"
                     >
                       {concept.name}
                       {concept.unit ? ` (${concept.unit})` : ''} ·{' '}
@@ -199,7 +199,7 @@ export function AssetHistoryPage() {
                 ))}
               </ul>
             ) : (
-              <p className="mt-4 text-sm text-slate-500">
+              <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
                 Sin mediciones analógicas para este activo.
               </p>
             )}
@@ -211,7 +211,7 @@ export function AssetHistoryPage() {
                 type="button"
                 disabled={page <= 1}
                 onClick={() => setPage(page - 1)}
-                className="rounded-lg border border-slate-300 px-3 py-2 disabled:opacity-40"
+                className="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 disabled:opacity-40"
               >
                 Anterior
               </button>
@@ -226,7 +226,7 @@ export function AssetHistoryPage() {
                   )
                 }
                 onClick={() => setPage(page + 1)}
-                className="rounded-lg border border-slate-300 px-3 py-2 disabled:opacity-40"
+                className="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 disabled:opacity-40"
               >
                 Siguiente
               </button>

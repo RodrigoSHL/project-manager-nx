@@ -215,11 +215,11 @@ export function DashboardPage() {
         description="Tus inspecciones de un vistazo."
       />
       {tenantAccess.isLoading ? (
-        <p className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
+        <p className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 text-sm text-slate-600 dark:text-slate-300">
           Cargando empresas disponibles…
         </p>
       ) : !tenantId ? (
-        <p className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
+        <p className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 text-sm text-slate-600 dark:text-slate-300">
           No tienes una empresa disponible para consultar inspecciones.
         </p>
       ) : (
@@ -238,22 +238,22 @@ export function DashboardPage() {
             onApply={applyFilters}
           />
           {mode !== 'REMOTE' ? (
-            <p className="mt-6 rounded-xl border border-amber-300 bg-amber-50 p-5 text-sm text-amber-900">
+            <p className="mt-6 rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-5 text-sm text-amber-900 dark:text-amber-200">
               El resumen necesita conexión con el servidor. Puedes continuar tus
               trabajos con los datos guardados en este dispositivo.
             </p>
           ) : filters.from > filters.to ? (
             <p
               role="alert"
-              className="mt-6 rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-700"
+              className="mt-6 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-5 text-sm text-red-700 dark:text-red-300"
             >
               La fecha inicial debe ser anterior o igual a la final.
             </p>
           ) : (
             <>
               {summaryData && summaryData.totalWorks === 0 && (
-                <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
-                  <strong className="block text-base text-slate-950">
+                <div className="mt-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 text-sm text-slate-600 dark:text-slate-300">
+                  <strong className="block text-base text-slate-950 dark:text-slate-100">
                     Aún no existen trabajos suficientes para mostrar métricas.
                   </strong>
                   Las estadísticas aparecerán cuando comiencen a finalizarse

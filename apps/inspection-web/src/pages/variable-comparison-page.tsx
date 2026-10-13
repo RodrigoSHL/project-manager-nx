@@ -186,12 +186,12 @@ export function VariableComparisonPage() {
       />
       <Link
         to={`/analytics/measurements?${returnParams.toString()}`}
-        className="mb-4 inline-flex min-h-11 items-center text-sm font-medium text-slate-600 hover:text-slate-950"
+        className="mb-4 inline-flex min-h-11 items-center text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-slate-100"
       >
         ← Volver a mediciones
       </Link>
       {mode !== 'REMOTE' ? (
-        <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <p className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-4 text-sm text-amber-900 dark:text-amber-200">
           El comparador histórico requiere conexión. Puedes seguir registrando
           mediciones y sincronizarlas después.
         </p>
@@ -229,7 +229,7 @@ export function VariableComparisonPage() {
               <p
                 key={error}
                 role="alert"
-                className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+                className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-800 dark:text-red-200"
               >
                 {error}
               </p>
@@ -255,42 +255,42 @@ export function VariableComparisonPage() {
             />
           </div>
           {!siteId && (
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
               Abre Filtros y selecciona una faena para comenzar.
             </p>
           )}
           {siteId && !bothSelected && (
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
               Elige un activo y una medición para cada variable.
             </p>
           )}
           {samePair && (
-            <p role="alert" className="text-sm text-amber-800">
+            <p role="alert" className="text-sm text-amber-800 dark:text-amber-200">
               Elige dos pares activo–concepto distintos.
             </p>
           )}
           {!validPeriod && (
-            <p role="alert" className="text-sm text-red-700">
+            <p role="alert" className="text-sm text-red-700 dark:text-red-300">
               Completa el período; la fecha inicial debe ser anterior o igual a
               la final.
             </p>
           )}
           {result.loading && (
-            <p role="status" className="text-sm text-slate-600">
+            <p role="status" className="text-sm text-slate-600 dark:text-slate-300">
               Cargando mediciones…
             </p>
           )}
           {tooMany && (
             <p
               role="alert"
-              className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+              className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-4 text-sm text-amber-900 dark:text-amber-200"
             >
               Hay más de {MAX_VARIABLE_POINTS} mediciones en al menos una
               variable. Acota el período para mostrar una comparación completa.
             </p>
           )}
           {selectedWithoutData && !tooMany && (
-            <p className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-600">
+            <p className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 text-sm text-slate-600 dark:text-slate-300">
               Uno de los pares elegidos no tiene mediciones en este período.
               Prueba otro activo o concepto.
             </p>
@@ -302,7 +302,7 @@ export function VariableComparisonPage() {
               tenantId={tenantId}
             />
           )}
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             La coincidencia temporal de dos curvas puede sugerir una relación,
             pero no demuestra causalidad. La hora es opcional y corresponde a la
             hora local registrada en la faena.

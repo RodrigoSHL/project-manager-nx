@@ -99,13 +99,13 @@ export function OfflineDebugPage() {
         title="Almacenamiento local"
         description="Diagnóstico del contenido guardado en IndexedDB para trabajo sin conexión."
       />
-      <section className="mb-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <label className="text-sm font-medium text-slate-700">
+      <section className="mb-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
+        <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
           Tenant / Empresa
           <select
             value={tenantId}
             onChange={(event) => handleTenantChange(event.target.value)}
-            className="mt-2 block h-11 w-full max-w-md rounded-lg border border-slate-300 bg-white px-3 text-slate-900"
+            className="mt-2 block h-11 w-full max-w-md rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-slate-900 dark:text-slate-100"
           >
             {tenantAccess.accessibleTenants.map((tenant) => (
               <option key={tenant.id} value={tenant.id}>
@@ -124,13 +124,13 @@ export function OfflineDebugPage() {
         <Metric label="Modificados" value={counts.modified} />
         <Metric label="Archivos referenciados" value={counts.files} />
       </section>
-      <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="mt-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="flex items-center gap-2 font-semibold">
               <Database className="size-5" /> Sitios descargados
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Uso aproximado del navegador: {usage}
             </p>
           </div>
@@ -154,12 +154,12 @@ export function OfflineDebugPage() {
           </div>
         </div>
         {!connectivity.apiReachable ? (
-          <p className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+          <p className="mt-4 rounded-lg bg-amber-50 dark:bg-amber-950/40 p-3 text-sm text-amber-800 dark:text-amber-200">
             La copia local se usa automáticamente mientras el servidor no está
             disponible.
           </p>
         ) : null}
-        <div className="mt-5 divide-y divide-slate-100 rounded-lg border border-slate-200">
+        <div className="mt-5 divide-y divide-slate-100 dark:divide-slate-800 rounded-lg border border-slate-200 dark:border-slate-800">
           {downloadedSites.length ? (
             downloadedSites.map((item) => (
               <div
@@ -170,7 +170,7 @@ export function OfflineDebugPage() {
                   {item.tenantName ?? item.tenantId} ·{' '}
                   {item.siteName ?? item.siteId}
                 </span>
-                <span className="text-slate-500">
+                <span className="text-slate-500 dark:text-slate-400">
                   {item.status}
                   {item.downloadedAt
                     ? ` · ${new Date(item.downloadedAt).toLocaleString(
@@ -181,7 +181,7 @@ export function OfflineDebugPage() {
               </div>
             ))
           ) : (
-            <p className="p-4 text-sm text-slate-500">
+            <p className="p-4 text-sm text-slate-500 dark:text-slate-400">
               No hay sitios descargados para esta empresa.
             </p>
           )}
@@ -196,10 +196,10 @@ export function OfflineDebugPage() {
 
 function Metric({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
       <HardDrive className="size-4 text-slate-400" />
       <p className="mt-3 text-2xl font-semibold">{value}</p>
-      <p className="text-xs text-slate-500">{label}</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
     </div>
   );
 }

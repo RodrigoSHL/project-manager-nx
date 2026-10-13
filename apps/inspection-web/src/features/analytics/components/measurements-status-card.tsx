@@ -14,15 +14,15 @@ export function MeasurementsStatusCard({
       {rows.map((row) => (
         <div
           key={row.label}
-          className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3 text-sm last:border-0 last:pb-0"
+          className="flex items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3 text-sm last:border-0 last:pb-0"
         >
-          <span className="text-slate-600">{row.label}</span>
-          <strong className="text-slate-950">
+          <span className="text-slate-600 dark:text-slate-300">{row.label}</span>
+          <strong className="text-slate-950 dark:text-slate-100">
             {row.value.toLocaleString('es-CL')}
           </strong>
         </div>
       ))}
-      <p className="pt-2 text-xs text-slate-500">
+      <p className="pt-2 text-xs text-slate-500 dark:text-slate-400">
         Base: {summary.measurementsEvaluable.toLocaleString('es-CL')} mediciones
         evaluables. Las mediciones sin límites configurados no entran en este
         cálculo.

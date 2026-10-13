@@ -83,19 +83,19 @@ export function WorksPage() {
       />
 
       {catalog.error ? (
-        <section className="mt-6 rounded-xl border border-red-200 bg-white p-6 text-center shadow-sm">
-          <AlertCircle className="mx-auto size-7 text-red-500" />
-          <p className="mt-3 text-sm text-red-700">{catalog.error}</p>
+        <section className="mt-6 rounded-xl border border-red-200 dark:border-red-800 bg-white dark:bg-slate-900 p-6 text-center shadow-sm">
+          <AlertCircle className="mx-auto size-7 text-red-500 dark:text-red-300" />
+          <p className="mt-3 text-sm text-red-700 dark:text-red-300">{catalog.error}</p>
           <Button className="mt-4" onClick={catalog.retry}>
             Reintentar
           </Button>
         </section>
       ) : null}
       {catalog.isLoading && !references ? (
-        <section className="mt-6 grid min-h-64 place-items-center rounded-xl border border-slate-200 bg-white shadow-sm">
+        <section className="mt-6 grid min-h-64 place-items-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
           <div className="text-center">
-            <LoaderCircle className="mx-auto size-8 animate-spin text-slate-500" />
-            <p className="mt-3 text-sm text-slate-600">
+            <LoaderCircle className="mx-auto size-8 animate-spin text-slate-500 dark:text-slate-400" />
+            <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
               Cargando trabajos locales...
             </p>
           </div>
@@ -108,12 +108,12 @@ export function WorksPage() {
       !catalog.isLoading &&
       references &&
       filteredWorks.length === 0 ? (
-        <section className="mt-6 rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center">
+        <section className="mt-6 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-10 text-center">
           <ClipboardList className="mx-auto size-8 text-slate-400" />
-          <h2 className="mt-3 font-semibold text-slate-900">
+          <h2 className="mt-3 font-semibold text-slate-900 dark:text-slate-100">
             No hay trabajos para estos filtros
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Selecciona un activo y usa “Nuevo trabajo” para crear uno.
           </p>
         </section>
@@ -134,19 +134,19 @@ export function WorksPage() {
               <Link
                 key={work.id}
                 to={`/works/${work.id}?tenantId=${work.tenantId}`}
-                className="min-w-0 break-words rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow md:p-5"
+                className="min-w-0 break-words rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm transition hover:border-slate-300 dark:hover:border-slate-700 hover:shadow md:p-5"
               >
                 <div className="flex items-start gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-700">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
                     <ClipboardList className="size-5" />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                           {workType?.name}
                         </p>
-                        <h2 className="mt-1 font-semibold text-slate-950">
+                        <h2 className="mt-1 font-semibold text-slate-950 dark:text-slate-100">
                           {work.title}
                         </h2>
                       </div>
@@ -155,7 +155,7 @@ export function WorksPage() {
                         <SyncStatusBadge work={work} />
                       </div>
                     </div>
-                    <div className="mt-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="mt-4 grid gap-2 text-sm text-slate-600 dark:text-slate-300 sm:grid-cols-2 lg:grid-cols-4">
                       <span>
                         {asset
                           ? `${asset.code} · ${asset.name}`

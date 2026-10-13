@@ -88,12 +88,12 @@ function Fields({
     },
   ];
   const inputClass =
-    'mt-1.5 min-h-11 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 text-base font-normal text-slate-800 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-50 md:text-sm';
+    'mt-1.5 min-h-11 w-full min-w-0 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-base font-normal text-slate-800 dark:text-slate-200 outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800 disabled:bg-slate-50 dark:disabled:bg-slate-950 md:text-sm';
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
       {tenants.length > 1 ? (
-        <label className="min-w-0 text-sm font-medium text-slate-600">
+        <label className="min-w-0 text-sm font-medium text-slate-600 dark:text-slate-300">
           Empresa
           <select
             className={inputClass}
@@ -108,15 +108,15 @@ function Fields({
           </select>
         </label>
       ) : (
-        <div className="min-w-0 text-sm text-slate-600">
+        <div className="min-w-0 text-sm text-slate-600 dark:text-slate-300">
           Empresa
-          <p className="mt-1.5 break-words font-medium text-slate-900">
+          <p className="mt-1.5 break-words font-medium text-slate-900 dark:text-slate-100">
             {tenants[0]?.name ?? 'Sin empresa disponible'}
           </p>
         </div>
       )}
       {fields.map(({ label, key, all, options }) => (
-        <label key={key} className="min-w-0 text-sm font-medium text-slate-600">
+        <label key={key} className="min-w-0 text-sm font-medium text-slate-600 dark:text-slate-300">
           {label}
           <select
             className={inputClass}
@@ -166,7 +166,7 @@ export function WorkListFilters(props: Props) {
       }
       summary={
         <>
-          <p className="font-medium text-slate-900">
+          <p className="font-medium text-slate-900 dark:text-slate-100">
             {tenants.find((tenant) => tenant.id === values.tenantId)?.name}
           </p>
           <p className="mt-1">
@@ -196,7 +196,7 @@ export function WorkListFilters(props: Props) {
             loading={props.loading || changingTenant}
           />
           {changingTenant ? (
-            <p className="mt-3 text-sm text-slate-600">
+            <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
               Al cambiar de empresa, se restablecen la faena y los tipos. Aplica
               la selección para consultar la nueva empresa.
             </p>

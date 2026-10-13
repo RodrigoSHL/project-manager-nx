@@ -13,24 +13,24 @@ export function PwaUpdatePrompt() {
 
   return (
     <aside
-      className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-xl rounded-xl border border-slate-200 bg-white p-4 shadow-xl"
+      className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-xl rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xl"
       aria-live="polite"
     >
       <div className="flex items-start gap-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-700">
+        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
           {needRefresh ? (
             <RefreshCw className="size-5" />
           ) : (
-            <CheckCircle2 className="size-5 text-emerald-700" />
+            <CheckCircle2 className="size-5 text-emerald-700 dark:text-emerald-300" />
           )}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-slate-950">
+          <p className="font-semibold text-slate-950 dark:text-slate-100">
             {needRefresh
               ? 'Nueva versión disponible'
               : 'Aplicación preparada para uso sin conexión'}
           </p>
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
             {needRefresh
               ? 'Actualiza cuando termines de guardar lo que estás revisando.'
               : 'El esqueleto de la aplicación quedó guardado en este dispositivo.'}
@@ -47,7 +47,7 @@ export function PwaUpdatePrompt() {
         </div>
         <button
           type="button"
-          className="rounded-md p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          className="rounded-md p-1 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100"
           aria-label="Cerrar aviso"
           onClick={() => {
             setOfflineReady(false);

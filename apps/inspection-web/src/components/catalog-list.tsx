@@ -33,7 +33,7 @@ export function CatalogList({
 }: CatalogListProps) {
   if (items.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
+      <p className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-8 text-center text-sm text-slate-500 dark:text-slate-400">
         {emptyMessage}
       </p>
     );
@@ -54,12 +54,12 @@ export function CatalogList({
         return (
           <article
             key={item.id}
-            className={`relative min-w-0 overflow-hidden rounded-xl border bg-white transition ${
+            className={`relative min-w-0 overflow-hidden rounded-xl border bg-white dark:bg-slate-900 transition ${
               layout === 'list' ? 'p-3' : 'p-4'
             } ${
               isSelected
-                ? 'border-slate-900 bg-slate-50/70 shadow-sm ring-1 ring-slate-900'
-                : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
+                ? 'border-slate-900 dark:border-slate-300 bg-slate-50/70 dark:bg-slate-950/70 shadow-sm ring-1 ring-slate-900 dark:ring-slate-300'
+                : 'border-slate-200 dark:border-slate-800 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md'
             }`}
           >
             {onSelect ? (
@@ -68,7 +68,7 @@ export function CatalogList({
                 aria-label={`Seleccionar ${item.name}`}
                 aria-pressed={isSelected}
                 onClick={() => onSelect(item)}
-                className="absolute inset-0 z-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-600 focus-visible:ring-inset"
+                className="absolute inset-0 z-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-600 dark:focus-visible:ring-slate-400 focus-visible:ring-inset"
               />
             ) : null}
 
@@ -83,15 +83,15 @@ export function CatalogList({
                 <div className="flex min-w-0 items-center gap-2">
                   <span
                     title={item.code}
-                    className="min-w-0 truncate rounded bg-slate-100 px-2 py-1 font-mono text-[0.7rem] font-semibold text-slate-600"
+                    className="min-w-0 truncate rounded bg-slate-100 dark:bg-slate-800 px-2 py-1 font-mono text-[0.7rem] font-semibold text-slate-600 dark:text-slate-300"
                   >
                     {item.code}
                   </span>
                   <span
                     className={`shrink-0 rounded-full px-2 py-1 text-[0.7rem] font-medium ${
                       item.active
-                        ? 'bg-emerald-50 text-emerald-700'
-                        : 'bg-slate-100 text-slate-500'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
                     }`}
                   >
                     {item.active ? 'Activo' : 'Inactivo'}
@@ -99,7 +99,7 @@ export function CatalogList({
                 </div>
 
                 <h3
-                  className={`truncate font-semibold text-slate-950 ${
+                  className={`truncate font-semibold text-slate-950 dark:text-slate-100 ${
                     layout === 'list' ? 'mt-2 text-sm' : 'mt-4'
                   }`}
                   title={item.name}
@@ -107,7 +107,7 @@ export function CatalogList({
                   {item.name}
                 </h3>
                 <p
-                  className={`text-sm leading-5 text-slate-500 ${
+                  className={`text-sm leading-5 text-slate-500 dark:text-slate-400 ${
                     layout === 'list' ? 'mt-0.5 truncate' : 'mt-1 line-clamp-2'
                   }`}
                   title={item.description ?? 'Sin descripción.'}
@@ -119,13 +119,13 @@ export function CatalogList({
               <div
                 className={`pointer-events-auto flex shrink-0 items-center gap-1 ${
                   layout === 'cards'
-                    ? 'mt-4 border-t border-slate-100 pt-3'
+                    ? 'mt-4 border-t border-slate-100 dark:border-slate-800 pt-3'
                     : ''
                 }`}
               >
                 {isSelected && onSelect ? (
                   <span
-                    className="mr-1 hidden size-7 place-items-center rounded-full bg-slate-900 text-white sm:grid"
+                    className="mr-1 hidden size-7 place-items-center rounded-full bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-950 sm:grid"
                     title="Tipo seleccionado"
                   >
                     <Check className="size-3.5" strokeWidth={3} />
@@ -137,7 +137,7 @@ export function CatalogList({
                     aria-label={`Editar ${item.name}`}
                     title="Editar"
                     onClick={() => onEdit(item)}
-                    className="grid size-8 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500"
+                    className="grid size-8 place-items-center rounded-lg text-slate-500 dark:text-slate-400 transition hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 dark:focus-visible:ring-slate-500"
                   >
                     <Pencil className="size-4" />
                   </button>
@@ -157,7 +157,7 @@ export function CatalogList({
                         : 'Este tipo es necesario para los nodos raíz'
                     }
                     onClick={() => onToggleActive(item)}
-                    className="grid size-8 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:cursor-not-allowed disabled:opacity-35"
+                    className="grid size-8 place-items-center rounded-lg text-slate-500 dark:text-slate-400 transition hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 dark:focus-visible:ring-slate-500 disabled:cursor-not-allowed disabled:opacity-35"
                   >
                     {item.active ? (
                       <Power className="size-4" />

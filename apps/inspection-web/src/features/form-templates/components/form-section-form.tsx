@@ -40,32 +40,32 @@ export function FormSectionForm({
   return (
     <form
       onSubmit={submit}
-      className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4"
+      className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 p-4"
     >
-      <h4 className="text-sm font-semibold text-slate-900">
+      <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
         {section ? 'Editar sección' : 'Nueva sección'}
       </h4>
       <div className="mt-3 grid gap-3">
-        <label className="text-xs font-medium text-slate-600">
+        <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
           Título
           <input
             required
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             placeholder="Inspección visual"
-            className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-slate-500"
+            className="mt-1 h-10 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-slate-500 dark:focus:border-slate-500"
           />
         </label>
-        <label className="text-xs font-medium text-slate-600">
+        <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
           Descripción opcional
           <input
             value={description}
             onChange={(event) => setDescription(event.target.value)}
-            className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-slate-500"
+            className="mt-1 h-10 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-slate-500 dark:focus:border-slate-500"
           />
         </label>
       </div>
-      {error ? <p className="mt-2 text-xs text-red-700">{error}</p> : null}
+      {error ? <p className="mt-2 text-xs text-red-700 dark:text-red-300">{error}</p> : null}
       <div className="mt-3 flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={onCancel}>
           Cancelar

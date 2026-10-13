@@ -9,6 +9,7 @@ import {
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { GridAssetsLogo } from '../components/gridassets-logo';
+import { ThemeToggle } from '../components/theme-toggle';
 import {
   Sheet,
   SheetContent,
@@ -43,7 +44,7 @@ function PlatformSidebar({ onNavigate }: { onNavigate?: () => void }) {
         <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
           <ShieldCheck className="size-4" /> Control global
         </div>
-        <p className="mt-2 text-xs leading-5 text-slate-500">
+        <p className="mt-2 text-xs leading-5 text-slate-400">
           Esta área administra clientes y no depende del tenant operativo.
         </p>
       </div>
@@ -55,7 +56,7 @@ function PlatformSidebar({ onNavigate }: { onNavigate?: () => void }) {
           className={({ isActive }) =>
             `flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm transition-colors ${
               isActive
-                ? 'bg-white/10 font-medium text-white'
+                ? 'bg-amber-400/10 font-medium text-amber-300 ring-1 ring-inset ring-amber-300/25'
                 : 'text-slate-300 hover:bg-white/5 hover:text-white'
             }`
           }
@@ -95,7 +96,7 @@ export function PlatformLayout() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-950">
+    <div className="min-h-screen bg-slate-100 text-slate-950 dark:bg-slate-950 dark:text-slate-100">
       <aside className="fixed inset-y-0 left-0 hidden w-72 flex-col bg-slate-950 md:flex">
         <PlatformSidebar />
       </aside>
@@ -115,7 +116,7 @@ export function PlatformLayout() {
       </Sheet>
 
       <div className="md:pl-72">
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-slate-200 bg-white px-4 md:px-8">
+        <header className="sticky top-0 z-20 flex min-h-16 min-w-0 items-center gap-2 border-b border-slate-200 bg-white px-4 py-2 md:gap-3 md:px-8 dark:border-slate-800 dark:bg-slate-900">
           <Button
             variant="ghost"
             size="icon"
@@ -125,12 +126,13 @@ export function PlatformLayout() {
           >
             <Menu />
           </Button>
-          <div>
-            <p className="text-sm font-semibold text-slate-900">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
               Administración de plataforma
             </p>
-            <p className="text-xs text-slate-500">Gestión global de clientes</p>
+            <p className="truncate text-xs text-slate-500 dark:text-slate-400">Gestión global de clientes</p>
           </div>
+          <ThemeToggle />
         </header>
 
         <main className="mx-auto w-full max-w-7xl p-4 md:p-8">

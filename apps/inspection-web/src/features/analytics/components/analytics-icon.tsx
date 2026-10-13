@@ -1,11 +1,11 @@
 import type { LucideIcon } from 'lucide-react';
 
 const tones = {
-  slate: 'bg-slate-100 text-slate-600',
-  blue: 'bg-blue-50 text-blue-700',
-  teal: 'bg-teal-50 text-teal-700',
-  amber: 'bg-amber-50 text-amber-700',
-  violet: 'bg-violet-50 text-violet-700',
+  slate: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300',
+  blue: 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300',
+  teal: 'bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300',
+  amber: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300',
+  violet: 'bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300',
 };
 
 export type AnalyticsIconTone = keyof typeof tones;

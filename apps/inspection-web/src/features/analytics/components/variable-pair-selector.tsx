@@ -30,10 +30,10 @@ function PairFields({
   onChange,
 }: Omit<Props, 'label'>) {
   const inputClass =
-    'mt-1.5 min-h-11 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:bg-slate-50 md:text-sm';
+    'mt-1.5 min-h-11 w-full min-w-0 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-base text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-700 disabled:bg-slate-50 dark:disabled:bg-slate-950 md:text-sm';
   return (
     <div className="grid min-w-0 gap-3">
-      <label className="min-w-0 text-sm font-medium text-slate-700">
+      <label className="min-w-0 text-sm font-medium text-slate-700 dark:text-slate-200">
         Activo
         <select
           className={inputClass}
@@ -51,7 +51,7 @@ function PairFields({
           ))}
         </select>
       </label>
-      <label className="min-w-0 text-sm font-medium text-slate-700">
+      <label className="min-w-0 text-sm font-medium text-slate-700 dark:text-slate-200">
         Medición
         <select
           className={inputClass}
@@ -103,17 +103,17 @@ export function VariablePairSelector(props: Props) {
 
   return (
     <>
-      <fieldset className="hidden min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:block md:p-5">
-        <legend className="px-1 font-semibold text-slate-900">{label}</legend>
+      <fieldset className="hidden min-w-0 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm md:block md:p-5">
+        <legend className="px-1 font-semibold text-slate-900 dark:text-slate-100">{label}</legend>
         <PairFields {...props} />
       </fieldset>
       <section
         aria-label={label}
-        className="min-w-0 rounded-xl border border-slate-200 bg-white p-3 shadow-sm md:hidden"
+        className="min-w-0 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 shadow-sm md:hidden"
       >
         <button
           type="button"
-          className="flex min-h-16 w-full items-start justify-between gap-3 text-left disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+          className="flex min-h-16 w-full items-start justify-between gap-3 text-left disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 dark:focus-visible:ring-slate-600"
           aria-label={`${selected ? 'Cambiar' : 'Elegir'} ${label}`}
           aria-haspopup="dialog"
           aria-expanded={open}
@@ -124,10 +124,10 @@ export function VariablePairSelector(props: Props) {
           }}
         >
           <span className="min-w-0 break-words">
-            <span className="block text-sm font-semibold text-slate-950">
+            <span className="block text-sm font-semibold text-slate-950 dark:text-slate-100">
               {label}
             </span>
-            <span className="mt-1 block text-sm text-slate-700">
+            <span className="mt-1 block text-sm text-slate-700 dark:text-slate-200">
               {asset?.name ??
                 (disabled
                   ? 'Selecciona una faena primero'
@@ -136,13 +136,13 @@ export function VariablePairSelector(props: Props) {
                   : 'Elegir activo y medición')}
             </span>
             {concept ? (
-              <span className="mt-1 block text-xs text-slate-500">
+              <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
                 {concept.name}
                 {concept.unit ? ` · ${concept.unit}` : ''}
               </span>
             ) : null}
           </span>
-          <span className="flex min-h-11 shrink-0 items-center gap-1 text-sm font-medium text-slate-700">
+          <span className="flex min-h-11 shrink-0 items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
             {selected ? 'Cambiar' : 'Elegir'}
             <ChevronRight className="size-4" aria-hidden="true" />
           </span>
@@ -150,18 +150,18 @@ export function VariablePairSelector(props: Props) {
       </section>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="bottom" closeLabel={`Cerrar ${label}`}>
-          <header className="border-b border-slate-200 p-4 pr-16">
-            <SheetTitle className="text-lg font-semibold text-slate-950">
+          <header className="border-b border-slate-200 dark:border-slate-800 p-4 pr-16">
+            <SheetTitle className="text-lg font-semibold text-slate-950 dark:text-slate-100">
               {label}
             </SheetTitle>
-            <SheetDescription className="mt-1 text-sm text-slate-500">
+            <SheetDescription className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Selecciona el activo y la medición a comparar.
             </SheetDescription>
           </header>
           <div className="min-h-0 overflow-y-auto p-4">
             <PairFields {...props} value={draft} onChange={setDraft} />
           </div>
-          <footer className="flex shrink-0 gap-3 border-t border-slate-200 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <footer className="flex shrink-0 gap-3 border-t border-slate-200 dark:border-slate-800 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <Button
               type="button"
               variant="ghost"

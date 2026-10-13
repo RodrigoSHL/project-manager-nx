@@ -34,7 +34,7 @@ const periodLabels: Record<PeriodPreset, string> = {
   custom: 'Personalizado',
 };
 const inputClass =
-  'mt-1.5 min-h-11 w-full min-w-0 max-w-full rounded-lg border border-slate-300 bg-white px-3 text-base text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200 disabled:bg-slate-50 md:text-sm';
+  'mt-1.5 min-h-11 w-full min-w-0 max-w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-base text-slate-900 dark:text-slate-100 focus:border-slate-500 dark:focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800 disabled:bg-slate-50 dark:disabled:bg-slate-950 md:text-sm';
 
 function Field({
   label,
@@ -44,7 +44,7 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block min-w-0 text-sm font-medium text-slate-700">
+    <label className="block min-w-0 text-sm font-medium text-slate-700 dark:text-slate-200">
       {label}
       {children}
     </label>
@@ -88,9 +88,9 @@ function FilterFields({
             </select>
           </Field>
         ) : (
-          <div className="min-w-0 text-sm text-slate-600">
+          <div className="min-w-0 text-sm text-slate-600 dark:text-slate-300">
             Empresa
-            <p className="mt-1.5 break-words font-medium text-slate-900">
+            <p className="mt-1.5 break-words font-medium text-slate-900 dark:text-slate-100">
               {tenants[0]?.name ?? 'Sin empresa disponible'}
             </p>
           </div>
@@ -234,7 +234,7 @@ export function DashboardFilters(props: Props) {
         }
         summary={
           <>
-            <p className="font-medium text-slate-900">{selectedTenant?.name}</p>
+            <p className="font-medium text-slate-900 dark:text-slate-100">{selectedTenant?.name}</p>
             <p className="mt-1">
               {sites.find((site) => site.id === filters.siteId)?.name ??
                 (filters.siteId
@@ -245,7 +245,7 @@ export function DashboardFilters(props: Props) {
             {activeNames.length > 0 ? (
               <p className="mt-1 text-xs">{activeNames.join(' · ')}</p>
             ) : null}
-            <p className="mt-1 text-xs text-slate-500">{dateLabel}</p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{dateLabel}</p>
           </>
         }
         onOpen={() => {
@@ -279,13 +279,13 @@ export function DashboardFilters(props: Props) {
               onChange={changeDraft}
             />
             {changingTenant ? (
-              <p className="mt-3 text-sm text-slate-600">
+              <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
                 Al cambiar de empresa, se restablecen la faena y los tipos.
                 Aplica la selección para consultar la nueva empresa.
               </p>
             ) : null}
             {!datesValid ? (
-              <p role="alert" className="mt-3 text-sm text-red-700">
+              <p role="alert" className="mt-3 text-sm text-red-700 dark:text-red-300">
                 Selecciona un período válido: la fecha inicial debe ser anterior
                 o igual a la final.
               </p>
@@ -294,10 +294,10 @@ export function DashboardFilters(props: Props) {
         }
       >
         <FilterFields {...props} />
-        <p className="mt-3 text-xs text-slate-500">{dateLabel}</p>
+        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">{dateLabel}</p>
       </ResponsiveFilters>
       {optionsError ? (
-        <p role="alert" className="mt-3 text-sm text-amber-700">
+        <p role="alert" className="mt-3 text-sm text-amber-700 dark:text-amber-300">
           No se pudieron cargar las opciones de filtros. {optionsError}
         </p>
       ) : null}

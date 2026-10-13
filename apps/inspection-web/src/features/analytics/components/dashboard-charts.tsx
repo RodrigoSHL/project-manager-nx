@@ -22,22 +22,22 @@ export function FindingsBySeverityChart({ rows }: { rows: SeverityCount[] }) {
           layout="vertical"
           margin={{ top: 0, right: 20, left: 12, bottom: 0 }}
         >
-          <CartesianGrid horizontal={false} stroke="#e2e8f0" />
+          <CartesianGrid horizontal={false} stroke="var(--chart-grid)" />
           <XAxis
             type="number"
             allowDecimals={false}
-            tick={{ fill: '#64748b', fontSize: 12 }}
+            tick={{ fill: 'var(--chart-text)', fontSize: 12 }}
           />
           <YAxis
             type="category"
             dataKey="name"
             width={95}
-            tick={{ fill: '#334155', fontSize: 12 }}
+            tick={{ fill: 'var(--chart-text)', fontSize: 12 }}
           />
-          <Tooltip formatter={(value: number) => [value, 'Hallazgos']} />
+          <Tooltip contentStyle={{ backgroundColor: 'var(--chart-tooltip)', borderColor: 'var(--chart-grid)', color: 'var(--chart-text)', borderRadius: 8 }} itemStyle={{ color: 'var(--chart-text)' }} formatter={(value: number) => [value, 'Hallazgos']} />
           <Bar
             dataKey="count"
-            fill="#334155"
+            fill="var(--chart-bar)"
             radius={[0, 4, 4, 0]}
             maxBarSize={22}
           />
@@ -59,20 +59,20 @@ export function WorkActivityChart({ rows }: { rows: ActivityPoint[] }) {
           data={rows}
           margin={{ top: 8, right: 8, left: -20, bottom: 0 }}
         >
-          <CartesianGrid vertical={false} stroke="#e2e8f0" />
+          <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
           <XAxis
             dataKey="period"
-            tick={{ fill: '#64748b', fontSize: 11 }}
+            tick={{ fill: 'var(--chart-text)', fontSize: 11 }}
             minTickGap={12}
           />
           <YAxis
             allowDecimals={false}
-            tick={{ fill: '#64748b', fontSize: 12 }}
+            tick={{ fill: 'var(--chart-text)', fontSize: 12 }}
           />
-          <Tooltip formatter={(value: number) => [value, 'Trabajos']} />
+          <Tooltip contentStyle={{ backgroundColor: 'var(--chart-tooltip)', borderColor: 'var(--chart-grid)', color: 'var(--chart-text)', borderRadius: 8 }} itemStyle={{ color: 'var(--chart-text)' }} formatter={(value: number) => [value, 'Trabajos']} />
           <Bar
             dataKey="works"
-            fill="#0f172a"
+            fill="var(--chart-bar)"
             radius={[4, 4, 0, 0]}
             maxBarSize={34}
           />

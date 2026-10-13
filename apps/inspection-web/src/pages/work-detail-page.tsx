@@ -70,8 +70,8 @@ export function WorkDetailPage() {
     );
   if (catalog.isLoading || !catalog.catalog) {
     return (
-      <section className="grid min-h-72 place-items-center rounded-xl border border-slate-200 bg-white">
-        <LoaderCircle className="size-8 animate-spin text-slate-500" />
+      <section className="grid min-h-72 place-items-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+        <LoaderCircle className="size-8 animate-spin text-slate-500 dark:text-slate-400" />
       </section>
     );
   }
@@ -100,23 +100,23 @@ export function WorkDetailPage() {
     <>
       <Link
         to="/works"
-        className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-950"
+        className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-slate-100"
       >
         <ArrowLeft className="size-4" /> Volver a trabajos
       </Link>
       <Link
         to={`/works/${id}/report?tenantId=${encodeURIComponent(tenantId)}`}
-        className="mb-4 ml-4 inline-flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-slate-950"
+        className="mb-4 ml-4 inline-flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-slate-950 dark:hover:text-slate-100"
       >
         <FileText className="size-4" /> Ver informe
       </Link>
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+      <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               {workType?.name ?? 'Trabajo'}
             </p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-100">
               {work.title}
             </h1>
           </div>
@@ -125,7 +125,7 @@ export function WorkDetailPage() {
             <SyncStatusBadge work={work} />
           </div>
         </div>
-        <dl className="mt-6 grid gap-4 border-t border-slate-200 pt-5 text-sm sm:grid-cols-2 lg:grid-cols-4">
+        <dl className="mt-6 grid gap-4 border-t border-slate-200 dark:border-slate-800 pt-5 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <Meta
             icon={MapPin}
             label="Activo"
@@ -144,19 +144,19 @@ export function WorkDetailPage() {
           <Meta icon={UserRound} label="Responsable" value={work.responsible} />
         </dl>
         {work.company || work.notes ? (
-          <div className="mt-5 grid gap-3 rounded-lg bg-slate-50 p-4 text-sm sm:grid-cols-2">
+          <div className="mt-5 grid gap-3 rounded-lg bg-slate-50 dark:bg-slate-950 p-4 text-sm sm:grid-cols-2">
             {work.company ? (
               <p>
-                <span className="text-slate-500">Empresa/cuadrilla:</span>{' '}
-                <span className="font-medium text-slate-800">
+                <span className="text-slate-500 dark:text-slate-400">Empresa/cuadrilla:</span>{' '}
+                <span className="font-medium text-slate-800 dark:text-slate-200">
                   {work.company}
                 </span>
               </p>
             ) : null}
             {work.notes ? (
               <p>
-                <span className="text-slate-500">Observaciones:</span>{' '}
-                <span className="text-slate-700">{work.notes}</span>
+                <span className="text-slate-500 dark:text-slate-400">Observaciones:</span>{' '}
+                <span className="text-slate-700 dark:text-slate-200">{work.notes}</span>
               </p>
             ) : null}
           </div>
@@ -211,8 +211,8 @@ function Meta({
     <div className="flex gap-3">
       <Icon className="mt-0.5 size-4 shrink-0 text-slate-400" />
       <div>
-        <dt className="text-xs text-slate-500">{label}</dt>
-        <dd className="mt-1 font-medium text-slate-800">{value}</dd>
+        <dt className="text-xs text-slate-500 dark:text-slate-400">{label}</dt>
+        <dd className="mt-1 font-medium text-slate-800 dark:text-slate-200">{value}</dd>
       </div>
     </div>
   );
@@ -220,12 +220,12 @@ function Meta({
 
 function NotFound({ message }: { message: string }) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+    <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 text-center shadow-sm">
       <AlertCircle className="mx-auto size-8 text-slate-400" />
-      <h1 className="mt-3 font-semibold text-slate-950">
+      <h1 className="mt-3 font-semibold text-slate-950 dark:text-slate-100">
         Trabajo no disponible
       </h1>
-      <p className="mt-2 text-sm text-slate-600">{message}</p>
+      <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{message}</p>
       <Button asChild variant="outline" className="mt-5">
         <Link to="/works">Volver al listado</Link>
       </Button>

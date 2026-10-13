@@ -76,21 +76,21 @@ export function ReportSettingsPanel({ tenantId }: { tenantId: string }) {
   }
 
   return (
-    <details className="mt-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-      <summary className="cursor-pointer font-semibold text-slate-950">
+    <details className="mt-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm sm:p-5">
+      <summary className="cursor-pointer font-semibold text-slate-950 dark:text-slate-100">
         Configurar portada predeterminada
       </summary>
-      <p className="mt-3 text-sm text-slate-600">
+      <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
         Estos datos se completan automáticamente en cada informe de esta
         empresa. Puedes ajustarlos antes de guardar una versión.
       </p>
       {loading ? (
-        <LoaderCircle className="mt-5 size-6 animate-spin text-slate-500" />
+        <LoaderCircle className="mt-5 size-6 animate-spin text-slate-500 dark:text-slate-400" />
       ) : (
         <>
           {error ? (
             <div className="mt-4">
-              <p role="alert" className="flex gap-2 text-sm text-red-700">
+              <p role="alert" className="flex gap-2 text-sm text-red-700 dark:text-red-300">
                 <AlertCircle className="size-4 shrink-0" /> {error}
               </p>
               {!settings ? (
@@ -105,12 +105,12 @@ export function ReportSettingsPanel({ tenantId }: { tenantId: string }) {
             </div>
           ) : null}
           {message ? (
-            <p role="status" className="mt-4 text-sm text-emerald-700">
+            <p role="status" className="mt-4 text-sm text-emerald-700 dark:text-emerald-300">
               {message}
             </p>
           ) : null}
           <div className="mt-5 flex flex-wrap items-center gap-4">
-            <div className="flex h-20 w-40 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div className="flex h-20 w-40 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-3">
               <img
                 src={settings?.logoUrl || '/gridassets-icon.svg'}
                 alt={
@@ -122,7 +122,7 @@ export function ReportSettingsPanel({ tenantId }: { tenantId: string }) {
               />
             </div>
             <div>
-              <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-800 hover:bg-slate-50">
+              <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-700 px-3 text-sm font-medium text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-950">
                 <ImagePlus className="size-4" /> Subir logo de la empresa
                 <input
                   type="file"
@@ -143,7 +143,7 @@ export function ReportSettingsPanel({ tenantId }: { tenantId: string }) {
               {settings?.logoUrl ? (
                 <button
                   type="button"
-                  className="ml-3 text-sm font-medium text-slate-600 underline"
+                  className="ml-3 text-sm font-medium text-slate-600 dark:text-slate-300 underline"
                   disabled={busy}
                   onClick={() =>
                     void run(
@@ -155,7 +155,7 @@ export function ReportSettingsPanel({ tenantId }: { tenantId: string }) {
                   Usar GridAssets
                 </button>
               ) : null}
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                 PNG, JPG o WebP · máximo 2 MB.
               </p>
             </div>
@@ -164,7 +164,7 @@ export function ReportSettingsPanel({ tenantId }: { tenantId: string }) {
             {fields.map(([key, label]) => (
               <label
                 key={key}
-                className={`text-sm font-medium text-slate-700 ${
+                className={`text-sm font-medium text-slate-700 dark:text-slate-200 ${
                   key === 'introduction' ? 'sm:col-span-2' : ''
                 }`}
               >
@@ -180,7 +180,7 @@ export function ReportSettingsPanel({ tenantId }: { tenantId: string }) {
                     }
                     rows={3}
                     maxLength={4000}
-                    className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+                    className="mt-2 w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100"
                   />
                 ) : (
                   <input
@@ -192,13 +192,13 @@ export function ReportSettingsPanel({ tenantId }: { tenantId: string }) {
                       }))
                     }
                     maxLength={4000}
-                    className="mt-2 h-10 w-full rounded-lg border border-slate-300 px-3 text-slate-900"
+                    className="mt-2 h-10 w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 text-slate-900 dark:text-slate-100"
                   />
                 )}
               </label>
             ))}
           </div>
-          <p className="mt-3 text-xs text-slate-500">
+          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
             Al aprobar una versión final, “Aprobado por” se reemplaza por el
             nombre de la persona autenticada.
           </p>

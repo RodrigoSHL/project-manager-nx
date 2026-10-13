@@ -65,10 +65,10 @@ export function AdminAssetTypesPage() {
     <section>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-slate-950">
+          <h2 className="text-xl font-semibold text-slate-950 dark:text-slate-100">
             Tipos de activos
           </h2>
-          <p className="mt-2 max-w-2xl text-sm text-slate-600">
+          <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-300">
             Crea las clases de equipos y define sus trabajos y conceptos
             disponibles.
           </p>
@@ -78,19 +78,19 @@ export function AdminAssetTypesPage() {
         </Button>
       </div>
 
-      <div className="mt-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="mt-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
         <CatalogTenantSelector
           tenants={catalog.tenants}
           tenantId={catalog.tenantId}
           onChange={catalog.selectTenant}
         />
-        <p className="mt-3 text-xs text-slate-500">
+        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
           Los registros y asociaciones se guardan solamente para esta empresa.
         </p>
       </div>
 
       {catalog.error || catalog.mutationError ? (
-        <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <div className="mt-5 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-4 text-sm text-red-700 dark:text-red-300">
           <div className="flex items-center gap-2">
             <AlertCircle className="size-5" />{' '}
             {catalog.mutationError ?? catalog.error}
@@ -117,25 +117,25 @@ export function AdminAssetTypesPage() {
       ) : null}
 
       {catalog.isLoading ? (
-        <div className="mt-5 grid min-h-48 place-items-center rounded-xl border border-slate-200 bg-white">
-          <LoaderCircle className="size-7 animate-spin text-slate-500" />
+        <div className="mt-5 grid min-h-48 place-items-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+          <LoaderCircle className="size-7 animate-spin text-slate-500 dark:text-slate-400" />
         </div>
       ) : null}
 
       {!catalog.isLoading && !catalog.error ? (
         <div className="mt-5 grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(21rem,0.9fr)] xl:grid-cols-[minmax(0,1.05fr)_minmax(24rem,0.95fr)]">
-          <section className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm lg:flex lg:max-h-[calc(100vh-7rem)] lg:flex-col">
-            <div className="shrink-0 border-b border-slate-200 p-3 sm:p-4">
+          <section className="min-w-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm lg:flex lg:max-h-[calc(100vh-7rem)] lg:flex-col">
+            <div className="shrink-0 border-b border-slate-200 dark:border-slate-800 p-3 sm:p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900">
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                     Catálogo de tipos
                   </h3>
-                  <p className="mt-0.5 text-xs text-slate-500">
+                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                     {catalog.assetTypes.length} tipos configurados
                   </p>
                 </div>
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-slate-500 dark:text-slate-400">
                   {filteredAssetTypes.length} visibles
                 </span>
               </div>
@@ -148,7 +148,7 @@ export function AdminAssetTypesPage() {
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Buscar por nombre o código..."
-                  className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                  className="h-10 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 pl-9 pr-3 text-sm outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
                 />
               </label>
             </div>
@@ -184,14 +184,14 @@ export function AdminAssetTypesPage() {
 
           {selected ? (
             <div className="min-w-0 lg:sticky lg:top-24">
-              <div className="mb-3 grid grid-cols-2 gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+              <div className="mb-3 grid grid-cols-2 gap-1 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1 shadow-sm">
                 <button
                   type="button"
                   onClick={() => setConfigurationTab('work-types')}
                   className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium transition ${
                     configurationTab === 'work-types'
-                      ? 'bg-slate-950 text-white'
-                      : 'text-slate-600 hover:bg-slate-100'
+                      ? 'bg-slate-950 dark:bg-slate-100 text-white dark:text-slate-950'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
                   <Wrench className="size-4" /> Trabajos
@@ -201,8 +201,8 @@ export function AdminAssetTypesPage() {
                   onClick={() => setConfigurationTab('concepts')}
                   className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium transition ${
                     configurationTab === 'concepts'
-                      ? 'bg-slate-950 text-white'
-                      : 'text-slate-600 hover:bg-slate-100'
+                      ? 'bg-slate-950 dark:bg-slate-100 text-white dark:text-slate-950'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
                   <BookOpenText className="size-4" /> Conceptos
@@ -224,7 +224,7 @@ export function AdminAssetTypesPage() {
               )}
             </div>
           ) : (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
+            <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-8 text-center text-sm text-slate-500 dark:text-slate-400">
               Selecciona un tipo de activo para configurar sus relaciones.
             </div>
           )}

@@ -36,17 +36,17 @@ export function DashboardSection<T>({
   }, []);
   return (
     <section
-      className={`min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-5 ${className}`}
+      className={`min-w-0 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm md:p-5 ${className}`}
       aria-label={title}
     >
-      <h2 className="hidden items-center gap-3 text-lg font-semibold text-slate-950 md:flex">
+      <h2 className="hidden items-center gap-3 text-lg font-semibold text-slate-950 dark:text-slate-100 md:flex">
         {icon && <AnalyticsIcon icon={icon} tone={tone} />}
         <span className="min-w-0">{title}</span>
       </h2>
       <h2 className="md:hidden">
         <button
           type="button"
-          className="flex min-h-11 w-full items-center justify-between gap-3 text-left text-sm font-semibold text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+          className="flex min-h-11 w-full items-center justify-between gap-3 text-left text-sm font-semibold text-slate-950 dark:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 dark:focus-visible:ring-slate-600"
           aria-expanded={expanded}
           aria-controls={contentId}
           onClick={() => setExpanded((current) => !current)}
@@ -55,11 +55,11 @@ export function DashboardSection<T>({
           <span className="min-w-0 flex-1">
             {title}
             {state.error ? (
-              <span className="mt-1 block text-xs font-normal text-red-700">
+              <span className="mt-1 block text-xs font-normal text-red-700 dark:text-red-300">
                 No disponible
               </span>
             ) : state.loading ? (
-              <span className="mt-1 block text-xs font-normal text-slate-500">
+              <span className="mt-1 block text-xs font-normal text-slate-500 dark:text-slate-400">
                 Cargando…
               </span>
             ) : null}
@@ -76,19 +76,19 @@ export function DashboardSection<T>({
         {expanded || desktop ? (
           state.loading ? (
             <div role="status" className="mt-5 animate-pulse space-y-3">
-              <div className="h-5 w-2/3 rounded bg-slate-100" />
-              <div className="h-32 rounded bg-slate-100" />
+              <div className="h-5 w-2/3 rounded bg-slate-100 dark:bg-slate-800" />
+              <div className="h-32 rounded bg-slate-100 dark:bg-slate-800" />
               <span className="sr-only">Cargando {title}</span>
             </div>
           ) : state.error ? (
             <p
               role="alert"
-              className="mt-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+              className="mt-5 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-4 text-sm text-red-700 dark:text-red-300"
             >
               {state.error}
             </p>
           ) : state.data === null || isEmpty(state.data) ? (
-            <p className="mt-5 rounded-lg border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">
+            <p className="mt-5 rounded-lg border border-dashed border-slate-200 dark:border-slate-800 px-4 py-8 text-center text-sm text-slate-500 dark:text-slate-400">
               No hay información para el período seleccionado.
             </p>
           ) : (

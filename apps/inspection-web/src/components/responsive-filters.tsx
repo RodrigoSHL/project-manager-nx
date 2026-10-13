@@ -42,7 +42,7 @@ export function ResponsiveFilters({
     <>
       <section
         aria-label={label}
-        className="hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:block"
+        className="hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm md:block"
       >
         {children}
       </section>
@@ -50,7 +50,7 @@ export function ResponsiveFilters({
         aria-label={`${label}: selección actual`}
         className="flex min-w-0 items-start justify-between gap-3 md:hidden"
       >
-        <div className="min-w-0 flex-1 break-words text-sm text-slate-600">
+        <div className="min-w-0 flex-1 break-words text-sm text-slate-600 dark:text-slate-300">
           {summary}
         </div>
         <Button
@@ -70,18 +70,18 @@ export function ResponsiveFilters({
       </section>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="bottom" closeLabel="Cerrar filtros">
-          <header className="border-b border-slate-200 px-4 py-4 pr-16">
-            <SheetTitle className="text-lg font-semibold text-slate-950">
+          <header className="border-b border-slate-200 dark:border-slate-800 px-4 py-4 pr-16">
+            <SheetTitle className="text-lg font-semibold text-slate-950 dark:text-slate-100">
               {label}
             </SheetTitle>
-            <SheetDescription className="mt-1 text-sm text-slate-500">
+            <SheetDescription className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Ajusta la selección y pulsa Aplicar filtros.
             </SheetDescription>
           </header>
           <div className="min-h-0 overflow-y-auto overscroll-contain p-4">
             {mobileContent}
           </div>
-          <footer className="flex shrink-0 gap-3 border-t border-slate-200 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <footer className="flex shrink-0 gap-3 border-t border-slate-200 dark:border-slate-800 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <Button
               type="button"
               variant="ghost"

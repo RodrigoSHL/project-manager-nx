@@ -64,9 +64,9 @@ export function FormItemForm({
   return (
     <form
       onSubmit={submit}
-      className="rounded-lg border border-slate-300 bg-slate-50 p-3 sm:p-4"
+      className="rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 p-3 sm:p-4"
     >
-      <div className="grid grid-cols-2 gap-1 rounded-lg bg-slate-200/70 p-1">
+      <div className="grid grid-cols-2 gap-1 rounded-lg bg-slate-200/70 dark:bg-slate-700/70 p-1">
         {(['TASK', 'CONCEPT'] as const).map((option) => (
           <button
             key={option}
@@ -74,8 +74,8 @@ export function FormItemForm({
             onClick={() => setType(option)}
             className={`min-h-9 rounded-md px-3 text-sm font-medium transition ${
               type === option
-                ? 'bg-white text-slate-950 shadow-sm'
-                : 'text-slate-600'
+                ? 'bg-white dark:bg-slate-900 text-slate-950 dark:text-slate-100 shadow-sm'
+                : 'text-slate-600 dark:text-slate-300'
             }`}
           >
             {option === 'TASK' ? 'Tarea' : 'Concepto'}
@@ -85,25 +85,25 @@ export function FormItemForm({
 
       <div className="mt-3 grid gap-3">
         {type === 'TASK' ? (
-          <label className="text-xs font-medium text-slate-600">
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
             Actividad
             <input
               required
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               placeholder="Verificar apriete de conexiones"
-              className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-slate-500"
+              className="mt-1 h-10 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-slate-500 dark:focus:border-slate-500"
             />
           </label>
         ) : (
-          <label className="text-xs font-medium text-slate-600">
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
             Concepto del catálogo
             <select
               required
               value={conceptId}
               disabled={conceptsLoading}
               onChange={(event) => setConceptId(event.target.value)}
-              className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-slate-500"
+              className="mt-1 h-10 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-slate-500 dark:focus:border-slate-500"
             >
               <option value="">
                 {conceptsLoading ? 'Calculando conceptos...' : 'Seleccionar...'}
@@ -129,7 +129,7 @@ export function FormItemForm({
                 </optgroup>
               ) : null}
             </select>
-            <span className="mt-1 block font-normal leading-4 text-slate-500">
+            <span className="mt-1 block font-normal leading-4 text-slate-500 dark:text-slate-400">
               {usesFallback
                 ? 'No hay conceptos recomendados por compatibilidad; se muestra el catálogo activo de esta empresa.'
                 : 'Los conceptos compatibles aparecen primero.'}
@@ -137,16 +137,16 @@ export function FormItemForm({
           </label>
         )}
 
-        <label className="text-xs font-medium text-slate-600">
+        <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
           Descripción opcional
           <textarea
             value={description}
             onChange={(event) => setDescription(event.target.value)}
-            className="mt-1 min-h-16 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-500"
+            className="mt-1 min-h-16 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-slate-500 dark:focus:border-slate-500"
           />
         </label>
 
-        <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+        <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
           <input
             type="checkbox"
             checked={required}
@@ -157,7 +157,7 @@ export function FormItemForm({
         </label>
       </div>
 
-      {error ? <p className="mt-2 text-xs text-red-700">{error}</p> : null}
+      {error ? <p className="mt-2 text-xs text-red-700 dark:text-red-300">{error}</p> : null}
       <div className="mt-3 flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={onCancel}>
           Cancelar

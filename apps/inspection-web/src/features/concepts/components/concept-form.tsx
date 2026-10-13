@@ -139,13 +139,13 @@ export function ConceptForm({
   }
 
   return (
-    <section className="rounded-xl border border-slate-300 bg-white p-4 shadow-sm sm:p-5">
+    <section className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 shadow-sm sm:p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className="font-semibold text-slate-950">
+          <h3 className="font-semibold text-slate-950 dark:text-slate-100">
             {concept ? 'Editar concepto' : 'Nuevo concepto'}
           </h3>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Define un dato reutilizable; todavía no se ingresan respuestas.
           </p>
         </div>
@@ -161,7 +161,7 @@ export function ConceptForm({
       </div>
 
       <form className="mt-5 grid gap-4 sm:grid-cols-2" onSubmit={handleSubmit}>
-        <label className="text-sm font-medium text-slate-700">
+        <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
           Nombre
           <input
             required
@@ -179,11 +179,11 @@ export function ConceptForm({
             maxLength={160}
             placeholder="Temperatura ambiente"
             autoFocus={!concept}
-            className="mt-2 h-11 w-full rounded-lg border border-slate-300 px-3 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+            className="mt-2 h-11 w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 text-slate-900 dark:text-slate-100 outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
           />
         </label>
 
-        <label className="text-sm font-medium text-slate-700">
+        <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
           Código
           <input
             required
@@ -197,14 +197,14 @@ export function ConceptForm({
             }}
             maxLength={80}
             placeholder="TEMP_AMBIENTE"
-            className="mt-2 h-11 w-full rounded-lg border border-slate-300 px-3 font-mono text-sm text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+            className="mt-2 h-11 w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 font-mono text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
           />
-          <span className="mt-1.5 block text-xs font-normal text-slate-500">
+          <span className="mt-1.5 block text-xs font-normal text-slate-500 dark:text-slate-400">
             Se sugiere desde el nombre y puedes editarlo.
           </span>
         </label>
 
-        <label className="text-sm font-medium text-slate-700">
+        <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
           Tipo
           <select
             value={form.type}
@@ -214,7 +214,7 @@ export function ConceptForm({
                 type: event.target.value as ConceptFormValue['type'],
               }))
             }
-            className="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+            className="mt-2 h-11 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-slate-900 dark:text-slate-100 outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
           >
             {conceptTypes.map((type) => (
               <option key={type} value={type}>
@@ -225,7 +225,7 @@ export function ConceptForm({
         </label>
 
         {form.type === 'ANALOG' ? (
-          <label className="text-sm font-medium text-slate-700">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
             Unidad
             <input
               value={form.unit ?? ''}
@@ -237,7 +237,7 @@ export function ConceptForm({
               }
               maxLength={30}
               placeholder="°C, A, kV..."
-              className="mt-2 h-11 w-full rounded-lg border border-slate-300 px-3 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+              className="mt-2 h-11 w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 text-slate-900 dark:text-slate-100 outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
             />
           </label>
         ) : (
@@ -245,8 +245,8 @@ export function ConceptForm({
         )}
 
         {form.type === 'ANALOG' ? (
-          <div className="grid gap-3 rounded-lg border border-amber-200 bg-amber-50/40 p-3 sm:col-span-2 sm:grid-cols-3">
-            <label className="text-sm font-medium text-slate-700">
+          <div className="grid gap-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/40 p-3 sm:col-span-2 sm:grid-cols-3">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
               Mínimo permitido
               <input
                 type="number"
@@ -261,10 +261,10 @@ export function ConceptForm({
                         : Number(event.target.value),
                   }))
                 }
-                className="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3"
+                className="mt-2 h-11 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3"
               />
             </label>
-            <label className="text-sm font-medium text-slate-700">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
               Máximo permitido
               <input
                 type="number"
@@ -279,10 +279,10 @@ export function ConceptForm({
                         : Number(event.target.value),
                   }))
                 }
-                className="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3"
+                className="mt-2 h-11 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3"
               />
             </label>
-            <label className="text-sm font-medium text-slate-700">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
               Severidad sugerida
               <select
                 value={form.outOfRangeSeverityId ?? ''}
@@ -292,7 +292,7 @@ export function ConceptForm({
                     outOfRangeSeverityId: event.target.value || null,
                   }))
                 }
-                className="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3"
+                className="mt-2 h-11 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3"
               >
                 <option value="">Sin sugerencia</option>
                 {severityLevels
@@ -307,13 +307,13 @@ export function ConceptForm({
                   ))}
               </select>
             </label>
-            <p className="text-xs text-slate-600 sm:col-span-3">
+            <p className="text-xs text-slate-600 dark:text-slate-300 sm:col-span-3">
               Un valor fuera de los límites genera un candidato de hallazgo.
             </p>
           </div>
         ) : null}
 
-        <label className="text-sm font-medium text-slate-700 sm:col-span-2">
+        <label className="text-sm font-medium text-slate-700 dark:text-slate-200 sm:col-span-2">
           Descripción
           <textarea
             value={form.description ?? ''}
@@ -324,18 +324,18 @@ export function ConceptForm({
               }))
             }
             maxLength={2000}
-            className="mt-2 min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+            className="mt-2 min-h-24 w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
           />
         </label>
 
         {form.type === 'DIGITAL' ? (
-          <fieldset className="min-w-0 rounded-xl border border-slate-200 p-3 sm:col-span-2 sm:p-4">
+          <fieldset className="min-w-0 rounded-xl border border-slate-200 dark:border-slate-800 p-3 sm:col-span-2 sm:p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <legend className="text-sm font-semibold text-slate-900">
+                <legend className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                   Opciones cerradas
                 </legend>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   Estas serán las respuestas disponibles en un formulario
                   futuro.
                 </p>
@@ -346,7 +346,7 @@ export function ConceptForm({
             </div>
 
             {editableOptions.length === 0 ? (
-              <p className="mt-4 rounded-lg bg-slate-50 p-3 text-sm text-slate-500">
+              <p className="mt-4 rounded-lg bg-slate-50 dark:bg-slate-950 p-3 text-sm text-slate-500 dark:text-slate-400">
                 Agrega al menos una opción para el concepto digital.
               </p>
             ) : (
@@ -354,9 +354,9 @@ export function ConceptForm({
                 {editableOptions.map((option, index) => (
                   <div
                     key={option.key}
-                    className="grid min-w-0 gap-2 rounded-lg bg-slate-50 p-3 sm:grid-cols-[5rem_minmax(8rem,0.8fr)_minmax(10rem,1fr)_2.5rem] sm:items-end"
+                    className="grid min-w-0 gap-2 rounded-lg bg-slate-50 dark:bg-slate-950 p-3 sm:grid-cols-[5rem_minmax(8rem,0.8fr)_minmax(10rem,1fr)_2.5rem] sm:items-end"
                   >
-                    <label className="text-xs font-medium text-slate-600">
+                    <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
                       Orden
                       <input
                         type="number"
@@ -369,10 +369,10 @@ export function ConceptForm({
                             Number(event.target.value)
                           )
                         }
-                        className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm outline-none focus:border-slate-500"
+                        className="mt-1 h-10 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm outline-none focus:border-slate-500 dark:focus:border-slate-500"
                       />
                     </label>
-                    <label className="min-w-0 text-xs font-medium text-slate-600">
+                    <label className="min-w-0 text-xs font-medium text-slate-600 dark:text-slate-300">
                       Valor
                       <input
                         required
@@ -385,10 +385,10 @@ export function ConceptForm({
                           )
                         }
                         placeholder="NORMAL"
-                        className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 font-mono text-xs outline-none focus:border-slate-500"
+                        className="mt-1 h-10 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 font-mono text-xs outline-none focus:border-slate-500 dark:focus:border-slate-500"
                       />
                     </label>
-                    <label className="min-w-0 text-xs font-medium text-slate-600">
+                    <label className="min-w-0 text-xs font-medium text-slate-600 dark:text-slate-300">
                       Etiqueta
                       <input
                         required
@@ -397,7 +397,7 @@ export function ConceptForm({
                           updateOption(option.key, 'label', event.target.value)
                         }
                         placeholder="Normal"
-                        className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm outline-none focus:border-slate-500"
+                        className="mt-1 h-10 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm outline-none focus:border-slate-500 dark:focus:border-slate-500"
                       />
                     </label>
                     <Button
@@ -405,7 +405,7 @@ export function ConceptForm({
                       variant="ghost"
                       size="icon"
                       aria-label={`Eliminar opción ${index + 1}`}
-                      className="text-red-600 hover:bg-red-50"
+                      className="text-red-600 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/40"
                       onClick={() =>
                         setEditableOptions((current) =>
                           current.filter((item) => item.key !== option.key)
@@ -414,7 +414,7 @@ export function ConceptForm({
                     >
                       <Trash2 />
                     </Button>
-                    <label className="flex items-center gap-2 text-xs font-medium text-slate-700 sm:col-span-2">
+                    <label className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-200 sm:col-span-2">
                       <input
                         type="checkbox"
                         checked={option.generatesFinding ?? false}
@@ -429,7 +429,7 @@ export function ConceptForm({
                       Genera hallazgo al seleccionar esta opción
                     </label>
                     {option.generatesFinding ? (
-                      <label className="text-xs font-medium text-slate-700 sm:col-span-2">
+                      <label className="text-xs font-medium text-slate-700 dark:text-slate-200 sm:col-span-2">
                         Severidad sugerida
                         <select
                           value={option.suggestedSeverityId ?? ''}
@@ -440,7 +440,7 @@ export function ConceptForm({
                               event.target.value || null
                             )
                           }
-                          className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-2"
+                          className="mt-1 h-10 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2"
                         >
                           <option value="">Sin sugerencia</option>
                           {severityLevels
@@ -464,7 +464,7 @@ export function ConceptForm({
           </fieldset>
         ) : null}
 
-        <label className="flex min-h-11 items-center gap-3 rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-700 sm:col-span-2">
+        <label className="flex min-h-11 items-center gap-3 rounded-lg border border-slate-200 dark:border-slate-800 px-3 text-sm font-medium text-slate-700 dark:text-slate-200 sm:col-span-2">
           <input
             type="checkbox"
             checked={form.active}
@@ -480,7 +480,7 @@ export function ConceptForm({
         </label>
 
         {error ? (
-          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 sm:col-span-2">
+          <p className="rounded-lg bg-red-50 dark:bg-red-950/40 px-3 py-2 text-sm text-red-700 dark:text-red-300 sm:col-span-2">
             {error}
           </p>
         ) : null}

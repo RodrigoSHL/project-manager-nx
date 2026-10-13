@@ -20,18 +20,18 @@ export function MeasurementAssets({
   );
   return (
     <section
-      className="min-w-0 rounded-xl border border-slate-200 bg-white p-3 shadow-sm md:p-5"
+      className="min-w-0 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 shadow-sm md:p-5"
       aria-label="Seleccionar activos para comparar"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-slate-950 md:text-lg">
+        <h2 className="text-sm font-semibold text-slate-950 dark:text-slate-100 md:text-lg">
           Activos con historial
         </h2>
-        <span className="text-xs text-slate-500">
+        <span className="text-xs text-slate-500 dark:text-slate-400">
           {selectedIds.length}/{MAX_ASSET_SERIES} seleccionados
         </span>
       </div>
-      <p className="mt-1 text-xs text-slate-500">
+      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
         Selecciona hasta {MAX_ASSET_SERIES} activos para mantener el gráfico
         legible.
       </p>
@@ -42,7 +42,7 @@ export function MeasurementAssets({
           placeholder="Buscar activo..."
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          className="mt-3 min-h-11 w-full min-w-0 rounded-lg border border-slate-300 px-3 text-base focus:outline-none focus:ring-2 focus:ring-slate-300 md:text-sm"
+          className="mt-3 min-h-11 w-full min-w-0 rounded-lg border border-slate-300 dark:border-slate-700 px-3 text-base focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-700 md:text-sm"
         />
       ) : null}
       <div className="mt-3 max-h-64 space-y-1 overflow-y-auto">
@@ -51,7 +51,7 @@ export function MeasurementAssets({
           return (
             <label
               key={asset.assetId}
-              className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 py-2 hover:bg-slate-50"
+              className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 py-2 hover:bg-slate-50 dark:hover:bg-slate-950"
             >
               <input
                 type="checkbox"
@@ -62,17 +62,17 @@ export function MeasurementAssets({
                 }
                 className="size-5 shrink-0 accent-slate-950"
               />
-              <span className="min-w-0 flex-1 break-words text-sm font-medium text-slate-800">
+              <span className="min-w-0 flex-1 break-words text-sm font-medium text-slate-800 dark:text-slate-200">
                 {asset.assetName}
               </span>
-              <span className="shrink-0 text-xs text-slate-500">
+              <span className="shrink-0 text-xs text-slate-500 dark:text-slate-400">
                 {asset.statistics.count} mediciones
               </span>
             </label>
           );
         })}
         {!visible.length && (
-          <p className="py-5 text-center text-sm text-slate-500">
+          <p className="py-5 text-center text-sm text-slate-500 dark:text-slate-400">
             No hay activos con historial para esta búsqueda y filtros.
           </p>
         )}

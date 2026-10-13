@@ -24,6 +24,29 @@ AtomDev conserva su logo corporativo como marca de la empresa.
 | ProjectHub | Carpeta | Verde `#54b8a0` (RGB 84, 184, 160) | Aplicado |
 | FlowBoard | Tablero | Violeta `#a78bfa` | Aplicado |
 
+## Detalles amarillos de GridAssets
+
+GridAssets conserva el rayo amarillo `#fbbf24` y su base azul oscuro. El amarillo
+se usa de forma discreta en la navegación activa, los indicadores de marca y el
+foco de teclado. Las acciones principales mantienen superficies neutras y los
+avisos conservan sus colores semánticos.
+
+| Uso | Tema claro | Tema oscuro |
+| --- | --- | --- |
+| Texto de marca en login | `#92400e` | `#fcd34d` |
+| Selección móvil | Fondo `#fffbeb`, texto `#78350f` | Amarillo translúcido, texto `#fcd34d` |
+| Navegación lateral activa | Amarillo translúcido, texto `#fcd34d` | Amarillo translúcido, texto `#fcd34d` |
+| Foco de teclado | `#b45309` | `#fcd34d` |
+
+El login y la aplicación operativa ofrecen selector de tema. La preferencia se
+guarda en `gridassets-theme`; al entrar por primera vez se sigue el tema del
+sistema. Tablas, formularios, gráficos y avisos adaptan sus fondos y textos. La
+navegación lateral conserva su fondo oscuro en ambos temas.
+
+El estado inicial de conexión se presenta como «Comprobando conexión», con una
+segunda comprobación si falla el primer intento. El aviso de servidor no
+disponible aparece después de la comprobación y permite reintentar desde el login.
+
 ## Detalles verdes de ProjectHub
 
 ProjectHub usa verde en acciones principales, enlaces, foco de teclado y

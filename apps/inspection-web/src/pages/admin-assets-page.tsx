@@ -37,9 +37,9 @@ import { AvailableConcepts } from '../features/concepts/components/available-con
 type EditorMode = 'detail' | 'create-root' | 'create-child' | 'edit';
 
 const statusClasses: Record<Asset['status'], string> = {
-  ACTIVE: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
-  OUT_OF_SERVICE: 'bg-amber-50 text-amber-700 ring-amber-600/20',
-  INACTIVE: 'bg-slate-100 text-slate-600 ring-slate-500/20',
+  ACTIVE: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 ring-emerald-600/20',
+  OUT_OF_SERVICE: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 ring-amber-600/20',
+  INACTIVE: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 ring-slate-500/20 dark:ring-slate-500/20',
 };
 
 export function AdminAssetsPage() {
@@ -160,22 +160,22 @@ export function AdminAssetsPage() {
   return (
     <>
       <header className="mb-6">
-        <h2 className="text-xl font-semibold text-slate-950">Activos</h2>
-        <p className="mt-2 max-w-2xl text-sm text-slate-600">
+        <h2 className="text-xl font-semibold text-slate-950 dark:text-slate-100">Activos</h2>
+        <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-300">
           Organiza las subestaciones y sus componentes directamente desde el
           árbol del sitio.
         </p>
       </header>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+      <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm md:p-5">
         <div className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
-          <label className="text-sm font-medium text-slate-700">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
             Tenant / Empresa
             <select
               value={admin.tenantId}
               onChange={(event) => admin.selectTenant(event.target.value)}
               disabled={admin.tenants.length === 0}
-              className="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+              className="mt-2 h-11 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-slate-900 dark:text-slate-100 outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
             >
               {admin.tenants.length === 0 ? (
                 <option value="">Cargando empresas...</option>
@@ -205,8 +205,8 @@ export function AdminAssetsPage() {
         </div>
 
         {tenant && site ? (
-          <div className="mt-4 flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
-            <span className="inline-flex items-center gap-1.5 font-medium text-slate-800">
+          <div className="mt-4 flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 dark:bg-slate-950 px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
+            <span className="inline-flex items-center gap-1.5 font-medium text-slate-800 dark:text-slate-200">
               <Building2 className="size-4" /> {tenant.name}
             </span>
             <ChevronRight className="size-4 text-slate-400" />
@@ -222,12 +222,12 @@ export function AdminAssetsPage() {
         ) : null}
 
         {tenant && !admin.isLoading && admin.sites.length === 0 ? (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-4 py-3">
             <div>
-              <p className="text-sm font-medium text-amber-950">
+              <p className="text-sm font-medium text-amber-950 dark:text-amber-200">
                 Esta empresa todavía no tiene una ubicación.
               </p>
-              <p className="mt-0.5 text-xs text-amber-800">
+              <p className="mt-0.5 text-xs text-amber-800 dark:text-amber-200">
                 Primero crea una mina, planta o faena; después podrás agregar
                 sus subestaciones.
               </p>
@@ -242,21 +242,21 @@ export function AdminAssetsPage() {
       </section>
 
       {admin.error || admin.mutationError ? (
-        <section className="mt-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <section className="mt-6 flex items-start gap-3 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-4 text-sm text-red-800 dark:text-red-200">
           <AlertCircle className="mt-0.5 size-5 shrink-0" />
           <p>{admin.mutationError ?? admin.error}</p>
         </section>
       ) : null}
 
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(20rem,0.9fr)_minmax(24rem,1.1fr)]">
-        <section className="min-w-0 rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 p-4 md:p-5">
+        <section className="min-w-0 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+          <div className="border-b border-slate-200 dark:border-slate-800 p-4 md:p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="font-semibold text-slate-950">
+                <h2 className="font-semibold text-slate-950 dark:text-slate-100">
                   Árbol del sitio
                 </h2>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   Selecciona un nodo para administrarlo.
                 </p>
               </div>
@@ -296,7 +296,7 @@ export function AdminAssetsPage() {
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Buscar por código o nombre..."
-                className="h-11 w-full rounded-lg border border-slate-300 pl-9 pr-3 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                className="h-11 w-full rounded-lg border border-slate-300 dark:border-slate-700 pl-9 pr-3 text-sm outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
               />
             </label>
           </div>
@@ -305,8 +305,8 @@ export function AdminAssetsPage() {
             {admin.isLoading && admin.assets.length === 0 ? (
               <div className="grid min-h-64 place-items-center text-center">
                 <div>
-                  <LoaderCircle className="mx-auto size-8 animate-spin text-slate-500" />
-                  <p className="mt-3 text-sm text-slate-600">
+                  <LoaderCircle className="mx-auto size-8 animate-spin text-slate-500 dark:text-slate-400" />
+                  <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
                     Cargando activos...
                   </p>
                 </div>
@@ -339,13 +339,13 @@ export function AdminAssetsPage() {
               onSubmit={saveAsset}
             />
           ) : selectedAsset ? (
-            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
               <div className="flex items-start justify-between gap-4">
                 <span
                   className={`grid size-12 shrink-0 place-items-center rounded-xl ${
                     isSubstationAsset(selectedAsset, admin.assetTypes)
-                      ? 'bg-slate-950 text-white'
-                      : 'bg-slate-100 text-slate-700'
+                      ? 'bg-slate-950 dark:bg-slate-100 text-white dark:text-slate-950'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200'
                   }`}
                 >
                   {isSubstationAsset(selectedAsset, admin.assetTypes) ? (
@@ -363,17 +363,17 @@ export function AdminAssetsPage() {
                 </span>
               </div>
 
-              <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 {selectedAsset.code}
               </p>
-              <h2 className="mt-1 text-xl font-semibold text-slate-950">
+              <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-100">
                 {selectedAsset.name}
               </h2>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 {selectedAssetType?.name ?? 'Tipo de activo no disponible'}
               </p>
 
-              <div className="mt-5 flex flex-wrap items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+              <div className="mt-5 flex flex-wrap items-center gap-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
                 <GitBranch className="mr-1 size-4 shrink-0" />
                 {selectedPath.map((asset, index) => (
                   <span
@@ -386,7 +386,7 @@ export function AdminAssetsPage() {
                     <span
                       className={
                         asset.id === selectedAsset.id
-                          ? 'font-semibold text-slate-900'
+                          ? 'font-semibold text-slate-900 dark:text-slate-100'
                           : undefined
                       }
                     >
@@ -396,10 +396,10 @@ export function AdminAssetsPage() {
                 ))}
               </div>
 
-              <dl className="mt-5 divide-y divide-slate-100 border-y border-slate-100 text-sm">
+              <dl className="mt-5 divide-y divide-slate-100 dark:divide-slate-800 border-y border-slate-100 dark:border-slate-800 text-sm">
                 <div className="grid grid-cols-[8rem_1fr] gap-3 py-3">
-                  <dt className="text-slate-500">Activo padre</dt>
-                  <dd className="font-medium text-slate-800">
+                  <dt className="text-slate-500 dark:text-slate-400">Activo padre</dt>
+                  <dd className="font-medium text-slate-800 dark:text-slate-200">
                     {selectedAsset.parentId
                       ? assetsById.get(selectedAsset.parentId)?.name ??
                         'No disponible'
@@ -407,18 +407,18 @@ export function AdminAssetsPage() {
                   </dd>
                 </div>
                 <div className="grid grid-cols-[8rem_1fr] gap-3 py-3">
-                  <dt className="text-slate-500">Hijos directos</dt>
-                  <dd className="font-medium text-slate-800">{childCount}</dd>
+                  <dt className="text-slate-500 dark:text-slate-400">Hijos directos</dt>
+                  <dd className="font-medium text-slate-800 dark:text-slate-200">{childCount}</dd>
                 </div>
                 <div className="grid grid-cols-[8rem_1fr] gap-3 py-3">
-                  <dt className="text-slate-500">Ubicación</dt>
-                  <dd className="font-medium text-slate-800">
+                  <dt className="text-slate-500 dark:text-slate-400">Ubicación</dt>
+                  <dd className="font-medium text-slate-800 dark:text-slate-200">
                     {site?.name ?? 'No disponible'}
                   </dd>
                 </div>
               </dl>
 
-              <p className="mt-5 rounded-lg bg-slate-50 p-3 text-sm leading-6 text-slate-600">
+              <p className="mt-5 rounded-lg bg-slate-50 dark:bg-slate-950 p-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
                 {selectedAsset.description ??
                   'Este activo todavía no tiene una descripción.'}
               </p>
@@ -455,7 +455,7 @@ export function AdminAssetsPage() {
                 <Button
                   type="button"
                   variant="ghost"
-                  className="text-red-700 hover:bg-red-50 sm:col-span-2"
+                  className="text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 sm:col-span-2"
                   onClick={() => void removeSelectedAsset()}
                   disabled={admin.isMutating || childCount > 0}
                   title={
@@ -472,15 +472,15 @@ export function AdminAssetsPage() {
               </div>
             </section>
           ) : (
-            <section className="grid min-h-96 place-items-center rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center">
+            <section className="grid min-h-96 place-items-center rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-8 text-center">
               <div>
-                <span className="mx-auto grid size-12 place-items-center rounded-full bg-slate-100 text-slate-600">
+                <span className="mx-auto grid size-12 place-items-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
                   <GitBranch className="size-6" />
                 </span>
-                <h2 className="mt-4 font-semibold text-slate-900">
+                <h2 className="mt-4 font-semibold text-slate-900 dark:text-slate-100">
                   Selecciona un activo
                 </h2>
-                <p className="mt-2 max-w-xs text-sm text-slate-500">
+                <p className="mt-2 max-w-xs text-sm text-slate-500 dark:text-slate-400">
                   El detalle y las acciones aparecerán aquí.
                 </p>
               </div>

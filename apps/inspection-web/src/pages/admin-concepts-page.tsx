@@ -178,8 +178,8 @@ export function AdminConceptsPage() {
     <section>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-slate-950">Conceptos</h2>
-          <p className="mt-2 max-w-2xl text-sm text-slate-600">
+          <h2 className="text-xl font-semibold text-slate-950 dark:text-slate-100">Conceptos</h2>
+          <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-300">
             Define variables, estados y características que podrán reutilizarse
             en distintos tipos de activo.
           </p>
@@ -189,23 +189,23 @@ export function AdminConceptsPage() {
         </Button>
       </div>
 
-      <div className="mt-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="mt-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
         <CatalogTenantSelector
           tenants={referenceCatalog.tenants}
           tenantId={referenceCatalog.tenantId}
           onChange={referenceCatalog.selectTenant}
         />
-        <p className="mt-3 text-xs text-slate-500">
+        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
           Los conceptos se guardan en PostgreSQL y permanecen aislados por
           empresa.
         </p>
       </div>
 
-      <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h3 className="font-semibold text-slate-900">
+      <section className="mt-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
+        <h3 className="font-semibold text-slate-900 dark:text-slate-100">
           Severidades de hallazgos
         </h3>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Cada empresa define sus niveles; los conceptos pueden sugerir uno al
           detectar una condición.
         </p>
@@ -215,8 +215,8 @@ export function AdminConceptsPage() {
               key={level.id}
               className={`flex items-center gap-1 rounded-full pl-3 pr-1 py-1 text-xs font-medium ${
                 level.active
-                  ? 'bg-amber-50 text-amber-900'
-                  : 'bg-slate-100 text-slate-500'
+                  ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
               }`}
             >
               {level.name} · {level.code} {level.active ? '' : '(inactiva)'}
@@ -224,7 +224,7 @@ export function AdminConceptsPage() {
                 type="button"
                 onClick={() => setEditingSeverity(level)}
                 aria-label={`Editar severidad ${level.name}`}
-                className="rounded-full p-1 hover:bg-white/70"
+                className="rounded-full p-1 hover:bg-white/70 dark:hover:bg-slate-900/70"
               >
                 <Pencil className="size-3.5" />
               </button>
@@ -234,14 +234,14 @@ export function AdminConceptsPage() {
                 aria-label={`${
                   level.active ? 'Desactivar' : 'Activar'
                 } severidad ${level.name}`}
-                className="rounded-full p-1 hover:bg-white/70"
+                className="rounded-full p-1 hover:bg-white/70 dark:hover:bg-slate-900/70"
               >
                 <Power className="size-3.5" />
               </button>
             </div>
           ))}
           {severityLevels.length === 0 ? (
-            <span className="text-sm text-slate-500">
+            <span className="text-sm text-slate-500 dark:text-slate-400">
               Aún no hay niveles configurados.
             </span>
           ) : null}
@@ -249,9 +249,9 @@ export function AdminConceptsPage() {
         {editingSeverity ? (
           <form
             onSubmit={(event) => void saveSeverityEdit(event)}
-            className="mt-3 flex flex-wrap items-end gap-2 rounded-lg border border-slate-200 p-3"
+            className="mt-3 flex flex-wrap items-end gap-2 rounded-lg border border-slate-200 dark:border-slate-800 p-3"
           >
-            <label className="text-xs font-medium text-slate-600">
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
               Nombre
               <input
                 required
@@ -261,10 +261,10 @@ export function AdminConceptsPage() {
                     current ? { ...current, name: event.target.value } : null
                   )
                 }
-                className="mt-1 block h-10 rounded-lg border border-slate-300 px-3 text-sm"
+                className="mt-1 block h-10 rounded-lg border border-slate-300 dark:border-slate-700 px-3 text-sm"
               />
             </label>
-            <label className="text-xs font-medium text-slate-600">
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
               Código
               <input
                 required
@@ -274,10 +274,10 @@ export function AdminConceptsPage() {
                     current ? { ...current, code: event.target.value } : null
                   )
                 }
-                className="mt-1 block h-10 rounded-lg border border-slate-300 px-3 font-mono text-sm"
+                className="mt-1 block h-10 rounded-lg border border-slate-300 dark:border-slate-700 px-3 font-mono text-sm"
               />
             </label>
-            <label className="text-xs font-medium text-slate-600">
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
               Orden
               <input
                 required
@@ -291,7 +291,7 @@ export function AdminConceptsPage() {
                       : null
                   )
                 }
-                className="mt-1 block h-10 w-20 rounded-lg border border-slate-300 px-3 text-sm"
+                className="mt-1 block h-10 w-20 rounded-lg border border-slate-300 dark:border-slate-700 px-3 text-sm"
               />
             </label>
             <Button type="submit">Guardar</Button>
@@ -308,7 +308,7 @@ export function AdminConceptsPage() {
           onSubmit={(event) => void saveSeverity(event)}
           className="mt-4 flex flex-wrap items-end gap-2"
         >
-          <label className="text-xs font-medium text-slate-600">
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
             Nombre
             <input
               required
@@ -318,17 +318,17 @@ export function AdminConceptsPage() {
                 setSeverityName(name);
                 setSeverityCode(suggestConceptCode(name));
               }}
-              className="mt-1 block h-10 rounded-lg border border-slate-300 px-3 text-sm"
+              className="mt-1 block h-10 rounded-lg border border-slate-300 dark:border-slate-700 px-3 text-sm"
               placeholder="Alta"
             />
           </label>
-          <label className="text-xs font-medium text-slate-600">
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
             Código
             <input
               required
               value={severityCode}
               onChange={(event) => setSeverityCode(event.target.value)}
-              className="mt-1 block h-10 rounded-lg border border-slate-300 px-3 font-mono text-sm"
+              className="mt-1 block h-10 rounded-lg border border-slate-300 dark:border-slate-700 px-3 font-mono text-sm"
               placeholder="ALTA"
             />
           </label>
@@ -337,12 +337,12 @@ export function AdminConceptsPage() {
           </Button>
         </form>
         {severityError ? (
-          <p className="mt-2 text-sm text-red-700">{severityError}</p>
+          <p className="mt-2 text-sm text-red-700 dark:text-red-300">{severityError}</p>
         ) : null}
       </section>
 
       {conceptCatalog.error ? (
-        <div className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <div className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-4 text-sm text-red-700 dark:text-red-300">
           <span className="flex items-center gap-2">
             <AlertCircle className="size-5" /> {conceptCatalog.error}
           </span>
@@ -364,19 +364,19 @@ export function AdminConceptsPage() {
         </div>
       ) : null}
 
-      <section className="mt-5 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 p-4">
+      <section className="mt-5 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+        <div className="border-b border-slate-200 dark:border-slate-800 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h3 className="font-semibold text-slate-900">
+              <h3 className="font-semibold text-slate-900 dark:text-slate-100">
                 Catálogo de conceptos
               </h3>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 {filteredConcepts.length} de {conceptCatalog.concepts.length}{' '}
                 registros visibles
               </p>
             </div>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-800">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:text-emerald-200">
               <Database className="size-3.5" /> PostgreSQL
             </span>
           </div>
@@ -390,7 +390,7 @@ export function AdminConceptsPage() {
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Buscar por código o nombre..."
-                className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                className="h-10 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 pl-9 pr-3 text-sm outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
               />
             </label>
 
@@ -401,7 +401,7 @@ export function AdminConceptsPage() {
                 onChange={(event) =>
                   setTypeFilter(event.target.value as ConceptType | 'ALL')
                 }
-                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                className="h-10 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm text-slate-800 dark:text-slate-200 outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
               >
                 <option value="ALL">Todos los tipos</option>
                 {conceptTypes.map((type) => (
@@ -419,7 +419,7 @@ export function AdminConceptsPage() {
                 onChange={(event) =>
                   setActiveFilter(event.target.value as ActiveFilter)
                 }
-                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                className="h-10 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm text-slate-800 dark:text-slate-200 outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
               >
                 <option value="ALL">Todos los estados</option>
                 <option value="ACTIVE">Activos</option>
@@ -429,7 +429,7 @@ export function AdminConceptsPage() {
           </div>
         </div>
 
-        <div className="hidden grid-cols-[minmax(12rem,1.3fr)_minmax(10rem,1fr)_8rem_6rem_5rem] gap-4 border-b border-slate-100 bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 md:grid">
+        <div className="hidden grid-cols-[minmax(12rem,1.3fr)_minmax(10rem,1fr)_8rem_6rem_5rem] gap-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 md:grid">
           <span>Concepto</span>
           <span>Código</span>
           <span>Tipo</span>
@@ -439,14 +439,14 @@ export function AdminConceptsPage() {
 
         {conceptCatalog.isLoading ? (
           <div className="grid min-h-40 place-items-center">
-            <LoaderCircle className="size-6 animate-spin text-slate-500" />
+            <LoaderCircle className="size-6 animate-spin text-slate-500 dark:text-slate-400" />
           </div>
         ) : filteredConcepts.length === 0 ? (
-          <p className="p-8 text-center text-sm text-slate-500">
+          <p className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">
             No hay conceptos que coincidan con los filtros.
           </p>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {filteredConcepts.map((concept) => {
               const optionCount = conceptCatalog.options.filter(
                 (option) => option.conceptId === concept.id && option.active
@@ -458,35 +458,35 @@ export function AdminConceptsPage() {
                 >
                   <div className="min-w-0">
                     <div className="flex min-w-0 items-center gap-2">
-                      <h4 className="truncate text-sm font-semibold text-slate-900">
+                      <h4 className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
                         {concept.name}
                       </h4>
                       <span
                         className={`shrink-0 rounded-full px-2 py-0.5 text-[0.7rem] font-medium ${
                           concept.active
-                            ? 'bg-emerald-50 text-emerald-700'
-                            : 'bg-slate-100 text-slate-500'
+                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
                         }`}
                       >
                         {concept.active ? 'Activo' : 'Inactivo'}
                       </span>
                     </div>
-                    <p className="mt-1 line-clamp-1 text-xs text-slate-500">
+                    <p className="mt-1 line-clamp-1 text-xs text-slate-500 dark:text-slate-400">
                       {concept.description ?? 'Sin descripción.'}
                     </p>
                   </div>
-                  <span className="truncate font-mono text-xs text-slate-600">
+                  <span className="truncate font-mono text-xs text-slate-600 dark:text-slate-300">
                     {concept.code}
                   </span>
-                  <span className="text-sm text-slate-700">
+                  <span className="text-sm text-slate-700 dark:text-slate-200">
                     {conceptTypeLabels[concept.type]}
                     {concept.type === 'DIGITAL' ? (
-                      <span className="block text-xs text-slate-500">
+                      <span className="block text-xs text-slate-500 dark:text-slate-400">
                         {optionCount} opciones
                       </span>
                     ) : null}
                   </span>
-                  <span className="text-sm text-slate-600">
+                  <span className="text-sm text-slate-600 dark:text-slate-300">
                     {concept.unit ?? '—'}
                   </span>
                   <div className="flex justify-end gap-1">

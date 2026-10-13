@@ -56,10 +56,10 @@ export function AdminSitesPage() {
     <section>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-slate-950">
+          <h2 className="text-xl font-semibold text-slate-950 dark:text-slate-100">
             Sitios y faenas
           </h2>
-          <p className="mt-2 max-w-2xl text-sm text-slate-600">
+          <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-300">
             Crea las minas, plantas o sitios que organizan las subestaciones de
             cada empresa.
           </p>
@@ -73,20 +73,20 @@ export function AdminSitesPage() {
         </Button>
       </div>
 
-      <div className="mt-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="mt-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
         <CatalogTenantSelector
           tenants={administration.tenants}
           tenantId={administration.tenantId}
           onChange={administration.selectTenant}
         />
-        <p className="mt-3 text-xs text-slate-500">
+        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
           Cada ubicación se guarda con el tenant seleccionado y no se comparte
           con otras empresas.
         </p>
       </div>
 
       {administration.error || administration.mutationError ? (
-        <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <div className="mt-5 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-4 text-sm text-red-700 dark:text-red-300">
           <div className="flex items-center gap-2">
             <AlertCircle className="size-5" />
             {administration.mutationError ?? administration.error}
@@ -116,26 +116,26 @@ export function AdminSitesPage() {
       ) : null}
 
       {administration.isLoading ? (
-        <div className="mt-5 grid min-h-48 place-items-center rounded-xl border border-slate-200 bg-white">
-          <LoaderCircle className="size-7 animate-spin text-slate-500" />
+        <div className="mt-5 grid min-h-48 place-items-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+          <LoaderCircle className="size-7 animate-spin text-slate-500 dark:text-slate-400" />
         </div>
       ) : null}
 
       {!administration.isLoading && !administration.error ? (
-        <section className="mt-5 min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 p-4">
+        <section className="mt-5 min-w-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+          <div className="border-b border-slate-200 dark:border-slate-800 p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-slate-900">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                   Ubicaciones de la empresa
                 </h3>
-                <p className="mt-0.5 text-xs text-slate-500">
+                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                   {administration.sites.length} configuradas ·{' '}
                   {administration.sites.filter((site) => site.active).length}{' '}
                   activas
                 </p>
               </div>
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-slate-500 dark:text-slate-400">
                 {filteredSites.length} visibles
               </span>
             </div>
@@ -148,7 +148,7 @@ export function AdminSitesPage() {
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Buscar por nombre, código o tipo..."
-                className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                className="h-10 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 pl-9 pr-3 text-sm outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
               />
             </label>
           </div>
@@ -156,15 +156,15 @@ export function AdminSitesPage() {
           {filteredSites.length === 0 ? (
             <div className="grid min-h-64 place-items-center p-6 text-center">
               <div>
-                <span className="mx-auto grid size-12 place-items-center rounded-full bg-slate-100 text-slate-500">
+                <span className="mx-auto grid size-12 place-items-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
                   <MapPinned className="size-5" />
                 </span>
-                <h3 className="mt-4 font-semibold text-slate-900">
+                <h3 className="mt-4 font-semibold text-slate-900 dark:text-slate-100">
                   {searchQuery
                     ? 'No encontramos ubicaciones'
                     : 'Este tenant todavía no tiene ubicaciones'}
                 </h3>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                   {searchQuery
                     ? 'Prueba con otro nombre, código o tipo.'
                     : 'Crea una mina, planta o faena para comenzar a organizar sus activos.'}
@@ -188,46 +188,46 @@ export function AdminSitesPage() {
                 return (
                   <article
                     key={site.id}
-                    className="min-w-0 rounded-xl border border-slate-200 p-4 transition hover:border-slate-300 hover:shadow-sm"
+                    className="min-w-0 rounded-xl border border-slate-200 dark:border-slate-800 p-4 transition hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-sm"
                   >
                     <div className="flex min-w-0 items-start gap-3">
-                      <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-600">
+                      <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
                         <Icon className="size-5" />
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex min-w-0 flex-wrap items-center gap-2">
-                          <span className="max-w-full truncate rounded bg-slate-100 px-2 py-1 font-mono text-[0.7rem] font-semibold text-slate-600">
+                          <span className="max-w-full truncate rounded bg-slate-100 dark:bg-slate-800 px-2 py-1 font-mono text-[0.7rem] font-semibold text-slate-600 dark:text-slate-300">
                             {site.code}
                           </span>
                           <span
                             className={`shrink-0 rounded-full px-2 py-1 text-[0.7rem] font-medium ${
                               site.active
-                                ? 'bg-emerald-50 text-emerald-700'
-                                : 'bg-slate-100 text-slate-500'
+                                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
                             }`}
                           >
                             {site.active ? 'Activa' : 'Inactiva'}
                           </span>
                         </div>
                         <h3
-                          className="mt-3 truncate font-semibold text-slate-950"
+                          className="mt-3 truncate font-semibold text-slate-950 dark:text-slate-100"
                           title={site.name}
                         >
                           {site.name}
                         </h3>
-                        <p className="mt-1 text-sm text-slate-500">
+                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                           {formatSiteType(site.type)}
                         </p>
                       </div>
                     </div>
 
-                    <div className="mt-4 flex items-center justify-end gap-1 border-t border-slate-100 pt-3">
+                    <div className="mt-4 flex items-center justify-end gap-1 border-t border-slate-100 dark:border-slate-800 pt-3">
                       <button
                         type="button"
                         aria-label={`Editar ${site.name}`}
                         title="Editar"
                         onClick={() => setEditing(site)}
-                        className="grid size-9 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500"
+                        className="grid size-9 place-items-center rounded-lg text-slate-500 dark:text-slate-400 transition hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 dark:focus-visible:ring-slate-500"
                       >
                         <Pencil className="size-4" />
                       </button>
@@ -243,7 +243,7 @@ export function AdminSitesPage() {
                             active: !site.active,
                           })
                         }
-                        className="grid size-9 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+                        className="grid size-9 place-items-center rounded-lg text-slate-500 dark:text-slate-400 transition hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 dark:focus-visible:ring-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         {site.active ? (
                           <Power className="size-4" />

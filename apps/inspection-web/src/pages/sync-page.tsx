@@ -125,20 +125,20 @@ export function SyncPage() {
         Icon: CloudOff,
         title: 'Modo sin conexión',
         detail: 'La red del dispositivo no está disponible.',
-        color: 'text-amber-700 bg-amber-50 border-amber-200',
+        color: 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800',
       }
     : connectivity.apiReachable
     ? {
         Icon: Cloud,
         title: 'En línea',
         detail: 'El servidor responde correctamente.',
-        color: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+        color: 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800',
       }
     : {
         Icon: ServerOff,
         title: 'Servidor no disponible',
         detail: 'Hay red, pero GridAssets no responde.',
-        color: 'text-red-700 bg-red-50 border-red-200',
+        color: 'text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800',
       };
 
   return (
@@ -149,7 +149,7 @@ export function SyncPage() {
       />
 
       {hasLegacyLocalData ? (
-        <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <p role="status" className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-4 text-sm text-amber-900 dark:text-amber-200">
           Los datos offline de una versión anterior están conservados, pero no
           pueden asociarse automáticamente a esta cuenta. Si tenías cambios
           pendientes, solicita su recuperación antes de borrar los datos del
@@ -157,8 +157,8 @@ export function SyncPage() {
         </p>
       ) : null}
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-        <label className="block text-sm font-medium text-slate-700">
+      <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm sm:p-5">
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
           Tenant / Empresa
           <span className="relative mt-2 block">
             <Building2 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
@@ -166,7 +166,7 @@ export function SyncPage() {
               value={tenantId}
               onChange={(event) => handleTenantChange(event.target.value)}
               disabled={tenantAccess.isLoading || isSyncing}
-              className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-10 pr-3 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+              className="h-11 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 pl-10 pr-3 text-slate-900 dark:text-slate-100 outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
             >
               {tenantAccess.accessibleTenants.length === 0 ? (
                 <option value="">No hay empresas disponibles</option>
@@ -179,7 +179,7 @@ export function SyncPage() {
             </select>
           </span>
         </label>
-        <p className="mt-2 text-xs text-slate-500">
+        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
           Los conteos, conflictos, checkpoint y registros mostrados pertenecen
           solamente a {selectedTenant?.name ?? 'la empresa seleccionada'}.
         </p>
@@ -242,13 +242,13 @@ export function SyncPage() {
         />
       </section>
 
-      <section className="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <section className="mt-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="font-semibold text-slate-950">
+            <h2 className="font-semibold text-slate-950 dark:text-slate-100">
               Registros pendientes
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Este listado se calcula directamente desde IndexedDB.
             </p>
           </div>
@@ -261,7 +261,7 @@ export function SyncPage() {
           </Button>
         </div>
 
-        <div className="mt-5 divide-y divide-slate-100 rounded-lg border border-slate-200">
+        <div className="mt-5 divide-y divide-slate-100 dark:divide-slate-800 rounded-lg border border-slate-200 dark:border-slate-800">
           {pendingSummary.items.length ? (
             pendingSummary.items.map((item) => (
               <div
@@ -269,10 +269,10 @@ export function SyncPage() {
                 className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm"
               >
                 <div className="min-w-0">
-                  <p className="truncate font-medium text-slate-800">
+                  <p className="truncate font-medium text-slate-800 dark:text-slate-200">
                     {item.label}
                   </p>
-                  <p className="mt-0.5 text-xs text-slate-500">
+                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                     {kindLabels[item.kind]} ·{' '}
                     {new Date(item.updatedAt).toLocaleString('es-CL')}
                   </p>
@@ -280,10 +280,10 @@ export function SyncPage() {
                 <span
                   className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                     item.status === 'ERROR'
-                      ? 'bg-red-50 text-red-700'
+                      ? 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300'
                       : item.status === 'SENDING'
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'bg-amber-50 text-amber-800'
+                      ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300'
+                      : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200'
                   }`}
                 >
                   {item.status === 'ERROR'
@@ -297,20 +297,20 @@ export function SyncPage() {
                     : 'Modificado'}
                 </span>
                 {item.lastError ? (
-                  <p className="w-full text-xs text-red-600">
+                  <p className="w-full text-xs text-red-600 dark:text-red-300">
                     {item.lastError}
                   </p>
                 ) : null}
               </div>
             ))
           ) : (
-            <p className="p-6 text-center text-sm text-slate-500">
+            <p className="p-6 text-center text-sm text-slate-500 dark:text-slate-400">
               No hay cambios locales pendientes.
             </p>
           )}
         </div>
 
-        <div className="mt-5 rounded-lg bg-slate-50 p-4">
+        <div className="mt-5 rounded-lg bg-slate-50 dark:bg-slate-950 p-4">
           <Button
             type="button"
             disabled={!tenantId || !connectivity.apiReachable || isSyncing}
@@ -325,15 +325,15 @@ export function SyncPage() {
           </Button>
           {isSyncing && showSyncFeedback && syncProgress ? (
             <div className="mt-3" aria-live="polite">
-              <div className="mb-1 flex justify-between text-xs text-slate-600">
+              <div className="mb-1 flex justify-between text-xs text-slate-600 dark:text-slate-300">
                 <span>{progressLabel(syncProgress.phase)}</span>
                 <span>
                   {syncProgress.processed} / {syncProgress.total}
                 </span>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+              <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
                 <div
-                  className="h-full rounded-full bg-slate-900 transition-all"
+                  className="h-full rounded-full bg-slate-900 dark:bg-slate-200 transition-all"
                   style={{
                     width: `${
                       syncProgress.total
@@ -350,22 +350,22 @@ export function SyncPage() {
               className="mt-3 flex flex-wrap gap-4 text-sm"
               aria-live="polite"
             >
-              <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700">
+              <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-300">
                 <CheckCircle2 className="size-4" />
                 {lastSyncSummary.pushed} enviados
               </span>
-              <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700">
+              <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-300">
                 <CheckCircle2 className="size-4" />
                 {lastSyncSummary.pulled} recibidos
               </span>
               {lastSyncSummary.conflicts > 0 ? (
-                <span className="inline-flex items-center gap-1.5 font-medium text-amber-700">
+                <span className="inline-flex items-center gap-1.5 font-medium text-amber-700 dark:text-amber-300">
                   <AlertTriangle className="size-4" />
                   {lastSyncSummary.conflicts} conflictos pendientes
                 </span>
               ) : null}
               {lastSyncSummary.errors > 0 ? (
-                <span className="inline-flex items-center gap-1.5 font-medium text-red-700">
+                <span className="inline-flex items-center gap-1.5 font-medium text-red-700 dark:text-red-300">
                   <AlertTriangle className="size-4" />
                   {lastSyncSummary.errors} con error
                 </span>
@@ -373,12 +373,12 @@ export function SyncPage() {
             </div>
           ) : null}
           {showSyncFeedback && syncError ? (
-            <p className="mt-3 text-sm font-medium text-red-700" role="alert">
+            <p className="mt-3 text-sm font-medium text-red-700 dark:text-red-300" role="alert">
               {syncError}
             </p>
           ) : null}
           {!connectivity.apiReachable ? (
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
               El botón se habilitará cuando la API vuelva a estar disponible.
             </p>
           ) : null}
@@ -398,10 +398,10 @@ function Metric({
   value: number | string;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
       <Icon className="size-4 text-slate-400" />
-      <p className="mt-3 text-2xl font-semibold text-slate-950">{value}</p>
-      <p className="text-xs text-slate-500">{label}</p>
+      <p className="mt-3 text-2xl font-semibold text-slate-950 dark:text-slate-100">{value}</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
     </div>
   );
 }

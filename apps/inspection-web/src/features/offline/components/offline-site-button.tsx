@@ -34,7 +34,7 @@ export function OfflineSiteButton({
   if (offline.mode === 'LOCAL') {
     if (!connectivity.apiReachable) {
       return (
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-slate-600 dark:text-slate-300">
           Estás usando la copia guardada en este dispositivo. Los cambios se
           conservarán localmente.
         </p>
@@ -71,7 +71,7 @@ export function OfflineSiteButton({
       </Button>
       {record?.status === 'READY' ? (
         <>
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
             <CheckCircle2 className="size-4" /> Disponible offline
           </span>
           <Button
@@ -84,7 +84,7 @@ export function OfflineSiteButton({
         </>
       ) : null}
       {record?.status === 'ERROR' ? (
-        <span className="text-xs text-red-700">{record.error}</span>
+        <span className="text-xs text-red-700 dark:text-red-300">{record.error}</span>
       ) : null}
     </div>
   );

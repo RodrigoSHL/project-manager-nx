@@ -187,13 +187,13 @@ export function PlatformTenantsPage() {
     <section>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
             Control global
           </p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 md:text-3xl">
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-100 md:text-3xl">
             Clientes
           </h1>
-          <p className="mt-2 max-w-2xl text-sm text-slate-600">
+          <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-300">
             Crea y administra las empresas que utilizarán GridAssets. Esta vista
             no depende del tenant seleccionado en la operación.
           </p>
@@ -220,15 +220,15 @@ export function PlatformTenantsPage() {
       </div>
 
       {error ? (
-        <div className="mt-5 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <div className="mt-5 flex items-start gap-2 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-4 text-sm text-red-700 dark:text-red-300">
           <AlertCircle className="mt-0.5 size-5 shrink-0" />
           <span>{error}</span>
         </div>
       ) : null}
 
       <div className="mt-5 grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.72fr)]">
-        <section className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 p-4">
+        <section className="min-w-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+          <div className="border-b border-slate-200 dark:border-slate-800 p-4">
             <label className="relative block">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
               <input
@@ -236,19 +236,19 @@ export function PlatformTenantsPage() {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Buscar por nombre o código"
-                className="h-10 w-full rounded-lg border border-slate-300 pl-9 pr-3 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                className="h-10 w-full rounded-lg border border-slate-300 dark:border-slate-700 pl-9 pr-3 text-sm outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
               />
             </label>
           </div>
 
           {isLoading ? (
             <div className="grid min-h-64 place-items-center">
-              <LoaderCircle className="size-7 animate-spin text-slate-500" />
+              <LoaderCircle className="size-7 animate-spin text-slate-500 dark:text-slate-400" />
             </div>
           ) : null}
 
           {!isLoading && filteredTenants.length === 0 ? (
-            <div className="p-10 text-center text-sm text-slate-500">
+            <div className="p-10 text-center text-sm text-slate-500 dark:text-slate-400">
               {query
                 ? 'No hay clientes que coincidan con la búsqueda.'
                 : 'Todavía no existen clientes.'}
@@ -256,7 +256,7 @@ export function PlatformTenantsPage() {
           ) : null}
 
           {!isLoading ? (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredTenants.map((tenant) => (
                 <button
                   key={tenant.id}
@@ -268,26 +268,26 @@ export function PlatformTenantsPage() {
                   }}
                   className={`flex w-full items-center gap-4 px-4 py-4 text-left transition-colors ${
                     selectedId === tenant.id && mode !== 'create'
-                      ? 'bg-slate-100'
-                      : 'hover:bg-slate-50'
+                      ? 'bg-slate-100 dark:bg-slate-800'
+                      : 'hover:bg-slate-50 dark:hover:bg-slate-950'
                   }`}
                 >
-                  <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-700">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
                     <Building2 className="size-5" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium text-slate-950">
+                    <span className="block truncate font-medium text-slate-950 dark:text-slate-100">
                       {tenant.name}
                     </span>
-                    <span className="mt-1 block truncate font-mono text-xs text-slate-500">
+                    <span className="mt-1 block truncate font-mono text-xs text-slate-500 dark:text-slate-400">
                       {tenant.code}
                     </span>
                   </span>
                   <span
                     className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
                       tenant.active
-                        ? 'bg-emerald-50 text-emerald-700'
-                        : 'bg-slate-100 text-slate-500'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
                     }`}
                   >
                     {tenant.active ? 'Activo' : 'Inactivo'}
@@ -329,7 +329,7 @@ export function PlatformTenantsPage() {
           ) : null}
 
           {mode === 'detail' && !selected && !isLoading ? (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
+            <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-8 text-center text-sm text-slate-500 dark:text-slate-400">
               Selecciona un cliente o crea el primero.
             </div>
           ) : null}
@@ -355,14 +355,14 @@ function TenantAccess({
   ) => void;
 }) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
       <div className="flex items-start gap-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-700">
+        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
           <UserRound className="size-4" />
         </span>
         <div>
-          <h2 className="font-semibold text-slate-950">Acceso de usuarios</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-500">
+          <h2 className="font-semibold text-slate-950 dark:text-slate-100">Acceso de usuarios</h2>
+          <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
             Los usuarios habilitados podrán ver este cliente y tendrán las
             acciones correspondientes al rol elegido.
           </p>
@@ -374,7 +374,7 @@ function TenantAccess({
           <LoaderCircle className="size-6 animate-spin text-slate-400" />
         </div>
       ) : (
-        <div className="mt-4 divide-y divide-slate-100 border-t border-slate-100">
+        <div className="mt-4 divide-y divide-slate-100 dark:divide-slate-800 border-t border-slate-100 dark:border-slate-800">
           {users.map((user) => {
             const globalAdmin = user.roles.includes('admin');
             const enabled = globalAdmin || user.hasAccess;
@@ -383,19 +383,19 @@ function TenantAccess({
                 key={user.id}
                 className="flex min-w-0 flex-wrap items-center gap-3 py-3 sm:flex-nowrap"
               >
-                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300">
                   {user.name.slice(0, 1).toUpperCase()}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium text-slate-900">
+                  <span className="block truncate text-sm font-medium text-slate-900 dark:text-slate-100">
                     {user.name}
                   </span>
-                  <span className="block truncate text-xs text-slate-500">
+                  <span className="block truncate text-xs text-slate-500 dark:text-slate-400">
                     {user.email}
                   </span>
                 </span>
                 {globalAdmin ? (
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800">
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-950/40 px-2 py-1 text-xs font-medium text-amber-800 dark:text-amber-200">
                     <ShieldCheck className="size-3" /> Global
                   </span>
                 ) : (
@@ -408,7 +408,7 @@ function TenantAccess({
                         onChange={(event) =>
                           onChange(user, true, event.target.value as TenantRole)
                         }
-                        className="h-9 w-full rounded-lg border border-slate-300 bg-white px-2 text-xs text-slate-700 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-50 disabled:text-slate-400 sm:max-w-48"
+                        className="h-9 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-xs text-slate-700 dark:text-slate-200 outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800 disabled:bg-slate-50 dark:disabled:bg-slate-950 disabled:text-slate-400 dark:disabled:text-slate-400 sm:max-w-48"
                       >
                         {tenantRoles.map((role) => (
                           <option key={role} value={role}>
@@ -423,8 +423,8 @@ function TenantAccess({
                       onClick={() => onChange(user, !enabled)}
                       className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition disabled:opacity-50 ${
                         enabled
-                          ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-950/40'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                       }`}
                     >
                       {mutatingUserId === user.id
@@ -439,7 +439,7 @@ function TenantAccess({
             );
           })}
           {!users.length ? (
-            <p className="py-5 text-center text-sm text-slate-500">
+            <p className="py-5 text-center text-sm text-slate-500 dark:text-slate-400">
               No hay usuarios registrados.
             </p>
           ) : null}
@@ -459,13 +459,13 @@ function Metric({
   icon: typeof Building2;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <span className="grid size-10 place-items-center rounded-lg bg-slate-100 text-slate-700">
+    <div className="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
+      <span className="grid size-10 place-items-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
         <Icon className="size-5" />
       </span>
       <div>
-        <p className="text-2xl font-semibold text-slate-950">{value}</p>
-        <p className="text-xs text-slate-500">{label}</p>
+        <p className="text-2xl font-semibold text-slate-950 dark:text-slate-100">{value}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
       </div>
     </div>
   );
@@ -479,22 +479,22 @@ function TenantDetail({
   onEdit: () => void;
 }) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <span
             className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
               tenant.active
-                ? 'bg-emerald-50 text-emerald-700'
-                : 'bg-slate-100 text-slate-600'
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
             }`}
           >
             {tenant.active ? 'Cliente activo' : 'Cliente inactivo'}
           </span>
-          <h2 className="mt-3 text-xl font-semibold text-slate-950">
+          <h2 className="mt-3 text-xl font-semibold text-slate-950 dark:text-slate-100">
             {tenant.name}
           </h2>
-          <p className="mt-1 break-all font-mono text-xs text-slate-500">
+          <p className="mt-1 break-all font-mono text-xs text-slate-500 dark:text-slate-400">
             {tenant.code}
           </p>
         </div>
@@ -509,7 +509,7 @@ function TenantDetail({
         <Usage label="Trabajos" value={tenant.workCount} />
       </dl>
 
-      <div className="mt-6 border-t border-slate-200 pt-4 text-xs leading-5 text-slate-500">
+      <div className="mt-6 border-t border-slate-200 dark:border-slate-800 pt-4 text-xs leading-5 text-slate-500 dark:text-slate-400">
         <p>
           Creado el{' '}
           {new Intl.DateTimeFormat('es-CL', { dateStyle: 'medium' }).format(
@@ -522,7 +522,7 @@ function TenantDetail({
       </div>
 
       {!tenant.active ? (
-        <p className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+        <p className="mt-5 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-3 text-sm text-amber-800 dark:text-amber-200">
           Este cliente no aparece en los selectores operativos. Reactívalo desde
           Editar para recuperar el acceso a sus datos.
         </p>
@@ -533,9 +533,9 @@ function TenantDetail({
 
 function Usage({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-lg bg-slate-50 p-3 text-center">
-      <dd className="text-lg font-semibold text-slate-950">{value}</dd>
-      <dt className="text-xs text-slate-500">{label}</dt>
+    <div className="rounded-lg bg-slate-50 dark:bg-slate-950 p-3 text-center">
+      <dd className="text-lg font-semibold text-slate-950 dark:text-slate-100">{value}</dd>
+      <dt className="text-xs text-slate-500 dark:text-slate-400">{label}</dt>
     </div>
   );
 }

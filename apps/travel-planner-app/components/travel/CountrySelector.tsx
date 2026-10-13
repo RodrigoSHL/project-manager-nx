@@ -73,7 +73,7 @@ export function CountrySelector({ value, onChange, placeholder = 'Seleccionar pa
           return (
             <span
               key={name}
-              className="flex items-center gap-1 bg-primary/10 text-primary rounded-md px-1.5 py-0.5 text-xs font-medium"
+              className="flex items-center gap-1 bg-primary/10 text-brand-foreground rounded-md px-1.5 py-0.5 text-xs font-medium"
             >
               <span>{country?.flag}</span>
               <span>{name}</span>
@@ -118,13 +118,13 @@ export function CountrySelector({ value, onChange, placeholder = 'Seleccionar pa
                 className={cn(
                   'flex items-center gap-2 px-3 py-2 text-sm cursor-pointer transition-colors',
                   'hover:bg-muted',
-                  value.includes(country.name) && 'bg-primary/10 text-primary font-medium',
+                  value.includes(country.name) && 'bg-primary/10 text-brand-foreground font-medium',
                 )}
               >
                 <span>{country.flag}</span>
                 <span>{country.name}</span>
                 {value.includes(country.name) && (
-                  <span className="ml-auto text-xs text-primary">✓</span>
+                  <span className="ml-auto text-xs text-brand-foreground">✓</span>
                 )}
               </li>
             ))}

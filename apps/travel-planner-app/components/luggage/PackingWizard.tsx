@@ -66,7 +66,7 @@ export function PackingWizard({ tripDays, luggage, selected, onToggleLuggage, on
 
   return (
     <div className="mx-auto max-w-3xl overflow-hidden rounded-[28px] border border-border bg-card shadow-xl shadow-slate-900/5">
-      <div className="bg-gradient-to-br from-indigo-600 via-blue-600 to-sky-500 px-5 py-6 text-white sm:px-8">
+      <div className="brand-banner px-5 py-6 text-white sm:px-8">
         <div className="flex items-center gap-3">
           <div className="flex size-11 items-center justify-center rounded-2xl bg-white/15 backdrop-blur"><Sparkles className="size-5" /></div>
           <div>
@@ -84,14 +84,14 @@ export function PackingWizard({ tripDays, luggage, selected, onToggleLuggage, on
           <div className="space-y-6">
             <div><h3 className="text-lg font-bold">¿Cuánto dura y qué clima esperas?</h3><p className="mt-1 text-sm text-muted-foreground">Usamos las fechas del viaje como punto de partida.</p></div>
             <label className="block"><span className="mb-2 block text-sm font-semibold">Duración</span><div className="flex items-center gap-3 rounded-2xl border border-border bg-muted/20 p-3"><button type="button" onClick={() => setDays(Math.max(1, days - 1))} className="size-10 rounded-xl bg-card text-xl shadow-sm">−</button><div className="flex-1 text-center"><strong className="text-2xl">{days}</strong><span className="ml-1 text-sm text-muted-foreground">días</span></div><button type="button" onClick={() => setDays(days + 1)} className="size-10 rounded-xl bg-card text-xl shadow-sm">+</button></div></label>
-            <div><span className="mb-2 block text-sm font-semibold">Clima predominante</span><div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{CLIMATES.map(option => <button key={option.value} type="button" onClick={() => setClimate(option.value)} className={`flex items-center gap-2 rounded-xl border p-3 text-left text-sm font-medium transition ${climate === option.value ? 'border-primary bg-primary/5 ring-2 ring-primary/10' : 'border-border hover:bg-muted'}`}><span className="text-xl">{option.emoji}</span>{option.label}{climate === option.value && <Check className="ml-auto size-4 text-primary" />}</button>)}</div></div>
+            <div><span className="mb-2 block text-sm font-semibold">Clima predominante</span><div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{CLIMATES.map(option => <button key={option.value} type="button" onClick={() => setClimate(option.value)} className={`flex items-center gap-2 rounded-xl border p-3 text-left text-sm font-medium transition ${climate === option.value ? 'border-primary bg-primary/5 ring-2 ring-primary/10' : 'border-border hover:bg-muted'}`}><span className="text-xl">{option.emoji}</span>{option.label}{climate === option.value && <Check className="ml-auto size-4 text-brand-foreground" />}</button>)}</div></div>
           </div>
         )}
 
         {step === 2 && (
           <div className="space-y-6">
             <div><h3 className="text-lg font-bold">¿Qué harás durante el viaje?</h3><p className="mt-1 text-sm text-muted-foreground">Selecciona todo lo que aplique; podrás editar el resultado.</p></div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{ACTIVITIES.map(option => <button key={option.value} type="button" onClick={() => toggleActivity(option.value)} className={`relative rounded-2xl border p-3 text-left transition ${activities.includes(option.value) ? 'border-primary bg-primary/5 ring-2 ring-primary/10' : 'border-border hover:bg-muted'}`}><span className="block text-2xl">{option.emoji}</span><span className="mt-2 block text-xs font-semibold">{option.label}</span>{activities.includes(option.value) && <Check className="absolute right-2 top-2 size-4 text-primary" />}</button>)}</div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{ACTIVITIES.map(option => <button key={option.value} type="button" onClick={() => toggleActivity(option.value)} className={`relative rounded-2xl border p-3 text-left transition ${activities.includes(option.value) ? 'border-primary bg-primary/5 ring-2 ring-primary/10' : 'border-border hover:bg-muted'}`}><span className="block text-2xl">{option.emoji}</span><span className="mt-2 block text-xs font-semibold">{option.label}</span>{activities.includes(option.value) && <Check className="absolute right-2 top-2 size-4 text-brand-foreground" />}</button>)}</div>
             <div className="grid gap-2 sm:grid-cols-3">{[
               [needsMedication, setNeedsMedication, '💊', 'Llevo medicamentos'],
               [carriesLaptop, setCarriesLaptop, '💻', 'Llevo computador'],
@@ -117,11 +117,11 @@ export function PackingWizard({ tripDays, luggage, selected, onToggleLuggage, on
           <div className="space-y-5">
             <div><h3 className="text-lg font-bold">¿Qué equipaje llevarás?</h3><p className="mt-1 text-sm text-muted-foreground">Los artículos se distribuirán automáticamente entre estas piezas.</p></div>
             {luggage.length === 0 ? (
-              <button type="button" onClick={onCreateLuggage} className="flex w-full flex-col items-center rounded-2xl border-2 border-dashed border-border p-8 text-center hover:border-primary"><Backpack className="mb-3 size-8 text-primary" /><strong>Agrega tu primera maleta</strong><span className="mt-1 text-sm text-muted-foreground">Puedes usar uno de nuestros tipos rápidos.</span></button>
+              <button type="button" onClick={onCreateLuggage} className="flex w-full flex-col items-center rounded-2xl border-2 border-dashed border-border p-8 text-center hover:border-primary"><Backpack className="mb-3 size-8 text-brand-foreground" /><strong>Agrega tu primera maleta</strong><span className="mt-1 text-sm text-muted-foreground">Puedes usar uno de nuestros tipos rápidos.</span></button>
             ) : (
               <div className="space-y-2">{luggage.map(bag => { const selectedAssignment = selected.find(entry => entry.luggageId === bag.id); const Icon = luggageIcon(bag.type); return <button key={bag.id} type="button" onClick={() => onToggleLuggage(bag)} className={`flex w-full items-center gap-3 rounded-2xl border p-3.5 text-left transition ${selectedAssignment ? 'border-primary bg-primary/5 ring-2 ring-primary/10' : 'border-border hover:bg-muted'}`}><div className="flex size-11 items-center justify-center rounded-xl text-white" style={{ backgroundColor: bag.color }}><Icon className="size-5" /></div><div className="min-w-0 flex-1"><strong className="block truncate text-sm">{bag.name}</strong><span className="text-xs text-muted-foreground">{LUGGAGE_TYPES[bag.type].shortLabel} · {bag.capacityLiters ?? '—'} L</span></div><span className={`flex size-6 items-center justify-center rounded-full border ${selectedAssignment ? 'border-primary bg-primary text-white' : 'border-border'}`}>{selectedAssignment && <Check className="size-4" />}</span></button> })}</div>
             )}
-            <button type="button" onClick={onCreateLuggage} className="text-sm font-semibold text-primary hover:underline">+ Agregar otra maleta</button>
+            <button type="button" onClick={onCreateLuggage} className="text-sm font-semibold text-brand-foreground hover:underline">+ Agregar otra maleta</button>
             <div className="rounded-2xl bg-sky-50 p-4 text-sm text-sky-900"><div className="flex gap-2"><CloudRain className="mt-0.5 size-4 shrink-0" /><p>Generaremos una propuesta editable para <strong>{days} días</strong>, con estilo <strong>{style === 'minimal' ? 'minimalista' : style === 'balanced' ? 'equilibrado' : 'preparado'}</strong>{laundryAccess ? ` y lavado cada ${laundryEveryDays} días` : ''}.</p></div></div>
             {error && <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
           </div>

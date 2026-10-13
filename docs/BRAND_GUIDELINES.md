@@ -64,6 +64,26 @@ del logo se reserva para fondos e iconos; los textos usan `brand-foreground`
 para mantener contraste en superficies claras. Las selecciones alcanzan
 6,29:1 en modo claro y 11,19:1 en oscuro.
 
+## Detalles celestes de Travel Planner
+
+Travel Planner usa el celeste de su marcador en acciones, enlaces, foco de teclado
+y selecciones. Los encabezados de itinerario, divisas, equipaje y perfil comparten
+un mismo fondo azul oscuro. Las tarjetas de divisas y categorías de actividad,
+gastos y equipaje usan fondos suaves, identificadas por sus iconos y nombres.
+
+| Uso | Tema claro | Tema oscuro |
+| --- | --- | --- |
+| Fondo de acción | `#38bdf8` | `#38bdf8` |
+| Texto sobre acción | `#082f49` | `#082f49` |
+| Enlace y texto de marca | `#075985` | `#7dd3fc` |
+| Fondo de selección | `#edf9ff` | `#102c3d` |
+| Texto de selección | `#075985` | `#bae6fd` |
+
+La acción alcanza 6,48:1 de contraste; las selecciones alcanzan 7,06:1 en claro
+y 10,92:1 en oscuro. Los colores de alertas y estados, las franjas de países del
+calendario y los colores personales de las maletas conservan su significado.
+Login, registro y perfil ofrecen selector de tema.
+
 ## Fuentes y regeneración
 
 - GridAssets: `apps/inspection-web/public/gridassets-icon.svg`.

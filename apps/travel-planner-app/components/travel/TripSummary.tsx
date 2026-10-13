@@ -47,7 +47,7 @@ export function TripSummary({ activities }: Props) {
         {stats.map(({ icon: Icon, label, value }) => (
           <div key={label} className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <Icon className="w-4.5 h-4.5 text-primary" />
+              <Icon className="w-4.5 h-4.5 text-brand-foreground" />
             </div>
             <div>
               <div className="text-xl font-bold text-foreground leading-tight">{value}</div>
@@ -77,10 +77,10 @@ export function TripSummary({ activities }: Props) {
       {upcoming && (
         <div className="bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
-            <Zap className="w-4 h-4 text-primary" />
+            <Zap className="w-4 h-4 text-brand-foreground" />
           </div>
           <div className="min-w-0">
-            <div className="text-xs font-semibold text-primary uppercase tracking-wide mb-0.5">Próxima actividad</div>
+            <div className="text-xs font-semibold text-brand-foreground uppercase tracking-wide mb-0.5">Próxima actividad</div>
             <div className="text-sm font-medium text-foreground truncate">{upcoming.title}</div>
             <div className="text-xs text-muted-foreground">
               {format(parseISO(upcoming.date), "EEEE d 'de' MMMM", { locale: es })}

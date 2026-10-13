@@ -76,7 +76,7 @@ export function DocumentViewer({ fileId, title, onClose }: DocumentViewerProps) 
       <section className="flex h-[100dvh] w-full flex-col overflow-hidden bg-muted shadow-2xl sm:h-[calc(100dvh-2rem)] sm:max-w-[1500px] sm:rounded-2xl sm:border">
         <header className="flex shrink-0 items-center justify-between gap-4 border-b bg-card px-4 py-3 sm:px-6">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">
+            <p className="text-xs font-semibold uppercase tracking-wide text-brand-foreground">
               Vista segura
             </p>
             <h2 id="document-viewer-title" className="truncate font-bold text-card-foreground">
@@ -108,7 +108,7 @@ export function DocumentViewer({ fileId, title, onClose }: DocumentViewerProps) 
         <div className="relative flex h-0 flex-1 items-center justify-center overflow-hidden bg-muted p-3 sm:p-5">
           {!url && !error && (
             <div className="flex flex-col items-center gap-3 text-sm text-muted-foreground">
-              <Loader2 className="size-8 animate-spin text-blue-600 dark:text-blue-400" />
+              <Loader2 className="size-8 animate-spin text-brand-foreground" />
               Cargando documento protegido…
             </div>
           )}

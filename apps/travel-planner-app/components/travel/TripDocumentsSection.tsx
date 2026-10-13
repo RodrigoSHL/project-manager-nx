@@ -176,7 +176,7 @@ export function TripDocumentsSection({
     return (
       <div className="flex min-h-72 items-center justify-center rounded-3xl border bg-card">
         <div className="flex items-center gap-3 text-sm text-muted-foreground">
-          <Loader2 className="size-5 animate-spin text-blue-600" />
+          <Loader2 className="size-5 animate-spin text-brand-foreground" />
           Preparando tus documentos para este viaje…
         </div>
       </div>
@@ -185,17 +185,17 @@ export function TripDocumentsSection({
 
   return (
     <section className="space-y-5">
-      <div className="overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-cyan-50 p-5 shadow-sm sm:p-6">
+      <div className="overflow-hidden rounded-3xl border border-primary/20 bg-accent p-5 shadow-sm sm:p-6">
         <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
           <div>
-            <div className="flex items-center gap-2 text-sm font-semibold text-blue-700">
+            <div className="flex items-center gap-2 text-sm font-semibold text-brand-foreground">
               <ShieldCheck className="size-4" />
               Preparación personal para este viaje
             </div>
-            <h2 className="mt-2 text-2xl font-bold text-slate-950">
+            <h2 className="mt-2 text-2xl font-bold text-foreground">
               Documentos de {tripTitle}
             </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
               Aquí eliges qué documentos de tu bóveda necesitarás en este viaje.
               Los originales siguen siendo privados y se guardan una sola vez en
               tu perfil.
@@ -203,7 +203,7 @@ export function TripDocumentsSection({
           </div>
           <Link
             href="/profile"
-            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-blue-200 bg-white px-4 text-sm font-semibold text-blue-700 shadow-sm hover:bg-blue-50"
+            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-primary/25 bg-card px-4 text-sm font-semibold text-brand-foreground shadow-sm hover:bg-accent"
           >
             <FolderLock className="size-4" />
             Abrir mi bóveda
@@ -225,7 +225,7 @@ export function TripDocumentsSection({
         <div className="rounded-3xl border bg-card p-5 shadow-sm sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand-foreground">
                 Solo para este viaje
               </p>
               <h3 className="mt-1 text-lg font-bold text-foreground">
@@ -235,7 +235,7 @@ export function TripDocumentsSection({
             <button
               type="button"
               onClick={() => setChooserOpen((open) => !open)}
-              className="inline-flex h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
+              className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
             >
               <Plus className="size-4" />
               Elegir desde mi bóveda
@@ -246,8 +246,8 @@ export function TripDocumentsSection({
           </div>
 
           {chooserOpen && (
-            <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-3">
-              <p className="px-1 pb-2 text-xs text-slate-600">
+            <div className="mt-4 rounded-2xl border border-primary/20 bg-accent p-3">
+              <p className="px-1 pb-2 text-xs text-muted-foreground">
                 Esta selección no mueve ni duplica los archivos.
               </p>
               {documents.length ? (
@@ -262,13 +262,13 @@ export function TripDocumentsSection({
                         onClick={() => toggleDocument(document)}
                         className={`flex items-center gap-3 rounded-xl border p-3 text-left transition disabled:opacity-60 ${
                           selected
-                            ? 'border-blue-300 bg-white text-slate-900'
-                            : 'border-transparent bg-white/70 text-slate-600 hover:border-blue-200'
+                            ? 'border-primary/30 bg-card text-foreground'
+                            : 'border-transparent bg-card/70 text-muted-foreground hover:border-primary/25'
                         }`}
                       >
                         <span
                           className={`flex size-6 shrink-0 items-center justify-center rounded-lg ${
-                            selected ? 'bg-blue-600 text-white' : 'border bg-white'
+                            selected ? 'bg-primary text-primary-foreground' : 'border bg-card'
                           }`}
                         >
                           {busyId === document.id ? (
@@ -281,7 +281,7 @@ export function TripDocumentsSection({
                           <span className="block truncate text-sm font-semibold">
                             {document.displayName}
                           </span>
-                          <span className="block truncate text-xs text-slate-500">
+                          <span className="block truncate text-xs text-muted-foreground">
                             {DOCUMENT_LABELS[document.type]}
                           </span>
                         </span>
@@ -290,9 +290,9 @@ export function TripDocumentsSection({
                   })}
                 </div>
               ) : (
-                <div className="rounded-xl border border-dashed bg-white p-5 text-center text-sm text-slate-600">
+                <div className="rounded-xl border border-dashed bg-card p-5 text-center text-sm text-muted-foreground">
                   Tu bóveda todavía está vacía.{' '}
-                  <Link href="/profile" className="font-semibold text-blue-700">
+                  <Link href="/profile" className="font-semibold text-brand-foreground">
                     Agrega tu primer documento
                   </Link>
                   .
@@ -310,7 +310,7 @@ export function TripDocumentsSection({
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 gap-3">
-                      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+                      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent text-brand-foreground">
                         <FileBadge2 className="size-5" />
                       </span>
                       <div className="min-w-0">
@@ -329,7 +329,7 @@ export function TripDocumentsSection({
                       disabled={busyId === document.id}
                       title="Quitar de este viaje"
                       aria-label={`Quitar ${document.displayName} de este viaje`}
-                      className="flex size-9 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                      className="flex size-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
                     >
                       {busyId === document.id ? (
                         <Loader2 className="size-4 animate-spin" />
@@ -345,7 +345,7 @@ export function TripDocumentsSection({
                           ? 'font-semibold text-red-600'
                           : document.status === 'expiring'
                             ? 'font-semibold text-amber-600'
-                            : 'text-slate-500'
+                            : 'text-muted-foreground'
                       }
                     >
                       {formatDate(document.expiresAt)}
@@ -359,13 +359,13 @@ export function TripDocumentsSection({
                             title: document.displayName,
                           })
                         }
-                        className="inline-flex items-center gap-1.5 font-semibold text-blue-700 hover:text-blue-900"
+                        className="inline-flex items-center gap-1.5 font-semibold text-brand-foreground hover:text-brand-foreground"
                       >
                         <Eye className="size-4" />
                         Ver archivo
                       </button>
                     ) : (
-                      <Link href="/profile" className="font-semibold text-blue-700">
+                      <Link href="/profile" className="font-semibold text-brand-foreground">
                         Adjuntar archivo
                       </Link>
                     )}
@@ -428,7 +428,7 @@ export function TripDocumentsSection({
                   )}
                   <span
                     className={`text-sm ${
-                      checked ? 'text-slate-400 line-through' : 'text-slate-700'
+                      checked ? 'text-muted-foreground line-through' : 'text-foreground'
                     }`}
                   >
                     {item.label}
@@ -444,13 +444,13 @@ export function TripDocumentsSection({
               onChange={(event) => setNewItem(event.target.value)}
               maxLength={180}
               placeholder="Agregar pendiente…"
-              className="h-10 min-w-0 flex-1 rounded-xl border bg-background px-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              className="h-10 min-w-0 flex-1 rounded-xl border bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
             />
             <button
               type="submit"
               disabled={!newItem.trim() || busyId === 'new-checklist-item'}
               aria-label="Agregar pendiente"
-              className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white hover:bg-slate-700 disabled:opacity-40"
+              className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-primary-foreground hover:bg-slate-700 disabled:opacity-40"
             >
               {busyId === 'new-checklist-item' ? (
                 <Loader2 className="size-4 animate-spin" />

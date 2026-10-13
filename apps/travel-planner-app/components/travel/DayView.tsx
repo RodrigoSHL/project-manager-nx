@@ -202,7 +202,7 @@ export function DayView({
       {canEdit && (
         <button
           onClick={() => onAddActivity(dateStr)}
-          className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border hover:border-primary hover:text-primary py-4 text-sm text-muted-foreground transition-colors"
+          className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border hover:border-primary hover:text-brand-foreground py-4 text-sm text-muted-foreground transition-colors"
         >
           <Plus className="w-4 h-4" />
           Agregar actividad

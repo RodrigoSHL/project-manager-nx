@@ -23,12 +23,13 @@ export function ViewSwitcher({ current, onChange }: Props) {
         <button
           key={value}
           role="tab"
+          aria-label={label}
           aria-selected={current === value}
           onClick={() => onChange(value)}
           className={cn(
             'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all',
             current === value
-              ? 'bg-card text-foreground shadow-sm'
+              ? 'bg-accent text-accent-foreground ring-1 ring-inset ring-primary/25 shadow-sm'
               : 'text-muted-foreground hover:text-foreground',
           )}
         >

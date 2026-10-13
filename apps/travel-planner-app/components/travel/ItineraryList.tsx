@@ -171,7 +171,7 @@ export function ItineraryList({
               {canEdit && (
                 <button
                   onClick={() => onAddActivity(dateStr)}
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors w-fit"
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-brand-foreground transition-colors w-fit"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Agregar actividad

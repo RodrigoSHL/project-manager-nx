@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
   CalendarDays,
@@ -12,48 +12,42 @@ import { PageHeader } from '../components/page-header';
 import { Button } from '../components/ui/button';
 import { useAssetCatalog } from '../features/assets/use-asset-catalog';
 import { WorkStatusBadge } from '../features/works/components/work-status-badge';
+import { formatWorkDate } from '../features/works/work-formatters';
 import {
-  formatWorkDate,
-  workStatusLabels,
-} from '../features/works/work-formatters';
-import type { WorkStatus } from '../features/works/models';
+  WorkListFilters,
+  emptyWorkFilters,
+  type WorkListFilterValues,
+} from '../features/works/components/work-list-filters';
 import { useWorkCatalog } from '../features/works/use-work-catalog';
 import { SyncStatusBadge } from '../features/offline/components/sync-status-badge';
 import { OfflineContentUnavailable } from '../features/offline/components/offline-content-unavailable';
 import { useOffline } from '../features/offline/offline-context';
 
-const allStatuses: WorkStatus[] = [
-  'DRAFT',
-  'IN_PROGRESS',
-  'FINISHED',
-  'REVIEWED',
-];
-
 export function WorksPage() {
   const { mode } = useOffline();
   const organization = useAssetCatalog();
   const catalog = useWorkCatalog(organization.tenantId);
-  const [siteId, setSiteId] = useState('');
-  const [assetId, setAssetId] = useState('');
-  const [workTypeId, setWorkTypeId] = useState('');
-  const [status, setStatus] = useState('');
+  const [filters, setFilters] = useState(emptyWorkFilters);
+  const { siteId, assetId, workTypeId, status } = filters;
 
   useEffect(() => {
-    setSiteId('');
-    setAssetId('');
-    setWorkTypeId('');
-    setStatus('');
+    setFilters(emptyWorkFilters);
   }, [organization.tenantId]);
-  useEffect(() => setAssetId(''), [siteId]);
 
   const references = catalog.catalog;
-  const assetOptions = useMemo(
-    () =>
-      (references?.assets ?? []).filter(
-        (asset) => !siteId || asset.siteId === siteId
-      ),
-    [references?.assets, siteId]
-  );
+  function applyFilters(next: WorkListFilterValues) {
+    if (next.tenantId !== organization.tenantId) {
+      organization.selectTenant(next.tenantId);
+      setFilters(emptyWorkFilters);
+    } else {
+      setFilters({
+        siteId: next.siteId,
+        assetId: next.assetId,
+        workTypeId: next.workTypeId,
+        status: next.status,
+      });
+    }
+  }
   const filteredWorks = useMemo(
     () =>
       catalog.works
@@ -76,59 +70,17 @@ export function WorksPage() {
     <>
       <PageHeader
         title="Trabajos"
-        description="Ejecuciones reales de formularios sobre activos, persistidas para continuar su avance más adelante."
+        description="Consulta tus inspecciones y continúa el trabajo en terreno."
       />
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <Filter
-            label="Tenant / Empresa"
-            value={organization.tenantId}
-            onChange={organization.selectTenant}
-          >
-            {organization.tenants.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </Filter>
-          <Filter label="Sitio" value={siteId} onChange={setSiteId}>
-            <option value="">Todos</option>
-            {(references?.sites ?? []).map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.code} · {item.name}
-              </option>
-            ))}
-          </Filter>
-          <Filter label="Activo" value={assetId} onChange={setAssetId}>
-            <option value="">Todos</option>
-            {assetOptions.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.code} · {item.name}
-              </option>
-            ))}
-          </Filter>
-          <Filter
-            label="Tipo de trabajo"
-            value={workTypeId}
-            onChange={setWorkTypeId}
-          >
-            <option value="">Todos</option>
-            {(references?.workTypes ?? []).map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </Filter>
-          <Filter label="Estado" value={status} onChange={setStatus}>
-            <option value="">Todos</option>
-            {allStatuses.map((item) => (
-              <option key={item} value={item}>
-                {workStatusLabels[item]}
-              </option>
-            ))}
-          </Filter>
-        </div>
-      </section>
+      <WorkListFilters
+        values={{ tenantId: organization.tenantId, ...filters }}
+        tenants={organization.tenants}
+        sites={references?.sites ?? []}
+        assets={references?.assets ?? []}
+        workTypes={references?.workTypes ?? []}
+        loading={catalog.isLoading}
+        onChange={applyFilters}
+      />
 
       {catalog.error ? (
         <section className="mt-6 rounded-xl border border-red-200 bg-white p-6 text-center shadow-sm">
@@ -182,7 +134,7 @@ export function WorksPage() {
               <Link
                 key={work.id}
                 to={`/works/${work.id}?tenantId=${work.tenantId}`}
-                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow md:p-5"
+                className="min-w-0 break-words rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow md:p-5"
               >
                 <div className="flex items-start gap-3">
                   <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-700">
@@ -190,7 +142,7 @@ export function WorksPage() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                           {workType?.name}
                         </p>
@@ -228,30 +180,5 @@ export function WorksPage() {
         </section>
       ) : null}
     </>
-  );
-}
-
-function Filter({
-  label,
-  value,
-  onChange,
-  children,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  children: ReactNode;
-}) {
-  return (
-    <label className="text-xs font-semibold text-slate-600">
-      {label}
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-2 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-normal text-slate-800 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-      >
-        {children}
-      </select>
-    </label>
   );
 }

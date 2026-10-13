@@ -19,6 +19,7 @@ import { MeasurementChart } from '../features/analytics/components/measurement-c
 import { MeasurementDetail } from '../features/analytics/components/measurement-detail';
 import { MeasurementFilters } from '../features/analytics/components/measurement-filters';
 import { MeasurementStatCard } from '../features/analytics/components/measurement-stat-card';
+import { applyMeasurementFilterSelection } from '../features/analytics/measurement-filter-state';
 import {
   MAX_CHART_POINTS,
   formatMeasurementDate,
@@ -227,24 +228,37 @@ export function MeasurementAnalyticsPage() {
     setParams(next);
   }
 
+  function applyFilters(
+    nextTenantId: string,
+    nextValues: DashboardFilterValues
+  ) {
+    organizationSelectionStorage.rememberTenant(
+      user?.userId ?? '',
+      nextTenantId
+    );
+    setParams(
+      applyMeasurementFilterSelection(params, nextTenantId, nextValues)
+    );
+  }
+
   return (
     <>
       <PageHeader
         title="Análisis de mediciones"
-        description="Compara mediciones históricas de inspecciones ejecutadas entre activos para un mismo concepto."
+        description="Elige una medición y compara su historial entre activos."
       />
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-4 grid grid-cols-2 items-center gap-3 md:mb-5 md:flex md:flex-wrap md:justify-between">
         <Link
           to={`/dashboard?${backParams.toString()}`}
-          className="text-sm font-medium text-slate-600 hover:text-slate-950"
+          className="inline-flex min-h-11 items-center text-sm font-medium text-slate-600 hover:text-slate-950"
         >
-          ← Volver al dashboard
+          ← Volver al resumen
         </Link>
         <Link
           to={`/analytics/variables?${params.toString()}`}
-          className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-800 shadow-sm hover:border-slate-400 hover:bg-slate-50"
+          className="inline-flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-center text-sm font-medium text-slate-800 shadow-sm hover:border-slate-400 hover:bg-slate-50 md:px-4"
         >
-          <ChartNoAxesCombined className="size-4" aria-hidden="true" />
+          <ChartNoAxesCombined className="size-4 shrink-0" aria-hidden="true" />
           Comparar variables
         </Link>
       </div>
@@ -269,6 +283,7 @@ export function MeasurementAnalyticsPage() {
             onTenantChange={updateTenant}
             onConceptChange={updateConcept}
             onChange={updateFilters}
+            onApply={applyFilters}
           />
           {mode !== 'REMOTE' ? (
             <Message text="El comparador técnico necesita conexión con el servidor. Las inspecciones offline siguen disponibles en sus secciones." />
@@ -286,7 +301,7 @@ export function MeasurementAnalyticsPage() {
           ) : !selectedConcept ? (
             <Message text="Este concepto no tiene mediciones para los filtros seleccionados. Elige otro concepto o amplía el período." />
           ) : (
-            <div className="mt-6 space-y-6">
+            <div className="mt-4 min-w-0 space-y-4 md:mt-6 md:space-y-6">
               {discovery.loading ? (
                 <Message text="Buscando activos con historial…" />
               ) : discovery.error ? (
@@ -309,12 +324,12 @@ export function MeasurementAnalyticsPage() {
                   ) : comparison.data ? (
                     <>
                       <section
-                        className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6"
+                        className="min-w-0 rounded-xl border border-slate-200 bg-white p-3 shadow-sm md:p-6"
                         aria-label="Evolución histórica"
                       >
                         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                           <div>
-                            <h2 className="text-xl font-semibold text-slate-950">
+                            <h2 className="text-lg font-semibold text-slate-950 md:text-xl">
                               Evolución histórica
                             </h2>
                             <p className="text-sm text-slate-500">
@@ -346,13 +361,13 @@ export function MeasurementAnalyticsPage() {
                         )}
                       </section>
                       {!tooManyPoints && selected && (
-                        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(300px,380px)]">
-                          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <div className="grid min-w-0 grid-cols-1 gap-4 md:gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(300px,380px)]">
+                          <section className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
                             <h2 className="text-lg font-semibold text-slate-950">
                               Mediciones recientes
                             </h2>
                             <p className="mt-1 text-xs text-slate-500">
-                              Selecciona un registro para ver su Work, rango
+                              Selecciona un registro para ver su trabajo, rango
                               histórico y hallazgo.
                             </p>
                             <ul className="mt-4 max-h-80 divide-y divide-slate-100 overflow-y-auto">

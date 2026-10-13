@@ -23,7 +23,7 @@ export function MeasurementStatCard({
   params.set('tenantId', tenantId);
   params.set('returnTo', 'measurements');
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <article className="min-w-0 break-words rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
       <Link
         to={`/assets/${encodeURIComponent(
           series.assetId
@@ -102,7 +102,7 @@ export function MeasurementStatCard({
       <p className="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-500">
         Rango permitido en la última medición: {stats.latestMinValue ?? '—'} a{' '}
         {stats.latestMaxValue ?? '—'} {unit ?? ''}. Los límites pueden variar
-        entre Works.
+        entre trabajos.
       </p>
     </article>
   );

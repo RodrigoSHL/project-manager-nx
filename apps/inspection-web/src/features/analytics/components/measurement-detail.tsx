@@ -22,7 +22,7 @@ export function MeasurementDetail({
   )}?tenantId=${encodeURIComponent(tenantId)}`;
   return (
     <section
-      className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+      className="min-w-0 break-words rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-5"
       aria-label="Detalle de la medición seleccionada"
     >
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -53,7 +53,7 @@ export function MeasurementDetail({
         </div>
         <div>
           <dt className="text-xs text-slate-500">
-            Rango aplicado en este Work
+            Rango aplicado en este trabajo
           </dt>
           <dd>
             {point.minValue ?? '—'} a {point.maxValue ?? '—'} {unit ?? ''}

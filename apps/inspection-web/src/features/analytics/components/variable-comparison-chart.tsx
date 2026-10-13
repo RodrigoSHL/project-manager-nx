@@ -74,18 +74,19 @@ export function VariableComparisonChart({
   const segments = variableSegments(rows);
   const ambiguousDays = ambiguousVariableDays(rows);
   const dateOnlyCount = rows.filter((row) => !row.point.measuredAtTime).length;
+  const hasTime = dateOnlyCount < rows.length;
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+    <section className="min-w-0 break-words rounded-xl border border-slate-200 bg-white p-3 shadow-sm md:p-6">
       <h2 className="text-lg font-semibold text-slate-950">
         Curvas históricas
       </h2>
       <p className="mt-1 text-sm text-slate-600">
-        Cada punto es una medición real. Las líneas unen observaciones del mismo
-        concepto; no se calculan mediciones intermedias.
+        Mediciones registradas de ambas variables. Cada eje tiene su propia
+        escala.
       </p>
-      <div className="mt-5 overflow-x-auto">
+      <div className="mt-4 min-w-0">
         <div
-          className="h-96 min-w-[700px]"
+          className="h-72 w-full min-w-0 md:h-96"
           role="img"
           aria-label="Comparación de dos conceptos sobre la misma línea de tiempo"
         >
@@ -102,10 +103,8 @@ export function VariableComparisonChart({
                 domain={['dataMin', 'dataMax']}
                 tickFormatter={(value: number) => {
                   const iso = new Date(value).toISOString();
-                  return `${formatMeasurementDate(iso).slice(0, 5)} ${iso.slice(
-                    11,
-                    16
-                  )}`;
+                  const date = formatMeasurementDate(iso).slice(0, 5);
+                  return hasTime ? `${date} ${iso.slice(11, 16)}` : date;
                 }}
                 tick={{ fontSize: 11, fill: '#64748b' }}
               />
@@ -114,7 +113,7 @@ export function VariableComparisonChart({
                 type="number"
                 domain={['auto', 'auto']}
                 stroke={colors.first}
-                width={60}
+                width={50}
                 unit={first.concept.unit ?? undefined}
               />
               <YAxis
@@ -123,7 +122,7 @@ export function VariableComparisonChart({
                 type="number"
                 domain={['auto', 'auto']}
                 stroke={colors.second}
-                width={60}
+                width={50}
                 unit={second.concept.unit ?? undefined}
               />
               <Tooltip
@@ -233,7 +232,7 @@ export function VariableComparisonChart({
                 to={`/works/${encodeURIComponent(
                   row.point.workId
                 )}?tenantId=${encodeURIComponent(tenantId)}`}
-                className="font-medium text-blue-700 hover:underline"
+                className="inline-flex min-h-11 items-center font-medium text-blue-700 hover:underline"
               >
                 Ver trabajo
               </Link>

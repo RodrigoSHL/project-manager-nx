@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   AlertTriangle,
   Building2,
   ClipboardList,
   LayoutDashboard,
   LogOut,
-  Menu,
   Settings,
   ShieldCheck,
   Zap,
@@ -13,7 +12,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { Button } from '../components/ui/button';
+import { MobileNavigation } from '../components/mobile-navigation';
 import { useAuth } from '../features/auth/auth-context';
 import { isGlobalAdmin } from '../features/auth/auth-storage';
 import {
@@ -34,7 +33,7 @@ type NavigationItem = {
 };
 
 const navigation: NavigationItem[] = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/dashboard', label: 'Resumen', icon: LayoutDashboard },
   { to: '/assets', label: 'Activos', icon: Building2 },
   { to: '/works', label: 'Trabajos', icon: ClipboardList },
   { to: '/findings', label: 'Hallazgos', icon: AlertTriangle },
@@ -127,6 +126,15 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
 export function AppLayout() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  useEffect(() => {
+    const desktop = window.matchMedia?.('(min-width: 768px)');
+    if (!desktop) return;
+    const closeOnDesktop = () => {
+      if (desktop.matches) setIsMenuOpen(false);
+    };
+    desktop.addEventListener('change', closeOnDesktop);
+    return () => desktop.removeEventListener('change', closeOnDesktop);
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-950">
@@ -140,38 +148,31 @@ export function AppLayout() {
           <SheetDescription className="sr-only">
             Navegación entre las secciones de la aplicación
           </SheetDescription>
-          <div className="flex h-full flex-col">
+          <div className="flex h-full min-h-0 flex-col overflow-y-auto">
             <SidebarContent onNavigate={() => setIsMenuOpen(false)} />
           </div>
         </SheetContent>
       </Sheet>
 
       <div className="md:pl-64">
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-slate-200 bg-white px-4 md:px-8">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            aria-label="Abrir menú"
-            onClick={() => setIsMenuOpen(true)}
-          >
-            <Menu />
-          </Button>
+        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-slate-200 bg-white px-4 md:h-16 md:px-8">
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-slate-900">
-              Gestión de subestaciones
+              <span className="md:hidden">GridAssets</span>
+              <span className="hidden md:inline">Gestión de subestaciones</span>
             </p>
             <p className="hidden text-xs text-slate-500 sm:block">
-              Etapa visual
+              Inspecciones y activos
             </p>
           </div>
           <ConnectivityStatus />
         </header>
 
-        <main className="mx-auto w-full max-w-7xl p-4 md:p-8">
+        <main className="mx-auto w-full min-w-0 max-w-7xl p-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:p-8">
           <Outlet />
         </main>
       </div>
+      <MobileNavigation open={isMenuOpen} onMore={() => setIsMenuOpen(true)} />
     </div>
   );
 }

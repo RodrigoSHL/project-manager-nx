@@ -153,9 +153,9 @@ export function MeasurementChart({
     new Date(rows[rows.length - 1].timestamp).getUTCFullYear();
   return (
     <>
-      <div className="overflow-x-auto pb-2">
+      <div className="min-w-0 pb-2">
         <div
-          className="h-96 min-w-[680px]"
+          className="h-72 w-full min-w-0 md:h-96"
           role="img"
           aria-label="Evolución histórica de mediciones por activo; cada símbolo es una medición real"
         >
@@ -318,11 +318,16 @@ export function MeasurementChart({
           se muestran, pero no se unen porque se desconoce su orden.
         </p>
       )}
-      <p className="mt-1 text-xs text-slate-500">
-        Las líneas unen únicamente observaciones reales de Works; no se crean
-        mediciones intermedias. La fecha es el día de inspección; si existe una
-        hora, se usa para ordenar las lecturas.
-      </p>
+      <details className="mt-1 text-xs text-slate-500">
+        <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-slate-700">
+          Cómo leer este gráfico
+        </summary>
+        <p className="pb-2">
+          Las líneas unen únicamente observaciones reales de trabajos; no se
+          crean mediciones intermedias. La fecha es el día de inspección; si
+          existe una hora, se usa para ordenar las lecturas.
+        </p>
+      </details>
     </>
   );
 }

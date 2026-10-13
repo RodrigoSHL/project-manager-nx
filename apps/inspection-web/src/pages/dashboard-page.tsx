@@ -158,9 +158,6 @@ export function DashboardPage() {
     (signal) => analyticsApi.concepts(tenantId, analytics, signal),
     [tenantId, filterKey]
   );
-  const selectedTenant = tenantAccess.accessibleTenants.find(
-    (tenant) => tenant.id === tenantId
-  );
   const linkSearch = useMemo(
     () => `?${searchParams.toString()}`,
     [searchParams]
@@ -182,6 +179,25 @@ export function DashboardPage() {
     setSearchParams(next);
   }
 
+  function applyFilters(
+    nextTenantId: string,
+    nextFilters: DashboardFilterValues
+  ) {
+    organizationSelectionStorage.rememberTenant(
+      user?.userId ?? '',
+      nextTenantId
+    );
+    const changingTenant = nextTenantId !== tenantId;
+    const next = changeDashboardFilters(searchParams, {
+      ...nextFilters,
+      siteId: changingTenant ? '' : nextFilters.siteId ?? '',
+      workTypeId: changingTenant ? '' : nextFilters.workTypeId ?? '',
+      assetTypeId: changingTenant ? '' : nextFilters.assetTypeId ?? '',
+    });
+    next.set('tenantId', nextTenantId);
+    setSearchParams(next);
+  }
+
   const number = (value?: number) =>
     value === undefined ? '—' : value.toLocaleString('es-CL');
   const summaryData = summary.data;
@@ -190,10 +206,8 @@ export function DashboardPage() {
   return (
     <>
       <PageHeader
-        title="Dashboard"
-        description={`Estado general de las inspecciones realizadas${
-          selectedTenant ? ` para ${selectedTenant.name}` : ''
-        }. Los valores provienen de Analytics.`}
+        title="Resumen"
+        description="Tus inspecciones de un vistazo."
       />
       {tenantAccess.isLoading ? (
         <p className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
@@ -201,7 +215,7 @@ export function DashboardPage() {
         </p>
       ) : !tenantId ? (
         <p className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
-          No tienes una empresa disponible para consultar Analytics.
+          No tienes una empresa disponible para consultar inspecciones.
         </p>
       ) : (
         <>
@@ -216,12 +230,12 @@ export function DashboardPage() {
             optionsError={optionsError}
             onTenantChange={updateTenant}
             onChange={updateFilters}
+            onApply={applyFilters}
           />
           {mode !== 'REMOTE' ? (
             <p className="mt-6 rounded-xl border border-amber-300 bg-amber-50 p-5 text-sm text-amber-900">
-              El dashboard ejecutivo necesita conexión con el servidor. Tus
-              datos de trabajo offline siguen disponibles en las otras
-              secciones.
+              El resumen necesita conexión con el servidor. Puedes continuar tus
+              trabajos con los datos guardados en este dispositivo.
             </p>
           ) : filters.from > filters.to ? (
             <p
@@ -242,13 +256,13 @@ export function DashboardPage() {
                 </div>
               )}
               <section
-                className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+                className="mt-4 grid grid-cols-2 gap-3 md:mt-6 md:gap-4 xl:grid-cols-4"
                 aria-label="Indicadores principales"
               >
                 <MetricCard
                   label="Trabajos realizados"
                   value={number(summaryData?.totalWorks)}
-                  detail="Trabajos finalizados o revisados"
+                  detail="Finalizados o revisados"
                   icon={ClipboardList}
                   loading={summary.loading || !initialized}
                   error={summary.error}
@@ -256,7 +270,7 @@ export function DashboardPage() {
                 <MetricCard
                   label="Activos inspeccionados"
                   value={number(summaryData?.totalInspectedAssets)}
-                  detail="Activos únicos, incluidos los hijos inspeccionados"
+                  detail="Activos únicos"
                   icon={ClipboardCheck}
                   loading={summary.loading || !initialized}
                   error={summary.error}
@@ -295,7 +309,7 @@ export function DashboardPage() {
                   error={summary.error}
                 />
               </section>
-              <div className="mt-6 grid gap-6 lg:grid-cols-2">
+              <div className="mt-5 grid min-w-0 gap-3 md:mt-6 md:gap-6 lg:grid-cols-2">
                 <DashboardSection
                   title="Hallazgos por criticidad"
                   state={summary}

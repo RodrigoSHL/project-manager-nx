@@ -9,7 +9,7 @@ export function ConnectivityStatus() {
   const state = !connectivity.browserOnline
     ? {
         Icon: CloudOff,
-        label: 'Modo sin conexión',
+        label: 'Sin conexión',
         detail: 'Los cambios se guardarán en este dispositivo',
         className: 'bg-amber-50 text-amber-900 ring-amber-200',
       }
@@ -22,18 +22,16 @@ export function ConnectivityStatus() {
       }
     : {
         Icon: ServerOff,
-        label: connectivity.checking
-          ? 'Comprobando servidor'
-          : 'Servidor no disponible',
+        label: connectivity.checking ? 'Comprobando' : 'Sin servidor',
         detail: 'Usando datos guardados en este dispositivo',
         className: 'bg-red-50 text-red-800 ring-red-200',
       };
   const content = (
     <span
-      className={`inline-flex min-w-0 items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs ring-1 ring-inset ${state.className}`}
+      className={`inline-flex min-h-11 min-w-0 items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs ring-1 ring-inset ${state.className}`}
     >
       <state.Icon className="size-4 shrink-0" />
-      <span className="hidden min-w-0 sm:block">
+      <span className="min-w-0">
         <span className="block truncate font-semibold">{state.label}</span>
         <span className="hidden truncate text-[0.68rem] opacity-80 lg:block">
           {pendingSummary.total > 0
@@ -41,6 +39,14 @@ export function ConnectivityStatus() {
             : state.detail}
         </span>
       </span>
+      {pendingSummary.total > 0 ? (
+        <span
+          className="shrink-0 rounded bg-white/60 px-1.5 py-0.5 font-semibold"
+          aria-hidden="true"
+        >
+          {pendingSummary.total}
+        </span>
+      ) : null}
     </span>
   );
 

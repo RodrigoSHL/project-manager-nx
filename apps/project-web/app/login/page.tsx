@@ -6,13 +6,13 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { safeRedirect } from "@project-manager/security-navigation"
 import {
   ArrowRight,
-  FolderKanban,
   Layers3,
   Loader2,
   ShieldCheck,
   Users,
 } from "lucide-react"
 import { canAccessProjectWeb, setAccessToken, type CurrentUser } from "@/lib/auth"
+import { ProjectHubLogo } from "@/components/brand-logo"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "/api"
 
@@ -91,9 +91,7 @@ function LoginForm() {
           <div className="absolute bottom-20 left-8 size-52 rounded-full bg-blue-400/10 blur-3xl" />
 
           <div className="relative flex items-center gap-2.5 text-sm font-semibold">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-white/10">
-              <FolderKanban className="size-4" />
-            </div>
+            <ProjectHubLogo className="size-9 shrink-0" />
             ProjectHub
           </div>
 
@@ -128,9 +126,7 @@ function LoginForm() {
 
         <section className="flex min-h-[600px] flex-col justify-center px-6 py-10 sm:px-12 lg:px-14">
           <div className="mb-8 flex flex-col items-start gap-2">
-            <div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg lg:hidden">
-              <FolderKanban className="size-5" />
-            </div>
+            <ProjectHubLogo className="mb-3 size-12 shadow-lg lg:hidden" />
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Bienvenido de vuelta</p>
             <h2 className="text-3xl font-bold tracking-tight">Inicia sesión</h2>
             <p className="text-sm leading-relaxed text-muted-foreground">

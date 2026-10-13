@@ -19,6 +19,7 @@ import {
   ExternalLink,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { FlowBoardLogo } from '@/components/brand-logo'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -81,17 +82,13 @@ export function AppSidebar({
         <div className="flex items-center h-14 px-3 border-b border-sidebar-border">
           {!collapsed && (
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground font-bold text-sm">
-                F
-              </div>
+              <FlowBoardLogo className="size-9 shrink-0" />
               <span className="font-semibold text-sidebar-foreground truncate">FlowBoard</span>
             </div>
           )}
           {collapsed && (
             <div className="flex items-center justify-center w-full">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground font-bold text-sm">
-                F
-              </div>
+              <FlowBoardLogo className="size-9 shrink-0" alt="FlowBoard" />
             </div>
           )}
           <Button

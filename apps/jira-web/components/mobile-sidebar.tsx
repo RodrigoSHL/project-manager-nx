@@ -13,6 +13,7 @@ import {
   Folder
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { FlowBoardLogo } from '@/components/brand-logo'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -70,9 +71,7 @@ export function MobileSidebar({
       <SheetContent side="left" className="w-72 p-0">
         <SheetHeader className="p-4 border-b">
           <div className="flex items-center gap-2">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground font-bold text-sm">
-              F
-            </div>
+            <FlowBoardLogo className="size-9 shrink-0" />
             <SheetTitle className="font-semibold">FlowBoard</SheetTitle>
           </div>
         </SheetHeader>

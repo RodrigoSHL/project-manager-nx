@@ -21,11 +21,8 @@ AtomDev conserva su logo corporativo como marca de la empresa.
 | --- | --- | --- | --- |
 | GridAssets | Rayo | Amarillo `#fbbf24` | Aplicado |
 | Travel Planner | Marcador de ubicación | Celeste `#38bdf8` | Aplicado |
-| ProjectHub | Carpeta | Verde `#34d399` | Propuesta |
-| FlowBoard | Tablero | Violeta `#a78bfa` | Propuesta |
-
-Los símbolos y colores de ProjectHub y FlowBoard son una propuesta para su próxima
-normalización; sus aplicaciones todavía no se han modificado.
+| ProjectHub | Carpeta | Verde `#34d399` | Aplicado |
+| FlowBoard | Tablero | Violeta `#a78bfa` | Aplicado |
 
 ## Fuentes y regeneración
 
@@ -33,13 +30,18 @@ normalización; sus aplicaciones todavía no se han modificado.
   Regenerar con `node scripts/generate-gridassets-icons.mjs`.
 - Travel Planner: `apps/travel-planner-app/public/travel-planner-icon.svg`.
   Regenerar con `node scripts/generate-travel-planner-icons.mjs`.
+- ProjectHub: `apps/project-web/public/projecthub-icon.svg`.
+- FlowBoard: `apps/jira-web/public/flowboard-icon.svg`.
+  Regenerar ambos con `node scripts/generate-project-brand-icons.mjs`.
+- ProjectHub mantiene `app/favicon.ico` como alternativa compatible; FlowBoard
+  mantiene `public/icon.svg` como alias actualizado de su SVG de marca.
 - Los iconos Apple tienen fondo opaco y margen para la máscara de la plataforma.
 - Los iconos de GridAssets instalable conservan su variante con área segura.
 
 ## Siguiente etapa
 
-Tras definir las identidades de ProjectHub y FlowBoard, compartir en una librería
-Nx los componentes de marca y los valores comunes de tipografía, espacios, radios,
-botones y formularios. Cada app debe configurar únicamente su nombre, símbolo y
-acento. Esta etapa aún no está implementada: los cambios actuales normalizan la
-marca de Travel Planner, sin rediseñar su calendario ni sus pantallas operativas.
+Compartir en una librería Nx los componentes de marca y los valores comunes de
+tipografía, espacios, radios, botones y formularios. Cada app debe configurar
+únicamente su nombre, símbolo y acento. Esta etapa aún no está implementada:
+las cuatro aplicaciones ya comparten la línea de marca, mientras sus pantallas
+operativas conservan sus diseños actuales.

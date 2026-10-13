@@ -27,6 +27,7 @@ import {
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { useAuth } from "@/contexts/auth-context"
 import { isProjectAdmin } from "@/lib/auth"
+import { ProjectHubLogo } from "@/components/brand-logo"
 
 // Datos de ejemplo de notificaciones
 const notifications = [
@@ -94,9 +95,7 @@ export function TopNavbar() {
       <div className="flex items-center gap-4">
         <SidebarTrigger className="-ml-1" />
         <div className="flex items-center gap-2">
-          {/* <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Folder className="h-4 w-4" />
-          </div> */}
+          <ProjectHubLogo className="size-9 shrink-0" />
           <span className="font-semibold text-lg">ProjectHub</span>
         </div>
         <div className="text-muted-foreground">

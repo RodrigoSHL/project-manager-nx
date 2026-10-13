@@ -1,15 +1,20 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, type LucideIcon } from 'lucide-react';
 import type { LoadState } from '../models';
+import { AnalyticsIcon, type AnalyticsIconTone } from './analytics-icon';
 
 export function DashboardSection<T>({
   title,
+  icon,
+  tone,
   state,
   isEmpty,
   children,
   className = '',
 }: {
   title: string;
+  icon?: LucideIcon;
+  tone?: AnalyticsIconTone;
   state: LoadState<T>;
   isEmpty: (data: T) => boolean;
   children: (data: T) => ReactNode;
@@ -34,8 +39,9 @@ export function DashboardSection<T>({
       className={`min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-5 ${className}`}
       aria-label={title}
     >
-      <h2 className="hidden text-lg font-semibold text-slate-950 md:block">
-        {title}
+      <h2 className="hidden items-center gap-3 text-lg font-semibold text-slate-950 md:flex">
+        {icon && <AnalyticsIcon icon={icon} tone={tone} />}
+        <span className="min-w-0">{title}</span>
       </h2>
       <h2 className="md:hidden">
         <button
@@ -45,7 +51,8 @@ export function DashboardSection<T>({
           aria-controls={contentId}
           onClick={() => setExpanded((current) => !current)}
         >
-          <span className="min-w-0">
+          {icon && <AnalyticsIcon icon={icon} tone={tone} />}
+          <span className="min-w-0 flex-1">
             {title}
             {state.error ? (
               <span className="mt-1 block text-xs font-normal text-red-700">

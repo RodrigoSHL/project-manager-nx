@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
+  Activity,
+  Building2,
+  ChartNoAxesCombined,
   ClipboardCheck,
   ClipboardList,
   Gauge,
+  Layers3,
+  ShieldAlert,
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../components/page-header';
@@ -264,6 +269,7 @@ export function DashboardPage() {
                   value={number(summaryData?.totalWorks)}
                   detail="Finalizados o revisados"
                   icon={ClipboardList}
+                  tone="blue"
                   loading={summary.loading || !initialized}
                   error={summary.error}
                 />
@@ -272,6 +278,7 @@ export function DashboardPage() {
                   value={number(summaryData?.totalInspectedAssets)}
                   detail="Activos únicos"
                   icon={ClipboardCheck}
+                  tone="teal"
                   loading={summary.loading || !initialized}
                   error={summary.error}
                 />
@@ -284,6 +291,7 @@ export function DashboardPage() {
                       : 'Hallazgos confirmados'
                   }
                   icon={AlertTriangle}
+                  tone="amber"
                   to={`/findings${linkSearch}`}
                   loading={summary.loading || !initialized}
                   error={summary.error}
@@ -305,6 +313,7 @@ export function DashboardPage() {
                       : 'Sin mediciones evaluables'
                   }
                   icon={Gauge}
+                  tone="violet"
                   loading={summary.loading || !initialized}
                   error={summary.error}
                 />
@@ -312,6 +321,8 @@ export function DashboardPage() {
               <div className="mt-5 grid min-w-0 gap-3 md:mt-6 md:gap-6 lg:grid-cols-2">
                 <DashboardSection
                   title="Hallazgos por criticidad"
+                  icon={ShieldAlert}
+                  tone="amber"
                   state={summary}
                   isEmpty={(data) =>
                     data.totalFindings === 0 ||
@@ -324,6 +335,8 @@ export function DashboardPage() {
                 </DashboardSection>
                 <DashboardSection
                   title="Trabajos realizados en el tiempo"
+                  icon={ChartNoAxesCombined}
+                  tone="blue"
                   state={activity}
                   isEmpty={(data) => data.length === 0}
                 >
@@ -331,6 +344,8 @@ export function DashboardPage() {
                 </DashboardSection>
                 <DashboardSection
                   title="Activos con más hallazgos"
+                  icon={Building2}
+                  tone="teal"
                   state={findings}
                   isEmpty={(data) => data.byAsset.length === 0}
                 >
@@ -343,6 +358,8 @@ export function DashboardPage() {
                 </DashboardSection>
                 <DashboardSection
                   title="Hallazgos por tipo de activo"
+                  icon={Layers3}
+                  tone="teal"
                   state={findings}
                   isEmpty={(data) => data.byAssetType.length === 0}
                 >
@@ -352,6 +369,8 @@ export function DashboardPage() {
                 </DashboardSection>
                 <DashboardSection
                   title="Estado de mediciones"
+                  icon={Gauge}
+                  tone="violet"
                   state={summary}
                   isEmpty={(data) => data.measurementsEvaluable === 0}
                 >
@@ -359,6 +378,8 @@ export function DashboardPage() {
                 </DashboardSection>
                 <DashboardSection
                   title="Mediciones disponibles para análisis"
+                  icon={Activity}
+                  tone="violet"
                   state={concepts}
                   isEmpty={(data) => data.length === 0}
                 >

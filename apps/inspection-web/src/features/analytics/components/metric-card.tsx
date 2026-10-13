@@ -1,11 +1,13 @@
 import type { LucideIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { AnalyticsIcon, type AnalyticsIconTone } from './analytics-icon';
 
 export function MetricCard({
   label,
   value,
   detail,
-  icon: Icon,
+  icon,
+  tone,
   to,
   loading,
   error,
@@ -14,6 +16,7 @@ export function MetricCard({
   value: string;
   detail: string;
   icon: LucideIcon;
+  tone?: AnalyticsIconTone;
   to?: string;
   loading?: boolean;
   error?: string | null;
@@ -24,29 +27,31 @@ export function MetricCard({
         <p className="min-h-10 min-w-0 text-sm font-medium text-slate-600 md:min-h-0">
           {label}
         </p>
-        <span
-          className="hidden size-10 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-600 md:grid"
-          aria-hidden="true"
-        >
-          <Icon className="size-5" />
+        <span className="hidden md:block">
+          <AnalyticsIcon icon={icon} tone={tone} />
         </span>
       </div>
-      {loading ? (
-        <div
-          role="status"
-          className="mt-4 h-9 w-20 animate-pulse rounded bg-slate-100"
-        >
-          <span className="sr-only">Cargando {label}</span>
-        </div>
-      ) : error ? (
-        <p role="alert" className="mt-4 text-sm text-red-700">
-          {error}
-        </p>
-      ) : (
-        <p className="mt-2 break-words text-2xl font-semibold tracking-tight text-slate-950 md:mt-3 md:text-3xl">
-          {value}
-        </p>
-      )}
+      <div className="mt-2 flex min-h-9 items-center justify-between gap-2 md:mt-3">
+        {loading ? (
+          <div
+            role="status"
+            className="h-9 w-20 animate-pulse rounded bg-slate-100"
+          >
+            <span className="sr-only">Cargando {label}</span>
+          </div>
+        ) : error ? (
+          <p role="alert" className="text-sm text-red-700">
+            {error}
+          </p>
+        ) : (
+          <p className="min-w-0 break-words text-2xl font-semibold tracking-tight text-slate-950 md:text-3xl">
+            {value}
+          </p>
+        )}
+        <span className="md:hidden">
+          <AnalyticsIcon icon={icon} tone={tone} />
+        </span>
+      </div>
       {!loading && !error && (
         <p className="mt-2 text-xs text-slate-500">{detail}</p>
       )}

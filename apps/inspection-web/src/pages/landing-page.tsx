@@ -23,6 +23,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { GridAssetsLogo } from '../components/gridassets-logo';
 
 const atomdevHref = 'https://atomdev.cl';
 const contactEmail = 'contacto@atomdev.cl';
@@ -129,18 +130,10 @@ const flow = [
   ['04', 'Analiza', 'Revisa hallazgos, informes e historial técnico.'],
 ];
 
-function Brand({ inverse = false }: { inverse?: boolean }) {
+function Brand() {
   return (
     <span className="inline-flex items-center gap-2.5 whitespace-nowrap text-xl font-extrabold tracking-tight">
-      <span
-        className={`grid size-9 place-items-center rounded-xl ${
-          inverse
-            ? 'bg-amber-400 text-slate-950'
-            : 'bg-slate-950 text-amber-400'
-        }`}
-      >
-        <Zap className="size-5" fill="currentColor" strokeWidth={2.5} />
-      </span>
+      <GridAssetsLogo className="size-9 shrink-0" />
       GridAssets
     </span>
   );
@@ -900,7 +893,7 @@ export function LandingPage() {
       <footer className="bg-slate-950 py-12 text-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-8 px-5 sm:px-8 lg:flex-row lg:items-end lg:justify-between lg:px-10">
           <div>
-            <Brand inverse />
+            <Brand />
             <p className="mt-5 max-w-sm text-sm leading-relaxed text-slate-400">
               Inspecciones, activos e historial técnico conectados para equipos
               que trabajan en terreno.

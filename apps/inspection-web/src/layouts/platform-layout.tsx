@@ -5,10 +5,10 @@ import {
   LogOut,
   Menu,
   ShieldCheck,
-  Zap,
 } from 'lucide-react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
+import { GridAssetsLogo } from '../components/gridassets-logo';
 import {
   Sheet,
   SheetContent,
@@ -31,9 +31,7 @@ function PlatformSidebar({ onNavigate }: { onNavigate?: () => void }) {
     <>
       <div className="border-b border-white/10 px-5 py-5">
         <div className="flex items-center gap-3">
-          <span className="grid size-9 place-items-center rounded-lg bg-amber-400 text-slate-950">
-            <Zap className="size-5" fill="currentColor" />
-          </span>
+          <GridAssetsLogo className="size-9 shrink-0" />
           <div>
             <p className="font-semibold text-white">GridAssets</p>
             <p className="text-xs text-amber-300">Plataforma</p>

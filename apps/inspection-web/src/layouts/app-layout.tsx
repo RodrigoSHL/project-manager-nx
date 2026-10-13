@@ -7,12 +7,12 @@ import {
   LogOut,
   Settings,
   ShieldCheck,
-  Zap,
   Database,
   RefreshCw,
 } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { MobileNavigation } from '../components/mobile-navigation';
+import { GridAssetsLogo } from '../components/gridassets-logo';
 import { useAuth } from '../features/auth/auth-context';
 import { isGlobalAdmin } from '../features/auth/auth-storage';
 import {
@@ -54,9 +54,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <>
       <div className="flex h-16 items-center gap-3 border-b border-white/10 px-5">
-        <span className="grid size-9 place-items-center rounded-lg bg-amber-400 text-slate-950">
-          <Zap className="size-5" fill="currentColor" />
-        </span>
+        <GridAssetsLogo className="size-9 shrink-0" />
         <div>
           <p className="font-semibold text-white">GridAssets</p>
           <p className="text-xs text-slate-400">Gestión de subestaciones</p>

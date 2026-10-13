@@ -5,9 +5,9 @@ import {
   ClipboardCheck,
   Loader2,
   ShieldCheck,
-  Zap,
 } from 'lucide-react';
 import { Navigate, useSearchParams } from 'react-router-dom';
+import { GridAssetsLogo } from '../components/gridassets-logo';
 import { useAuth } from '../features/auth/auth-context';
 import {
   canAccessOperation,
@@ -75,9 +75,7 @@ export function LoginPage() {
           <div className="absolute bottom-20 left-8 size-52 rounded-full bg-amber-300/10 blur-3xl" />
 
           <div className="relative flex items-center gap-2.5 text-sm font-semibold">
-            <span className="grid size-9 place-items-center rounded-xl bg-amber-400 text-slate-950">
-              <Zap className="size-4" fill="currentColor" />
-            </span>
+            <GridAssetsLogo className="size-9 shrink-0" />
             GridAssets
           </div>
 
@@ -119,9 +117,7 @@ export function LoginPage() {
 
         <section className="flex min-h-[600px] flex-col justify-center px-6 py-10 sm:px-12 lg:px-14">
           <div className="mb-8 flex flex-col items-start gap-2">
-            <div className="mb-3 grid size-12 place-items-center rounded-2xl bg-slate-950 text-amber-400 shadow-lg lg:hidden">
-              <Zap className="size-5" fill="currentColor" />
-            </div>
+            <GridAssetsLogo className="mb-3 size-12 shadow-lg lg:hidden" />
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-600">
               Bienvenido de vuelta
             </p>

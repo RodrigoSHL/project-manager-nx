@@ -121,11 +121,11 @@ export function UsersTab() {
   }
 
   return (
-    <div className="flex gap-6">
+    <div className="flex min-w-0 flex-col gap-6 xl:flex-row">
       {/* Lista */}
-      <div className="flex-1 space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1">
+      <div className="min-w-0 flex-1 space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative w-full min-w-0 flex-1">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar usuarios..."
@@ -134,7 +134,7 @@ export function UsersTab() {
               className="pl-9"
             />
           </div>
-          <Button onClick={() => setCreateOpen(true)}>
+          <Button className="w-full shrink-0 sm:w-auto" onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4 mr-1" /> Nuevo usuario
           </Button>
         </div>
@@ -202,8 +202,8 @@ export function UsersTab() {
       {/* Panel detalle */}
       {selectedUser && (
         <>
-          <Separator orientation="vertical" className="h-auto" />
-          <div className="w-72 shrink-0 space-y-5">
+          <Separator orientation="vertical" className="hidden h-auto xl:block" />
+          <div className="w-full min-w-0 space-y-5 border-t pt-6 xl:w-72 xl:shrink-0 xl:border-t-0 xl:pt-0">
             <div className="flex items-start justify-between">
               <h3 className="font-semibold text-sm">Detalle del usuario</h3>
               <button
@@ -224,10 +224,10 @@ export function UsersTab() {
                   </AvatarFallback>
                 )}
               </Avatar>
-              <div className="text-center">
-                <div className="font-semibold">{selectedUser.name}</div>
-                <div className="text-sm text-muted-foreground">{selectedUser.email}</div>
-                <div className="mt-2 flex justify-center gap-1">
+              <div className="min-w-0 max-w-full text-center">
+                <div className="break-words font-semibold">{selectedUser.name}</div>
+                <div className="break-all text-sm text-muted-foreground">{selectedUser.email}</div>
+                <div className="mt-2 flex flex-wrap justify-center gap-1">
                   {selectedUser.roles.map(role => (
                     <Badge key={role} variant={role === "admin" ? "default" : "secondary"} className="capitalize">
                       {role}

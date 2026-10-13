@@ -223,9 +223,9 @@ export function WorkspacesTab() {
   }
 
   return (
-    <div className="flex gap-6 h-full">
+    <div className="flex min-w-0 flex-col gap-6 xl:flex-row">
       {/* Lista de workspaces */}
-      <div className="w-80 shrink-0 space-y-3">
+      <div className="w-full min-w-0 space-y-3 xl:w-80 xl:shrink-0">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-semibold text-sm">Workspaces</h2>
@@ -275,10 +275,10 @@ export function WorkspacesTab() {
         </div>
       </div>
 
-      <Separator orientation="vertical" className="h-auto" />
+      <Separator orientation="vertical" className="hidden h-auto xl:block" />
 
       {/* Panel derecho - Detalle del workspace */}
-      <div className="flex-1 min-w-0">
+      <div className={`min-w-0 flex-1 border-t pt-6 xl:border-t-0 xl:pt-0 ${selectedWs ? "" : "hidden xl:block"}`}>
         {!selectedWs ? (
           <div className="flex flex-col items-center justify-center h-64 text-center">
             <Building2 className="h-12 w-12 text-muted-foreground/40 mb-3" />
@@ -288,27 +288,27 @@ export function WorkspacesTab() {
         ) : (
           <div className="space-y-6">
             {/* Header del workspace */}
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-linear-to-br from-primary/20 to-primary/10 text-brand-foreground font-bold text-lg">
+            <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex min-w-0 flex-1 items-start gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-primary/20 to-primary/10 text-brand-foreground font-bold text-lg">
                   {selectedWs.name[0].toUpperCase()}
                 </div>
-                <div>
-                  <h2 className="text-lg font-semibold">{selectedWs.name}</h2>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                <div className="min-w-0 flex-1">
+                  <h2 className="break-words text-lg font-semibold">{selectedWs.name}</h2>
+                  <div className="mt-0.5 flex min-w-0 items-center gap-2">
+                    <span className="min-w-0 break-all text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">
                       /{selectedWs.slug}
                     </span>
-                    <button onClick={() => copySlug(selectedWs.slug)} className="text-muted-foreground hover:text-foreground transition-colors">
+                    <button onClick={() => copySlug(selectedWs.slug)} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors" aria-label="Copiar identificador del workspace">
                       {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
                     </button>
                   </div>
                   {selectedWs.description && (
-                    <p className="text-sm text-muted-foreground mt-1">{selectedWs.description}</p>
+                    <p className="mt-1 break-words text-sm text-muted-foreground">{selectedWs.description}</p>
                   )}
                 </div>
               </div>
-              <Button size="sm" onClick={() => setAddMemberOpen(true)}>
+              <Button size="sm" className="w-full shrink-0 sm:w-auto" onClick={() => setAddMemberOpen(true)}>
                 <UserPlus className="h-3.5 w-3.5 mr-1" /> Añadir miembro
               </Button>
             </div>
@@ -342,7 +342,7 @@ export function WorkspacesTab() {
                     const name = m.user?.name ?? m.userId
                     const email = m.user?.email ?? ""
                     return (
-                      <div key={m.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors group">
+                      <div key={m.id} className="group grid min-w-0 grid-cols-[2rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2 rounded-lg border bg-card p-3 transition-colors hover:bg-muted/30 sm:flex sm:gap-3">
                         <Avatar className="h-8 w-8 shrink-0">
                           <AvatarFallback className="text-xs bg-primary/10 text-brand-foreground font-semibold">
                             {initials(name)}
@@ -352,6 +352,7 @@ export function WorkspacesTab() {
                           <div className="text-sm font-medium truncate">{name}</div>
                           {email && <div className="text-xs text-muted-foreground truncate">{email}</div>}
                         </div>
+                        <div className="col-span-2 flex flex-wrap items-center justify-end gap-2 sm:ml-auto sm:flex-nowrap">
                         <RoleBadge role={m.role} />
                         <Button
                           type="button"
@@ -365,10 +366,12 @@ export function WorkspacesTab() {
                         </Button>
                         <button
                           onClick={() => handleRemoveMember(m.userId)}
-                          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-1 rounded"
+                          className="grid size-9 shrink-0 place-items-center rounded text-muted-foreground opacity-100 transition-all hover:text-destructive focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                          aria-label={`Eliminar a ${name} del workspace`}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
+                        </div>
                       </div>
                     )
                   })}
@@ -380,7 +383,7 @@ export function WorkspacesTab() {
 
             {/* Proyectos */}
             <div>
-              <div className="flex items-center justify-between mb-4">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h3 className="font-semibold text-sm">Proyectos</h3>
                   <p className="text-xs text-muted-foreground">{wsProjects.length} proyecto{wsProjects.length !== 1 ? "s" : ""} vinculado{wsProjects.length !== 1 ? "s" : ""}</p>
@@ -405,14 +408,15 @@ export function WorkspacesTab() {
               ) : (
                 <div className="space-y-2">
                   {wsProjects.map(p => (
-                    <div key={p.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors group">
+                    <div key={p.id} className="group grid min-w-0 grid-cols-[2rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2 rounded-lg border bg-card p-3 transition-colors hover:bg-muted/30 sm:flex sm:gap-3">
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-brand-foreground font-bold text-xs shrink-0">
-                        {p.key ?? p.name[0].toUpperCase()}
+                        {p.key?.slice(0, 2) ?? p.name[0].toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">{p.name}</div>
-                        <div className="text-xs text-muted-foreground">{p.status} · {p.businessUnit}</div>
+                        <div className="break-words text-xs text-muted-foreground">{p.status} · {p.businessUnit}</div>
                       </div>
+                      <div className="col-span-2 flex flex-wrap items-center justify-end gap-2 sm:ml-auto sm:flex-nowrap">
                       {p.key && (
                         <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded shrink-0">{p.key}</span>
                       )}
@@ -427,11 +431,12 @@ export function WorkspacesTab() {
                       </Button>
                       <button
                         onClick={() => handleUnlinkProject(p.id)}
-                        className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-1 rounded"
+                        className="grid size-9 shrink-0 place-items-center rounded text-muted-foreground opacity-100 transition-all hover:text-destructive focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                         title="Desvincular proyecto"
                       >
                         <Unlink className="h-3.5 w-3.5" />
                       </button>
+                      </div>
                     </div>
                   ))}
                 </div>

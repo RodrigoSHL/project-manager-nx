@@ -27,9 +27,9 @@ export function SettingsDashboard() {
         <AppSidebar />
         <SidebarInset>
           <TopNavbar />
-          <div className="flex flex-1 flex-col gap-0 min-h-screen">
+          <div className="flex min-w-0 flex-1 flex-col">
             {/* Header */}
-            <div className="border-b bg-background px-8 pt-8 pb-0">
+            <div className="min-w-0 border-b bg-background px-4 pt-6 sm:px-6 lg:px-8 lg:pt-8">
               <div className="mb-6">
                 <h1 className="text-2xl font-bold tracking-tight">Configuración</h1>
                 <p className="text-muted-foreground text-sm mt-1">
@@ -37,14 +37,16 @@ export function SettingsDashboard() {
                 </p>
               </div>
               {/* Tab nav */}
-              <nav className="flex gap-1">
+              <div className="-mx-4 overflow-x-auto px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+              <nav className="flex w-max min-w-full gap-1" aria-label="Secciones de configuración">
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => !tab.disabled && setActiveTab(tab.id)}
                     disabled={tab.disabled}
+                    aria-pressed={activeTab === tab.id}
                     className={cn(
-                      "flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors",
+                      "flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors",
                       activeTab === tab.id
                         ? "border-ring text-brand-foreground bg-primary/5"
                         : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50",
@@ -61,10 +63,11 @@ export function SettingsDashboard() {
                   </button>
                 ))}
               </nav>
+              </div>
             </div>
 
             {/* Content */}
-            <div className="flex-1 px-8 py-8">
+            <div className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
               {activeTab === "workspaces" && <WorkspacesTab />}
               {activeTab === "users" && <UsersTab />}
             </div>

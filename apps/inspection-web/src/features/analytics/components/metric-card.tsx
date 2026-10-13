@@ -1,12 +1,13 @@
 import type { LucideIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { AnalyticsIcon } from './analytics-icon';
+import { AnalyticsIcon, type AnalyticsIconTone } from './analytics-icon';
 
 export function MetricCard({
   label,
   value,
   detail,
   icon,
+  tone,
   to,
   loading,
   error,
@@ -15,6 +16,7 @@ export function MetricCard({
   value: string;
   detail: string;
   icon: LucideIcon;
+  tone?: AnalyticsIconTone;
   to?: string;
   loading?: boolean;
   error?: string | null;
@@ -26,7 +28,7 @@ export function MetricCard({
           {label}
         </p>
         <span className="hidden md:block">
-          <AnalyticsIcon icon={icon} />
+          <AnalyticsIcon icon={icon} tone={tone} />
         </span>
       </div>
       <div className="mt-2 flex min-h-9 items-center justify-between gap-2 md:mt-3">
@@ -47,7 +49,7 @@ export function MetricCard({
           </p>
         )}
         <span className="md:hidden">
-          <AnalyticsIcon icon={icon} />
+          <AnalyticsIcon icon={icon} tone={tone} />
         </span>
       </div>
       {!loading && !error && (

@@ -1,11 +1,12 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
 import { ChevronDown, type LucideIcon } from 'lucide-react';
 import type { LoadState } from '../models';
-import { AnalyticsIcon } from './analytics-icon';
+import { AnalyticsIcon, type AnalyticsIconTone } from './analytics-icon';
 
 export function DashboardSection<T>({
   title,
   icon,
+  tone,
   state,
   isEmpty,
   children,
@@ -13,6 +14,7 @@ export function DashboardSection<T>({
 }: {
   title: string;
   icon?: LucideIcon;
+  tone?: AnalyticsIconTone;
   state: LoadState<T>;
   isEmpty: (data: T) => boolean;
   children: (data: T) => ReactNode;
@@ -38,7 +40,7 @@ export function DashboardSection<T>({
       aria-label={title}
     >
       <h2 className="hidden items-center gap-3 text-lg font-semibold text-slate-950 md:flex">
-        {icon && <AnalyticsIcon icon={icon} />}
+        {icon && <AnalyticsIcon icon={icon} tone={tone} />}
         <span className="min-w-0">{title}</span>
       </h2>
       <h2 className="md:hidden">
@@ -49,7 +51,7 @@ export function DashboardSection<T>({
           aria-controls={contentId}
           onClick={() => setExpanded((current) => !current)}
         >
-          {icon && <AnalyticsIcon icon={icon} />}
+          {icon && <AnalyticsIcon icon={icon} tone={tone} />}
           <span className="min-w-0 flex-1">
             {title}
             {state.error ? (

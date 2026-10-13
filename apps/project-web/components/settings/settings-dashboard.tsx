@@ -46,7 +46,7 @@ export function SettingsDashboard() {
                     className={cn(
                       "flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors",
                       activeTab === tab.id
-                        ? "border-primary text-primary bg-primary/5"
+                        ? "border-ring text-brand-foreground bg-primary/5"
                         : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50",
                       tab.disabled && "opacity-40 cursor-not-allowed hover:bg-transparent hover:text-muted-foreground"
                     )}

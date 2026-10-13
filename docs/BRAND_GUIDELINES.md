@@ -21,8 +21,28 @@ AtomDev conserva su logo corporativo como marca de la empresa.
 | --- | --- | --- | --- |
 | GridAssets | Rayo | Amarillo `#fbbf24` | Aplicado |
 | Travel Planner | Marcador de ubicación | Celeste `#38bdf8` | Aplicado |
-| ProjectHub | Carpeta | Verde `#34d399` | Aplicado |
+| ProjectHub | Carpeta | Verde `#54b8a0` (RGB 84, 184, 160) | Aplicado |
 | FlowBoard | Tablero | Violeta `#a78bfa` | Aplicado |
+
+## Detalles verdes de ProjectHub
+
+ProjectHub usa verde en acciones principales, enlaces, foco de teclado y
+selecciones, acompañado de fondos suaves en la navegación y avisos. Los fondos
+principales se mantienen neutros y los estados conservan sus colores semánticos.
+
+| Uso | Tema claro | Tema oscuro |
+| --- | --- | --- |
+| Fondo de acción | `#54b8a0` | `#54b8a0` |
+| Texto sobre acción | `#052e24` | `#052e24` |
+| Enlace y texto de marca | `#176956` | `#54b8a0` |
+| Fondo de selección | `#eef8f5` | `#12352d` |
+| Texto de selección | `#176956` | `#a6dfd0` |
+
+El login comparte esta paleta y ofrece un selector de tema. El verde principal
+es el RGB 84, 184, 160 elegido por el usuario. El texto oscuro sobre ese verde
+alcanza 6,14:1 de contraste; los enlaces usan un tono más oscuro en modo claro,
+porque el verde principal sobre blanco solo alcanza 2,40:1. Las combinaciones de
+texto y los estados hover mantienen al menos 4,5:1 de contraste.
 
 ## Fuentes y regeneración
 

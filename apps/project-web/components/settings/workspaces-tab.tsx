@@ -254,12 +254,12 @@ export function WorkspacesTab() {
               onClick={() => loadMembers(ws)}
               className={`w-full text-left rounded-xl border p-4 transition-all hover:shadow-sm ${
                 selectedWs?.id === ws.id
-                  ? "border-primary bg-primary/5 shadow-sm"
+                  ? "border-ring bg-primary/5 shadow-sm"
                   : "border-border bg-card hover:border-primary/40"
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-linear-to-br from-primary/20 to-primary/10 text-primary font-bold text-sm shrink-0">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-linear-to-br from-primary/20 to-primary/10 text-brand-foreground font-bold text-sm shrink-0">
                   {ws.name[0].toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -268,7 +268,7 @@ export function WorkspacesTab() {
                     <span className="truncate font-mono">/{ws.slug}</span>
                   </div>
                 </div>
-                <ChevronRight className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${selectedWs?.id === ws.id ? "rotate-90 text-primary" : ""}`} />
+                <ChevronRight className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${selectedWs?.id === ws.id ? "rotate-90 text-brand-foreground" : ""}`} />
               </div>
             </button>
           ))}
@@ -290,7 +290,7 @@ export function WorkspacesTab() {
             {/* Header del workspace */}
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-linear-to-br from-primary/20 to-primary/10 text-primary font-bold text-lg">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-linear-to-br from-primary/20 to-primary/10 text-brand-foreground font-bold text-lg">
                   {selectedWs.name[0].toUpperCase()}
                 </div>
                 <div>
@@ -344,7 +344,7 @@ export function WorkspacesTab() {
                     return (
                       <div key={m.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors group">
                         <Avatar className="h-8 w-8 shrink-0">
-                          <AvatarFallback className="text-xs bg-primary/10 text-primary font-semibold">
+                          <AvatarFallback className="text-xs bg-primary/10 text-brand-foreground font-semibold">
                             {initials(name)}
                           </AvatarFallback>
                         </Avatar>
@@ -406,7 +406,7 @@ export function WorkspacesTab() {
                 <div className="space-y-2">
                   {wsProjects.map(p => (
                     <div key={p.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors group">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary font-bold text-xs shrink-0">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-brand-foreground font-bold text-xs shrink-0">
                         {p.key ?? p.name[0].toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">

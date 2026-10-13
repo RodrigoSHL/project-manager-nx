@@ -197,12 +197,12 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
       'design': { icon: Palette, color: 'text-purple-600' },
       'monitoring': { icon: Activity, color: 'text-green-600' },
       'communication': { icon: MessageSquare, color: 'text-yellow-600' },
-      'repository': { icon: GitBranch, color: 'text-gray-600' },
+      'repository': { icon: GitBranch, color: 'text-muted-foreground' },
       'deployment': { icon: Rocket, color: 'text-orange-600' },
       'testing': { icon: TestTube, color: 'text-red-600' },
-      'other': { icon: Globe, color: 'text-gray-600' }
+      'other': { icon: Globe, color: 'text-muted-foreground' }
     }
-    const iconInfo = iconMap[type] || { icon: Globe, color: 'text-gray-600' }
+    const iconInfo = iconMap[type] || { icon: Globe, color: 'text-muted-foreground' }
     const IconComponent = iconInfo.icon
     return <IconComponent className={`h-4 w-4 ${iconInfo.color}`} />
   }
@@ -216,7 +216,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
       'production': Rocket
     }
     const IconComponent = iconMap[type] || Globe
-    return <IconComponent className="h-4 w-4 text-gray-600" />
+    return <IconComponent className="h-4 w-4 text-muted-foreground" />
   }
 
   const getEnvironmentTypeLabel = (type: string) => {
@@ -241,7 +241,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
       'netlify': Cloud
     }
     const IconComponent = iconMap[provider] || Cloud
-    return <IconComponent className="h-4 w-4 text-gray-600" />
+    return <IconComponent className="h-4 w-4 text-muted-foreground" />
   }
 
   const getCloudProviderLabel = (provider: string) => {
@@ -274,7 +274,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
       'Other': Cloud
     }
     const IconComponent = iconMap[type] || Cloud
-    return <IconComponent className="h-4 w-4 text-gray-600" />
+    return <IconComponent className="h-4 w-4 text-muted-foreground" />
   }
 
   // Función para obtener el diagrama de arquitectura más reciente
@@ -348,35 +348,35 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
             {loading ? (
               <div className="flex items-center justify-center h-64">
                 <div className="text-center">
-                  <Loader2 className="h-12 w-12 text-blue-600 mx-auto mb-4 animate-spin" />
-                  <h2 className="text-xl font-semibold text-gray-600 mb-2">Cargando proyectos...</h2>
-                  <p className="text-gray-500">Espera mientras se cargan los datos</p>
+                  <Loader2 className="h-12 w-12 text-brand-foreground mx-auto mb-4 animate-spin" />
+                  <h2 className="text-xl font-semibold text-muted-foreground mb-2">Cargando proyectos...</h2>
+                  <p className="text-muted-foreground">Espera mientras se cargan los datos</p>
                 </div>
               </div>
             ) : error ? (
               <div className="flex items-center justify-center h-64">
                 <div className="text-center">
                   <AlertCircle className="h-12 w-12 text-red-600 mx-auto mb-4" />
-                  <h2 className="text-xl font-semibold text-gray-600 mb-2">Error al cargar proyectos</h2>
-                  <p className="text-gray-500">{error}</p>
+                  <h2 className="text-xl font-semibold text-muted-foreground mb-2">Error al cargar proyectos</h2>
+                  <p className="text-muted-foreground">{error}</p>
                 </div>
               </div>
             ) : !currentProject ? (
               <div className="flex items-center justify-center h-64">
                 <div className="text-center">
-                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h2 className="text-xl font-semibold text-gray-600 mb-2">Selecciona un proyecto</h2>
-                  <p className="text-gray-500">Elige un proyecto del sidebar para ver sus detalles</p>
+                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h2 className="text-xl font-semibold text-muted-foreground mb-2">Selecciona un proyecto</h2>
+                  <p className="text-muted-foreground">Elige un proyecto del sidebar para ver sus detalles</p>
                 </div>
               </div>
             ) : (
               <div className="grid gap-6">
                 {/* Información General del Proyecto - with action buttons */}
-                <Card>
+                <Card className="border-t-2 border-t-primary/30">
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="flex items-center gap-2">
-                        <Zap className="h-5 w-5 text-blue-600" />
+                        <Zap className="h-5 w-5 text-brand-foreground" />
                         Información General del Proyecto
                       </CardTitle>
                       <div className="flex gap-2">
@@ -397,25 +397,25 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                     <div className="grid gap-6 md:grid-cols-2">
                       <div className="space-y-4">
                         <div>
-                          <label className="text-sm font-medium text-gray-500">Nombre del Proyecto</label>
+                          <label className="text-sm font-medium text-muted-foreground">Nombre del Proyecto</label>
                           <p className="text-lg font-semibold">{currentProject.name}</p>
                         </div>
                         <div>
-                          <label className="text-sm font-medium text-gray-500">Unidad de Negocio</label>
+                          <label className="text-sm font-medium text-muted-foreground">Unidad de Negocio</label>
                           <p className="text-base">{currentProject.businessUnit}</p>
                         </div>
                         <div>
-                          <label className="text-sm font-medium text-gray-500">Descripción</label>
-                          <p className="text-base text-gray-700">{currentProject.description}</p>
+                          <label className="text-sm font-medium text-muted-foreground">Descripción</label>
+                          <p className="text-base text-foreground">{currentProject.description}</p>
                         </div>
                       </div>
                       <div className="space-y-4">
                         <div>
-                          <label className="text-sm font-medium text-gray-500">Estado Actual</label>
+                          <label className="text-sm font-medium text-muted-foreground">Estado Actual</label>
                           <div className="mt-1">{getStatusBadge(currentProject.status)}</div>
                         </div>
                         <div>
-                          <label className="text-sm font-medium text-gray-500">Tecnologías Utilizadas</label>
+                          <label className="text-sm font-medium text-muted-foreground">Tecnologías Utilizadas</label>
                           <div className="mt-2 flex flex-wrap gap-2">
                             {currentProject.technologies && currentProject.technologies.length > 0 ? (
                               currentProject.technologies.map((tech, index) => (
@@ -424,7 +424,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                                 </Badge>
                               ))
                             ) : (
-                              <span className="text-sm text-gray-500">No especificadas</span>
+                              <span className="text-sm text-muted-foreground">No especificadas</span>
                             )}
                           </div>
                         </div>
@@ -460,10 +460,10 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                         currentProject.repositories.map((repo) => (
                           <div key={repo.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                             <div className="flex items-center gap-3">
-                              <GitBranch className="h-4 w-4 text-gray-600" />
+                              <GitBranch className="h-4 w-4 text-muted-foreground" />
                               <div>
                                 <p className="font-medium">{repo.name}</p>
-                                <p className="text-sm text-gray-500">{repo.type}</p>
+                                <p className="text-sm text-muted-foreground">{repo.type}</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
@@ -480,8 +480,8 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                           </div>
                         ))
                       ) : (
-                        <div className="text-center py-4 text-gray-500">
-                          <GitBranch className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                        <div className="text-center py-4 text-muted-foreground">
+                          <GitBranch className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                           <p>No hay repositorios configurados</p>
                         </div>
                       )}
@@ -533,7 +533,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                                   />
                                 ) : null}
                                 <div className={`absolute inset-0 flex items-center justify-center ${latestDiagram.mimetype.startsWith('image/') ? 'hidden' : ''}`}>
-                                  <div className="text-center text-gray-600">
+                                  <div className="text-center text-muted-foreground">
                                     <div className="text-3xl mb-2">{getFileIcon(latestDiagram.mimetype)}</div>
                                     <p className="text-sm font-medium">Diagrama de Arquitectura</p>
                                   </div>
@@ -550,7 +550,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                           } else {
                             return (
                               <div className="h-full flex items-center justify-center">
-                                <div className="text-center text-gray-500">
+                                <div className="text-center text-muted-foreground">
                                   <Cloud className="h-8 w-8 mx-auto mb-2" />
                                   <p className="text-sm">Diagrama de Arquitectura</p>
                                   {isAdmin && <p className="text-xs">Haz clic para subir</p>}
@@ -561,7 +561,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                         })()}
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Servicios Cloud</label>
+                        <label className="text-sm font-medium text-muted-foreground">Servicios Cloud</label>
                         <div className="mt-2 space-y-2">
                           {currentProject.cloudServices && currentProject.cloudServices.length > 0 ? (
                             currentProject.cloudServices.map((service) => (
@@ -580,8 +580,8 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                               </div>
                             ))
                           ) : (
-                            <div className="text-center py-4 text-gray-500">
-                              <Cloud className="h-6 w-6 mx-auto mb-2 text-gray-400" />
+                            <div className="text-center py-4 text-muted-foreground">
+                              <Cloud className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
                               <p className="text-sm">No hay servicios cloud configurados</p>
                               {isAdmin && <p className="text-xs">Haz clic en &quot;Editar&quot; para agregar servicios</p>}
                             </div>
@@ -636,13 +636,13 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                                   href={environment.url} 
                                   target="_blank" 
                                   rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-800 hover:underline"
+                                  className="text-brand-foreground underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
                                 >
                                   {environment.url}
                                   <ExternalLink className="inline h-3 w-3 ml-1" />
                                 </a>
                               </TableCell>
-                              <TableCell className="text-sm text-gray-600">
+                              <TableCell className="text-sm text-muted-foreground">
                                 {environment.description || '-'}
                               </TableCell>
                             </TableRow>
@@ -650,8 +650,8 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                         </TableBody>
                       </Table>
                     ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        <Server className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Server className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
                         <p>No hay entornos configurados</p>
                           {isAdmin && <p className="text-sm">Haz clic en &quot;Editar&quot; para agregar entornos al proyecto</p>}
                       </div>
@@ -670,28 +670,28 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Tipo de Autenticación</label>
+                        <label className="text-sm font-medium text-muted-foreground">Tipo de Autenticación</label>
                         <p className="text-base font-medium">SSO (Single Sign-On)</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Roles Definidos</label>
+                        <label className="text-sm font-medium text-muted-foreground">Roles Definidos</label>
                         <div className="mt-2 space-y-1">
                           <div className="flex items-center gap-2">
                             <Badge variant="outline">Admin</Badge>
-                            <span className="text-sm text-gray-600">Acceso completo</span>
+                            <span className="text-sm text-muted-foreground">Acceso completo</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge variant="outline">Editor</Badge>
-                            <span className="text-sm text-gray-600">Lectura y escritura</span>
+                            <span className="text-sm text-muted-foreground">Lectura y escritura</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge variant="outline">Viewer</Badge>
-                            <span className="text-sm text-gray-600">Solo lectura</span>
+                            <span className="text-sm text-muted-foreground">Solo lectura</span>
                           </div>
                         </div>
                       </div>
-                      <div className="p-3 bg-blue-50 rounded-lg">
-                        <p className="text-sm text-blue-800">
+                      <div className="p-3 bg-accent rounded-lg">
+                        <p className="text-sm text-accent-foreground">
                           <strong>Para solicitar accesos:</strong> Contactar al equipo de IT mediante ticket en ServiceNow
                         </p>
                       </div>
@@ -732,7 +732,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                               <div className="flex-1 text-left">
                                 <div className="font-medium">{file.filename}</div>
                                 {file.description && (
-                                  <div className="text-xs text-gray-500 truncate">{file.description}</div>
+                                  <div className="text-xs text-muted-foreground truncate">{file.description}</div>
                                 )}
                               </div>
                               <div className="flex items-center gap-2">
@@ -743,15 +743,15 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                           </Button>
                         ))
                       ) : (
-                        <div className="text-center py-6 text-gray-500">
-                          <FileText className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                        <div className="text-center py-6 text-muted-foreground">
+                          <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                           <p className="text-sm">No hay documentos en el proyecto</p>
                           {isAdmin && <p className="text-xs">Haz clic en &quot;Editar&quot; para agregar documentos</p>}
                         </div>
                       )}
                       {currentProject.files && currentProject.files.length > 5 && (
                         <div className="text-center pt-2">
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-muted-foreground">
                             Y {currentProject.files.length - 5} documentos más...
                           </p>
                         </div>
@@ -801,13 +801,13 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                                 <div className="space-y-1">
                                   <a
                                     href={`mailto:${member.email}`}
-                                    className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
+                                    className="flex items-center gap-2 text-brand-foreground underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
                                   >
                                     <Mail className="h-4 w-4" />
                                     {member.email}
                                   </a>
                                   {member.phone && (
-                                    <div className="flex items-center gap-2 text-gray-600">
+                                    <div className="flex items-center gap-2 text-muted-foreground">
                                       <Phone className="h-3 w-3" />
                                       <span className="text-sm">{member.phone}</span>
                                     </div>
@@ -819,8 +819,8 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                         </TableBody>
                       </Table>
                     ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        <Users className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Users className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
                         <p>No hay miembros del equipo configurados</p>
                         {isAdmin && <p className="text-sm">Haz clic en &quot;Editar&quot; para agregar miembros al equipo</p>}
                       </div>
@@ -862,15 +862,15 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                                 ) : task.status === 'review' ? (
                                   <AlertTriangle className="h-4 w-4 text-yellow-600" />
                                 ) : (
-                                  <AlertCircle className="h-4 w-4 text-gray-600" />
+                                  <AlertCircle className="h-4 w-4 text-muted-foreground" />
                                 )}
                                 <div className="flex-1">
                                   <p className="font-medium text-sm">{task.title}</p>
                                   {task.description && (
-                                    <p className="text-xs text-gray-600 mt-1 line-clamp-1">{task.description}</p>
+                                    <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{task.description}</p>
                                   )}
                                   {task.dueDate && (
-                                    <p className="text-xs text-gray-500 mt-1">
+                                    <p className="text-xs text-muted-foreground mt-1">
                                       Fecha límite: {new Date(task.dueDate).toLocaleDateString('es-ES')}
                                     </p>
                                   )}
@@ -884,8 +884,8 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                           ))}
                         </div>
                       ) : (
-                        <div className="text-center py-6 text-gray-500">
-                          <Calendar className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                        <div className="text-center py-6 text-muted-foreground">
+                          <Calendar className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                           <p className="text-sm">No hay tareas configuradas</p>
                           {isAdmin && <p className="text-xs">Haz clic en &quot;Editar&quot; para agregar tareas al proyecto</p>}
                         </div>
@@ -922,7 +922,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                               <div className="flex-1 text-left">
                                 <div className="font-medium">{link.title}</div>
                                 {link.description && (
-                                  <div className="text-xs text-gray-500 truncate">{link.description}</div>
+                                  <div className="text-xs text-muted-foreground truncate">{link.description}</div>
                                 )}
                               </div>
                               <ExternalLink className="h-3 w-3 ml-auto flex-shrink-0" />
@@ -930,8 +930,8 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                           </Button>
                         ))
                       ) : (
-                        <div className="text-center py-6 text-gray-500">
-                          <Link className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                        <div className="text-center py-6 text-muted-foreground">
+                          <Link className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                           <p className="text-sm">No hay enlaces útiles configurados</p>
                           {isAdmin && <p className="text-xs">Haz clic en &quot;Editar&quot; para agregar enlaces al proyecto</p>}
                         </div>

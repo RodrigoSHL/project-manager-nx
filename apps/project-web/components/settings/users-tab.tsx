@@ -164,7 +164,7 @@ export function UsersTab() {
                 onClick={() => setSelectedUser(user)}
                 className={`text-left rounded-xl border p-4 transition-all hover:shadow-sm group ${
                   selectedUser?.id === user.id
-                    ? "border-primary bg-primary/5 shadow-sm"
+                    ? "border-ring bg-primary/5 shadow-sm"
                     : "border-border bg-card hover:border-primary/40"
                 }`}
               >
@@ -317,13 +317,13 @@ export function UsersTab() {
                       aria-pressed={selected}
                       onClick={() => toggleRole(option.value)}
                       className={`relative rounded-lg border p-3 text-left transition-colors ${
-                        selected ? "border-primary bg-primary/5" : "hover:border-primary/40"
+                        selected ? "border-ring bg-primary/5" : "hover:border-primary/40"
                       }`}
                     >
                       <div className="flex items-center gap-2">
                         <RoleIcon className="h-4 w-4" />
                         <span className="text-sm font-medium">{option.label}</span>
-                        {selected && <Check className="ml-auto h-4 w-4 text-primary" />}
+                        {selected && <Check className="ml-auto h-4 w-4 text-brand-foreground" />}
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
                     </button>

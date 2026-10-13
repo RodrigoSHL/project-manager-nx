@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Bell, Moon, Sun, Settings, LogOut, Shield, UserRound } from "lucide-react"
+import { Bell, Settings, LogOut, Shield, UserRound } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
-import { useTheme } from "@/components/theme-provider"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { NotificationsDialog } from "./notifications-dialog"
 import {
   Breadcrumb,
@@ -67,7 +67,6 @@ const notifications = [
 
 export function TopNavbar() {
   const router = useRouter()
-  const { theme, setTheme } = useTheme()
   const { user, logout } = useAuth()
   const [isNotificationsOpen, setIsNotificationsOpen] = React.useState(false)
   const isAdmin = isProjectAdmin(user.roles)
@@ -76,10 +75,6 @@ export function TopNavbar() {
 
   const handleSettings = () => {
     router.push("/settings")
-  }
-
-  const toggleTheme = () => {
-    setTheme(theme === "light" ? "dark" : "light")
   }
 
   const initials = user.name
@@ -139,11 +134,7 @@ export function TopNavbar() {
         </NotificationsDialog>
 
         {/* Toggle modo oscuro */}
-        <Button variant="ghost" size="sm" onClick={toggleTheme}>
-          <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-          <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-          <span className="sr-only">Cambiar tema</span>
-        </Button>
+        <ThemeToggle />
 
         {/* Avatar y menú de usuario */}
         <DropdownMenu>

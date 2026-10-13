@@ -25,6 +25,10 @@ import {
 import { useTenantAccess } from '../features/tenants/tenant-access-context';
 import { ConnectivityStatus } from '../features/offline/components/connectivity-status';
 import { useOffline } from '../features/offline/offline-context';
+import {
+  DataSourceStatus,
+  LocalDataBanner,
+} from '../features/offline/components/data-source-status';
 
 type NavigationItem = {
   to: string;
@@ -154,19 +158,27 @@ export function AppLayout() {
       </Sheet>
 
       <div className="md:pl-64">
-        <header className="sticky top-0 z-20 flex min-h-14 min-w-0 items-center gap-2 border-b border-slate-200 bg-white px-4 py-1.5 md:min-h-16 md:gap-3 md:px-8 dark:border-slate-800 dark:bg-slate-900">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
-              <span className="md:hidden">GridAssets</span>
-              <span className="hidden md:inline">Gestión de subestaciones</span>
-            </p>
-            <p className="hidden text-xs text-slate-500 sm:block dark:text-slate-400">
-              Inspecciones y activos
-            </p>
-          </div>
-          <ConnectivityStatus />
-          <ThemeToggle />
-        </header>
+        <div className="sticky top-0 z-20 bg-white dark:bg-slate-900">
+          <header className="flex min-h-14 min-w-0 flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-1.5 lg:min-h-16 lg:flex-nowrap lg:gap-3 lg:px-8 dark:border-slate-800">
+            <div className="order-1 min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                <span className="md:hidden">GridAssets</span>
+                <span className="hidden md:inline">
+                  Gestión de subestaciones
+                </span>
+              </p>
+              <p className="hidden text-xs text-slate-500 sm:block dark:text-slate-400">
+                Inspecciones y activos
+              </p>
+            </div>
+            <div className="order-3 flex w-full min-w-0 items-center gap-2 lg:order-2 lg:w-auto lg:max-w-[65%]">
+              <DataSourceStatus />
+              <ConnectivityStatus />
+            </div>
+            <ThemeToggle className="order-2 lg:order-3" />
+          </header>
+          <LocalDataBanner />
+        </div>
 
         <main className="mx-auto w-full min-w-0 max-w-7xl p-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:p-8">
           <Outlet />

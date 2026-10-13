@@ -209,6 +209,18 @@ La segunda fase cambia automáticamente a IndexedDB cuando el navegador o la
 API no están disponibles. El usuario también puede abrir la copia local de
 forma explícita para diagnosticarla.
 
+La navbar muestra siempre el origen efectivo: **Datos remotos** o **Copia local**
+(**Remoto** o **Local** en móvil), separado del estado de conexión. Por eso una
+copia local elegida manualmente puede aparecer junto a **En línea**. El
+indicador sigue `mode`, incluida la activación automática de IndexedDB.
+
+Mientras el origen sea local, una franja fija bajo la navbar indica que se
+trabaja con datos de este dispositivo. Si el servidor está disponible, ofrece
+**Volver a datos remotos**; este botón cambia la fuente y no sincroniza por sí
+solo los cambios pendientes. El enlace a sincronización conserva su contador.
+Ambos indicadores permanecen visibles al navegar y desplazarse, y adaptan su
+contraste a los temas claro y oscuro.
+
 ### 2. Cuatro ideas que conviene separar
 
 #### Estado de React

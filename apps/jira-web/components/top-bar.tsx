@@ -86,28 +86,34 @@ export function TopBar({
 
       {/* Project Selector (Desktop) */}
       {!isMobile && (
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <Select value={currentProject} onValueChange={onProjectChange}>
-            <SelectTrigger className="w-[180px] h-9 text-sm font-medium border-0 bg-secondary hover:bg-secondary/80">
-              <div className="flex items-center gap-2">
+            <SelectTrigger aria-label="Seleccionar proyecto" title={project?.name} className="w-[180px] min-w-0 shrink-0 h-9 text-sm font-medium border-0 bg-secondary hover:bg-secondary/80">
+              <div className="flex min-w-0 flex-1 items-center gap-2">
                 {project && (
                   <div 
-                    className="w-2.5 h-2.5 rounded-sm shrink-0" 
+                    aria-hidden="true"
+                    className="size-2.5 rounded-full shrink-0"
                     style={{ backgroundColor: project.color ?? '#6b7280' }}
                   />
                 )}
-                <SelectValue placeholder="Seleccionar proyecto" />
+                <span className="min-w-0 flex-1 truncate text-left">
+                  <SelectValue placeholder="Seleccionar proyecto">
+                    {project?.name}
+                  </SelectValue>
+                </span>
               </div>
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="w-80 max-w-[calc(100vw-2rem)]">
               {projects.map((proj) => (
-                <SelectItem key={proj.id} value={proj.id}>
-                  <div className="flex items-center gap-2">
+                <SelectItem key={proj.id} value={proj.id} textValue={proj.name} className="[&>span:last-child]:min-w-0 [&>span:last-child]:flex-1">
+                  <div className="flex min-w-0 items-center gap-2">
                     <div 
-                      className="w-2.5 h-2.5 rounded-sm" 
+                      aria-hidden="true"
+                      className="size-2.5 rounded-full shrink-0"
                       style={{ backgroundColor: proj.color ?? '#6b7280' }}
                     />
-                    {proj.name}
+                    <span className="min-w-0 whitespace-normal break-words">{proj.name}</span>
                   </div>
                 </SelectItem>
               ))}
@@ -116,8 +122,8 @@ export function TopBar({
 
           {activeSprint && (
             <Badge variant="outline" className="hidden h-7 max-w-40 gap-1.5 truncate border-primary/30 bg-accent px-2.5 text-xs font-normal text-accent-foreground 2xl:inline-flex">
-              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-              {activeSprint.name}
+              <span aria-hidden="true" className="w-1.5 h-1.5 shrink-0 rounded-full bg-success animate-pulse" />
+              <span className="truncate" title={activeSprint.name}>{activeSprint.name}</span>
             </Badge>
           )}
         </div>

@@ -44,7 +44,6 @@ import {
   LogOut,
   Luggage,
   WalletCards,
-  MapPin,
   Pencil,
   Plus,
   Share2,
@@ -58,6 +57,7 @@ import { getUserProfile } from '@/services/tripService';
 import { QuickCurrencyConverter } from '../currency/QuickCurrencyConverter';
 import { CurrencySection } from '../currency/CurrencySection';
 import { ThemeToggle } from '../theme-toggle';
+import { TravelPlannerLogo } from '../brand-logo';
 
 const EMPTY_FILTERS: Filters = {
   country: '',
@@ -264,9 +264,7 @@ export function TravelCalendar() {
           <div className="relative flex flex-col gap-6">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-white/90">
-                <div className="flex size-8 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
-                  <MapPin className="size-4" />
-                </div>
+                <TravelPlannerLogo className="size-9 shrink-0" />
                 <span>Travel Planner</span>
               </div>
               <div className="flex items-center gap-2">

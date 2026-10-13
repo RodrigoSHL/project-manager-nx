@@ -7,10 +7,10 @@ import {
   ArrowRight,
   CalendarDays,
   Loader2,
-  MapPin,
   Plane,
   Sparkles,
 } from 'lucide-react';
+import { TravelPlannerLogo } from '@/components/brand-logo';
 
 const BFF_URL = process.env.NEXT_PUBLIC_BFF_URL ?? '';
 
@@ -92,9 +92,7 @@ function LoginForm() {
           <div className="absolute bottom-28 left-8 size-52 rounded-full bg-cyan-300/15 blur-3xl" />
 
           <div className="relative flex items-center gap-2.5 text-sm font-semibold">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
-              <MapPin className="size-4" />
-            </div>
+            <TravelPlannerLogo className="size-9 shrink-0" />
             Travel Planner
           </div>
 
@@ -137,9 +135,7 @@ function LoginForm() {
         <section className="flex min-h-[620px] flex-col justify-center px-6 py-10 sm:px-12 lg:px-14">
           {/* Logo */}
           <div className="mb-8 flex flex-col items-start gap-2">
-            <div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 lg:hidden">
-              <MapPin className="size-5" />
-            </div>
+            <TravelPlannerLogo className="mb-3 size-12 shadow-lg lg:hidden" />
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
               {mode === 'login'
                 ? 'Bienvenido de vuelta'

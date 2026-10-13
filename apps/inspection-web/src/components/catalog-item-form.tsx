@@ -123,7 +123,7 @@ export function CatalogItemForm({
             }}
             maxLength={80}
             placeholder="EJEMPLO_CODIGO"
-            className="mt-2 h-11 w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 font-mono text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
+            className="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 font-mono text-sm text-slate-900 outline-none focus:border-amber-700 focus:ring-2 focus:ring-amber-700/15 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-amber-300 dark:focus:ring-amber-300/15"
           />
           {suggestCodeFromName ? (
             <span className="mt-1.5 block text-xs font-normal text-slate-500 dark:text-slate-400">
@@ -156,7 +156,7 @@ export function CatalogItemForm({
             }}
             maxLength={160}
             autoFocus={suggestCodeFromName && !item}
-            className="mt-2 h-11 w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 text-slate-900 dark:text-slate-100 outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
+            className="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-900 outline-none focus:border-amber-700 focus:ring-2 focus:ring-amber-700/15 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-amber-300 dark:focus:ring-amber-300/15"
           />
         </label>
 
@@ -171,7 +171,7 @@ export function CatalogItemForm({
               }))
             }
             maxLength={2000}
-            className="mt-2 min-h-24 w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-slate-100 outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
+            className="mt-2 min-h-24 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-amber-700 focus:ring-2 focus:ring-amber-700/15 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-amber-300 dark:focus:ring-amber-300/15"
           />
         </label>
 

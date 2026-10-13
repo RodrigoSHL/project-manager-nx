@@ -1,39 +1,26 @@
-import { Cloud, CloudOff, Loader2, ServerOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useConnectivity } from '../../../hooks/use-connectivity';
 import { useOffline } from '../offline-context';
 import { connectionPresentation } from '../../connectivity/connectivity-presentation';
+import { connectivityAppearances } from './connectivity-appearance';
 
-export function ConnectivityStatus() {
+export function ConnectivityStatus({ compact = false }: { compact?: boolean }) {
   const connectivity = useConnectivity();
   const { pendingSummary } = useOffline();
   const presentation = connectionPresentation(connectivity);
-  const appearances = {
-    offline: {
-      Icon: CloudOff,
-      className:
-        'bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 ring-amber-200 dark:ring-amber-800',
-    },
-    online: {
-      Icon: Cloud,
-      className:
-        'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 ring-emerald-200 dark:ring-emerald-800',
-    },
-    checking: {
-      Icon: Loader2,
-      className:
-        'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 ring-slate-200 dark:ring-slate-800',
-    },
-    unavailable: {
-      Icon: ServerOff,
-      className:
-        'bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-200 ring-red-200 dark:ring-red-800',
-    },
+  const state = {
+    ...presentation,
+    ...connectivityAppearances[presentation.status],
   };
-  const state = { ...presentation, ...appearances[presentation.status] };
+  const detail =
+    pendingSummary.total > 0
+      ? `${pendingSummary.total} cambios pendientes en este dispositivo`
+      : state.detail;
   const content = (
     <span
-      className={`inline-flex min-h-11 min-w-0 max-w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs ring-1 ring-inset ${state.className}`}
+      className={`inline-flex min-w-0 max-w-full items-center rounded-lg text-xs ring-1 ring-inset ${
+        compact ? 'min-h-9 gap-1.5 px-2 py-1' : 'min-h-11 gap-2 px-2.5 py-1.5'
+      } ${state.className}`}
     >
       <state.Icon
         className={`size-4 shrink-0 ${
@@ -41,12 +28,22 @@ export function ConnectivityStatus() {
         }`}
         aria-hidden="true"
       />
-      <span className="min-w-0">
+      <span
+        className={
+          compact
+            ? 'sr-only min-[380px]:not-sr-only min-[380px]:min-w-0 min-[380px]:max-w-[4.5rem] sm:max-w-none'
+            : 'min-w-0'
+        }
+      >
         <span className="block truncate font-semibold">{state.label}</span>
-        <span className="hidden truncate text-[0.68rem] opacity-80 lg:block">
-          {pendingSummary.total > 0
-            ? `${pendingSummary.total} cambios pendientes en este dispositivo`
-            : state.detail}
+        <span
+          className={
+            compact
+              ? 'sr-only'
+              : 'hidden truncate text-[0.68rem] opacity-80 lg:block'
+          }
+        >
+          {detail}
         </span>
       </span>
       {pendingSummary.total > 0 ? (
@@ -54,7 +51,7 @@ export function ConnectivityStatus() {
           className="shrink-0 rounded bg-white/60 dark:bg-slate-900/60 px-1.5 py-0.5 font-semibold"
           aria-hidden="true"
         >
-          {pendingSummary.total}
+          {compact && pendingSummary.total > 99 ? '99+' : pendingSummary.total}
         </span>
       ) : null}
     </span>
@@ -63,12 +60,20 @@ export function ConnectivityStatus() {
   return pendingSummary.total > 0 ? (
     <Link
       to="/sync"
-      className="ml-auto min-w-0 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-slate-400 dark:focus-visible:ring-slate-600"
-      aria-label={`Abrir sincronización: ${pendingSummary.total} cambios pendientes en este dispositivo`}
+      className={`${
+        compact ? 'inline-flex min-h-11 items-center' : 'ml-auto'
+      } min-w-0 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-amber-700 dark:focus-visible:ring-amber-300`}
+      title={`${state.label}: ${detail}`}
+      aria-label={`${state.label}. Abrir sincronización: ${pendingSummary.total} cambios pendientes en este dispositivo`}
     >
       {content}
     </Link>
   ) : (
-    <span className="ml-auto min-w-0">{content}</span>
+    <span
+      className={`${compact ? '' : 'ml-auto'} min-w-0`}
+      title={`${state.label}: ${detail}`}
+    >
+      {content}
+    </span>
   );
 }

@@ -238,9 +238,9 @@ export function DashboardPage() {
             onApply={applyFilters}
           />
           {mode !== 'REMOTE' ? (
-            <p className="mt-6 rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-5 text-sm text-amber-900 dark:text-amber-200">
-              El resumen necesita conexión con el servidor. Puedes continuar tus
-              trabajos con los datos guardados en este dispositivo.
+            <p className="mt-6 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+              El resumen se consulta con datos remotos. Puedes continuar tus
+              trabajos desde la copia local.
             </p>
           ) : filters.from > filters.to ? (
             <p

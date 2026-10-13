@@ -50,8 +50,17 @@ body {
   min-height: 100vh;
 }
 
-button,
-input,
-select {
-  font: inherit;
+@layer base {
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  input,
+  select,
+  textarea {
+    font-weight: 400;
+  }
 }

@@ -159,23 +159,23 @@ export function AppLayout() {
 
       <div className="md:pl-64">
         <div className="sticky top-0 z-20 bg-white dark:bg-slate-900">
-          <header className="flex min-h-14 min-w-0 flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-1.5 lg:min-h-16 lg:flex-nowrap lg:gap-3 lg:px-8 dark:border-slate-800">
-            <div className="order-1 min-w-0 flex-1">
+          <header className="flex min-h-14 min-w-0 items-center gap-1.5 border-b border-slate-200 px-3 py-1.5 md:min-h-16 md:gap-3 md:px-6 xl:px-8 dark:border-slate-800">
+            <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
-                <span className="md:hidden">GridAssets</span>
-                <span className="hidden md:inline">
+                <span className="xl:hidden">GridAssets</span>
+                <span className="hidden xl:inline">
                   Gestión de subestaciones
                 </span>
               </p>
-              <p className="hidden text-xs text-slate-500 sm:block dark:text-slate-400">
+              <p className="hidden text-xs text-slate-500 xl:block dark:text-slate-400">
                 Inspecciones y activos
               </p>
             </div>
-            <div className="order-3 flex w-full min-w-0 items-center gap-2 lg:order-2 lg:w-auto lg:max-w-[65%]">
+            <div className="flex min-w-0 shrink-0 items-center gap-1.5 md:gap-2">
               <DataSourceStatus />
-              <ConnectivityStatus />
+              <ConnectivityStatus compact />
             </div>
-            <ThemeToggle className="order-2 lg:order-3" />
+            <ThemeToggle />
           </header>
           <LocalDataBanner />
         </div>

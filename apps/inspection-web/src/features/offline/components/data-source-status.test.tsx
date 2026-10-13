@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   preferredMode: 'REMOTE' as DataSourceMode,
   connectivity: { browserOnline: true, apiReachable: true, checking: false },
   setMode: vi.fn(),
+  pendingTotal: 2,
 }));
 vi.mock('../offline-context', () => ({
   useOffline: () => ({
@@ -17,7 +18,7 @@ vi.mock('../offline-context', () => ({
       mocks.connectivity.apiReachable
     ),
     setMode: mocks.setMode,
-    pendingSummary: { total: 2 },
+    pendingSummary: { total: mocks.pendingTotal },
   }),
 }));
 vi.mock('../../../hooks/use-connectivity', () => ({
@@ -28,7 +29,7 @@ function preview() {
   return (
     <MemoryRouter>
       <DataSourceStatus />
-      <ConnectivityStatus />
+      <ConnectivityStatus compact />
       <LocalDataBanner />
     </MemoryRouter>
   );
@@ -43,6 +44,7 @@ describe('data source indicators', () => {
       checking: false,
     };
     mocks.setMode.mockReset();
+    mocks.pendingTotal = 2;
   });
 
   it('shows remote data without a local banner', () => {
@@ -121,13 +123,22 @@ describe('data source indicators', () => {
     };
     render(preview());
     expect(
-      screen.getByText('Comprobando la conexión con el servidor…')
-    ).toBeInTheDocument();
+      screen.getByRole('region', { name: 'Uso de copia local' })
+    ).toHaveAttribute('title', 'Comprobando la conexión con el servidor…');
     expect(
       screen.queryByText(/El servidor no está disponible/)
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Volver a datos remotos' })
     ).not.toBeInTheDocument();
+  });
+
+  it('keeps the exact pending count accessible when the compact badge caps its visual count', () => {
+    mocks.pendingTotal = 123;
+    render(preview());
+    expect(screen.getByText('99+')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /En línea.*123 cambios pendientes/ })
+    ).toHaveAttribute('href', '/sync');
   });
 });

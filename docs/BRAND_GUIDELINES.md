@@ -43,6 +43,15 @@ guarda en `gridassets-theme`; al entrar por primera vez se sigue el tema del
 sistema. Tablas, formularios, gráficos y avisos adaptan sus fondos y textos. La
 navegación lateral conserva su fondo oscuro en ambos temas.
 
+La tipografía de botones, selectores e inputs respeta la escala de sus
+componentes: acciones y campos de 14 px, controles compactos y textos auxiliares
+de 12 px, y títulos de página de 24–32 px. La familia de fuentes de la aplicación
+se comparte entre controles y textos; los códigos técnicos conservan su estilo
+monoespaciado. Los campos usan peso normal y las etiquetas y acciones usan un
+peso medio. En sincronización, los avisos usan fondos suaves y
+textos explicativos neutros; los colores identifican el estado y sus iconos.
+Las métricas comparten altura y separan la fecha de la hora de sincronización.
+
 El estado inicial de conexión se presenta como «Comprobando conexión», con una
 segunda comprobación si falla el primer intento. El aviso de servidor no
 disponible aparece después de la comprobación y permite reintentar desde el login.

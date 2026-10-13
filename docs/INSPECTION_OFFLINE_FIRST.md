@@ -214,12 +214,18 @@ La navbar muestra siempre el origen efectivo: **Datos remotos** o **Copia local*
 copia local elegida manualmente puede aparecer junto a **En línea**. El
 indicador sigue `mode`, incluida la activación automática de IndexedDB.
 
-Mientras el origen sea local, una franja fija bajo la navbar indica que se
-trabaja con datos de este dispositivo. Si el servidor está disponible, ofrece
-**Volver a datos remotos**; este botón cambia la fuente y no sincroniza por sí
-solo los cambios pendientes. El enlace a sincronización conserva su contador.
-Ambos indicadores permanecen visibles al navegar y desplazarse, y adaptan su
-contraste a los temas claro y oscuro.
+Mientras el origen sea local, una franja compacta de una línea bajo la navbar
+indica **Datos en este dispositivo**. Si el servidor está disponible, ofrece
+**Usar datos remotos** (**Usar remoto** en móvil); este botón cambia la fuente
+y no sincroniza por sí solo los cambios pendientes. La explicación de guardado
+local se mantiene en el texto accesible y al situar el cursor sobre la franja.
+
+La cabecera mantiene una sola fila. En las pantallas más pequeñas, la conexión
+se representa con su icono y texto accesible; el origen **Local/Remoto** siempre
+conserva su etiqueta visible. El enlace a sincronización conserva su contador,
+limitado visualmente a **99+** cuando corresponde y con el total exacto en su
+nombre accesible. Los indicadores permanecen visibles al navegar y desplazarse,
+y adaptan su contraste a los temas claro y oscuro.
 
 ### 2. Cuatro ideas que conviene separar
 

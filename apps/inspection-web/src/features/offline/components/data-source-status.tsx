@@ -16,7 +16,7 @@ export function DataSourceStatus() {
       title={
         local ? 'Datos guardados en este dispositivo' : 'Datos del servidor'
       }
-      className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold ring-1 ring-inset ${
+      className={`inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-semibold ring-1 ring-inset ${
         local
           ? 'bg-amber-50 text-amber-900 ring-amber-200 dark:bg-amber-400/10 dark:text-amber-200 dark:ring-amber-300/25'
           : 'bg-slate-50 text-slate-700 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700'
@@ -43,26 +43,24 @@ export function LocalDataBanner() {
   return (
     <section
       aria-label="Uso de copia local"
-      className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-amber-200 bg-amber-50 px-4 py-2 text-amber-900 lg:px-8 dark:border-amber-300/20 dark:bg-amber-400/10 dark:text-amber-200"
+      title={detail}
+      className="flex min-h-11 min-w-0 items-center gap-2 border-b border-amber-200 bg-amber-50 px-3 text-amber-900 md:px-6 xl:px-8 dark:border-amber-300/20 dark:bg-amber-400/10 dark:text-amber-200"
     >
-      <div className="flex min-w-0 flex-1 basis-full items-start gap-2 sm:basis-0">
-        <Laptop className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-        <div role="status" className="min-w-0 text-xs leading-5">
-          <p className="font-semibold">
-            Trabajando con datos de este dispositivo
-          </p>
-          <p>{detail}</p>
-        </div>
-      </div>
+      <p role="status" className="min-w-0 flex-1 truncate text-xs">
+        <span>Datos en este dispositivo</span>
+        <span className="sr-only">. {detail}</span>
+      </p>
       {connectivity.apiReachable ? (
         <Button
           type="button"
-          variant="ghost"
+          variant="outline"
           onClick={() => offline.setMode('REMOTE')}
-          className="h-auto min-h-11 max-w-full shrink-0 whitespace-normal text-xs text-amber-900 hover:bg-amber-100 dark:text-amber-200 dark:hover:bg-amber-300/10"
+          aria-label="Volver a datos remotos"
+          className="h-8 min-h-8 shrink-0 border-amber-200/80 bg-white/60 px-2.5 text-xs font-medium text-amber-900 shadow-none hover:bg-amber-100 dark:border-amber-300/20 dark:bg-amber-300/5 dark:text-amber-200 dark:hover:bg-amber-300/10 [&_svg]:size-3.5"
         >
           <Cloud className="size-4 shrink-0" aria-hidden="true" />
-          Volver a datos remotos
+          <span className="sm:hidden">Usar remoto</span>
+          <span className="hidden sm:inline">Usar datos remotos</span>
         </Button>
       ) : null}
     </section>

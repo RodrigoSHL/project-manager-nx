@@ -36,6 +36,8 @@ import {
   localPhotoAsWorkPhoto,
   localPhotoRepository,
 } from '../../../repositories/local-photo-repository';
+import { MeasurementDateTimeEditor } from './measurement-date-time-editor';
+import { localMeasurementDateTime } from '../measurement-date-time';
 
 type WorkExecutionFormProps = {
   work: Work;
@@ -78,6 +80,17 @@ export function WorkExecutionForm({
   const readonly =
     accessReadonly || work.status === 'FINISHED' || work.status === 'REVIEWED';
   const formSections = groupSnapshotBySection(snapshot, work.assetId);
+  const analogItemIds = new Set(
+    snapshot.sections
+      .flatMap((section) => section.items)
+      .filter((item) => item.concept?.type === 'ANALOG')
+      .map((item) => item.id)
+  );
+  const savedResponseIds = new Set(
+    responses
+      .filter((response) => response.workId === work.id)
+      .map((response) => response.formItemId)
+  );
   const candidates = deriveFindingCandidates(
     work,
     snapshot,
@@ -252,10 +265,24 @@ export function WorkExecutionForm({
   }, [localMode, work.id, work.tenantId]);
 
   function update(itemId: string, value: WorkItemValue) {
-    setValues((current) => ({
-      ...current,
-      [itemId]: { ...current[itemId], ...value },
-    }));
+    const now = localMeasurementDateTime();
+    const editsMeasurement =
+      'valueNumber' in value ||
+      'measuredAt' in value ||
+      'measuredAtTime' in value;
+    setValues((current) => {
+      const next = { ...current[itemId], ...value };
+      if (
+        editsMeasurement &&
+        analogItemIds.has(itemId) &&
+        !savedResponseIds.has(itemId)
+      ) {
+        next.measuredAt ??= now.measuredAt;
+        if (next.measuredAtTime === undefined)
+          next.measuredAtTime = now.measuredAtTime;
+      }
+      return { ...current, [itemId]: next };
+    });
     setNotice(null);
     setFinishError(null);
   }
@@ -486,6 +513,8 @@ export function WorkExecutionForm({
     const concept = item.concept;
     if (!concept) return null;
     const value = values[item.id] ?? {};
+    const newMeasurement = !readonly && !savedResponseIds.has(item.id);
+    const currentMoment = localMeasurementDateTime();
     return (
       <fieldset
         key={item.id}
@@ -521,12 +550,15 @@ export function WorkExecutionForm({
           </p>
         ) : null}
         {concept.description ? (
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{concept.description}</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            {concept.description}
+          </p>
         ) : null}
         {concept.type === 'ANALOG' ? (
           <div className="mt-2 flex flex-wrap items-end gap-2">
             <input
               type="number"
+              aria-label={concept.name}
               disabled={readonly}
               value={value.valueNumber ?? ''}
               onChange={(event) =>
@@ -537,45 +569,40 @@ export function WorkExecutionForm({
                       : Number(event.target.value),
                 })
               }
-              className="h-11 min-w-0 flex-1 rounded-lg border border-slate-300 dark:border-slate-700 px-3 outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800 disabled:bg-slate-50 dark:disabled:bg-slate-950"
+              className="h-11 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-base outline-none focus:border-amber-700 focus:ring-2 focus:ring-amber-700/15 disabled:bg-slate-50 sm:text-sm dark:border-slate-700 dark:bg-slate-950 dark:focus:border-amber-300 dark:focus:ring-amber-300/15 dark:disabled:bg-slate-950"
             />
             {concept.unit ? (
               <span className="shrink-0 text-sm font-medium text-slate-600 dark:text-slate-300">
                 {concept.unit}
               </span>
             ) : null}
-            <label className="flex min-w-40 flex-col text-xs font-medium text-slate-600 dark:text-slate-300">
-              Fecha de medición
-              <input
-                type="date"
-                disabled={readonly}
-                value={
-                  value.measuredAt?.slice(0, 10) ??
-                  work.executionDate.slice(0, 10)
-                }
-                onChange={(event) =>
-                  update(item.id, {
-                    measuredAt: event.target.value || undefined,
-                  })
-                }
-                className="mt-1 h-11 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm text-slate-900 dark:text-slate-100 disabled:bg-slate-50 dark:disabled:bg-slate-950"
-              />
-            </label>
-            <label className="flex min-w-32 flex-col text-xs font-medium text-slate-600 dark:text-slate-300">
-              Hora de medición (opcional)
-              <input
-                type="time"
-                disabled={readonly}
-                value={value.measuredAtTime?.slice(0, 5) ?? ''}
-                onChange={(event) =>
-                  update(item.id, {
-                    measuredAtTime: event.target.value || null,
-                  })
-                }
-                className="mt-1 h-11 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm text-slate-900 dark:text-slate-100 disabled:bg-slate-50 dark:disabled:bg-slate-950"
-              />
-            </label>
           </div>
+        ) : null}
+        {concept.type === 'ANALOG' ? (
+          <MeasurementDateTimeEditor
+            key={`${work.id}:${item.id}`}
+            label={concept.name}
+            date={
+              value.measuredAt?.slice(0, 10) ??
+              (newMeasurement
+                ? currentMoment.measuredAt
+                : work.executionDate.slice(0, 10))
+            }
+            time={
+              value.measuredAtTime === undefined
+                ? newMeasurement
+                  ? currentMoment.measuredAtTime
+                  : null
+                : value.measuredAtTime?.slice(0, 5) ?? null
+            }
+            readonly={readonly}
+            useCurrentMoment={
+              newMeasurement &&
+              value.measuredAt === undefined &&
+              value.measuredAtTime === undefined
+            }
+            onChange={(patch) => update(item.id, patch)}
+          />
         ) : null}
         {concept.type === 'DIGITAL' ? (
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -636,7 +663,9 @@ export function WorkExecutionForm({
             <ClipboardCheck className="size-5" />
           </span>
           <div className="min-w-0">
-            <h2 className="font-semibold text-slate-950 dark:text-slate-100">{snapshot.name}</h2>
+            <h2 className="font-semibold text-slate-950 dark:text-slate-100">
+              {snapshot.name}
+            </h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Plantilla conservada · versión {snapshot.formTemplateVersion}
             </p>

@@ -488,6 +488,18 @@ Una `ConceptResponse` guarda exactamente uno de estos valores: `valueNumber`
 para conceptos `ANALOG`, `selectedOptionId` para conceptos `DIGITAL` o
 `valueText` para conceptos `TEXT`. Los conceptos `HIDDEN` no admiten captura.
 
+En el formulario de ejecución, las mediciones analógicas muestran un resumen
+compacto de fecha y hora. **Editar** abre los campos de esa medición; **Listo**
+los vuelve a ocultar sin descartar los cambios. La hora sigue siendo opcional.
+
+Una respuesta analógica nueva toma la fecha y hora locales del dispositivo al
+ingresar por primera vez su valor o ajustar sus campos temporales. No usa la
+fecha programada del trabajo. El momento capturado se conserva al guardar y
+al modificar otras respuestas, incluso si la jornada cruza medianoche. Las
+respuestas existentes conservan sus datos históricos y no reciben una hora
+inventada si no la tenían. Los trabajos cerrados muestran los campos en modo
+de solo lectura.
+
 #### RN-EJE-004 — El borrador puede quedar incompleto
 
 Guardar respuestas no exige completar los elementos obligatorios. Esto permite

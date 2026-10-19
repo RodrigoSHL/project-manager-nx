@@ -1,0 +1,13 @@
+[Unit]
+Description=Backup PostgreSQL and deployment configuration to OCI Object Storage
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/project-manager-nx
+UMask=0077
+ExecStart=/usr/bin/bash /home/ubuntu/project-manager-nx/scripts/backup-oci.sh
+TimeoutStartSec=2h

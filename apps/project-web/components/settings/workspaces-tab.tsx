@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Building2, Users, Trash2, ChevronRight, Copy, Check, Loader2, UserPlus, Crown, Shield, Eye, User as UserIcon, FolderOpen, Link2, Unlink, Pencil } from "lucide-react"
+import { Plus, Building2, Users, ChevronRight, Copy, Check, Loader2, UserPlus, FolderOpen, Link2, Unlink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,32 +10,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { WorkspaceService, UserService, type Workspace, type WorkspaceMember, type WorkspaceRole, type User } from "@/services/userService"
 import { ProjectService } from "@/services/projectService"
 import { type Project } from "@/types/project"
 import { EditTeamMembersDialog } from "@/components/edit-team-members-dialog"
-
-const roleConfig = {
-  owner:  { label: "Owner",  icon: Crown,  color: "text-amber-600 bg-amber-50 border-amber-200" },
-  admin:  { label: "Admin",  icon: Shield, color: "text-blue-600 bg-blue-50 border-blue-200" },
-  member: { label: "Member", icon: UserIcon, color: "text-green-600 bg-green-50 border-green-200" },
-  viewer: { label: "Viewer", icon: Eye,    color: "text-gray-600 bg-gray-50 border-gray-200" },
-}
-
-function RoleBadge({ role }: { role: string }) {
-  const cfg = roleConfig[role as keyof typeof roleConfig] ?? roleConfig.member
-  return (
-    <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border ${cfg.color}`}>
-      <cfg.icon className="h-3 w-3" />
-      {cfg.label}
-    </span>
-  )
-}
-
-function initials(name: string) {
-  return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
-}
+import { WorkspaceMembersTable, workspaceRoleConfig as roleConfig } from "./workspace-members-table"
 
 export function WorkspacesTab() {
   const [workspaces, setWorkspaces] = React.useState<Workspace[]>([])
@@ -223,7 +202,7 @@ export function WorkspacesTab() {
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-6 xl:flex-row">
+    <div className="mx-auto flex w-full min-w-0 max-w-[1440px] flex-col gap-6 xl:flex-row">
       {/* Lista de workspaces */}
       <div className="w-full min-w-0 space-y-3 xl:w-80 xl:shrink-0">
         <div className="flex items-center justify-between">
@@ -337,45 +316,12 @@ export function WorkspacesTab() {
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {members.map(m => {
-                    const name = m.user?.name ?? m.userId
-                    const email = m.user?.email ?? ""
-                    return (
-                      <div key={m.id} className="group grid min-w-0 grid-cols-[2rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2 rounded-lg border bg-card p-3 transition-colors hover:bg-muted/30 sm:flex sm:gap-3">
-                        <Avatar className="h-8 w-8 shrink-0">
-                          <AvatarFallback className="text-xs bg-primary/10 text-brand-foreground font-semibold">
-                            {initials(name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium truncate">{name}</div>
-                          {email && <div className="text-xs text-muted-foreground truncate">{email}</div>}
-                        </div>
-                        <div className="col-span-2 flex flex-wrap items-center justify-end gap-2 sm:ml-auto sm:flex-nowrap">
-                        <RoleBadge role={m.role} />
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openRoleEditor(m)}
-                          aria-label={`Editar rol de ${name}`}
-                        >
-                          <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                          Editar rol
-                        </Button>
-                        <button
-                          onClick={() => handleRemoveMember(m.userId)}
-                          className="grid size-9 shrink-0 place-items-center rounded text-muted-foreground opacity-100 transition-all hover:text-destructive focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                          aria-label={`Eliminar a ${name} del workspace`}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
+                <WorkspaceMembersTable
+                  key={selectedWs.id}
+                  members={members}
+                  onEditRole={openRoleEditor}
+                  onRemoveMember={handleRemoveMember}
+                />
               )}
             </div>
 

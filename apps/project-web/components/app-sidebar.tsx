@@ -7,10 +7,6 @@ import {
   Plus,
   Folder,
   FolderOpen,
-  Circle,
-  CheckCircle,
-  AlertCircle,
-  Clock,
   Users,
   Settings,
   Home,
@@ -46,6 +42,7 @@ import { useProjects } from "@/hooks/useProjects"
 import { useAuth } from "@/contexts/auth-context"
 import { useWorkspace } from "@/contexts/workspace-context"
 import { ProjectStatus } from "@/types/project"
+import { ProjectStatusBadge, ProjectStatusIcon } from "@/components/project-status-badge"
 
 const navigationItems = [
   {
@@ -69,36 +66,6 @@ const navigationItems = [
     url: "#",
   },
 ]
-
-const getStatusIcon = (status: ProjectStatus) => {
-  switch (status) {
-    case ProjectStatus.PRODUCTION:
-      return <CheckCircle className="h-3 w-3 text-green-600" />
-    case ProjectStatus.STAGING:
-      return <Clock className="h-3 w-3 text-yellow-600" />
-    case ProjectStatus.DEVELOPMENT:
-      return <Circle className="h-3 w-3 text-blue-600" />
-    case ProjectStatus.DEPRECATED:
-      return <AlertCircle className="h-3 w-3 text-gray-400" />
-    default:
-      return <Circle className="h-3 w-3 text-gray-400" />
-  }
-}
-
-const getStatusColor = (status: ProjectStatus) => {
-  switch (status) {
-    case ProjectStatus.PRODUCTION:
-      return "bg-green-100 text-green-800"
-    case ProjectStatus.STAGING:
-      return "bg-yellow-100 text-yellow-800"
-    case ProjectStatus.DEVELOPMENT:
-      return "bg-blue-100 text-blue-800"
-    case ProjectStatus.DEPRECATED:
-      return "bg-gray-100 text-gray-600"
-    default:
-      return "bg-gray-100 text-gray-600"
-  }
-}
 
 type AppSidebarProps = React.ComponentProps<typeof Sidebar>
 
@@ -233,7 +200,7 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
                       <SidebarMenuButton asChild isActive={pathname === `/projects/${project.id}`} className="group/project">
                         <button onClick={() => router.push(`/projects/${project.id}`)} className="w-full py-6">
                           <div className="flex items-center gap-2 min-w-0 flex-1">
-                            {getStatusIcon(project.status)}
+                            <ProjectStatusIcon status={project.status} />
                             <div className="min-w-0 flex-1">
                               <div className="truncate font-medium text-sm">{project.shortName || project.name}</div>
                               <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -243,12 +210,7 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
                             </div>
                           </div>
                           <div className="flex flex-col items-end gap-1">
-                            <Badge
-                              variant="outline"
-                              className={cn("text-xs px-1.5 py-0", getStatusColor(project.status))}
-                            >
-                              {project.status}
-                            </Badge>
+                            <ProjectStatusBadge status={project.status} className="px-2 py-0.5 text-[11px]" />
                             <span className="text-xs text-muted-foreground">{project.teamMembers.length} miembros</span>
                           </div>
                         </button>
@@ -286,7 +248,7 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
                           className="w-full opacity-75 hover:opacity-100"
                         >
                           <div className="flex items-center gap-2 min-w-0 flex-1">
-                            {getStatusIcon(project.status)}
+                            <ProjectStatusIcon status={project.status} />
                             <div className="min-w-0 flex-1">
                               <div className="truncate font-medium text-sm">{project.shortName || project.name}</div>
                               <div className="flex items-center gap-2 text-xs text-muted-foreground">

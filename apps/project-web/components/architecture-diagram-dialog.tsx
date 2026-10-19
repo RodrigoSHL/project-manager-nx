@@ -145,13 +145,13 @@ export function ArchitectureDiagramDialog({
       case 'jpg':
       case 'jpeg':
       case 'gif':
-        return <Image className="h-8 w-8 text-blue-600" />
+        return <Image className="h-8 w-8 text-blue-700 dark:text-blue-400" />
       case 'svg':
-        return <Image className="h-8 w-8 text-green-600" />
+        return <Image className="h-8 w-8 text-emerald-700 dark:text-emerald-400" />
       case 'pdf':
-        return <FileText className="h-8 w-8 text-red-600" />
+        return <FileText className="h-8 w-8 text-destructive" />
       default:
-        return <FileText className="h-8 w-8 text-gray-600" />
+        return <FileText className="h-8 w-8 text-muted-foreground" />
     }
   }
 
@@ -193,11 +193,11 @@ export function ArchitectureDiagramDialog({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3 p-4 bg-muted/40 rounded-lg">
                   {getFileIcon('diagram.png')}
                   <div>
                     <p className="font-medium">Diagrama de Arquitectura</p>
-                                         <p className="text-sm text-gray-500">Haz clic en &quot;Descargar&quot; para ver el archivo</p>
+                                         <p className="text-sm text-muted-foreground">Haz clic en &quot;Descargar&quot; para ver el archivo</p>
                   </div>
                 </div>
               </CardContent>
@@ -218,7 +218,7 @@ export function ArchitectureDiagramDialog({
                     accept="image/*,.pdf"
                     className="cursor-pointer"
                   />
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     Formatos soportados: PNG, JPEG, GIF, SVG, PDF. Tamaño máximo: 10MB
                   </p>
                 </div>
@@ -235,13 +235,13 @@ export function ArchitectureDiagramDialog({
                 </div>
 
                 {selectedFile && (
-                  <div className="p-3 bg-blue-50 rounded-lg">
+                  <div className="p-3 bg-primary/10 rounded-lg">
                     <div className="flex items-center gap-2">
-                      <Upload className="h-4 w-4 text-blue-600" />
+                      <Upload className="h-4 w-4 text-blue-700 dark:text-blue-400" />
                       <span className="text-sm font-medium">Archivo seleccionado:</span>
                     </div>
-                    <p className="text-sm text-blue-800 mt-1">{selectedFile.name}</p>
-                    <p className="text-xs text-blue-600">
+                    <p className="text-sm text-brand-foreground mt-1">{selectedFile.name}</p>
+                    <p className="text-xs text-blue-700 dark:text-blue-400">
                       Tamaño: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                     </p>
                   </div>
@@ -283,37 +283,37 @@ export function ArchitectureDiagramDialog({
             <CardContent>
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <Server className="h-4 w-4 text-blue-600 mt-0.5" />
+                  <Server className="h-4 w-4 text-blue-700 dark:text-blue-400 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium">Infraestructura</p>
-                    <p className="text-xs text-gray-600">
+                    <p className="text-xs text-muted-foreground">
                       Muestra la estructura de servidores, contenedores y servicios cloud
                     </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Database className="h-4 w-4 text-green-600 mt-0.5" />
+                  <Database className="h-4 w-4 text-emerald-700 dark:text-emerald-400 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium">Base de Datos</p>
-                    <p className="text-xs text-gray-600">
+                    <p className="text-xs text-muted-foreground">
                       Representa las bases de datos y sus relaciones
                     </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Globe className="h-4 w-4 text-purple-600 mt-0.5" />
+                  <Globe className="h-4 w-4 text-violet-700 dark:text-violet-400 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium">Redes</p>
-                    <p className="text-xs text-gray-600">
+                    <p className="text-xs text-muted-foreground">
                       Incluye load balancers, CDNs y configuraciones de red
                     </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Shield className="h-4 w-4 text-red-600 mt-0.5" />
+                  <Shield className="h-4 w-4 text-destructive mt-0.5" />
                   <div>
                     <p className="text-sm font-medium">Seguridad</p>
-                    <p className="text-xs text-gray-600">
+                    <p className="text-xs text-muted-foreground">
                       Muestra firewalls, WAFs y configuraciones de seguridad
                     </p>
                   </div>

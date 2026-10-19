@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "./app-sidebar"
+import { ProjectStatusBadge } from "./project-status-badge"
 import { TopNavbar } from "./top-navbar"
 import {
   ExternalLink,
@@ -42,7 +43,7 @@ import {
   Image,
 } from "lucide-react"
 import { useProjects } from "@/hooks/useProjects"
-import { ProjectStatus, Project, FileType } from "@/types/project"
+import { Project, FileType } from "@/types/project"
 import { FileService } from "@/services/fileService"
 import { EditProjectDialog } from "./edit-project-dialog"
 import { EditRepositoriesDialog } from "./edit-repositories-dialog"
@@ -133,34 +134,6 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
   // Manejar edición de servicios cloud
   const handleEditCloudServices = async (updatedProject: Project) => {
     // No necesitamos hacer nada aquí ya que el modal maneja la actualización directamente
-  }
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case ProjectStatus.PRODUCTION:
-        return (
-          <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100">
-            <CheckCircle className="mr-1 h-3 w-3" />
-            {status}
-          </Badge>
-        )
-      case ProjectStatus.STAGING:
-        return (
-          <Badge variant="default" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
-            <Clock className="mr-1 h-3 w-3" />
-            {status}
-          </Badge>
-        )
-      case ProjectStatus.DEVELOPMENT:
-        return (
-          <Badge variant="default" className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-            <AlertCircle className="mr-1 h-3 w-3" />
-            {status}
-          </Badge>
-        )
-      default:
-        return <Badge variant="secondary">{status}</Badge>
-    }
   }
 
   const getRoleBadge = (role: string) => {
@@ -335,6 +308,8 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
     return <Badge className={typeInfo.color}>{typeInfo.label}</Badge>
   }
 
+  const latestArchitectureDiagram = getLatestArchitectureDiagram()
+
   return (
     <>
     <SidebarProvider>
@@ -412,7 +387,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                       <div className="space-y-4">
                         <div>
                           <label className="text-sm font-medium text-muted-foreground">Estado Actual</label>
-                          <div className="mt-1">{getStatusBadge(currentProject.status)}</div>
+                          <div className="mt-1"><ProjectStatusBadge status={currentProject.status} showIcon /></div>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-muted-foreground">Tecnologías Utilizadas</label>
@@ -458,7 +433,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                     <CardContent className="space-y-4">
                       {currentProject.repositories.length > 0 ? (
                         currentProject.repositories.map((repo) => (
-                          <div key={repo.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div key={repo.id} className="flex items-center justify-between p-3 bg-muted/40 rounded-lg">
                             <div className="flex items-center gap-3">
                               <GitBranch className="h-4 w-4 text-muted-foreground" />
                               <div>
@@ -509,14 +484,17 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div 
-                        className={`aspect-video bg-gray-100 rounded-lg transition-colors overflow-hidden ${
-                          getLatestArchitectureDiagram() || isAdmin ? "cursor-pointer hover:bg-gray-200" : ""
-                        }`}
+                      <button
+                        type="button"
+                        className={`relative block w-full overflow-hidden rounded-xl border bg-muted/30 text-left transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card ${
+                          latestArchitectureDiagram ? "aspect-video" : "min-h-44 border-dashed p-6"
+                        } ${latestArchitectureDiagram || isAdmin ? "cursor-pointer hover:border-primary/50 hover:bg-muted/60" : ""}`}
                         onClick={handleArchitectureClick}
+                        disabled={!latestArchitectureDiagram && !isAdmin}
+                        aria-label={latestArchitectureDiagram ? "Ver diagrama de arquitectura" : isAdmin ? "Subir diagrama de arquitectura" : "Sin diagrama de arquitectura"}
                       >
                         {(() => {
-                          const latestDiagram = getLatestArchitectureDiagram()
+                          const latestDiagram = latestArchitectureDiagram
                           if (latestDiagram) {
                             return (
                               <div className="h-full relative">
@@ -524,7 +502,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                                   <img
                                     src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'}/files/${latestDiagram.id}`}
                                     alt="Diagrama de Arquitectura"
-                                    className="w-full h-full object-cover"
+                                    className="w-full h-full object-contain"
                                     onError={(e) => {
                                       // Si la imagen falla, mostrar el icono
                                       e.currentTarget.style.display = 'none'
@@ -539,7 +517,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                                   </div>
                                 </div>
                                 {/* Overlay con información */}
-                                <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2">
+                                <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white p-2">
                                   <p className="text-xs truncate">{latestDiagram.filename}</p>
                                   <p className="text-xs opacity-75">
                                     {new Date(latestDiagram.uploadedAt).toLocaleDateString('es-ES')}
@@ -549,27 +527,29 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                             )
                           } else {
                             return (
-                              <div className="h-full flex items-center justify-center">
-                                <div className="text-center text-muted-foreground">
-                                  <Cloud className="h-8 w-8 mx-auto mb-2" />
-                                  <p className="text-sm">Diagrama de Arquitectura</p>
-                                  {isAdmin && <p className="text-xs">Haz clic para subir</p>}
-                                </div>
+                              <div className="flex flex-col items-center justify-center gap-2 text-center">
+                                <span className="mb-1 flex size-11 items-center justify-center rounded-xl bg-primary/10 text-brand-foreground">
+                                  <Cloud className="size-5" aria-hidden="true" />
+                                </span>
+                                <p className="text-sm font-medium text-foreground">Diagrama de arquitectura</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {isAdmin ? "Haz clic para subir una imagen o PDF" : "No hay un diagrama disponible"}
+                                </p>
                               </div>
                             )
                           }
                         })()}
-                      </div>
+                      </button>
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Servicios Cloud</label>
+                        <h3 className="text-sm font-medium">Servicios Cloud</h3>
                         <div className="mt-2 space-y-2">
                           {currentProject.cloudServices && currentProject.cloudServices.length > 0 ? (
                             currentProject.cloudServices.map((service) => (
-                              <div key={service.id} className="flex items-center gap-2 text-sm">
-                                <div className={`w-2 h-2 rounded-full ${service.isActive ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                                <div className="flex items-center gap-2">
+                              <div key={service.id} className="flex items-center gap-2 rounded-lg border bg-muted/20 p-3 text-sm">
+                                <div className={`size-2 shrink-0 rounded-full ${service.isActive ? 'bg-emerald-600 dark:bg-emerald-400' : 'bg-muted-foreground'}`}></div>
+                                <div className="flex min-w-0 flex-wrap items-center gap-2">
                                   {getCloudProviderIcon(service.provider)}
-                                  <span className="font-medium">{service.name}</span>
+                                  <span className="break-words font-medium">{service.name}</span>
                                   <Badge variant="outline" className="text-xs">
                                     {getCloudProviderLabel(service.provider)}
                                   </Badge>
@@ -580,8 +560,8 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                               </div>
                             ))
                           ) : (
-                            <div className="text-center py-4 text-muted-foreground">
-                              <Cloud className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+                            <div className="rounded-xl border bg-muted/20 px-4 py-5 text-center text-muted-foreground">
+                              <Cloud className="mx-auto mb-2 size-5" aria-hidden="true" />
                               <p className="text-sm">No hay servicios cloud configurados</p>
                               {isAdmin && <p className="text-xs">Haz clic en &quot;Editar&quot; para agregar servicios</p>}
                             </div>
@@ -878,7 +858,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                               </div>
                               <div className="flex items-center gap-2">
                                 {getPriorityBadge(task.priority)}
-                                {getStatusBadge(task.status)}
+                                <Badge variant="secondary">{task.status}</Badge>
                               </div>
                             </div>
                           ))}

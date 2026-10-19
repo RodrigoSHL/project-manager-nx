@@ -106,4 +106,18 @@ describe('workspace member role editor', () => {
     expect(WorkspaceService.updateMemberRole).toHaveBeenCalledTimes(2)
     expect(screen.getByText('Viewer')).toBeInTheDocument()
   })
+
+  it('resets the member directory filters when switching workspaces', async () => {
+    const user = userEvent.setup()
+    jest.mocked(WorkspaceService.getAll).mockResolvedValue([
+      workspace, { ...workspace, id: 'workspace-2', name: 'Workspace Dos', slug: 'workspace-dos' },
+    ])
+    render(<WorkspacesTab />)
+    await user.click(await screen.findByRole('button', { name: /Workspace Uno/ }))
+    await user.type(await screen.findByRole('searchbox', { name: 'Buscar miembros' }), 'sin coincidencias')
+    expect(screen.getByText('No se encontraron miembros')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Workspace Dos/ }))
+    expect(await screen.findByRole('searchbox', { name: 'Buscar miembros' })).toHaveValue('')
+    expect(screen.getByText('Persona Uno')).toBeInTheDocument()
+  })
 })

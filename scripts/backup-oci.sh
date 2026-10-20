@@ -69,4 +69,5 @@ BYTES=$(stat -c '%s' "$ARCHIVE")
 printf '{"created_utc":"%s","object":"%s","bytes":%s}\n' \
   "$STAMP" "$OBJECT_NAME" "$BYTES" > "$WORK_DIR/last-success.json"
 install -m 600 "$WORK_DIR/last-success.json" "$BACKUP_BASE/offsite-last-success.json"
+"$OCI_PYTHON" "$ROOT_DIR/scripts/oci-backup-signal.py" success
 echo "Respaldo externo completo: $OBJECT_NAME ($BYTES bytes)"

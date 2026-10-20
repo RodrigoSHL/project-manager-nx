@@ -40,7 +40,9 @@ En la VM, `bash /home/ubuntu/project-manager-nx/scripts/verify-oci-backup.sh` de
 
 El 18 de octubre se probó el objeto `daily/2026-10-18/atomdev-prod-20261018T192757Z.tar` (155.852.800 bytes, SHA-256 `e89c3364a39b0e5069376f8f29d4047b79add654c2268354d8a1a066f8eea325`). La descarga, checksums e importación pasaron. Se restauraron las cinco bases de aplicación, con 26 tablas en `inspection_db`, tres en `files_db` y **62 archivos sincronizados / 136.578.488 bytes**. La importación reportó cero errores SQL. No se tocó la base de producción.
 
-Este ensayo prueba la integridad de datos y configuración. Aún falta un simulacro de reconstrucción completa de servicios, autenticación, apertura de un trabajo, visualización de una foto e informe, medición de RTO y un aviso externo automático en caso de fallo. Por eso no se publica todavía un SLA de recuperación.
+Este ensayo prueba la integridad de datos y configuración. Aún falta un simulacro de reconstrucción completa de servicios, autenticación, apertura de un trabajo, visualización de una foto e informe, y medición de RTO. Por eso no se publica todavía un SLA de recuperación.
+
+Las alertas ya están activas y verificadas en producción; el ensayo integral de recuperación sigue pendiente. El estado y el procedimiento están en [Alertas y ensayo integral de recuperación](./GRIDASSETS_ALERTAS_Y_ENSAYO_RECUPERACION_2026-10-20.md).
 
 ## Restauración ante incidente
 

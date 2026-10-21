@@ -6,8 +6,17 @@ import { WaterTrackerCard } from './WaterTrackerCard';
 import { FoodSelectorModal } from './FoodSelectorModal';
 import { CustomFoodModal } from './CustomFoodModal';
 import { MealTemplatesModal } from './MealTemplatesModal';
-import { FoodItem, MacroGoals, MealEntry, MealTemplate, MealType } from '../types/nutrition';
-import { Sparkles, UtensilsCrossed, Zap } from 'lucide-react';
+import { PlateCameraModal } from './PlateCameraModal';
+import { PlateAnalysisResultModal } from './PlateAnalysisResultModal';
+import {
+  FoodItem,
+  MacroGoals,
+  MealEntry,
+  MealTemplate,
+  MealType,
+  PlateAnalysisResponse,
+} from '../types/nutrition';
+import { Camera, Sparkles, UtensilsCrossed, Zap } from 'lucide-react';
 import { MEDS_PAUTA_PORTIONS } from '../utils/calculator';
 
 interface DailyTrackerViewProps {
@@ -60,6 +69,12 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
   const [selectedTemplateMealType, setSelectedTemplateMealType] = useState<MealType | null>(null);
   const [isCustomFoodModalOpen, setIsCustomFoodModalOpen] = useState(false);
 
+  // Gemini Vision Plate Analysis State
+  const [scanCameraMealType, setScanCameraMealType] = useState<MealType | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<PlateAnalysisResponse | null>(null);
+  const [analysisImageUrl, setAnalysisImageUrl] = useState<string>('');
+  const [analysisTargetMeal, setAnalysisTargetMeal] = useState<MealType>('lunch');
+
   // Group meals by mealType
   const breakfastMeals = meals.filter((m) => m.mealType === 'breakfast');
   const colacionAmMeals = meals.filter((m) => m.mealType === 'colacion_am');
@@ -91,7 +106,39 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
         onResetWater={onResetWater}
       />
 
-      {/* 4. Secciones de Comidas (Estructura de 5 tiempos recomendada en pauta) */}
+      {/* 4. Barra de Acción Rápida: Escaneo de Plato con IA (Gemini Vision) */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-indigo-950/50 border border-emerald-500/30 p-4 shadow-lg shadow-emerald-950/20">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 p-[1.5px] shrink-0 shadow-md shadow-emerald-500/20">
+              <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+                <Camera className="w-5 h-5 text-emerald-400" />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-white">Escanear Plato con IA</h3>
+                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                  Gemini Vision
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5 leading-snug">
+                Centra tu plato a 45° con calibración de 25 cm. La IA descompone los ingredientes y tú ajustas los gramos con 1 toque.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setScanCameraMealType('lunch')}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 transition active:scale-95 shrink-0"
+          >
+            <Camera className="w-4 h-4" />
+            <span>Abrir Cámara / Foto</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 5. Secciones de Comidas (Estructura de 5 tiempos recomendada en pauta) */}
       <div className="space-y-3.5">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
@@ -116,6 +163,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           entries={breakfastMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
+          onOpenScanPlate={(type) => setScanCameraMealType(type)}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -128,6 +176,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           entries={colacionAmMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
+          onOpenScanPlate={(type) => setScanCameraMealType(type)}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -140,6 +189,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           entries={lunchMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
+          onOpenScanPlate={(type) => setScanCameraMealType(type)}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -152,6 +202,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           entries={colacionPmMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
+          onOpenScanPlate={(type) => setScanCameraMealType(type)}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -164,6 +215,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           entries={dinnerMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
+          onOpenScanPlate={(type) => setScanCameraMealType(type)}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -177,6 +229,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
             entries={snackMeals}
             onOpenAddFood={(type) => setSelectedMealType(type)}
             onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
+            onOpenScanPlate={(type) => setScanCameraMealType(type)}
             onRemoveEntry={onRemoveMealEntry}
           />
         )}
@@ -212,6 +265,37 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
         isOpen={isCustomFoodModalOpen}
         onClose={() => setIsCustomFoodModalOpen(false)}
         onSaveFood={onSaveCustomFood}
+      />
+
+      {/* Modal: Camera / Photo Capture with Visual 25cm Overlay Guide */}
+      <PlateCameraModal
+        isOpen={scanCameraMealType !== null}
+        defaultMealType={scanCameraMealType || 'lunch'}
+        onClose={() => setScanCameraMealType(null)}
+        onAnalysisSuccess={(analysis, imageUrl, targetMeal) => {
+          setAnalysisResult(analysis);
+          setAnalysisImageUrl(imageUrl);
+          setAnalysisTargetMeal(targetMeal);
+        }}
+      />
+
+      {/* Modal: AI Plate Analysis Breakdown & 1-Tap Gram Adjustment */}
+      <PlateAnalysisResultModal
+        isOpen={analysisResult !== null}
+        analysis={analysisResult}
+        imageUrl={analysisImageUrl}
+        defaultMealType={analysisTargetMeal}
+        onClose={() => {
+          setAnalysisResult(null);
+          setAnalysisImageUrl('');
+        }}
+        onConfirmPlate={(entries, mealType) => {
+          entries.forEach(({ food, amountGrams }) => {
+            onAddMealEntry(mealType, food, amountGrams);
+          });
+          setAnalysisResult(null);
+          setAnalysisImageUrl('');
+        }}
       />
     </div>
   );

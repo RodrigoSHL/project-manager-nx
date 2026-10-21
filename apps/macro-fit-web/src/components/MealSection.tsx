@@ -1,5 +1,4 @@
-import React from 'react';
-import { Plus, Trash2, Utensils, Zap } from 'lucide-react';
+import { Camera, Plus, Trash2, Utensils, Zap } from 'lucide-react';
 import { MealEntry, MealType } from '../types/nutrition';
 
 interface MealSectionProps {
@@ -10,6 +9,7 @@ interface MealSectionProps {
   entries: MealEntry[];
   onOpenAddFood: (mealType: MealType) => void;
   onOpenTemplates?: (mealType: MealType) => void;
+  onOpenScanPlate?: (mealType: MealType) => void;
   onRemoveEntry: (entryId: string) => void;
 }
 
@@ -21,6 +21,7 @@ export const MealSection: React.FC<MealSectionProps> = ({
   entries,
   onOpenAddFood,
   onOpenTemplates,
+  onOpenScanPlate,
   onRemoveEntry,
 }) => {
   const mealTotals = entries.reduce(
@@ -59,6 +60,17 @@ export const MealSection: React.FC<MealSectionProps> = ({
             </div>
           )}
 
+          {onOpenScanPlate && (
+            <button
+              onClick={() => onOpenScanPlate(mealType)}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 text-xs font-semibold transition active:scale-95"
+              title="Escanear plato con IA (Gemini Vision)"
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Escanear</span>
+            </button>
+          )}
+
           {onOpenTemplates && (
             <button
               onClick={() => onOpenTemplates(mealType)}
@@ -86,13 +98,25 @@ export const MealSection: React.FC<MealSectionProps> = ({
           <div className="py-4 text-center">
             <Utensils className="w-6 h-6 text-slate-700 mx-auto mb-1.5" />
             <p className="text-xs text-slate-500">No hay alimentos registrados en {title.toLowerCase()}</p>
-            <div className="flex items-center justify-center gap-3 mt-2">
+            <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
               <button
                 onClick={() => onOpenAddFood(mealType)}
                 className="text-xs text-emerald-400 hover:underline font-semibold"
               >
                 + Agregar alimento
               </button>
+              {onOpenScanPlate && (
+                <>
+                  <span className="text-slate-600">•</span>
+                  <button
+                    onClick={() => onOpenScanPlate(mealType)}
+                    className="text-xs text-indigo-400 hover:underline font-semibold flex items-center gap-1"
+                  >
+                    <Camera className="w-3 h-3" />
+                    <span>Escanear con IA</span>
+                  </button>
+                </>
+              )}
               {onOpenTemplates && (
                 <>
                   <span className="text-slate-600">•</span>

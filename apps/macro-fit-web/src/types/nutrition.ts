@@ -123,3 +123,46 @@ export interface MealTemplate {
   isCustom?: boolean;
 }
 
+export type FoodCategory =
+  | 'proteina'
+  | 'carbohidrato'
+  | 'grasa'
+  | 'verdura'
+  | 'fruta'
+  | 'lacteo'
+  | 'legumbre';
+
+export interface NutrientsPer100g {
+  kcal: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  fiber_g: number;
+}
+
+export interface AnalyzedPlateItem {
+  id: string;
+  name: string;
+  category: FoodCategory;
+  estimated_grams: number;
+  adjusted_grams: number;
+  confidence: 'alta' | 'media' | 'baja';
+  nutritional_density_per_100g: NutrientsPer100g;
+  selected: boolean;
+}
+
+export interface PlateAnalysisResponse {
+  dish_name: string;
+  plate_type_detected: 'plato_extendido' | 'plato_hondo' | 'bowl';
+  total_estimated_kcal: number;
+  items: Array<{
+    name: string;
+    category: FoodCategory;
+    estimated_grams: number;
+    confidence: 'alta' | 'media' | 'baja';
+    nutritional_density_per_100g: NutrientsPer100g;
+  }>;
+  clinical_tip: string;
+}
+
+

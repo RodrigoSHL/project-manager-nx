@@ -93,7 +93,13 @@ const MEAL_NAMES: Record<MealType, string> = {
   snacks: '🍎 Snacks / Libre',
 };
 
-export const PlateAnalysisResultModal: React.FC<PlateAnalysisResultModalProps> = ({
+export const PlateAnalysisResultModal: React.FC<PlateAnalysisResultModalProps> = (props) => {
+  if (!props.isOpen || !props.analysis) return null;
+  // Mount fresh state for each analysis; keep hooks unconditional in the editor.
+  return <PlateAnalysisEditor {...props} analysis={props.analysis} />;
+};
+
+const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: PlateAnalysisResponse }> = ({
   isOpen,
   onClose,
   analysis,
@@ -101,8 +107,6 @@ export const PlateAnalysisResultModal: React.FC<PlateAnalysisResultModalProps> =
   defaultMealType,
   onConfirmPlate,
 }) => {
-  if (!isOpen || !analysis) return null;
-
   const [targetMeal, setTargetMeal] = useState<MealType>(defaultMealType);
   const [items, setItems] = useState<AnalyzedPlateItem[]>(() =>
     analysis.items.map((item, idx) => ({

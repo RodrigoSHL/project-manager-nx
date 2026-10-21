@@ -47,7 +47,7 @@ interface DailyTrackerViewProps {
   onResetWater: () => void;
   onSaveCustomFood: (food: Omit<FoodItem, 'id' | 'isCustom'>) => void;
   onApplyTemplate: (template: MealTemplate, mealType?: MealType) => void;
-  onSaveCurrentAsTemplate?: (name: string, description: string, mealType: MealType) => void;
+  onSaveCurrentAsTemplate?: (name: string, description: string, mealType: MealType, entries: MealEntry[]) => void;
   onOpenCalculator: () => void;
 }
 

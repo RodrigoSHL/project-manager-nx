@@ -75,7 +75,7 @@ export default defineConfig(() => ({
         clientsClaim: true,
         skipWaiting: true,
       },
-      devOptions: { enabled: true },
+      devOptions: { enabled: false },
     }),
   ],
   // Uncomment this if you are using workers.

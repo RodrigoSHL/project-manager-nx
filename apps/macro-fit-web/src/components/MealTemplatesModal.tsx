@@ -10,7 +10,7 @@ interface MealTemplatesModalProps {
   currentMealEntries?: MealEntry[];
   onClose: () => void;
   onApplyTemplate: (template: MealTemplate, mealType?: MealType) => void;
-  onSaveCurrentAsTemplate?: (name: string, description: string, mealType: MealType) => void;
+  onSaveCurrentAsTemplate?: (name: string, description: string, mealType: MealType, entries: MealEntry[]) => void;
 }
 
 export const MealTemplatesModal: React.FC<MealTemplatesModalProps> = ({
@@ -70,7 +70,7 @@ export const MealTemplatesModal: React.FC<MealTemplatesModalProps> = ({
   const handleSaveCurrent = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTemplateName.trim() || !onSaveCurrentAsTemplate) return;
-    onSaveCurrentAsTemplate(newTemplateName.trim(), newTemplateDesc.trim(), mealType);
+    onSaveCurrentAsTemplate(newTemplateName.trim(), newTemplateDesc.trim(), mealType, currentMealEntries);
     setIsCreating(false);
     setNewTemplateName('');
     setNewTemplateDesc('');

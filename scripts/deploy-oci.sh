@@ -38,6 +38,7 @@ CANONICAL_SERVICES=(
   files-api
   inspection-api
   mailer-api
+  macro-fit-api
   bff-api
   inspection-web
   inspection-web-qa
@@ -45,6 +46,7 @@ CANONICAL_SERVICES=(
   jira-web
   travel-planner-app
   atomdev-landing
+  macro-fit-web
   caddy
 )
 
@@ -149,7 +151,10 @@ select_profile_interactively() {
   printf '  8) Plataforma completa (APIs, BFF y frontends)\n'
   printf '  9) Selección personalizada\n'
   printf ' 10) Mailer API\n'
-  read -r -p 'Selecciona [1-10]: ' selection
+  printf ' 11) MacroFit completo (API, frontend y Caddy)\n'
+  printf ' 12) Solo frontend MacroFit y Caddy\n'
+  printf ' 13) Backend MacroFit (API)\n'
+  read -r -p 'Selecciona [1-13]: ' selection
 
   case "$selection" in
     1) PROFILE="travel-full" ;;
@@ -162,6 +167,9 @@ select_profile_interactively() {
     8) PROFILE="platform-full" ;;
     9) PROFILE="custom" ;;
     10) PROFILE="mailer-backend" ;;
+    11) PROFILE="macrofit-full" ;;
+    12) PROFILE="macrofit-frontend" ;;
+    13) PROFILE="macrofit-backend" ;;
     *) die "Selección inválida" ;;
   esac
 }
@@ -202,8 +210,17 @@ resolve_services() {
     mailer-backend)
       raw_services="mailer-api"
       ;;
+    macrofit-full)
+      raw_services="macro-fit-api,macro-fit-web,caddy"
+      ;;
+    macrofit-frontend)
+      raw_services="macro-fit-web,caddy"
+      ;;
+    macrofit-backend)
+      raw_services="macro-fit-api"
+      ;;
     platform-full)
-      raw_services="project-api,user-api,travel-planner-api,files-api,inspection-api,bff-api,inspection-web,project-web,jira-web,travel-planner-app,atomdev-landing"
+      raw_services="project-api,user-api,travel-planner-api,files-api,inspection-api,bff-api,inspection-web,project-web,jira-web,travel-planner-app,atomdev-landing,macro-fit-api,macro-fit-web"
       ;;
     custom)
       raw_services="$CUSTOM_SERVICES"
@@ -780,6 +797,17 @@ for INSPECTION_SERVICE in inspection-web inspection-web-qa; do
     printf '%s_PUBLIC_BUNDLE_URL_CHECK=clean\n' "$INSPECTION_SERVICE"
   fi
 done
+
+if printf '%s\n' "${SERVICES[@]}" | grep -qx macro-fit-web; then
+  MACROFIT_WEB_CONTAINER=$(docker compose --env-file .env.deploy -f docker-compose.prod.yml ps -q macro-fit-web)
+  docker exec "$MACROFIT_WEB_CONTAINER" wget -q --spider http://127.0.0.1/health
+  if docker exec "$MACROFIT_WEB_CONTAINER" grep -RlE \
+    '161\.153\.194\.227|http://localhost:3007|http://macro-fit-api' /usr/share/nginx/html; then
+    printf 'El bundle de macro-fit-web contiene una URL prohibida.\n' >&2
+    exit 1
+  fi
+  printf 'MACROFIT_PUBLIC_BUNDLE_URL_CHECK=clean\n'
+fi
 REMOTE
 }
 
@@ -802,6 +830,10 @@ verify_external() {
     expect_http_status INSPECTION_QA_ROOT https://qa-inspection.atomdev.cl/ 200
     expect_http_status INSPECTION_QA_LOGIN https://qa-inspection.atomdev.cl/login 200
     expect_http_status INSPECTION_QA_API_WITHOUT_JWT https://qa-inspection.atomdev.cl/api/inspection/tenants 401
+  fi
+  if contains_service macro-fit-web "${SERVICES[@]}"; then
+    expect_http_status MACROFIT_ROOT https://macrofit.atomdev.cl/ 200
+    expect_http_status MACROFIT_API_HEALTH https://macrofit.atomdev.cl/api/health 200
   fi
   expect_http_status JIRA_ROOT https://jira.atomdev.cl/ 200
   expect_http_status ATOMDEV_ROOT https://atomdev.cl/ 200

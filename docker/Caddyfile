@@ -58,6 +58,18 @@
   }
 }
 
+(macrofit_web) {
+  encode gzip
+
+  handle /api/* {
+    reverse_proxy macro-fit-api:3007
+  }
+
+  handle {
+    reverse_proxy macro-fit-web:80
+  }
+}
+
 (atomdev_landing) {
   encode gzip
 
@@ -88,6 +100,10 @@ inspection.atomdev.cl {
 
 qa-inspection.atomdev.cl {
   import inspection_qa_web
+}
+
+macrofit.atomdev.cl {
+  import macrofit_web
 }
 
 {$PROJECT_WEB_HOST} {

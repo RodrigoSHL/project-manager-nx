@@ -234,6 +234,43 @@ services:
       timeout: 5s
       retries: 10
 
+  macro-fit-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+      args:
+        APP: macro-fit-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      MACRO_FIT_API_PORT: 3007
+      PORT: 3007
+      API_PREFIX: api
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost,https://macrofit.atomdev.cl}
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3007/api/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  macro-fit-web:
+    build:
+      context: .
+      dockerfile: Dockerfile.vite
+      args:
+        APP: macro-fit-web
+    restart: unless-stopped
+    depends_on:
+      macro-fit-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   project-web:
     build:
       context: .
@@ -363,6 +400,10 @@ services:
         condition: service_healthy
       atomdev-landing:
         condition: service_started
+      macro-fit-api:
+        condition: service_healthy
+      macro-fit-web:
+        condition: service_healthy
 
 volumes:
   postgres_data:

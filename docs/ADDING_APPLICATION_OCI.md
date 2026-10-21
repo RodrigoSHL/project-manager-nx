@@ -34,6 +34,7 @@ Navegador
 | `jira.atomdev.cl` | Jira Web |
 | `travel.atomdev.cl` | Travel Planner |
 | `inspection.atomdev.cl` | Gestión de inspecciones |
+| `macrofit.atomdev.cl` | MacroFit Contador Nutricional PWA & Vision |
 
 OCI solo debe publicar `22`, `80` y `443`. Los APIs, PostgreSQL y puertos auxiliares permanecen internos o ligados a `127.0.0.1`.
 

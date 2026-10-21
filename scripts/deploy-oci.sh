@@ -73,7 +73,8 @@ Opciones:
   --profile PERFIL       travel-full, travel-frontend, travel-backend,
                          inspection-full, inspection-frontend,
                          inspection-qa-frontend,
-                         inspection-backend, mailer-backend, platform-full o custom
+                         inspection-backend, mailer-backend, macrofit-full,
+                         macrofit-frontend, macrofit-backend, platform-full o custom
   --services LISTA       Servicios separados por coma; implica perfil custom
   --key RUTA             Clave privada SSH (también ATOMDEV_SSH_KEY)
   --dry-run              Preflight y rsync simulado; no cambia producción
@@ -151,9 +152,9 @@ select_profile_interactively() {
   printf '  8) Plataforma completa (APIs, BFF y frontends)\n'
   printf '  9) Selección personalizada\n'
   printf ' 10) Mailer API\n'
-  printf ' 11) MacroFit completo (API, frontend y Caddy)\n'
+  printf ' 11) MacroFit completo (API, BFF, frontend y Caddy)\n'
   printf ' 12) Solo frontend MacroFit y Caddy\n'
-  printf ' 13) Backend MacroFit (API)\n'
+  printf ' 13) Backend MacroFit (API, BFF y Caddy)\n'
   read -r -p 'Selecciona [1-13]: ' selection
 
   case "$selection" in
@@ -211,16 +212,16 @@ resolve_services() {
       raw_services="mailer-api"
       ;;
     macrofit-full)
-      raw_services="macro-fit-api,macro-fit-web,caddy"
+      raw_services="macro-fit-api,bff-api,macro-fit-web,caddy"
       ;;
     macrofit-frontend)
       raw_services="macro-fit-web,caddy"
       ;;
     macrofit-backend)
-      raw_services="macro-fit-api"
+      raw_services="macro-fit-api,bff-api,caddy"
       ;;
     platform-full)
-      raw_services="project-api,user-api,travel-planner-api,files-api,inspection-api,bff-api,inspection-web,project-web,jira-web,travel-planner-app,atomdev-landing,macro-fit-api,macro-fit-web"
+      raw_services="project-api,user-api,travel-planner-api,files-api,inspection-api,bff-api,inspection-web,project-web,jira-web,travel-planner-app,atomdev-landing,macro-fit-api,macro-fit-web,caddy"
       ;;
     custom)
       raw_services="$CUSTOM_SERVICES"
@@ -802,7 +803,7 @@ if printf '%s\n' "${SERVICES[@]}" | grep -qx macro-fit-web; then
   MACROFIT_WEB_CONTAINER=$(docker compose --env-file .env.deploy -f docker-compose.prod.yml ps -q macro-fit-web)
   docker exec "$MACROFIT_WEB_CONTAINER" wget -q --spider http://127.0.0.1/health
   if docker exec "$MACROFIT_WEB_CONTAINER" grep -RlE \
-    '161\.153\.194\.227|http://localhost:3007|http://macro-fit-api' /usr/share/nginx/html; then
+    '161\.153\.194\.227|http://localhost|http://macro-fit-api|http://bff-api' /usr/share/nginx/html; then
     printf 'El bundle de macro-fit-web contiene una URL prohibida.\n' >&2
     exit 1
   fi
@@ -833,7 +834,21 @@ verify_external() {
   fi
   if contains_service macro-fit-web "${SERVICES[@]}"; then
     expect_http_status MACROFIT_ROOT https://macrofit.atomdev.cl/ 200
-    expect_http_status MACROFIT_API_HEALTH https://macrofit.atomdev.cl/api/health 200
+  fi
+  if contains_service macro-fit-api "${SERVICES[@]}" || contains_service macro-fit-web "${SERVICES[@]}"; then
+    expect_http_status MACROFIT_API_HEALTH https://macrofit.atomdev.cl/api/macrofit/health 200
+    expect_http_status MACROFIT_API_READY https://macrofit.atomdev.cl/api/macrofit/ready 200
+    local invalid_status
+    invalid_status=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' \
+      -F 'image=invalid;filename=invalid.txt;type=text/plain' \
+      https://macrofit.atomdev.cl/api/macrofit/analyze-plate)
+    [[ "$invalid_status" == 415 ]] || die "MacroFit aceptó un archivo no permitido (HTTP $invalid_status)"
+    printf 'MACROFIT_INVALID_IMAGE_REJECTED=415\n'
+    if [[ -n "${MACROFIT_SMOKE_IMAGE:-}" ]]; then
+      node "$ROOT_DIR/scripts/smoke-macrofit.mjs" https://macrofit.atomdev.cl "$MACROFIT_SMOKE_IMAGE"
+    else
+      warn "Gemini solo fue verificado a nivel de configuración. Para probar el proveedor real define MACROFIT_SMOKE_IMAGE con una foto de comida (consume una llamada)."
+    fi
   fi
   expect_http_status JIRA_ROOT https://jira.atomdev.cl/ 200
   expect_http_status ATOMDEV_ROOT https://atomdev.cl/ 200

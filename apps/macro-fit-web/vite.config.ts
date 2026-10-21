@@ -13,7 +13,7 @@ export default defineConfig(() => ({
     host: 'localhost',
     proxy: {
       '/api': {
-        target: 'http://localhost:3007',
+        target: 'http://localhost:3000',
         changeOrigin: true,
       },
     },
@@ -23,7 +23,7 @@ export default defineConfig(() => ({
     host: 'localhost',
     proxy: {
       '/api': {
-        target: 'http://localhost:3007',
+        target: 'http://localhost:3000',
         changeOrigin: true,
       },
     },

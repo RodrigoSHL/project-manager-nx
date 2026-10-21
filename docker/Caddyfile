@@ -62,7 +62,7 @@
   encode gzip
 
   handle /api/* {
-    reverse_proxy macro-fit-api:3007
+    reverse_proxy bff-api:3000
   }
 
   handle {

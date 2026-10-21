@@ -8,6 +8,7 @@ import { TravelApiModule } from './travel-api/travel-api.module';
 import { FilesApiModule } from './files-api/files-api.module';
 import { InspectionApiModule } from './inspection-api/inspection-api.module';
 import { WorkReportModule } from './inspection-api/work-report.module';
+import { MacrofitApiModule } from './macrofit-api/macrofit-api.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { WorkReportModule } from './inspection-api/work-report.module';
     FilesApiModule,
     InspectionApiModule,
     WorkReportModule,
+    MacrofitApiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -247,7 +247,7 @@ services:
       PORT: 3007
       API_PREFIX: api
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-flash-lite}
       MACROFIT_CORS_ORIGIN: ${MACROFIT_CORS_ORIGIN:-https://macrofit.atomdev.cl,http://localhost:4205,http://localhost:3000}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost,https://macrofit.atomdev.cl}
     healthcheck:

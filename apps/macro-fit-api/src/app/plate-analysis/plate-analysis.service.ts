@@ -10,7 +10,7 @@ export class PlateAnalysisService {
 
   constructor() {
     const apiKey = process.env.GEMINI_API_KEY;
-    this.modelName = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+    this.modelName = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
 
     if (apiKey) {
       try {
@@ -32,6 +32,10 @@ export class PlateAnalysisService {
     hints?: string,
     plateTypeHint?: string
   ): Promise<PlateAnalysisResponseDto> {
+    this.logger.log(
+      `Received plate analysis request: mime=${mimeType}, bytes=${imageBuffer.length}, hints="${hints || ''}"`
+    );
+
     if (!this.aiClient) {
       this.logger.warn('Calling simulated clinical vision engine (no API key configured).');
       return this.generateSimulatedAnalysis(hints, plateTypeHint);
@@ -138,7 +142,14 @@ Genera el desglose completo de alimentos según el esquema solicitado.`;
         ],
       };
 
-      const response = await this.aiClient.models.generateContent({
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error('Límite de tiempo excedido en la API de Gemini (15 segundos)')),
+          15000
+        )
+      );
+
+      const generatePromise = this.aiClient.models.generateContent({
         model: this.modelName,
         contents: [
           {
@@ -156,6 +167,8 @@ Genera el desglose completo de alimentos según el esquema solicitado.`;
           temperature: 0.2,
         },
       });
+
+      const response = await Promise.race([generatePromise, timeoutPromise]);
 
       const responseText = response.text;
       if (!responseText) {

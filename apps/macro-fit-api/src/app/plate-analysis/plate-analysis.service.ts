@@ -10,7 +10,7 @@ export class PlateAnalysisService {
 
   constructor() {
     const apiKey = process.env.GEMINI_API_KEY;
-    this.modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    this.modelName = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 
     if (apiKey) {
       try {

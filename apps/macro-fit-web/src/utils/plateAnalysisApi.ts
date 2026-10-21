@@ -38,11 +38,18 @@ export async function analyzePlateImage(
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
+      const fallbackMessages: Record<number, string> = {
+        429: 'Hay demasiados análisis en curso. Intenta nuevamente en un minuto.',
+        502: 'El servicio de análisis devolvió una respuesta inválida. Intenta nuevamente.',
+        503: 'Gemini no está disponible temporalmente. Intenta nuevamente en unos momentos.',
+        504: 'El análisis tardó demasiado en responder. Intenta nuevamente.',
+      };
       throw new Error(
         (Array.isArray(errorData?.message)
           ? errorData.message.join('. ')
           : errorData?.message) ||
-          `Error del servidor al analizar plato (${response.status}: ${response.statusText})`
+          fallbackMessages[response.status] ||
+          `No fue posible analizar el plato (HTTP ${response.status}).`
       );
     }
 

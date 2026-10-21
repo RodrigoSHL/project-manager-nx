@@ -42,7 +42,15 @@ export class MacrofitApiClient {
         ...init,
         signal: AbortSignal.timeout(35000),
       });
-      const body = await response.json();
+      const body = await response.json().catch((error: unknown) => {
+        if (
+          error instanceof Error &&
+          ['TimeoutError', 'AbortError'].includes(error.name)
+        ) {
+          throw error;
+        }
+        return null;
+      });
       if (!response.ok) {
         const message =
           typeof body?.message === 'string' ||

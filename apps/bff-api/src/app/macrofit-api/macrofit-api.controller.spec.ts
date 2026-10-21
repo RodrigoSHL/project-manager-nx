@@ -80,6 +80,26 @@ describe('MacroFit BFF HTTP contract', () => {
     expect(response.status).toBe(503);
     expect(await response.text()).not.toContain('private');
   });
+  it('preserves a gateway timeout even when the upstream response is HTML', async () => {
+    upstream.mockResolvedValue(
+      new Response('<html>Gateway timeout</html>', { status: 504 })
+    );
+    const response = await upload('/api/macrofit/analyze-plate');
+    expect(response.status).toBe(504);
+    const body = await response.json();
+    expect(body.message).toBe(
+      'No fue posible completar la solicitud de MacroFit.'
+    );
+    expect(body.message).not.toContain('<html>');
+  });
+  it('returns 504 when the upstream body times out', async () => {
+    const upstreamResponse = new Response('{}', { status: 200 });
+    jest.spyOn(upstreamResponse, 'json').mockRejectedValue(
+      Object.assign(new Error('Aborted'), { name: 'AbortError' })
+    );
+    upstream.mockResolvedValue(upstreamResponse);
+    expect((await upload('/api/macrofit/analyze-plate')).status).toBe(504);
+  });
   it('rejects invalid metadata, media and oversized uploads before forwarding', async () => {
     expect(
       (await upload('/api/macrofit/analyze-plate', ['extra', 'value'])).status

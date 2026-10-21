@@ -431,19 +431,79 @@ export function useMacroStore() {
       timestamp: timeStr,
     };
 
-    const updated: DailyLog = {
-      ...dailyLog,
-      meals: [...dailyLog.meals, newEntry],
-    };
-    persistDailyLog(updated);
+    setDailyLog((prev) => {
+      const updated: DailyLog = {
+        ...prev,
+        meals: [...prev.meals, newEntry],
+      };
+      try {
+        localStorage.setItem(`macrofit_log_${updated.date}`, JSON.stringify(updated));
+      } catch (e) {
+        console.error('Error persistiendo diario:', e);
+      }
+      return updated;
+    });
+  };
+
+  const addMultipleMealEntries = (
+    items: Array<{ mealType: MealType; food: FoodItem; amountGrams: number }>
+  ) => {
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    const newEntries: MealEntry[] = items.map(({ mealType, food, amountGrams }, idx) => {
+      const ratio = amountGrams / food.servingSizeGrams;
+      let portionGroup: FoodGroup | undefined;
+      let portionsCount: number | undefined;
+
+      if (food.portionEquiv) {
+        portionGroup = food.portionEquiv.group;
+        portionsCount = Number((food.portionEquiv.portions * ratio).toFixed(1));
+      }
+
+      return {
+        id: `meal-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
+        mealType,
+        foodId: food.id,
+        foodName: food.name,
+        amountGrams,
+        calories: Math.round(food.calories * ratio),
+        protein: Number((food.protein * ratio).toFixed(1)),
+        carbs: Number((food.carbs * ratio).toFixed(1)),
+        fat: Number((food.fat * ratio).toFixed(1)),
+        portionGroup,
+        portionsCount,
+        timestamp: timeStr,
+      };
+    });
+
+    setDailyLog((prev) => {
+      const updated: DailyLog = {
+        ...prev,
+        meals: [...prev.meals, ...newEntries],
+      };
+      try {
+        localStorage.setItem(`macrofit_log_${updated.date}`, JSON.stringify(updated));
+      } catch (e) {
+        console.error('Error persistiendo diario:', e);
+      }
+      return updated;
+    });
   };
 
   const removeMealEntry = (entryId: string) => {
-    const updated: DailyLog = {
-      ...dailyLog,
-      meals: dailyLog.meals.filter((m) => m.id !== entryId),
-    };
-    persistDailyLog(updated);
+    setDailyLog((prev) => {
+      const updated: DailyLog = {
+        ...prev,
+        meals: prev.meals.filter((m) => m.id !== entryId),
+      };
+      try {
+        localStorage.setItem(`macrofit_log_${updated.date}`, JSON.stringify(updated));
+      } catch (e) {
+        console.error('Error persistiendo diario:', e);
+      }
+      return updated;
+    });
   };
 
   const addWater = (amountMl: number) => {
@@ -604,6 +664,7 @@ export function useMacroStore() {
     consumedPortions,
     saveProfileAndGoals,
     addMealEntry,
+    addMultipleMealEntries,
     removeMealEntry,
     addWater,
     resetWater,

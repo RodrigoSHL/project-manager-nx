@@ -39,6 +39,9 @@ interface DailyTrackerViewProps {
   allFoods: FoodItem[];
   allTemplates: MealTemplate[];
   onAddMealEntry: (mealType: MealType, food: FoodItem, amountGrams: number) => void;
+  onAddMultipleMealEntries?: (
+    items: Array<{ mealType: MealType; food: FoodItem; amountGrams: number }>
+  ) => void;
   onRemoveMealEntry: (entryId: string) => void;
   onAddWater: (amountMl: number) => void;
   onResetWater: () => void;
@@ -57,6 +60,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
   allFoods,
   allTemplates,
   onAddMealEntry,
+  onAddMultipleMealEntries,
   onRemoveMealEntry,
   onAddWater,
   onResetWater,
@@ -290,9 +294,15 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           setAnalysisImageUrl('');
         }}
         onConfirmPlate={(entries, mealType) => {
-          entries.forEach(({ food, amountGrams }) => {
-            onAddMealEntry(mealType, food, amountGrams);
-          });
+          if (onAddMultipleMealEntries) {
+            onAddMultipleMealEntries(
+              entries.map(({ food, amountGrams }) => ({ mealType, food, amountGrams }))
+            );
+          } else {
+            entries.forEach(({ food, amountGrams }) => {
+              onAddMealEntry(mealType, food, amountGrams);
+            });
+          }
           setAnalysisResult(null);
           setAnalysisImageUrl('');
         }}

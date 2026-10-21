@@ -24,6 +24,7 @@ export function App() {
     consumedPortions,
     saveProfileAndGoals,
     addMealEntry,
+    addMultipleMealEntries,
     removeMealEntry,
     addWater,
     resetWater,
@@ -78,6 +79,7 @@ export function App() {
             allFoods={allFoods}
             allTemplates={allTemplates}
             onAddMealEntry={addMealEntry}
+            onAddMultipleMealEntries={addMultipleMealEntries}
             onRemoveMealEntry={removeMealEntry}
             onAddWater={addWater}
             onResetWater={resetWater}

@@ -28,7 +28,8 @@ async function bootstrap() {
   }));
 
   const port = process.env.BFF_PORT || 3000;
-  await app.listen(port);
+  app.enableShutdownHooks();
+  await app.listen(port, '0.0.0.0');
 
   Logger.log(`🚀 BFF API running on: http://localhost:${port}`);
   Logger.log(`👤 User API: ${process.env.USER_API_URL || 'http://localhost:3001'}`);

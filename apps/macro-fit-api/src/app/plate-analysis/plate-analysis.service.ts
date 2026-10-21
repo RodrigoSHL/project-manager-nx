@@ -6,7 +6,12 @@ import {
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { GoogleGenAI, Type } from '@google/genai';
+import {
+  GoogleGenAI,
+  Type,
+  ThinkingLevel,
+  type GenerateContentParameters,
+} from '@google/genai';
 import { z } from 'zod';
 import { PlateAnalysisResponseDto } from './dto/analyze-plate.dto';
 
@@ -61,10 +66,10 @@ export class PlateAnalysisService {
   private readonly logger = new Logger(PlateAnalysisService.name);
   private readonly aiClient: GoogleGenAI | null;
   private readonly modelName =
-    process.env.GEMINI_MODEL?.trim() || 'gemini-3.1-flash-lite';
+    process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash-lite';
   private readonly timeoutMs = positiveSetting(
     'GEMINI_TIMEOUT_MS',
-    15000,
+    30000,
     30000
   );
   private readonly requestsPerMinute = positiveSetting(
@@ -247,24 +252,69 @@ Genera el desglose completo de alimentos según el esquema solicitado.`;
           );
         }, this.timeoutMs);
       });
-      const response = await Promise.race([
-        this.aiClient!.models.generateContent({
-          model: this.modelName,
-          contents: [
-            { inlineData: { data: imageBuffer.toString('base64'), mimeType } },
-            promptText,
-          ],
-          config: {
-            systemInstruction,
-            responseMimeType: 'application/json',
-            responseSchema,
-            temperature: 0.2,
-            abortSignal: controller.signal,
-            httpOptions: { timeout: this.timeoutMs },
+      const request: GenerateContentParameters = {
+        model: this.modelName,
+        contents: [
+          { inlineData: { data: imageBuffer.toString('base64'), mimeType } },
+          promptText,
+        ],
+        config: {
+          systemInstruction,
+          responseMimeType: 'application/json',
+          responseSchema,
+          temperature: 0.2,
+          thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
+          maxOutputTokens: 8192,
+          abortSignal: controller.signal,
+          httpOptions: {
+            timeout: this.timeoutMs,
+            // One retry below shares the deadline and provider quota.
+            retryOptions: { attempts: 1 },
           },
-        }),
-        timeout,
-      ]);
+        },
+      };
+      const generate = async () => {
+        try {
+          return await this.aiClient!.models.generateContent(request);
+        } catch (error: unknown) {
+          const status =
+            typeof error === 'object' && error !== null && 'status' in error
+              ? Number(error.status)
+              : undefined;
+          if (
+            controller.signal.aborted ||
+            ![408, 500, 502, 503, 504].includes(status ?? 0)
+          ) {
+            throw error;
+          }
+          await new Promise<void>((resolve, reject) => {
+            const onAbort = () => {
+              clearTimeout(retryTimer);
+              reject(error);
+            };
+            const retryTimer = setTimeout(() => {
+              controller.signal.removeEventListener('abort', onAbort);
+              resolve();
+            }, 300);
+            controller.signal.addEventListener('abort', onAbort, {
+              once: true,
+            });
+            if (controller.signal.aborted) onAbort();
+          });
+          if (Date.now() - this.windowStart >= 60000) {
+            this.windowStart = Date.now();
+            this.windowRequests = 0;
+          }
+          // Retrying also consumes a provider request; never exceed the quota.
+          if (this.windowRequests >= this.requestsPerMinute) throw error;
+          this.windowRequests++;
+          this.logger.warn(
+            `Retrying Gemini transient failure (status=${status}).`
+          );
+          return this.aiClient!.models.generateContent(request);
+        }
+      };
+      const response = await Promise.race([generate(), timeout]);
       let parsed: PlateAnalysisResponseDto;
       try {
         parsed = analysisSchema.parse(JSON.parse(response.text || ''));

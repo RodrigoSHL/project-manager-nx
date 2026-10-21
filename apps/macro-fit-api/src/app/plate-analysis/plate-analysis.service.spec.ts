@@ -3,6 +3,7 @@ import { PlateAnalysisService } from './plate-analysis.service';
 
 jest.mock('@google/genai', () => ({
   GoogleGenAI: jest.fn(),
+  ThinkingLevel: { MINIMAL: 'MINIMAL' },
   Type: {
     OBJECT: 'OBJECT',
     STRING: 'STRING',
@@ -71,6 +72,9 @@ describe('PlateAnalysisService provider contract', () => {
     expect(generate.mock.calls[0][0].config.abortSignal).toBeInstanceOf(
       AbortSignal
     );
+    expect(
+      generate.mock.calls[0][0].config.httpOptions.retryOptions.attempts
+    ).toBe(1);
   });
   it.each([
     ['network', 502],
@@ -94,6 +98,58 @@ describe('PlateAnalysisService provider contract', () => {
       });
     }
   );
+  it('recovers from one transient provider error using a real second response', async () => {
+    generate.mockRejectedValueOnce({ status: 503 });
+    generate.mockResolvedValueOnce({ text: JSON.stringify(result) });
+    await expect(analyze(new PlateAnalysisService())).resolves.toHaveProperty(
+      'total_estimated_kcal',
+      260
+    );
+    expect(generate).toHaveBeenCalledTimes(2);
+    expect(generate.mock.calls[0][0].config.abortSignal).toBe(
+      generate.mock.calls[1][0].config.abortSignal
+    );
+  });
+  it('does not retry invalid credentials', async () => {
+    generate.mockRejectedValue({ status: 403 });
+    await expect(analyze(new PlateAnalysisService())).rejects.toMatchObject({
+      status: 503,
+    });
+    expect(generate).toHaveBeenCalledTimes(1);
+  });
+  it('counts retries against the provider quota', async () => {
+    process.env.MACROFIT_REQUESTS_PER_MINUTE = '2';
+    generate.mockRejectedValueOnce({ status: 503 });
+    generate.mockResolvedValueOnce({ text: JSON.stringify(result) });
+    const service = new PlateAnalysisService();
+    await expect(analyze(service)).resolves.toHaveProperty('items');
+    await expect(analyze(service)).rejects.toMatchObject({ status: 429 });
+    expect(generate).toHaveBeenCalledTimes(2);
+  });
+  it('does not retry when the provider quota is exhausted', async () => {
+    process.env.MACROFIT_REQUESTS_PER_MINUTE = '1';
+    generate.mockRejectedValue({ status: 503 });
+    await expect(analyze(new PlateAnalysisService())).rejects.toMatchObject({
+      status: 503,
+    });
+    expect(generate).toHaveBeenCalledTimes(1);
+  });
+  it('keeps one deadline across both attempts and releases the concurrency slot', async () => {
+    jest.useFakeTimers();
+    process.env.MACROFIT_MAX_CONCURRENT_ANALYSES = '1';
+    generate.mockRejectedValueOnce({ status: 503 });
+    generate.mockImplementationOnce(() => new Promise(() => undefined));
+    const service = new PlateAnalysisService();
+    const assertion = expect(analyze(service)).rejects.toMatchObject({
+      status: 504,
+    });
+    await jest.advanceTimersByTimeAsync(15000);
+    await assertion;
+    expect(generate).toHaveBeenCalledTimes(2);
+    generate.mockResolvedValue({ text: JSON.stringify(result) });
+    await expect(analyze(service)).resolves.toHaveProperty('items');
+    expect(jest.getTimerCount()).toBe(0);
+  });
   it.each([
     '',
     '{invalid',

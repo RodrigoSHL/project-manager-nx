@@ -19,11 +19,13 @@ El navegador accede mediante BFF: `POST /api/macrofit/analyze-plate`. BFF conser
 | Variable | Default / significado |
 |---|---|
 | `GEMINI_API_KEY` | Sin default. Ausente: readiness y análisis responden 503 |
-| `GEMINI_MODEL` | `gemini-3.1-flash-lite` |
-| `GEMINI_TIMEOUT_MS` | 15000, entero entre 1 y 30000 |
+| `GEMINI_MODEL` | `gemini-3.5-flash-lite` |
+| `GEMINI_TIMEOUT_MS` | 30000, entero entre 1 y 30000; plazo total, incluido el reintento |
 | `MACROFIT_REQUESTS_PER_MINUTE` | 10 solicitudes al proveedor por minuto e instancia; máximo configurable 1000 |
 | `MACROFIT_MAX_CONCURRENT_ANALYSES` | 2 solicitudes al proveedor simultáneas; máximo configurable 20 |
 | `CORS_ORIGIN` | Lista explícita de orígenes, utilizando la variable común del monorepo |
+
+Un fallo HTTP temporal del proveedor admite un único reintento. Ambos intentos comparten el plazo total y cada llamada consume el límite por minuto. No se reintentan credenciales inválidas ni cuotas del proveedor agotadas.
 
 Los límites son globales por proceso, en memoria: se reinician al recrear el contenedor y no son una cuota por usuario ni un presupuesto mensual. La calculadora sigue siendo pública. Si se escala a varias réplicas, se requiere un límite compartido o una cuota del proveedor para controlar el total.
 
@@ -65,4 +67,4 @@ node scripts/smoke-macrofit.mjs http://localhost:3000 /ruta/foto.jpg
 
 Esto consume una llamada del proveedor. No forma parte de los sondeos periódicos.
 
-El código de modelo fue contrastado con la [documentación oficial de Gemini](https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-lite).
+El código de modelo fue contrastado con la [documentación oficial de Gemini](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite).

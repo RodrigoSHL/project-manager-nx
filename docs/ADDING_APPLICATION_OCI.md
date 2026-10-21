@@ -411,7 +411,7 @@ guardarla fuera del repo, por ejemplo en `~/.ssh/`.
 
 Los perfiles MacroFit full/backend incluyen API → BFF → Caddy (y frontend en
 full). Antes del primer despliegue de esta integración, comprobar que
-`GEMINI_MODEL` remoto sea `gemini-3.1-flash-lite`, o el modelo válido elegido
+`GEMINI_MODEL` remoto sea `gemini-3.5-flash-lite`, o el modelo válido elegido
 explícitamente; los ejemplos antiguos fijaban otro nombre. El script preserva
 `.env.deploy` y no corrige ese valor automáticamente. No imprimir la clave.
 El health confirma el proceso; readiness solo confirma configuración. Para

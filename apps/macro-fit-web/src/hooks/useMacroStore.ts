@@ -5,10 +5,12 @@ import {
   FoodItem,
   MacroGoals,
   MealEntry,
+  MealTemplate,
   MealType,
   UserProfile,
 } from '../types/nutrition';
 import { COMMON_FOODS } from '../data/common-foods';
+import { DEFAULT_MEAL_TEMPLATES } from '../data/meal-templates';
 import { MEDS_PAUTA_GOALS, MEDS_PAUTA_PORTIONS } from '../utils/calculator';
 
 const DEFAULT_PROFILE: UserProfile = {
@@ -477,7 +479,91 @@ export function useMacroStore() {
     return newFood;
   };
 
+  // 4. Plantillas de Comidas / Combos precargados
+  const [customTemplates, setCustomTemplates] = useState<MealTemplate[]>(() => {
+    try {
+      const saved = localStorage.getItem('macrofit_custom_templates');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const allFoods: FoodItem[] = [...customFoods, ...COMMON_FOODS];
+  const allTemplates: MealTemplate[] = [...customTemplates, ...DEFAULT_MEAL_TEMPLATES];
+
+  // Aplicar un combo/plantilla completa en un tiempo de comida
+  const applyMealTemplate = (template: MealTemplate, targetMealType?: MealType) => {
+    const mealType = targetMealType || template.mealType;
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    const newEntries: MealEntry[] = [];
+
+    for (const item of template.items) {
+      const food = allFoods.find((f) => f.id === item.foodId);
+      if (!food) continue;
+
+      const ratio = item.amountGrams / food.servingSizeGrams;
+      let portionGroup: FoodGroup | undefined;
+      let portionsCount: number | undefined;
+
+      if (food.portionEquiv) {
+        portionGroup = food.portionEquiv.group;
+        portionsCount = Number((food.portionEquiv.portions * ratio).toFixed(1));
+      }
+
+      newEntries.push({
+        id: 'meal-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+        mealType,
+        foodId: food.id,
+        foodName: food.name,
+        amountGrams: item.amountGrams,
+        calories: Math.round(food.calories * ratio),
+        protein: Number((food.protein * ratio).toFixed(1)),
+        carbs: Number((food.carbs * ratio).toFixed(1)),
+        fat: Number((food.fat * ratio).toFixed(1)),
+        portionGroup,
+        portionsCount,
+        timestamp: timeStr,
+      });
+    }
+
+    const updated: DailyLog = {
+      ...dailyLog,
+      meals: [...dailyLog.meals, ...newEntries],
+    };
+    persistDailyLog(updated);
+  };
+
+  // Guardar la comida actual como plantilla reusable
+  const saveMealAsTemplate = (
+    name: string,
+    description: string,
+    mealType: MealType,
+    entries: MealEntry[]
+  ) => {
+    const newTemplate: MealTemplate = {
+      id: 'template-' + Date.now(),
+      name,
+      description,
+      mealType,
+      icon: mealType === 'breakfast' ? '🥣' : mealType === 'lunch' ? '🍱' : '🌙',
+      items: entries.map((e) => ({
+        foodId: e.foodId,
+        amountGrams: e.amountGrams,
+      })),
+      isCustom: true,
+    };
+
+    const nextTemplates = [newTemplate, ...customTemplates];
+    setCustomTemplates(nextTemplates);
+    try {
+      localStorage.setItem('macrofit_custom_templates', JSON.stringify(nextTemplates));
+    } catch (e) {
+      console.error('Error guardando plantilla:', e);
+    }
+  };
 
   // Totales consumidos en macros
   const consumedTotals = dailyLog.meals.reduce(
@@ -510,6 +596,7 @@ export function useMacroStore() {
     goals,
     allFoods,
     customFoods,
+    allTemplates,
     selectedDate,
     setSelectedDate,
     dailyLog,
@@ -521,5 +608,7 @@ export function useMacroStore() {
     addWater,
     resetWater,
     addCustomFood,
+    applyMealTemplate,
+    saveMealAsTemplate,
   };
 }

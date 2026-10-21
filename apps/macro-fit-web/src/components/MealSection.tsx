@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Trash2, Utensils } from 'lucide-react';
+import { Plus, Trash2, Utensils, Zap } from 'lucide-react';
 import { MealEntry, MealType } from '../types/nutrition';
 
 interface MealSectionProps {
@@ -9,6 +9,7 @@ interface MealSectionProps {
   icon: string;
   entries: MealEntry[];
   onOpenAddFood: (mealType: MealType) => void;
+  onOpenTemplates?: (mealType: MealType) => void;
   onRemoveEntry: (entryId: string) => void;
 }
 
@@ -19,6 +20,7 @@ export const MealSection: React.FC<MealSectionProps> = ({
   icon,
   entries,
   onOpenAddFood,
+  onOpenTemplates,
   onRemoveEntry,
 }) => {
   const mealTotals = entries.reduce(
@@ -57,6 +59,17 @@ export const MealSection: React.FC<MealSectionProps> = ({
             </div>
           )}
 
+          {onOpenTemplates && (
+            <button
+              onClick={() => onOpenTemplates(mealType)}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-semibold transition active:scale-95"
+              title="Cargar combo precargado (arroz + proteína, porridge, etc.)"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>Combos</span>
+            </button>
+          )}
+
           <button
             onClick={() => onOpenAddFood(mealType)}
             className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition active:scale-95"
@@ -73,12 +86,26 @@ export const MealSection: React.FC<MealSectionProps> = ({
           <div className="py-4 text-center">
             <Utensils className="w-6 h-6 text-slate-700 mx-auto mb-1.5" />
             <p className="text-xs text-slate-500">No hay alimentos registrados en {title.toLowerCase()}</p>
-            <button
-              onClick={() => onOpenAddFood(mealType)}
-              className="mt-2 text-xs text-emerald-400 hover:underline font-semibold"
-            >
-              + Agregar primer alimento
-            </button>
+            <div className="flex items-center justify-center gap-3 mt-2">
+              <button
+                onClick={() => onOpenAddFood(mealType)}
+                className="text-xs text-emerald-400 hover:underline font-semibold"
+              >
+                + Agregar alimento
+              </button>
+              {onOpenTemplates && (
+                <>
+                  <span className="text-slate-600">•</span>
+                  <button
+                    onClick={() => onOpenTemplates(mealType)}
+                    className="text-xs text-amber-400 hover:underline font-semibold flex items-center gap-1"
+                  >
+                    <Zap className="w-3 h-3" />
+                    <span>Cargar combo habitual</span>
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         ) : (
           entries.map((entry) => (

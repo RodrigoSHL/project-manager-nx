@@ -5,8 +5,9 @@ import { MealSection } from './MealSection';
 import { WaterTrackerCard } from './WaterTrackerCard';
 import { FoodSelectorModal } from './FoodSelectorModal';
 import { CustomFoodModal } from './CustomFoodModal';
-import { FoodItem, MacroGoals, MealEntry, MealType } from '../types/nutrition';
-import { Sparkles, UtensilsCrossed } from 'lucide-react';
+import { MealTemplatesModal } from './MealTemplatesModal';
+import { FoodItem, MacroGoals, MealEntry, MealTemplate, MealType } from '../types/nutrition';
+import { Sparkles, UtensilsCrossed, Zap } from 'lucide-react';
 import { MEDS_PAUTA_PORTIONS } from '../utils/calculator';
 
 interface DailyTrackerViewProps {
@@ -27,11 +28,14 @@ interface DailyTrackerViewProps {
   };
   waterIntakeMl: number;
   allFoods: FoodItem[];
+  allTemplates: MealTemplate[];
   onAddMealEntry: (mealType: MealType, food: FoodItem, amountGrams: number) => void;
   onRemoveMealEntry: (entryId: string) => void;
   onAddWater: (amountMl: number) => void;
   onResetWater: () => void;
   onSaveCustomFood: (food: Omit<FoodItem, 'id' | 'isCustom'>) => void;
+  onApplyTemplate: (template: MealTemplate, mealType?: MealType) => void;
+  onSaveCurrentAsTemplate?: (name: string, description: string, mealType: MealType) => void;
   onOpenCalculator: () => void;
 }
 
@@ -42,14 +46,18 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
   consumedPortions,
   waterIntakeMl,
   allFoods,
+  allTemplates,
   onAddMealEntry,
   onRemoveMealEntry,
   onAddWater,
   onResetWater,
   onSaveCustomFood,
+  onApplyTemplate,
+  onSaveCurrentAsTemplate,
   onOpenCalculator,
 }) => {
   const [selectedMealType, setSelectedMealType] = useState<MealType | null>(null);
+  const [selectedTemplateMealType, setSelectedTemplateMealType] = useState<MealType | null>(null);
   const [isCustomFoodModalOpen, setIsCustomFoodModalOpen] = useState(false);
 
   // Group meals by mealType
@@ -59,6 +67,10 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
   const colacionPmMeals = meals.filter((m) => m.mealType === 'colacion_pm');
   const dinnerMeals = meals.filter((m) => m.mealType === 'dinner');
   const snackMeals = meals.filter((m) => m.mealType === 'snacks');
+
+  const currentTemplateEntries = selectedTemplateMealType
+    ? meals.filter((m) => m.mealType === selectedTemplateMealType)
+    : [];
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-16 animate-in fade-in duration-300">
@@ -103,6 +115,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           icon="🌅"
           entries={breakfastMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
+          onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -114,6 +127,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           icon="🍏"
           entries={colacionAmMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
+          onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -125,6 +139,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           icon="☀️"
           entries={lunchMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
+          onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -136,6 +151,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           icon="🥪"
           entries={colacionPmMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
+          onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -147,6 +163,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           icon="🌙"
           entries={dinnerMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
+          onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -159,12 +176,13 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
             icon="⚡"
             entries={snackMeals}
             onOpenAddFood={(type) => setSelectedMealType(type)}
+            onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
             onRemoveEntry={onRemoveMealEntry}
           />
         )}
       </div>
 
-      {/* Modal: Select & Scale Food */}
+      {/* Modal: Select & Scale Single Food */}
       <FoodSelectorModal
         isOpen={selectedMealType !== null}
         mealType={selectedMealType}
@@ -175,6 +193,18 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           setSelectedMealType(null);
           setIsCustomFoodModalOpen(true);
         }}
+      />
+
+      {/* Modal: Pre-saved Meal Templates / Combos */}
+      <MealTemplatesModal
+        isOpen={selectedTemplateMealType !== null}
+        mealType={selectedTemplateMealType}
+        templates={allTemplates}
+        allFoods={allFoods}
+        currentMealEntries={currentTemplateEntries}
+        onClose={() => setSelectedTemplateMealType(null)}
+        onApplyTemplate={onApplyTemplate}
+        onSaveCurrentAsTemplate={onSaveCurrentAsTemplate}
       />
 
       {/* Modal: Create Custom Food */}

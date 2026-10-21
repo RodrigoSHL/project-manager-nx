@@ -107,3 +107,19 @@ export interface DailyLog {
   notes?: string;
   weightCheckKg?: number;
 }
+
+export interface MealTemplateItem {
+  foodId: string;
+  amountGrams: number;
+}
+
+export interface MealTemplate {
+  id: string;
+  name: string;
+  description: string;
+  mealType: MealType;
+  icon: string;
+  items: MealTemplateItem[];
+  isCustom?: boolean;
+}
+

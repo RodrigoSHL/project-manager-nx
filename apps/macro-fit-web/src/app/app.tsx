@@ -16,6 +16,7 @@ export function App() {
     profile,
     goals,
     allFoods,
+    allTemplates,
     selectedDate,
     setSelectedDate,
     dailyLog,
@@ -27,6 +28,8 @@ export function App() {
     addWater,
     resetWater,
     addCustomFood,
+    applyMealTemplate,
+    saveMealAsTemplate,
   } = useMacroStore();
 
   const {
@@ -73,11 +76,14 @@ export function App() {
             consumedPortions={consumedPortions}
             waterIntakeMl={dailyLog.waterIntakeMl || 0}
             allFoods={allFoods}
+            allTemplates={allTemplates}
             onAddMealEntry={addMealEntry}
             onRemoveMealEntry={removeMealEntry}
             onAddWater={addWater}
             onResetWater={resetWater}
             onSaveCustomFood={addCustomFood}
+            onApplyTemplate={applyMealTemplate}
+            onSaveCurrentAsTemplate={saveMealAsTemplate}
             onOpenCalculator={() => setActiveTab('calculator')}
           />
         ) : (

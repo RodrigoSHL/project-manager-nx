@@ -245,12 +245,13 @@ services:
     environment:
       NODE_ENV: production
       MACRO_FIT_API_PORT: 3007
-      PORT: 3007
       API_PREFIX: api
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-flash-lite}
-      MACROFIT_CORS_ORIGIN: ${MACROFIT_CORS_ORIGIN:-https://macrofit.atomdev.cl,http://localhost:4205,http://localhost:3000}
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost,https://macrofit.atomdev.cl}
+      GEMINI_TIMEOUT_MS: ${GEMINI_TIMEOUT_MS:-15000}
+      MACROFIT_REQUESTS_PER_MINUTE: ${MACROFIT_REQUESTS_PER_MINUTE:-10}
+      MACROFIT_MAX_CONCURRENT_ANALYSES: ${MACROFIT_MAX_CONCURRENT_ANALYSES:-2}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost,http://localhost:8081,http://localhost:8082}
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3007/api/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
       interval: 10s

@@ -1,3 +1,5 @@
+import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+
 export class NutrientsPer100gDto {
   kcal!: number;
   protein_g!: number;
@@ -8,7 +10,14 @@ export class NutrientsPer100gDto {
 
 export class AnalyzedFoodItemDto {
   name!: string;
-  category!: 'proteina' | 'carbohidrato' | 'grasa' | 'verdura' | 'fruta' | 'lacteo' | 'legumbre';
+  category!:
+    | 'proteina'
+    | 'carbohidrato'
+    | 'grasa'
+    | 'verdura'
+    | 'fruta'
+    | 'lacteo'
+    | 'legumbre';
   estimated_grams!: number;
   confidence!: 'alta' | 'media' | 'baja';
   nutritional_density_per_100g!: NutrientsPer100gDto;
@@ -23,6 +32,12 @@ export class PlateAnalysisResponseDto {
 }
 
 export class AnalyzePlateQueryDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
   hints?: string;
+
+  @IsOptional()
+  @IsIn(['plato_extendido', 'plato_hondo', 'bowl'])
   plateTypeHint?: 'plato_extendido' | 'plato_hondo' | 'bowl';
 }

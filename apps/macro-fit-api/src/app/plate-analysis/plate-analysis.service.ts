@@ -1,29 +1,103 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  BadGatewayException,
+  GatewayTimeoutException,
+  HttpException,
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { GoogleGenAI, Type } from '@google/genai';
+import { z } from 'zod';
 import { PlateAnalysisResponseDto } from './dto/analyze-plate.dto';
+
+const nonNegative = z.number().finite().min(0);
+const analysisSchema = z.object({
+  dish_name: z.string().trim().min(1).max(200),
+  plate_type_detected: z.enum(['plato_extendido', 'plato_hondo', 'bowl']),
+  total_estimated_kcal: nonNegative,
+  items: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1).max(200),
+        category: z.enum([
+          'proteina',
+          'carbohidrato',
+          'grasa',
+          'verdura',
+          'fruta',
+          'lacteo',
+          'legumbre',
+        ]),
+        estimated_grams: nonNegative.max(10000),
+        confidence: z.enum(['alta', 'media', 'baja']),
+        nutritional_density_per_100g: z.object({
+          kcal: nonNegative.max(1000),
+          protein_g: nonNegative.max(100),
+          carbs_g: nonNegative.max(100),
+          fat_g: nonNegative.max(100),
+          fiber_g: nonNegative.max(100),
+        }),
+      })
+    )
+    .min(1)
+    .max(50),
+  clinical_tip: z.string().max(2000),
+});
+
+function positiveSetting(
+  name: string,
+  fallback: number,
+  maximum: number
+): number {
+  const value = Number(process.env[name] || fallback);
+  if (!Number.isInteger(value) || value < 1 || value > maximum) {
+    throw new Error(`${name} must be an integer between 1 and ${maximum}`);
+  }
+  return value;
+}
 
 @Injectable()
 export class PlateAnalysisService {
   private readonly logger = new Logger(PlateAnalysisService.name);
-  private readonly aiClient: GoogleGenAI | null = null;
-  private readonly modelName: string;
+  private readonly aiClient: GoogleGenAI | null;
+  private readonly modelName =
+    process.env.GEMINI_MODEL?.trim() || 'gemini-3.1-flash-lite';
+  private readonly timeoutMs = positiveSetting(
+    'GEMINI_TIMEOUT_MS',
+    15000,
+    30000
+  );
+  private readonly requestsPerMinute = positiveSetting(
+    'MACROFIT_REQUESTS_PER_MINUTE',
+    10,
+    1000
+  );
+  private readonly maxConcurrent = positiveSetting(
+    'MACROFIT_MAX_CONCURRENT_ANALYSES',
+    2,
+    20
+  );
+  private active = 0;
+  private windowStart = Date.now();
+  private windowRequests = 0;
 
   constructor() {
-    const apiKey = process.env.GEMINI_API_KEY;
-    this.modelName = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
-
-    if (apiKey) {
-      try {
-        this.aiClient = new GoogleGenAI({ apiKey });
-        this.logger.log(`Initialized Google Gen AI with model ${this.modelName}`);
-      } catch (err: any) {
-        this.logger.error(`Failed to initialize Google Gen AI: ${err.message}`);
-      }
-    } else {
+    const apiKey = process.env.GEMINI_API_KEY?.trim();
+    this.aiClient = apiKey ? new GoogleGenAI({ apiKey }) : null;
+    if (!this.aiClient)
       this.logger.warn(
-        'GEMINI_API_KEY is not defined in environment. Plate analysis will use clinical mock simulator.'
+        'Gemini is not configured; analysis requests will return 503.'
+      );
+  }
+
+  readiness() {
+    if (!this.aiClient) {
+      throw new ServiceUnavailableException(
+        'El análisis de imágenes no está configurado.'
       );
     }
+    // Configuration readiness only: this endpoint never makes a paid provider call.
+    return { status: 'ready', provider: 'gemini', model: this.modelName };
   }
 
   async analyzePlate(
@@ -32,15 +106,24 @@ export class PlateAnalysisService {
     hints?: string,
     plateTypeHint?: string
   ): Promise<PlateAnalysisResponseDto> {
-    this.logger.log(
-      `Received plate analysis request: mime=${mimeType}, bytes=${imageBuffer.length}, hints="${hints || ''}"`
-    );
-
-    if (!this.aiClient) {
-      this.logger.warn('Calling simulated clinical vision engine (no API key configured).');
-      return this.generateSimulatedAnalysis(hints, plateTypeHint);
+    this.readiness();
+    if (Date.now() - this.windowStart >= 60000) {
+      this.windowStart = Date.now();
+      this.windowRequests = 0;
     }
-
+    if (
+      this.active >= this.maxConcurrent ||
+      this.windowRequests >= this.requestsPerMinute
+    ) {
+      throw new HttpException(
+        'Hay demasiados análisis en curso. Intenta nuevamente en un minuto.',
+        429
+      );
+    }
+    this.windowRequests++;
+    this.active++;
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       const systemInstruction = `Eres un nutricionista clínico experto en análisis visual de alimentos y composición de platos preparados.
 Tu función es descomponer una imagen de comida en sus componentes individuales e ingredientes crudos/cocidos reales.
@@ -58,7 +141,9 @@ Reglas de análisis:
 
       const promptText = `Analiza la imagen adjunta. 
 Referencia: Plato estándar de 25 cm de diámetro, tomado desde ángulo cenital o 45°.
-Contexto adicional del usuario: "${hints || 'Sin pista adicional'}" (si el usuario escribió algo como "lomo saltado sin freír", prioriza esta preparación).
+Contexto adicional del usuario: "${
+        hints || 'Sin pista adicional'
+      }" (si el usuario escribió algo como "lomo saltado sin freír", prioriza esta preparación).
 Tipo de plato sugerido por usuario: "${plateTypeHint || 'plato_extendido'}".
 
 Genera el desglose completo de alimentos según el esquema solicitado.`;
@@ -85,7 +170,10 @@ Genera el desglose completo de alimentos según el esquema solicitado.`;
             items: {
               type: Type.OBJECT,
               properties: {
-                name: { type: Type.STRING, description: 'Nombre claro del alimento' },
+                name: {
+                  type: Type.STRING,
+                  description: 'Nombre claro del alimento',
+                },
                 category: {
                   type: Type.STRING,
                   enum: [
@@ -116,7 +204,13 @@ Genera el desglose completo de alimentos según el esquema solicitado.`;
                     fat_g: { type: Type.NUMBER },
                     fiber_g: { type: Type.NUMBER },
                   },
-                  required: ['kcal', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g'],
+                  required: [
+                    'kcal',
+                    'protein_g',
+                    'carbs_g',
+                    'fat_g',
+                    'fiber_g',
+                  ],
                 },
               },
               required: [
@@ -130,7 +224,8 @@ Genera el desglose completo de alimentos según el esquema solicitado.`;
           },
           clinical_tip: {
             type: Type.STRING,
-            description: 'Consejo breve de saciedad, fibra o control glicémico.',
+            description:
+              'Consejo breve de saciedad, fibra o control glicémico.',
           },
         },
         required: [
@@ -142,231 +237,83 @@ Genera el desglose completo de alimentos según el esquema solicitado.`;
         ],
       };
 
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error('Límite de tiempo excedido en la API de Gemini (15 segundos)')),
-          15000
-        )
-      );
-
-      const generatePromise = this.aiClient.models.generateContent({
-        model: this.modelName,
-        contents: [
-          {
-            inlineData: {
-              data: imageBuffer.toString('base64'),
-              mimeType: mimeType || 'image/jpeg',
-            },
-          },
-          promptText,
-        ],
-        config: {
-          systemInstruction,
-          responseMimeType: 'application/json',
-          responseSchema,
-          temperature: 0.2,
-        },
+      const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          controller.abort();
+          reject(
+            new GatewayTimeoutException(
+              'Gemini tardó demasiado en responder. Intenta nuevamente.'
+            )
+          );
+        }, this.timeoutMs);
       });
-
-      const response = await Promise.race([generatePromise, timeoutPromise]);
-
-      const responseText = response.text;
-      if (!responseText) {
-        throw new Error('Gemini API returned empty response text');
-      }
-
-      const parsed: PlateAnalysisResponseDto = JSON.parse(responseText);
-
-      // Verify and guarantee total_estimated_kcal matches sum if discrepancy exists
-      let computedTotalKcal = 0;
-      parsed.items.forEach((item) => {
-        const factor = (item.estimated_grams || 0) / 100;
-        computedTotalKcal += Math.round(
-          (item.nutritional_density_per_100g?.kcal || 0) * factor
+      const response = await Promise.race([
+        this.aiClient!.models.generateContent({
+          model: this.modelName,
+          contents: [
+            { inlineData: { data: imageBuffer.toString('base64'), mimeType } },
+            promptText,
+          ],
+          config: {
+            systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema,
+            temperature: 0.2,
+            abortSignal: controller.signal,
+            httpOptions: { timeout: this.timeoutMs },
+          },
+        }),
+        timeout,
+      ]);
+      let parsed: PlateAnalysisResponseDto;
+      try {
+        parsed = analysisSchema.parse(JSON.parse(response.text || ''));
+      } catch {
+        throw new BadGatewayException(
+          'Gemini devolvió un análisis inválido. Intenta con otra foto.'
         );
-      });
-
-      if (!parsed.total_estimated_kcal || Math.abs(parsed.total_estimated_kcal - computedTotalKcal) > 50) {
-        parsed.total_estimated_kcal = computedTotalKcal;
       }
-
+      parsed.total_estimated_kcal = parsed.items.reduce(
+        (total, item) =>
+          total +
+          Math.round(
+            (item.nutritional_density_per_100g.kcal * item.estimated_grams) /
+              100
+          ),
+        0
+      );
       return parsed;
-    } catch (err: any) {
-      this.logger.error(`Error during Gemini plate analysis: ${err.message}`, err.stack);
-      this.logger.warn('Falling back to simulated clinical analysis due to Gemini error.');
-      return this.generateSimulatedAnalysis(hints, plateTypeHint);
+    } catch (error: unknown) {
+      if (controller.signal.aborted) {
+        throw new GatewayTimeoutException(
+          'Gemini tardó demasiado en responder. Intenta nuevamente.'
+        );
+      }
+      if (error instanceof HttpException) throw error;
+      const status =
+        typeof error === 'object' && error !== null && 'status' in error
+          ? Number(error.status)
+          : undefined;
+      // Never log the provider payload, request, photo, hints or credentials.
+      this.logger.warn(
+        `Gemini analysis failed (status=${status || 'unavailable'}).`
+      );
+      if (status === 429 || status === 503) {
+        throw new ServiceUnavailableException(
+          'Gemini no está disponible o agotó su cuota. Intenta más tarde.'
+        );
+      }
+      if (status === 401 || status === 403 || status === 404) {
+        throw new ServiceUnavailableException(
+          'El servicio de análisis tiene un problema de configuración.'
+        );
+      }
+      throw new BadGatewayException(
+        'No fue posible obtener el análisis de Gemini. Intenta nuevamente.'
+      );
+    } finally {
+      if (timer) clearTimeout(timer);
+      this.active--;
     }
-  }
-
-  private generateSimulatedAnalysis(
-    hints?: string,
-    plateTypeHint?: string
-  ): PlateAnalysisResponseDto {
-    const hintLower = (hints || '').toLowerCase();
-
-    if (hintLower.includes('desayuno') || hintLower.includes('porridge') || hintLower.includes('avena')) {
-      return {
-        dish_name: 'Porridge de Avena con Proteína y Frutas Silvestres',
-        plate_type_detected: 'bowl',
-        total_estimated_kcal: 440,
-        items: [
-          {
-            name: 'Avena tradicional cocida en leche descremada',
-            category: 'carbohidrato',
-            estimated_grams: 180,
-            confidence: 'alta',
-            nutritional_density_per_100g: {
-              kcal: 95,
-              protein_g: 4.5,
-              carbs_g: 16.5,
-              fat_g: 1.5,
-              fiber_g: 2.5,
-            },
-          },
-          {
-            name: 'Proteína Whey isolada (1 scoop disuelto)',
-            category: 'proteina',
-            estimated_grams: 30,
-            confidence: 'alta',
-            nutritional_density_per_100g: {
-              kcal: 380,
-              protein_g: 80.0,
-              carbs_g: 4.0,
-              fat_g: 3.0,
-              fiber_g: 0.0,
-            },
-          },
-          {
-            name: 'Plátano en rodajas',
-            category: 'fruta',
-            estimated_grams: 80,
-            confidence: 'alta',
-            nutritional_density_per_100g: {
-              kcal: 89,
-              protein_g: 1.1,
-              carbs_g: 22.8,
-              fat_g: 0.3,
-              fiber_g: 2.6,
-            },
-          },
-          {
-            name: 'Chips de Chocolate 60% sin azúcar',
-            category: 'grasa',
-            estimated_grams: 10,
-            confidence: 'media',
-            nutritional_density_per_100g: {
-              kcal: 600,
-              protein_g: 6.0,
-              carbs_g: 28.0,
-              fat_g: 42.0,
-              fiber_g: 10.0,
-            },
-          },
-        ],
-        clinical_tip:
-          'Excelente densidad de fibra beta-glucano para sostener saciedad y liberación sostenida de energía matutina.',
-      };
-    }
-
-    if (hintLower.includes('pollo') || hintLower.includes('pechuga')) {
-      return {
-        dish_name: 'Pechuga de Pollo a la Plancha con Arroz y Ensalada Verde',
-        plate_type_detected: (plateTypeHint as any) || 'plato_extendido',
-        total_estimated_kcal: 510,
-        items: [
-          {
-            name: 'Pechuga de pollo a la plancha fileteada',
-            category: 'proteina',
-            estimated_grams: 150,
-            confidence: 'alta',
-            nutritional_density_per_100g: {
-              kcal: 165,
-              protein_g: 31.0,
-              carbs_g: 0.0,
-              fat_g: 3.6,
-              fiber_g: 0.0,
-            },
-          },
-          {
-            name: 'Arroz blanco graneado cocido',
-            category: 'carbohidrato',
-            estimated_grams: 130,
-            confidence: 'alta',
-            nutritional_density_per_100g: {
-              kcal: 130,
-              protein_g: 2.7,
-              carbs_g: 28.2,
-              fat_g: 0.3,
-              fiber_g: 0.4,
-            },
-          },
-          {
-            name: 'Mix de hojas verdes y tomate con aceite de oliva',
-            category: 'verdura',
-            estimated_grams: 120,
-            confidence: 'media',
-            nutritional_density_per_100g: {
-              kcal: 55,
-              protein_g: 1.2,
-              carbs_g: 3.5,
-              fat_g: 4.2,
-              fiber_g: 1.8,
-            },
-          },
-        ],
-        clinical_tip:
-          'Plato balanceado 40-30-30 con alta saciedad y volumen gástrico gracias a las verduras crudas.',
-      };
-    }
-
-    // Default dish matching standard 25cm plate
-    return {
-      dish_name: hints ? `Plato Casero (${hints})` : 'Plato Saludable de Vacuno Magro con Papas y Verduras',
-      plate_type_detected: (plateTypeHint as any) || 'plato_extendido',
-      total_estimated_kcal: 545,
-      items: [
-        {
-          name: 'Carne de vacuno magra salteada (posta o lomo liso)',
-          category: 'proteina',
-          estimated_grams: 180,
-          confidence: 'alta',
-          nutritional_density_per_100g: {
-            kcal: 135,
-            protein_g: 22.5,
-            carbs_g: 0.0,
-            fat_g: 4.5,
-            fiber_g: 0.0,
-          },
-        },
-        {
-          name: 'Papas cocidas al vapor sin freír',
-          category: 'carbohidrato',
-          estimated_grams: 140,
-          confidence: 'media',
-          nutritional_density_per_100g: {
-            kcal: 86,
-            protein_g: 1.9,
-            carbs_g: 20.0,
-            fat_g: 0.1,
-            fiber_g: 1.8,
-          },
-        },
-        {
-          name: 'Mix de verduras salteadas (zapallito, zanahoria, cebolla)',
-          category: 'verdura',
-          estimated_grams: 110,
-          confidence: 'alta',
-          nutritional_density_per_100g: {
-            kcal: 45,
-            protein_g: 1.4,
-            carbs_g: 7.2,
-            fat_g: 1.2,
-            fiber_g: 2.1,
-          },
-        },
-      ],
-      clinical_tip:
-        'Para optimizar la absorción de hierro no-hem de los vegetales, acompaña con limón o una fruta rica en vitamina C.',
-    };
   }
 }

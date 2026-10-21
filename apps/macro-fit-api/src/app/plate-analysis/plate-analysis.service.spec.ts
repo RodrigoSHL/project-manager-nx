@@ -1,36 +1,144 @@
+import { GoogleGenAI } from '@google/genai';
 import { PlateAnalysisService } from './plate-analysis.service';
 
-describe('PlateAnalysisService', () => {
-  let service: PlateAnalysisService;
+jest.mock('@google/genai', () => ({
+  GoogleGenAI: jest.fn(),
+  Type: {
+    OBJECT: 'OBJECT',
+    STRING: 'STRING',
+    NUMBER: 'NUMBER',
+    ARRAY: 'ARRAY',
+  },
+}));
 
+const result = {
+  dish_name: 'Arroz',
+  plate_type_detected: 'bowl',
+  total_estimated_kcal: 999,
+  items: [
+    {
+      name: 'Arroz cocido',
+      category: 'carbohidrato',
+      estimated_grams: 200,
+      confidence: 'media',
+      nutritional_density_per_100g: {
+        kcal: 130,
+        protein_g: 2,
+        carbs_g: 28,
+        fat_g: 1,
+        fiber_g: 1,
+      },
+    },
+  ],
+  clinical_tip: 'Agrega verduras.',
+};
+
+describe('PlateAnalysisService provider contract', () => {
+  const environment = { ...process.env };
+  const generate = jest.fn();
   beforeEach(() => {
-    // Delete GEMINI_API_KEY to test clinical simulation fallback
+    process.env = {
+      ...environment,
+      GEMINI_API_KEY: 'test-only',
+      GEMINI_TIMEOUT_MS: '15000',
+      MACROFIT_REQUESTS_PER_MINUTE: '10',
+      MACROFIT_MAX_CONCURRENT_ANALYSES: '2',
+    };
+    generate.mockReset();
+    (GoogleGenAI as jest.Mock).mockImplementation(() => ({
+      models: { generateContent: generate },
+    }));
+  });
+  afterEach(() => {
+    process.env = { ...environment };
+    jest.useRealTimers();
+  });
+  const analyze = (service: PlateAnalysisService) =>
+    service.analyzePlate(Buffer.from('pixels'), 'image/jpeg');
+
+  it('returns 503 when unconfigured, without producing an analysis', async () => {
     delete process.env.GEMINI_API_KEY;
-    service = new PlateAnalysisService();
+    const service = new PlateAnalysisService();
+    expect(() => service.readiness()).toThrow('no está configurado');
+    await expect(analyze(service)).rejects.toMatchObject({ status: 503 });
+    expect(generate).not.toHaveBeenCalled();
   });
-
-  it('should be defined', () => {
-    expect(service).toBeDefined();
+  it('uses the provider response and always recomputes the total', async () => {
+    generate.mockResolvedValue({ text: JSON.stringify(result) });
+    const analysis = await analyze(new PlateAnalysisService());
+    expect(analysis.items).toEqual(result.items);
+    expect(analysis.total_estimated_kcal).toBe(260);
+    expect(generate.mock.calls[0][0].config.abortSignal).toBeInstanceOf(
+      AbortSignal
+    );
   });
-
-  it('should return simulated analysis for breakfast porridge', async () => {
-    const dummyBuffer = Buffer.from('test-image-content');
-    const result = await service.analyzePlate(dummyBuffer, 'image/jpeg', 'porridge con avena');
-
-    expect(result.dish_name).toContain('Porridge');
-    expect(result.plate_type_detected).toBe('bowl');
-    expect(result.items.length).toBeGreaterThan(0);
-    expect(result.total_estimated_kcal).toBeGreaterThan(0);
-    expect(result.clinical_tip).toBeDefined();
+  it.each([
+    ['network', 502],
+    [401, 503],
+    [403, 503],
+    [404, 503],
+    [429, 503],
+    [500, 502],
+    [503, 503],
+  ])(
+    'exposes provider failure %s as HTTP %s without invented data',
+    async (status, expected) => {
+      generate.mockRejectedValue({
+        status,
+        message: 'sensitive provider payload',
+      });
+      await expect(analyze(new PlateAnalysisService())).rejects.toMatchObject({
+        status: expected,
+      });
+    }
+  );
+  it.each([
+    '',
+    '{invalid',
+    JSON.stringify({ ...result, items: [] }),
+    JSON.stringify({
+      ...result,
+      items: [{ ...result.items[0], estimated_grams: -1 }],
+    }),
+  ])('rejects empty or invalid provider responses', async (text) => {
+    generate.mockResolvedValue({ text });
+    await expect(analyze(new PlateAnalysisService())).rejects.toMatchObject({
+      status: 502,
+    });
   });
-
-  it('should return simulated analysis for chicken dish', async () => {
-    const dummyBuffer = Buffer.from('test-image-content');
-    const result = await service.analyzePlate(dummyBuffer, 'image/jpeg', 'pollo con arroz');
-
-    expect(result.dish_name).toContain('Pechuga');
-    expect(result.plate_type_detected).toBe('plato_extendido');
-    expect(result.items.some((i) => i.category === 'proteina')).toBe(true);
-    expect(result.items.some((i) => i.category === 'carbohidrato')).toBe(true);
+  it('aborts timed out calls and releases its concurrency slot', async () => {
+    jest.useFakeTimers();
+    process.env.MACROFIT_MAX_CONCURRENT_ANALYSES = '1';
+    generate.mockImplementationOnce(() => new Promise(() => undefined));
+    const service = new PlateAnalysisService();
+    const pending = analyze(service);
+    const assertion = expect(pending).rejects.toMatchObject({ status: 504 });
+    await jest.advanceTimersByTimeAsync(15000);
+    await assertion;
+    expect(generate.mock.calls[0][0].config.abortSignal.aborted).toBe(true);
+    generate.mockResolvedValue({ text: JSON.stringify(result) });
+    await expect(analyze(service)).resolves.toHaveProperty(
+      'total_estimated_kcal',
+      260
+    );
+    expect(jest.getTimerCount()).toBe(0);
+  });
+  it('limits concurrent and per-minute provider requests', async () => {
+    process.env.MACROFIT_MAX_CONCURRENT_ANALYSES = '1';
+    process.env.MACROFIT_REQUESTS_PER_MINUTE = '1';
+    let finish!: (value: { text: string }) => void;
+    generate.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        })
+    );
+    const service = new PlateAnalysisService();
+    const first = analyze(service);
+    await expect(analyze(service)).rejects.toMatchObject({ status: 429 });
+    finish({ text: JSON.stringify(result) });
+    await first;
+    await expect(analyze(service)).rejects.toMatchObject({ status: 429 });
+    expect(generate).toHaveBeenCalledTimes(1);
   });
 });

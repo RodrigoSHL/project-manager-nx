@@ -2,6 +2,10 @@
 
 Fecha: 21 de octubre de 2026, America/Santiago.
 
+Actualización posterior: la incidencia de Gemini se investigó y corrigió en
+[disponibilidad de Gemini](2026-10-21-macrofit-gemini-reliability.md), con pruebas
+reales exitosas. El texto siguiente conserva los resultados del despliegue inicial.
+
 ## Resultado
 
 Se desplegaron las ocho APIs, los seis proyectos frontend, la instancia QA de

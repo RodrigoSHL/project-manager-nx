@@ -20,6 +20,7 @@ export function App() {
     setSelectedDate,
     dailyLog,
     consumedTotals,
+    consumedPortions,
     saveProfileAndGoals,
     addMealEntry,
     removeMealEntry,
@@ -69,6 +70,7 @@ export function App() {
             goals={goals}
             meals={dailyLog.meals}
             consumedTotals={consumedTotals}
+            consumedPortions={consumedPortions}
             waterIntakeMl={dailyLog.waterIntakeMl || 0}
             allFoods={allFoods}
             onAddMealEntry={addMealEntry}

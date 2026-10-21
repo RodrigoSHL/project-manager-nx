@@ -38,10 +38,12 @@ export const FoodSelectorModal: React.FC<FoodSelectorModalProps> = ({
   if (!isOpen || !mealType) return null;
 
   const mealLabels: Record<MealType, string> = {
-    breakfast: 'Desayuno',
-    lunch: 'Almuerzo',
-    dinner: 'Cena',
-    snacks: 'Snacks / Colaciones',
+    breakfast: 'Comida 1: Desayuno',
+    colacion_am: 'Colación Mañana',
+    lunch: 'Comida 2: Almuerzo',
+    colacion_pm: 'Colación Tarde',
+    dinner: 'Comida 3: Cena',
+    snacks: 'Snacks / Colaciones Extra',
   };
 
   const handleSelectFood = (food: FoodItem) => {
@@ -150,12 +152,22 @@ export const FoodSelectorModal: React.FC<FoodSelectorModalProps> = ({
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-white">{food.name}</span>
+                      {food.medsRecommended && (
+                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold">
+                          MEDS
+                        </span>
+                      )}
                       {food.isCustom && (
                         <span className="text-[10px] px-1 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
                           Personalizado
                         </span>
                       )}
                     </div>
+                    {food.notes && (
+                      <div className="text-[10px] text-emerald-400 font-medium mt-0.5">
+                        {food.notes}
+                      </div>
+                    )}
                     <div className="text-[11px] text-slate-400 mt-0.5">
                       Base {food.servingUnit} • {food.calories} kcal
                     </div>

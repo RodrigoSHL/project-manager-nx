@@ -8,6 +8,7 @@ export type ActivityLevel =
   | 'very_active';   // Muy intenso o trabajo físico
 
 export type Goal =
+  | 'meds_pauta'      // Pauta Clínica MEDS (10 Prot, 4 Carb, 2 Grasa, 3 Lácteos, 3 Frutas)
   | 'aggressive_loss' // Déficit agresivo (-25%)
   | 'moderate_loss'   // Pérdida de grasa (-20%)
   | 'mild_loss'       // Definición suave (-10%)
@@ -16,6 +17,7 @@ export type Goal =
   | 'aggressive_bulk';// Volumen potente (+15%)
 
 export type MacroDistributionPreset =
+  | 'meds_pauta'   // Pauta Nutricionista Clínica MEDS (143g P, 205g C, 66g G ~1990 kcal)
   | 'balanced'     // 30% Prot, 40% Carb, 30% Fat
   | 'high_protein' // 40% Prot, 35% Carb, 25% Fat
   | 'low_carb'     // 35% Prot, 20% Carb, 45% Fat
@@ -34,6 +36,16 @@ export interface UserProfile {
   customTdee?: number;
 }
 
+export interface PautaPortionsTarget {
+  protein: number; // 10
+  carbs: number;   // 4
+  fats: number;    // 2
+  dairy: number;   // 3
+  fruits: number;  // 3
+  veggies: string; // 'Libre'
+  waterLitres: number; // >2
+}
+
 export interface MacroGoals {
   calories: number;
   proteinGrams: number;
@@ -41,13 +53,23 @@ export interface MacroGoals {
   fatGrams: number;
   waterTargetMl: number;
   distributionPreset: MacroDistributionPreset;
+  pautaPortions?: PautaPortionsTarget;
+}
+
+export type FoodGroup = 'protein' | 'carbs' | 'fats' | 'dairy' | 'fruits' | 'veggies' | 'supplements' | 'custom';
+
+export interface PortionEquivalence {
+  group: FoodGroup;
+  portions: number;       // ej: 1 porción de proteína
+  secondaryGroup?: FoodGroup;
+  secondaryPortions?: number; // ej: legumbres = 1 proteína + 0.5 carb
 }
 
 export interface FoodItem {
   id: string;
   name: string;
   brand?: string;
-  servingUnit: string;      // ej: "100g", "1 unidad (50g)"
+  servingUnit: string;      // ej: "50g (1 trozo 6x6 cm)", "1 scoop (30g)"
   servingSizeGrams: number; // base para cálculos
   calories: number;        // kcal por porción base
   protein: number;         // gramos
@@ -55,10 +77,13 @@ export interface FoodItem {
   fat: number;             // gramos
   fiber?: number;          // gramos opcional
   category: 'protein' | 'carbs' | 'fats' | 'fruits_veggies' | 'dairy' | 'snacks' | 'custom';
+  portionEquiv?: PortionEquivalence;
+  medsRecommended?: boolean;
+  notes?: string;
   isCustom?: boolean;
 }
 
-export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snacks';
+export type MealType = 'breakfast' | 'colacion_am' | 'lunch' | 'colacion_pm' | 'dinner' | 'snacks';
 
 export interface MealEntry {
   id: string;
@@ -70,6 +95,8 @@ export interface MealEntry {
   protein: number;
   carbs: number;
   fat: number;
+  portionGroup?: FoodGroup;
+  portionsCount?: number;
   timestamp: string;
 }
 

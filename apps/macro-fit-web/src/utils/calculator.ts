@@ -4,8 +4,29 @@ import {
   Goal,
   MacroDistributionPreset,
   MacroGoals,
+  PautaPortionsTarget,
   UserProfile,
 } from '../types/nutrition';
+
+export const MEDS_PAUTA_PORTIONS: PautaPortionsTarget = {
+  protein: 10,
+  carbs: 4,
+  fats: 2,
+  dairy: 3,
+  fruits: 3,
+  veggies: 'Libre',
+  waterLitres: 2.5,
+};
+
+export const MEDS_PAUTA_GOALS: MacroGoals = {
+  calories: 1990,
+  proteinGrams: 143,
+  carbsGrams: 205,
+  fatGrams: 66,
+  waterTargetMl: 2500,
+  distributionPreset: 'meds_pauta',
+  pautaPortions: MEDS_PAUTA_PORTIONS,
+};
 
 /**
  * Multiplicadores de actividad física sobre la Tasa Metabólica Basal (BMR)
@@ -30,6 +51,11 @@ export const ACTIVITY_LABELS: Record<ActivityLevel, { label: string; desc: strin
  * Factores de ajuste calórico según el objetivo
  */
 export const GOAL_ADJUSTMENTS: Record<Goal, { multiplier: number; label: string; desc: string }> = {
+  meds_pauta: {
+    multiplier: 1.0,
+    label: '📋 Pauta Nutricionista (MEDS)',
+    desc: 'Plan estructurado por porciones (10 Prot, 4 Carbs, 2 Grasas, 3 Lácteos, 3 Frutas)',
+  },
   aggressive_loss: {
     multiplier: 0.75,
     label: 'Déficit Agresivo (-25%)',
@@ -64,14 +90,18 @@ export const GOAL_ADJUSTMENTS: Record<Goal, { multiplier: number; label: string;
 
 /**
  * Distribución estándar de macronutrientes (% de calorías)
- * 1g Proteína = 4 kcal
- * 1g Carbohidrato = 4 kcal
- * 1g Grasa = 9 kcal
  */
 export const PRESET_RATIOS: Record<
   Exclude<MacroDistributionPreset, 'custom'>,
   { proteinPct: number; carbsPct: number; fatPct: number; name: string; desc: string }
 > = {
+  meds_pauta: {
+    proteinPct: 29,
+    carbsPct: 41,
+    fatPct: 30,
+    name: 'Pauta Nutricionista (MEDS)',
+    desc: '1990 kcal distribuidas en 10 porciones proteína, 4 carbos, 2 grasas, 3 lácteos y 3 frutas.',
+  },
   balanced: {
     proteinPct: 30,
     carbsPct: 40,
@@ -102,45 +132,37 @@ export const PRESET_RATIOS: Record<
   },
 };
 
-/**
- * Calcula la Tasa Metabólica Basal (BMR) usando la ecuación Mifflin-St Jeor (estándar clínico)
- */
 export function calculateBmr(gender: Gender, weightKg: number, heightCm: number, age: number): number {
   if (weightKg <= 0 || heightCm <= 0 || age <= 0) return 0;
-  
-  // Mifflin-St Jeor:
-  // Hombres: 10 * peso + 6.25 * altura - 5 * edad + 5
-  // Mujeres: 10 * peso + 6.25 * altura - 5 * edad - 161
   const base = 10 * weightKg + 6.25 * heightCm - 5 * age;
   return gender === 'male' ? Math.round(base + 5) : Math.round(base - 161);
 }
 
-/**
- * Calcula el Gasto Energético Total Diario (TDEE)
- */
 export function calculateTdee(bmr: number, activityLevel: ActivityLevel): number {
   const multiplier = ACTIVITY_MULTIPLIERS[activityLevel] || 1.2;
   return Math.round(bmr * multiplier);
 }
 
-/**
- * Calcula calorías meta ajustadas por objetivo
- */
 export function calculateTargetCalories(tdee: number, goal: Goal): number {
+  if (goal === 'meds_pauta') return MEDS_PAUTA_GOALS.calories;
   const adjustment = GOAL_ADJUSTMENTS[goal] || { multiplier: 1.0 };
   return Math.round(tdee * adjustment.multiplier);
 }
 
-/**
- * Calcula los gramos de macronutrientes basados en calorías totales y preset
- */
 export function calculateMacrosFromPreset(
   targetCalories: number,
   preset: Exclude<MacroDistributionPreset, 'custom'>,
   weightKg?: number
 ): { proteinGrams: number; carbsGrams: number; fatGrams: number } {
-  const ratio = PRESET_RATIOS[preset];
+  if (preset === 'meds_pauta') {
+    return {
+      proteinGrams: MEDS_PAUTA_GOALS.proteinGrams,
+      carbsGrams: MEDS_PAUTA_GOALS.carbsGrams,
+      fatGrams: MEDS_PAUTA_GOALS.fatGrams,
+    };
+  }
 
+  const ratio = PRESET_RATIOS[preset];
   const proteinCals = targetCalories * (ratio.proteinPct / 100);
   const carbsCals = targetCalories * (ratio.carbsPct / 100);
   const fatCals = targetCalories * (ratio.fatPct / 100);
@@ -152,29 +174,30 @@ export function calculateMacrosFromPreset(
   };
 }
 
-/**
- * Recomienda ingesta de agua según peso y actividad
- */
 export function calculateRecommendedWater(weightKg: number, activityLevel: ActivityLevel): number {
-  // Base: ~35 ml por kg de peso corporal
   let baseMl = weightKg * 35;
   if (activityLevel === 'moderate') baseMl += 350;
   if (activityLevel === 'active') baseMl += 650;
   if (activityLevel === 'very_active') baseMl += 1000;
-  return Math.round(Math.max(1800, baseMl));
+  return Math.round(Math.max(2000, baseMl));
 }
 
-/**
- * Genera el paquete completo de metas nutricionales a partir del perfil
- */
 export function generateNutritionPlan(
   profile: UserProfile,
-  preset: MacroDistributionPreset = 'high_protein'
+  preset: MacroDistributionPreset = 'meds_pauta'
 ): { bmr: number; tdee: number; goals: MacroGoals } {
   const bmr = calculateBmr(profile.gender, profile.weightKg, profile.heightCm, profile.age);
   const tdee = calculateTdee(bmr, profile.activityLevel);
-  const targetCalories = calculateTargetCalories(tdee, profile.goal);
 
+  if (preset === 'meds_pauta' || profile.goal === 'meds_pauta') {
+    return {
+      bmr,
+      tdee,
+      goals: MEDS_PAUTA_GOALS,
+    };
+  }
+
+  const targetCalories = calculateTargetCalories(tdee, profile.goal);
   const safePreset: Exclude<MacroDistributionPreset, 'custom'> =
     preset === 'custom' ? 'high_protein' : preset;
 
@@ -191,6 +214,7 @@ export function generateNutritionPlan(
       fatGrams: macros.fatGrams,
       waterTargetMl,
       distributionPreset: preset,
+      pautaPortions: MEDS_PAUTA_PORTIONS,
     },
   };
 }

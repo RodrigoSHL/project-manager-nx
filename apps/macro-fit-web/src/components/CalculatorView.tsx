@@ -42,7 +42,7 @@ export const CalculatorView: React.FC<CalculatorViewProps> = ({
 }) => {
   const [profile, setProfile] = useState<UserProfile>(initialProfile);
   const [preset, setPreset] = useState<MacroDistributionPreset>(
-    initialPreset === 'custom' ? 'high_protein' : initialPreset
+    initialPreset === 'custom' ? 'meds_pauta' : initialPreset
   );
   const [justSaved, setJustSaved] = useState(false);
 

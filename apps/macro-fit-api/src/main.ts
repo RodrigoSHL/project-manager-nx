@@ -12,13 +12,27 @@ async function bootstrap() {
   app.setGlobalPrefix(globalPrefix);
 
   const port = Number(process.env.MACRO_FIT_API_PORT || process.env.PORT || 3007);
-  const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:4205')
+  const envOrigins = (process.env.MACROFIT_CORS_ORIGIN || process.env.CORS_ORIGIN || '')
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean);
 
+  const defaultOrigins = [
+    'https://macrofit.atomdev.cl',
+    'http://localhost:4205',
+    'http://localhost:3000',
+  ];
+
+  const allowedOrigins = new Set([...defaultOrigins, ...envOrigins]);
+
   app.enableCors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.has(origin) || origin.endsWith('.atomdev.cl')) {
+        callback(null, true);
+      } else {
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
+      }
+    },
     credentials: true,
   });
 

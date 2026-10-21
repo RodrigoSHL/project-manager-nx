@@ -125,10 +125,49 @@ export const PlateCameraModal: React.FC<PlateCameraModalProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setCapturedBlob(file);
     const reader = new FileReader();
-    reader.onload = () => {
-      setCapturedImage(reader.result as string);
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 1280;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                setCapturedBlob(blob);
+                setCapturedImage(canvas.toDataURL('image/jpeg', 0.85));
+              }
+            },
+            'image/jpeg',
+            0.85
+          );
+        } else {
+          setCapturedBlob(file);
+          setCapturedImage(dataUrl);
+        }
+      };
+      img.onerror = () => {
+        setCapturedBlob(file);
+        setCapturedImage(dataUrl);
+      };
+      img.src = dataUrl;
     };
     reader.readAsDataURL(file);
   };

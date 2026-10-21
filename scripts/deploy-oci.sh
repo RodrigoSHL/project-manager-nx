@@ -776,8 +776,8 @@ done
 
 if printf '%s\n' "${SERVICES[@]}" | grep -qx travel-planner-app; then
   TRAVEL_APP_CONTAINER=$(docker compose --env-file .env.deploy -f docker-compose.prod.yml ps -q travel-planner-app)
-  docker exec "$TRAVEL_APP_CONTAINER" node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync('/app/.next/routes-manifest.json'));console.log('TRAVEL_REWRITE='+m.rewrites.afterFiles[0].destination)"
-  if docker exec "$TRAVEL_APP_CONTAINER" grep -RIlE '161\.153\.194\.227|http://localhost:3000/api|http://bff-api:3000' /app/.next/static; then
+  docker exec "$TRAVEL_APP_CONTAINER" node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync('/app/apps/travel-planner-app/.next/routes-manifest.json'));console.log('TRAVEL_REWRITE='+m.rewrites.afterFiles[0].destination)"
+  if docker exec "$TRAVEL_APP_CONTAINER" grep -RIlE '161\.153\.194\.227|http://localhost:3000/api|http://bff-api:3000' /app/apps/travel-planner-app/.next/static; then
     printf 'El bundle público contiene una URL prohibida.\n' >&2
     exit 1
   fi

@@ -1,14 +1,3 @@
-FROM node:20-bookworm-slim AS deps
-
-WORKDIR /workspace
-
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends python3 make g++ \
-  && rm -rf /var/lib/apt/lists/*
-
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
-
 FROM node:20-bookworm-slim AS builder
 
 WORKDIR /workspace
@@ -21,11 +10,27 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY nx.json tsconfig.base.json jest.preset.js jest.config.ts eslint.config.mjs ./
-COPY apps ./apps
-
 ARG APP
+COPY apps/${APP} ./apps/${APP}
+COPY libs ./libs
+
 ENV NX_DAEMON=false
 RUN npx nx build ${APP} --configuration=production --skip-nx-cache
+
+FROM node:20-bookworm-slim AS deps
+
+WORKDIR /workspace
+ARG APP
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
+
+# Keep the authoritative lockfile: Nx 21's pruned lock can mis-hoist nested
+# dependencies. npm ci installs only the generated application's dependency tree.
+COPY package-lock.json ./
+COPY --from=builder /workspace/dist/apps/${APP}/package.json ./
+RUN npm ci --omit=dev
 
 FROM node:20-bookworm-slim AS runner
 
@@ -36,6 +41,7 @@ ARG APP
 
 COPY --from=deps /workspace/node_modules ./node_modules
 COPY --from=builder /workspace/dist/apps/${APP} ./
+COPY --from=deps /workspace/package.json /workspace/package-lock.json ./
 
 USER node
 

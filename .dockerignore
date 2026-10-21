@@ -4,6 +4,7 @@
 .vscode
 coverage
 dist
+**/dev-dist
 node_modules
 tmp
 out-tsc

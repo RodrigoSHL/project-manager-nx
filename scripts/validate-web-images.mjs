@@ -49,7 +49,11 @@ for (const app of ['macro-fit-web', 'inspection-web']) {
   const check =
     'nginx -g "daemon off;" >/tmp/web-check.log 2>&1 & web_pid=$!; sleep 1; ' +
     'wget -q -O /dev/null http://127.0.0.1/ && wget -q -O /dev/null http://127.0.0.1/health ' +
-    '&& wget -q -O /dev/null http://127.0.0.1/example/deep/path; result=$?; kill "$web_pid"; exit "$result"';
+    '&& wget -q -O /dev/null http://127.0.0.1/example/deep/path ' +
+    '&& wget -S -O /dev/null http://127.0.0.1/sw.js >/tmp/sw-headers.log 2>&1 ' +
+    '&& grep -qi "cache-control:.*no-store" /tmp/sw-headers.log ' +
+    '&& wget -S -O /dev/null http://127.0.0.1/index.html >/tmp/html-headers.log 2>&1 ' +
+    '&& grep -qi "cache-control:.*no-cache" /tmp/html-headers.log; result=$?; kill "$web_pid"; exit "$result"';
   docker(
     'run',
     '--rm',
@@ -61,5 +65,5 @@ for (const app of ['macro-fit-web', 'inspection-web']) {
     '-c',
     check
   );
-  console.log(`${app}: Nginx root + health + SPA: ok`);
+  console.log(`${app}: Nginx root + health + SPA + PWA cache headers: ok`);
 }

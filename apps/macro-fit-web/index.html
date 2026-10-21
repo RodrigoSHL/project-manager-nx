@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <title>MacroFit | Calculadora y Contador de Macros</title>
+    <base href="/" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="description" content="MacroFit te ayuda a calcular tu gasto calórico diario (TDEE) y registrar tus macronutrientes (proteínas, carbohidratos y grasas) con precisión." />
+    
+    <!-- PWA / Mobile Capable -->
+    <meta name="theme-color" content="#090d16" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MacroFit" />
+
+    <!-- Icons -->
+    <link rel="icon" type="image/svg+xml" href="/macrofit-icon.svg" />
+    <link rel="apple-touch-icon" href="/pwa-192x192.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Google Fonts for premium typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body class="bg-[#090d16] text-slate-100 antialiased selection:bg-emerald-500/30 selection:text-emerald-300 min-h-screen">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

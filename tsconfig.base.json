@@ -15,7 +15,9 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@project-manager/security-navigation": ["libs/security-navigation/src/index.ts"]
+      "@project-manager/security-navigation": [
+        "libs/security-navigation/src/index.ts"
+      ]
     }
   },
   "exclude": ["node_modules", "tmp"]

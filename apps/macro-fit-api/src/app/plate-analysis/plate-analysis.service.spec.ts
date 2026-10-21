@@ -77,9 +77,11 @@ describe('PlateAnalysisService provider contract', () => {
     [401, 503],
     [403, 503],
     [404, 503],
+    [408, 504],
     [429, 503],
     [500, 502],
     [503, 503],
+    [504, 504],
   ])(
     'exposes provider failure %s as HTTP %s without invented data',
     async (status, expected) => {

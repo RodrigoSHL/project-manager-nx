@@ -298,6 +298,11 @@ Genera el desglose completo de alimentos según el esquema solicitado.`;
       this.logger.warn(
         `Gemini analysis failed (status=${status || 'unavailable'}).`
       );
+      if (status === 408 || status === 504) {
+        throw new GatewayTimeoutException(
+          'Gemini tardó demasiado en responder. Intenta nuevamente.'
+        );
+      }
       if (status === 429 || status === 503) {
         throw new ServiceUnavailableException(
           'Gemini no está disponible o agotó su cuota. Intenta más tarde.'

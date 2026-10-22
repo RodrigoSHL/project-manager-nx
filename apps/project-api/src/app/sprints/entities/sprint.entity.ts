@@ -9,6 +9,18 @@ import {
 } from 'typeorm';
 import { Project } from '../../projects/entities/project.entity';
 
+export interface SprintCompletionSummary {
+  totalTickets: number;
+  doneTickets: number;
+  cancelledTickets: number;
+  movedTickets: number;
+  totalStoryPoints: number;
+  completedStoryPoints: number;
+  targetSprintId: string | null;
+  targetSprintName: string | null;
+  tickets: { id: string; key: string; title: string; status: string; storyPoints: number | null }[];
+}
+
 @Entity('sprints')
 export class Sprint {
   @PrimaryGeneratedColumn('uuid')
@@ -32,6 +44,12 @@ export class Sprint {
 
   @Column({ type: 'boolean', default: false })
   isActive: boolean;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  completedAt: Date | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  completionSummary: SprintCompletionSummary | null;
 
   @CreateDateColumn()
   createdAt: Date;

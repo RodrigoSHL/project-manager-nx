@@ -23,10 +23,11 @@ export class TicketsService {
   private async assertProjectMemberAssignee(
     projectId: string,
     assigneeId?: string | null,
+    repository = this.teamMembersRepository,
   ): Promise<void> {
     if (!assigneeId) return;
 
-    const member = await this.teamMembersRepository.findOne({
+    const member = await repository.findOne({
       where: [
         { projectId, id: assigneeId, isActive: true },
         { projectId, userId: assigneeId, isActive: true },
@@ -61,6 +62,7 @@ export class TicketsService {
     projectId: string,
     type: TicketType,
     epicId?: string | null,
+    repository = this.ticketsRepository,
   ): Promise<void> {
     if (type !== TicketType.STORY) {
       if (epicId) {
@@ -77,7 +79,7 @@ export class TicketsService {
       );
     }
 
-    const epic = await this.ticketsRepository.findOne({
+    const epic = await repository.findOne({
       where: { id: epicId, projectId, type: TicketType.EPIC },
     });
     if (!epic) {
@@ -87,10 +89,10 @@ export class TicketsService {
     }
   }
 
-  private async assertEpicHasNoStories(ticket: Ticket): Promise<void> {
+  private async assertEpicHasNoStories(ticket: Ticket, repository = this.ticketsRepository): Promise<void> {
     if (ticket.type !== TicketType.EPIC) return;
 
-    const stories = await this.ticketsRepository.count({
+    const stories = await repository.count({
       where: { epicId: ticket.id },
     });
     if (stories > 0) {
@@ -110,6 +112,7 @@ export class TicketsService {
     );
     return this.dataSource.transaction(async (manager) => {
       const key = await this.generateKey(manager, projectId);
+      await this.findProjectSprint(projectId, dto.sprintId, manager.getRepository(Sprint));
       const tickets = manager.getRepository(Ticket);
       const ticket = tickets.create({ ...dto, projectId, key });
       const saved = await tickets.save(ticket);
@@ -132,8 +135,8 @@ export class TicketsService {
     });
   }
 
-  async findOne(projectId: string, id: string): Promise<Ticket> {
-    const ticket = await this.ticketsRepository.findOne({
+  async findOne(projectId: string, id: string, repository = this.ticketsRepository): Promise<Ticket> {
+    const ticket = await repository.findOne({
       where: { id, projectId },
       relations: ['labels', 'sprint', 'epic'],
     });
@@ -146,45 +149,56 @@ export class TicketsService {
     return ticket;
   }
 
-  private async findProjectSprint(projectId: string, sprintId?: string | null) {
+  private async findProjectSprint(projectId: string, sprintId?: string | null, repository = this.sprintsRepository) {
     if (sprintId === undefined || sprintId === null) return null;
-    const sprint = await this.sprintsRepository.findOne({ where: { id: sprintId, projectId } });
+    const sprint = await repository.findOne({ where: { id: sprintId, projectId } });
     if (!sprint) {
       throw new BadRequestException('El sprint seleccionado no existe o pertenece a otro proyecto');
+    }
+    if (sprint.completedAt) {
+      throw new BadRequestException('No puedes asignar tickets a un sprint finalizado');
     }
     return sprint;
   }
 
   async update(projectId: string, id: string, dto: UpdateTicketDto): Promise<Ticket> {
-    const ticket = await this.findOne(projectId, id);
-    if (dto.sprintId !== undefined) {
-      const sprint = await this.findProjectSprint(projectId, dto.sprintId);
-      // Keep the loaded relation in sync so TypeORM saves the selected sprintId.
-      ticket.sprint = sprint;
-    }
-    if (dto.assigneeId !== undefined) {
-      await this.assertProjectMemberAssignee(projectId, dto.assigneeId);
-    }
-
-    if (dto.type !== undefined || dto.epicId !== undefined) {
-      const nextType = dto.type ?? ticket.type;
-      const nextEpicId = nextType === TicketType.STORY
-        ? (dto.epicId !== undefined ? dto.epicId : ticket.epicId)
-        : null;
-
-      if (ticket.type === TicketType.EPIC && nextType !== TicketType.EPIC) {
-        await this.assertEpicHasNoStories(ticket);
+    return this.dataSource.transaction(async manager => {
+      await manager.query('SELECT "id" FROM "projects" WHERE "id" = $1 FOR UPDATE', [projectId]);
+      const repository = manager.getRepository(Ticket);
+      const ticket = await this.findOne(projectId, id, repository);
+      if (dto.sprintId !== undefined) {
+        const sprint = await this.findProjectSprint(projectId, dto.sprintId, manager.getRepository(Sprint));
+        // Keep the loaded relation in sync so TypeORM saves the selected sprintId.
+        ticket.sprint = sprint;
       }
-      await this.assertValidEpic(projectId, nextType, nextEpicId);
-      dto.epicId = nextEpicId;
-    }
-    Object.assign(ticket, dto);
-    return this.ticketsRepository.save(ticket);
+      if (dto.assigneeId !== undefined) {
+        await this.assertProjectMemberAssignee(projectId, dto.assigneeId, manager.getRepository(TeamMember));
+      }
+
+      if (dto.type !== undefined || dto.epicId !== undefined) {
+        const nextType = dto.type ?? ticket.type;
+        const nextEpicId = nextType === TicketType.STORY
+          ? (dto.epicId !== undefined ? dto.epicId : ticket.epicId)
+          : null;
+
+        if (ticket.type === TicketType.EPIC && nextType !== TicketType.EPIC) {
+          await this.assertEpicHasNoStories(ticket, repository);
+        }
+        await this.assertValidEpic(projectId, nextType, nextEpicId, repository);
+        dto.epicId = nextEpicId;
+      }
+      Object.assign(ticket, dto);
+      return repository.save(ticket);
+    });
   }
 
   async remove(projectId: string, id: string): Promise<void> {
-    const ticket = await this.findOne(projectId, id);
-    await this.assertEpicHasNoStories(ticket);
-    await this.ticketsRepository.remove(ticket);
+    return this.dataSource.transaction(async manager => {
+      await manager.query('SELECT "id" FROM "projects" WHERE "id" = $1 FOR UPDATE', [projectId]);
+      const repository = manager.getRepository(Ticket);
+      const ticket = await this.findOne(projectId, id, repository);
+      await this.assertEpicHasNoStories(ticket, repository);
+      await repository.remove(ticket);
+    });
   }
 }

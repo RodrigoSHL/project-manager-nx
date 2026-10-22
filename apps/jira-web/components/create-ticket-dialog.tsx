@@ -97,7 +97,7 @@ export function CreateTicketDialog({
   const [error, setError] = React.useState('')
   const [templateMessage, setTemplateMessage] = React.useState('')
 
-  const activeSprint = sprints.find(s => s.isActive)
+  const activeSprint = sprints.find(s => s.projectId === projectId && s.isActive && !s.completedAt)
 
   React.useEffect(() => {
     if (!open) return
@@ -331,7 +331,7 @@ export function CreateTicketDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Sin sprint (Backlog)</SelectItem>
-                  {sprints.map(s => (
+                  {sprints.filter(s => s.projectId === projectId && !s.completedAt).map(s => (
                     <SelectItem key={s.id} value={s.id}>
                       <span className="flex items-center gap-2 min-w-0">
                         <span className="truncate">{s.name}</span>

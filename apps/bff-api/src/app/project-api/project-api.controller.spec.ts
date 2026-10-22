@@ -36,6 +36,18 @@ describe('ProjectApiController workspace role permissions', () => {
     expect(client.forwardJsonRequest).not.toHaveBeenCalled();
   });
 
+  it('rejects a viewer attempting to complete a sprint', async () => {
+    await expect(controller.completeSprint(projectId, 'sprint-1', {}, request)).rejects.toBeInstanceOf(ForbiddenException);
+    expect(client.forwardJsonRequest).not.toHaveBeenCalled();
+  });
+
+  it('forwards sprint completion and its destination after checking write access', async () => {
+    access.assertProjectWriteAccess.mockResolvedValue(undefined);
+    await controller.completeSprint(projectId, 'sprint-1', { targetSprintId: 'next-sprint' }, request);
+    expect(access.assertProjectWriteAccess).toHaveBeenCalledWith(projectId, request.user);
+    expect(client.forwardJsonRequest).toHaveBeenCalledWith('PATCH', '/projects/project-1/sprints/sprint-1/complete', { targetSprintId: 'next-sprint' });
+  });
+
   it('allows a viewer to comment on a ticket', async () => {
     await expect(controller.createTicketComment(projectId, ticketId, { body: '  Comentario  ' }, request))
       .resolves.toEqual({ id: 'comment-1' });

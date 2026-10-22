@@ -60,7 +60,7 @@ export function BacklogView({
   }, [currentProject])
 
   const projectSprints = sprints
-    .filter((s) => s.projectId === currentProject)
+    .filter((s) => s.projectId === currentProject && !s.completedAt)
     .sort((a, b) => {
       if (a.isActive !== b.isActive) return a.isActive ? -1 : 1
       return (

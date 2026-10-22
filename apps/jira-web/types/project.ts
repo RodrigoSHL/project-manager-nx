@@ -24,6 +24,18 @@ export interface ApiSprint {
   startDate: string | null
   endDate: string | null
   isActive: boolean
+  completedAt?: string | null
+  completionSummary?: {
+    totalTickets: number
+    doneTickets: number
+    cancelledTickets: number
+    movedTickets: number
+    totalStoryPoints: number
+    completedStoryPoints: number
+    targetSprintId: string | null
+    targetSprintName: string | null
+    tickets: Pick<ApiTicket, 'id' | 'key' | 'title' | 'status' | 'storyPoints'>[]
+  } | null
   createdAt: string
 }
 

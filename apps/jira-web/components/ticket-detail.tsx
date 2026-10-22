@@ -684,8 +684,8 @@ export function TicketDetail({
                         <SelectItem value={ticket.sprintId} disabled>Sprint no disponible</SelectItem>
                       )}
                       {projectSprints.map(sprint => (
-                        <SelectItem key={sprint.id} value={sprint.id}>
-                          {sprint.name}{sprint.isActive ? ' · En curso' : ''}
+                        (!sprint.completedAt || sprint.id === ticket.sprintId) && <SelectItem key={sprint.id} value={sprint.id} disabled={Boolean(sprint.completedAt)}>
+                          {sprint.name}{sprint.completedAt ? ' · Finalizado' : sprint.isActive ? ' · En curso' : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>

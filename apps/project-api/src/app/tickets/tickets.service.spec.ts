@@ -57,7 +57,7 @@ describe('TicketsService', () => {
 
     service = module.get(TicketsService);
     manager.query.mockResolvedValue([{ key: 'WEB', lastTicketNumber: 1 }]);
-    manager.getRepository.mockImplementation(entity => entity === Ticket ? ticketsRepository : supportDetailsRepository);
+    manager.getRepository.mockImplementation(entity => entity === Ticket ? ticketsRepository : entity === Sprint ? sprintsRepository : entity === TeamMember ? teamMembersRepository : supportDetailsRepository);
     dataSource.transaction.mockImplementation(callback => callback(manager));
     ticketsRepository.count.mockResolvedValue(0);
     ticketsRepository.create.mockImplementation(data => data);
@@ -282,6 +282,14 @@ describe('TicketsService', () => {
     sprintsRepository.findOne.mockResolvedValue(sprint);
     expect(await service.create('project-1', { title: 'Valid sprint', sprintId: sprint.id })).toMatchObject({ sprintId: sprint.id });
     expect(sprintsRepository.findOne).toHaveBeenCalledWith({ where: { id: sprint.id, projectId: 'project-1' } });
+  });
+
+  it('rejects creation and reassignment to a completed sprint', async () => {
+    sprintsRepository.findOne.mockResolvedValue({ id: 'closed', projectId: 'project-1', completedAt: new Date() });
+    ticketsRepository.findOne.mockResolvedValue({ id: 'ticket-1', projectId: 'project-1', sprintId: null });
+    await expect(service.create('project-1', { title: 'New ticket', sprintId: 'closed' })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.update('project-1', 'ticket-1', { sprintId: 'closed' })).rejects.toBeInstanceOf(BadRequestException);
+    expect(ticketsRepository.save).not.toHaveBeenCalled();
   });
 
   it('does not disclose a foreign sprint on a legacy ticket', async () => {

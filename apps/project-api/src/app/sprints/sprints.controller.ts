@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { SprintsService } from './sprints.service';
 import { CreateSprintDto } from './dto/create-sprint.dto';
 import { UpdateSprintDto } from './dto/update-sprint.dto';
+import { CompleteSprintDto } from './dto/complete-sprint.dto';
 
 @Controller('projects/:projectId/sprints')
 export class SprintsController {
@@ -51,6 +52,15 @@ export class SprintsController {
     @Param('id') id: string,
   ) {
     return this.sprintsService.remove(projectId, id);
+  }
+
+  @Patch(':id/complete')
+  complete(
+    @Param('projectId') projectId: string,
+    @Param('id') id: string,
+    @Body() dto: CompleteSprintDto,
+  ) {
+    return this.sprintsService.complete(projectId, id, dto);
   }
 }
 

@@ -138,6 +138,21 @@ export class ProjectApiController {
     );
   }
 
+  @Patch(':projectId/sprints/:sprintId/complete')
+  async completeSprint(
+    @Param('projectId') projectId: string,
+    @Param('sprintId') sprintId: string,
+    @Body() dto: Record<string, unknown>,
+    @Request() req: ExpressRequestWithUser,
+  ) {
+    await this.projectAccessService.assertProjectWriteAccess(projectId, req.user);
+    return this.projectApiClient.forwardJsonRequest(
+      'PATCH',
+      `/projects/${encodeURIComponent(projectId)}/sprints/${encodeURIComponent(sprintId)}/complete`,
+      dto,
+    );
+  }
+
   @Delete(':projectId/sprints/:sprintId')
   async removeSprint(
     @Param('projectId') projectId: string,

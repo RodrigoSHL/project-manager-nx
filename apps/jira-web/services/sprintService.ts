@@ -4,7 +4,11 @@ import { authenticatedFetch } from '@/lib/api'
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? '/api'
 
 async function handleResponse<T>(res: Response): Promise<T> {
-  if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`)
+  if (!res.ok) {
+    const body = await res.json().catch(() => null)
+    const message = Array.isArray(body?.message) ? body.message.join('. ') : body?.message
+    throw new Error(message || `Error al procesar el sprint (${res.status})`)
+  }
   return res.json()
 }
 
@@ -54,4 +58,13 @@ export async function deleteSprint(projectId: string, sprintId: string): Promise
     method: 'DELETE',
   })
   if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`)
+}
+
+export async function completeSprint(projectId: string, sprintId: string, targetSprintId: string | null): Promise<ApiSprint> {
+  const res = await authenticatedFetch(`${API_BASE_URL}/projects/${projectId}/sprints/${sprintId}/complete`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ targetSprintId }),
+  })
+  return handleResponse<ApiSprint>(res)
 }

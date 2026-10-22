@@ -12,9 +12,10 @@ interface SprintInfoProps {
   sprint: ApiSprint
   tickets: ApiTicket[]
   onEdit?: () => void
+  onComplete?: () => void
 }
 
-export function SprintInfo({ sprint, tickets, onEdit }: SprintInfoProps) {
+export function SprintInfo({ sprint, tickets, onEdit, onComplete }: SprintInfoProps) {
   const totalTickets = tickets.length
   const doneTickets = tickets.filter(t => t.status === 'done').length
   const inProgressTickets = tickets.filter(t => t.status === 'in_progress' || t.status === 'in_review').length
@@ -52,7 +53,7 @@ export function SprintInfo({ sprint, tickets, onEdit }: SprintInfoProps) {
       <div className="flex flex-col lg:flex-row lg:items-center gap-6">
         {/* Sprint Header */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex flex-wrap items-center gap-3 mb-2">
             <h2 className="text-lg font-semibold">{sprint.name}</h2>
             <Badge variant="outline" className="text-xs font-normal gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
@@ -61,6 +62,11 @@ export function SprintInfo({ sprint, tickets, onEdit }: SprintInfoProps) {
             {onEdit && (
               <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto" onClick={onEdit}>
                 <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            {onComplete && (
+              <Button variant="outline" size="sm" onClick={onComplete}>
+                Finalizar sprint
               </Button>
             )}
           </div>
@@ -128,7 +134,7 @@ export function SprintInfo({ sprint, tickets, onEdit }: SprintInfoProps) {
             <div className="text-xs text-muted-foreground">
               {remainingDays > 0 
                 ? `${remainingDays} días para terminar`
-                : 'Sprint finalizado'
+                : 'Plazo del sprint terminado'
               }
             </div>
           </div>

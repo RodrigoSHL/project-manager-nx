@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsDateString, IsBoolean, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsDateString, MaxLength } from 'class-validator';
 
 export class UpdateSprintDto {
   @IsString()
@@ -17,8 +17,4 @@ export class UpdateSprintDto {
   @IsDateString()
   @IsOptional()
   endDate?: string;
-
-  @IsBoolean()
-  @IsOptional()
-  isActive?: boolean;
 }

@@ -25,6 +25,8 @@ import { getTicketsByProject, updateTicket } from '@/services/ticketService'
 import { Button } from '@/components/ui/button'
 import { CreateSprintDialog } from '@/components/create-sprint-dialog'
 import { EditSprintDialog } from '@/components/edit-sprint-dialog'
+import { CompleteSprintDialog } from '@/components/complete-sprint-dialog'
+import { CompletedSprints } from '@/components/completed-sprints'
 import { CreateTicketDialog } from '@/components/create-ticket-dialog'
 import { CreateSupportDialog } from '@/components/create-support-dialog'
 import { SupportView } from '@/components/support-view'
@@ -53,6 +55,9 @@ export default function ProjectManagement() {
   const [selectedTicket, setSelectedTicket] = React.useState<ApiTicket | null>(null)
   const [createSprintOpen, setCreateSprintOpen] = React.useState(false)
   const [editingSprint, setEditingSprint] = React.useState<ApiSprint | null>(null)
+  const [completingSprint, setCompletingSprint] = React.useState<ApiSprint | null>(null)
+  const currentProjectRef = React.useRef(currentProject)
+  currentProjectRef.current = currentProject
   const [createTicketOpen, setCreateTicketOpen] = React.useState(false)
   const [createTicketInitialStatus, setCreateTicketInitialStatus] = React.useState<ApiTicket['status']>('todo')
   const [createTicketInitialSprintId, setCreateTicketInitialSprintId] = React.useState<string | null | undefined>(undefined)
@@ -95,6 +100,7 @@ export default function ProjectManagement() {
 
   React.useEffect(() => {
     setProjectPermission(null)
+    setCompletingSprint(null)
     if (!currentProject) return
     let cancelled = false
     setSprints([])
@@ -130,7 +136,7 @@ export default function ProjectManagement() {
     setTicketDetailOpen(true)
   }, [tickets, currentProject, selectedWorkspace])
 
-  const activeSprint = sprints.find(s => s.projectId === currentProject && s.isActive)
+  const activeSprint = sprints.find(s => s.projectId === currentProject && s.isActive && !s.completedAt)
 
   // Filter tickets
   const filteredTickets = React.useMemo(() => {
@@ -213,6 +219,28 @@ export default function ProjectManagement() {
 
   const handleSprintUpdated = (updated: ApiSprint) => {
     setSprints(prev => prev.map(s => s.id === updated.id ? updated : s))
+  }
+
+  const handleSprintCompleted = (completed: ApiSprint) => {
+    if (currentProjectRef.current !== completed.projectId) return
+    setSprints(prev => prev.map(sprint => sprint.id === completed.id ? completed : sprint))
+    const summary = completed.completionSummary
+    if (summary) {
+      const movedIds = new Set(summary.tickets.filter(ticket => ticket.status !== 'done' && ticket.status !== 'cancelled').map(ticket => ticket.id))
+      const move = (ticket: ApiTicket): ApiTicket => movedIds.has(ticket.id) ? {
+        ...ticket,
+        sprintId: summary.targetSprintId,
+        status: summary.targetSprintId ? (ticket.status === 'backlog' ? 'todo' : ticket.status) : 'backlog',
+      } : ticket
+      setTickets(prev => prev.map(move))
+      setSelectedTicket(prev => prev ? move(prev) : null)
+    }
+    // Refresh tickets added or edited by other users while the confirmation was open.
+    getTicketsByProject(completed.projectId).then(fresh => {
+      if (currentProjectRef.current !== completed.projectId) return
+      setTickets(fresh)
+      setSelectedTicket(prev => prev ? fresh.find(ticket => ticket.id === prev.id) ?? null : null)
+    }).catch(console.error)
   }
 
   const handleDeleteSprint = async (sprintId: string) => {
@@ -672,13 +700,13 @@ export default function ProjectManagement() {
                   </Button>}
                 </div>
 
-                {sprints.filter(s => !s.isActive).length > 0 && (
+                {sprints.filter(s => !s.isActive && !s.completedAt).length > 0 && (
                   <div className="w-full max-w-md space-y-2">
                     <div className="flex items-center gap-2 mb-1">
                       <Layers className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm font-medium text-muted-foreground">Sprints disponibles</span>
                     </div>
-                    {sprints.filter(s => !s.isActive).map(s => {
+                    {sprints.filter(s => !s.isActive && !s.completedAt).map(s => {
                       const sprintTicketCount = tickets.filter(t => t.sprintId === s.id).length
                       const startLabel = s.startDate ? new Date(s.startDate).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }) : null
                       const endLabel = s.endDate ? new Date(s.endDate).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }) : null
@@ -732,7 +760,7 @@ export default function ProjectManagement() {
 
             {activeSprint && (
               <>
-                <SprintInfo sprint={activeSprint} tickets={sprintTickets} onEdit={canWrite ? () => setEditingSprint(activeSprint) : undefined} />
+                <SprintInfo sprint={activeSprint} tickets={sprintTickets} onEdit={canWrite ? () => setEditingSprint(activeSprint) : undefined} onComplete={canWrite ? () => setCompletingSprint(activeSprint) : undefined} />
 
                 <AssigneeFilter
                   members={teamMembers}
@@ -777,17 +805,17 @@ export default function ProjectManagement() {
                 </Tabs>
 
                 {/* Inactive sprints */}
-                {sprints.filter(s => !s.isActive).length > 0 && (
+                {sprints.filter(s => !s.isActive && !s.completedAt).length > 0 && (
                   <div className="mt-6">
                     <div className="flex items-center gap-2 mb-3">
                       <Layers className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm font-medium text-muted-foreground">Otros sprints</span>
                       <span className="ml-1 inline-flex items-center justify-center w-5 h-5 rounded-full bg-muted text-xs font-semibold text-muted-foreground">
-                        {sprints.filter(s => !s.isActive).length}
+                        {sprints.filter(s => !s.isActive && !s.completedAt).length}
                       </span>
                     </div>
                     <div className="space-y-2">
-                      {sprints.filter(s => !s.isActive).map(s => {
+                      {sprints.filter(s => !s.isActive && !s.completedAt).map(s => {
                         const sprintTicketCount = tickets.filter(t => t.sprintId === s.id).length
                         const startLabel = s.startDate ? new Date(s.startDate).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }) : null
                         const endLabel = s.endDate ? new Date(s.endDate).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }) : null
@@ -859,6 +887,7 @@ export default function ProjectManagement() {
                 )}
               </>
             )}
+            <CompletedSprints sprints={sprints.filter(sprint => sprint.projectId === currentProject)} tickets={tickets} onTicketClick={handleTicketClick} />
           </div>
         )
       case 'tickets':
@@ -966,6 +995,17 @@ export default function ProjectManagement() {
         projectId={currentProject}
         onCreated={handleSprintCreated}
       />}
+
+      {canWrite && completingSprint && completingSprint.projectId === currentProject && (
+        <CompleteSprintDialog
+          key={completingSprint.id}
+          sprint={completingSprint}
+          sprints={sprints}
+          tickets={tickets}
+          onOpenChange={open => { if (!open) setCompletingSprint(null) }}
+          onCompleted={handleSprintCompleted}
+        />
+      )}
 
       {canWrite && editingSprint && (
         <EditSprintDialog

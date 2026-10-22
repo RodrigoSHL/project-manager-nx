@@ -83,14 +83,17 @@ export class SyncChangeParser {
     for (const key of ['workId', 'formItemId', 'conceptId']) {
       this.assertUuid(payload[key], `payload.${key}`);
     }
+    // Downloaded responses use null for fields unused by their concept type.
+    const valueNumber = payload.valueNumber ?? undefined;
+    const selectedOptionId = payload.selectedOptionId ?? undefined;
     if (
-      payload.valueNumber !== undefined &&
-      typeof payload.valueNumber !== 'number'
+      valueNumber !== undefined &&
+      (typeof valueNumber !== 'number' || !Number.isFinite(valueNumber))
     ) {
       throw new BadRequestException('valueNumber must be numeric');
     }
-    if (payload.selectedOptionId !== undefined) {
-      this.assertUuid(payload.selectedOptionId, 'payload.selectedOptionId');
+    if (selectedOptionId !== undefined) {
+      this.assertUuid(selectedOptionId, 'payload.selectedOptionId');
     }
     return {
       id: payload.id as string,
@@ -98,9 +101,9 @@ export class SyncChangeParser {
       workId: payload.workId as string,
       formItemId: payload.formItemId as string,
       conceptId: payload.conceptId as string,
-      valueNumber: payload.valueNumber as number | undefined,
+      valueNumber: valueNumber as number | undefined,
       valueText: this.optionalText(payload.valueText, 'valueText'),
-      selectedOptionId: payload.selectedOptionId as string | undefined,
+      selectedOptionId: selectedOptionId as string | undefined,
       measuredAt:
         payload.measuredAt === undefined
           ? undefined

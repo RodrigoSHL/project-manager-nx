@@ -69,7 +69,78 @@ describe('SyncChangeParser', () => {
     change.payload.measuredAtTime = '25:91';
     expect(() => parser.parse(tenantId, change)).toThrow(BadRequestException);
   });
+
+  it.each([
+    {
+      valueNumber: null,
+      valueText: null,
+      selectedOptionId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+    },
+    { valueNumber: 85, valueText: null, selectedOptionId: null },
+    { valueNumber: 0, valueText: null, selectedOptionId: null },
+    {
+      valueNumber: null,
+      valueText: 'Sin observaciones',
+      selectedOptionId: null,
+    },
+  ])('accepts downloaded response fields containing null: %j', (values) => {
+    const change = responseChange(values);
+    const original = { ...change.payload };
+
+    expect(parser.parse(tenantId, change).parsedPayload).toMatchObject({
+      valueNumber: values.valueNumber ?? undefined,
+      valueText: values.valueText ?? undefined,
+      selectedOptionId: values.selectedOptionId ?? undefined,
+    });
+    expect(change.payload).toEqual(original);
+  });
+
+  it('continues to accept omitted optional response fields', () => {
+    expect(
+      parser.parse(tenantId, responseChange({ valueNumber: 85 })).parsedPayload
+    ).toMatchObject({
+      valueNumber: 85,
+      valueText: undefined,
+      selectedOptionId: undefined,
+    });
+  });
+
+  it.each(['85', '', false, {}, NaN, Infinity, -Infinity])(
+    'rejects invalid numeric response values: %j',
+    (valueNumber) => {
+      expect(() =>
+        parser.parse(tenantId, responseChange({ valueNumber }))
+      ).toThrow('valueNumber must be numeric');
+    }
+  );
+
+  it.each(['', 'invalid-option', 123, false, {}])(
+    'rejects invalid non-null option identifiers: %j',
+    (selectedOptionId) => {
+      expect(() =>
+        parser.parse(tenantId, responseChange({ selectedOptionId }))
+      ).toThrow('payload.selectedOptionId must be a UUID');
+    }
+  );
 });
+
+function responseChange(values: Record<string, unknown>): SyncPushChangeDto {
+  const id = '99999999-9999-4999-8999-999999999999';
+  return {
+    ...workChange(),
+    entityType: SyncEntityType.RESPONSE,
+    entityId: id,
+    operation: SyncOperation.UPDATE,
+    payload: {
+      id,
+      tenantId,
+      workId: '44444444-4444-4444-8444-444444444444',
+      formItemId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      conceptId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      ...values,
+    },
+  };
+}
 
 function workChange(): SyncPushChangeDto {
   const id = '44444444-4444-4444-8444-444444444444';

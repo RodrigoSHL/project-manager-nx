@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from '../auth/types/authenticated-user';
+import { UserApiClient, WorkspaceRole } from '../user-api/user-api.client';
 import { WorkspaceAccessService } from '../user-api/workspace-access.service';
 import { ProjectApiClient, ProjectApiProject } from './project-api.client';
 
@@ -8,6 +9,7 @@ export class ProjectAccessService {
   constructor(
     private readonly projectApiClient: ProjectApiClient,
     private readonly workspaceAccessService: WorkspaceAccessService,
+    private readonly userApiClient: UserApiClient,
   ) {}
 
   async findAccessibleProjects(
@@ -67,6 +69,22 @@ export class ProjectAccessService {
 
   async assertProjectAccess(projectId: string, user: AuthenticatedUser): Promise<void> {
     await this.findAccessibleProject(projectId, user);
+  }
+
+  async getProjectPermissions(projectId: string, user: AuthenticatedUser): Promise<{ canWrite: boolean; workspaceRole: WorkspaceRole | null }> {
+    const project = await this.findAccessibleProject(projectId, user);
+    if (!project.workspaceId) return { canWrite: false, workspaceRole: null };
+    const members = await this.userApiClient.findWorkspaceMembers(project.workspaceId);
+    const workspaceRole = members.find(member => member.userId === user.userId)?.role ?? null;
+    return {
+      canWrite: workspaceRole === 'owner' || workspaceRole === 'admin' || workspaceRole === 'member',
+      workspaceRole,
+    };
+  }
+
+  async assertProjectWriteAccess(projectId: string, user: AuthenticatedUser): Promise<void> {
+    const permissions = await this.getProjectPermissions(projectId, user);
+    if (!permissions.canWrite) throw new ForbiddenException('Workspace role cannot modify project tickets');
   }
 
   async getAccessibleStats(user: AuthenticatedUser) {

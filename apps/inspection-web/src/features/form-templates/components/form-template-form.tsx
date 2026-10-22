@@ -52,14 +52,14 @@ export function FormTemplateForm({
   return (
     <form
       onSubmit={submit}
-      className="rounded-xl border border-slate-300 bg-slate-50 p-4"
+      className="rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 p-4"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h4 className="font-semibold text-slate-900">
+          <h4 className="font-semibold text-slate-900 dark:text-slate-100">
             {template ? 'Editar formulario' : 'Crear formulario'}
           </h4>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             La versión inicial será v1 y aún no contiene respuestas.
           </p>
         </div>
@@ -75,25 +75,25 @@ export function FormTemplateForm({
       </div>
 
       <div className="mt-4 grid gap-4">
-        <label className="text-sm font-medium text-slate-700">
+        <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
           Nombre
           <input
             required
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="Mantenimiento preventivo de transformador"
-            className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+            className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
           />
         </label>
-        <label className="text-sm font-medium text-slate-700">
+        <label className="text-sm font-medium text-slate-700 dark:text-slate-200">
           Descripción
           <textarea
             value={description}
             onChange={(event) => setDescription(event.target.value)}
-            className="mt-1.5 min-h-20 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+            className="mt-1.5 min-h-20 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
           />
         </label>
-        <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+        <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
           <input
             type="checkbox"
             checked={active}
@@ -104,7 +104,7 @@ export function FormTemplateForm({
         </label>
       </div>
 
-      {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
+      {error ? <p className="mt-3 text-sm text-red-700 dark:text-red-300">{error}</p> : null}
       <div className="mt-4 flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancelar

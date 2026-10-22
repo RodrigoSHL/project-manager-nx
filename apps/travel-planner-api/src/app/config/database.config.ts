@@ -23,7 +23,7 @@ import { CurrencyPreference } from '../currency/entities/currency-preference.ent
 import { CreateCurrencyPreferences1785067200000 } from '../../migrations/1785067200000-CreateCurrencyPreferences';
 import { FixActiveActivityExpenseLink1785067300000 } from '../../migrations/1785067300000-FixActiveActivityExpenseLink';
 
-export const databaseConfig: TypeOrmModuleOptions = {
+export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
   type: 'postgres',
   host: process.env.TRAVEL_DB_HOST || 'localhost',
   port: parseInt(process.env.TRAVEL_DB_PORT) || 5432,
@@ -46,4 +46,4 @@ export const databaseConfig: TypeOrmModuleOptions = {
   logging: process.env.NODE_ENV === 'development',
   ssl:
     process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
-};
+});

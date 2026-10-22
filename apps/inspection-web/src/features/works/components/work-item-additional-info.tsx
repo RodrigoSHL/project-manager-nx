@@ -11,7 +11,12 @@ import { Button } from '../../../components/ui/button';
 import type { WorkItemPhoto } from '../models';
 import { WORK_PHOTO_ACCEPT } from '../work-photo-api';
 
-export type WorkItemPhotoPreview = WorkItemPhoto & { previewUrl: string };
+export type WorkItemPhotoPreview = WorkItemPhoto & {
+  previewUrl: string;
+  localId?: string;
+  canDelete?: boolean;
+  pendingUpload?: boolean;
+};
 
 type WorkItemAdditionalInfoProps = {
   itemId: string;
@@ -19,7 +24,6 @@ type WorkItemAdditionalInfoProps = {
   isFinding?: boolean;
   photos: WorkItemPhotoPreview[];
   readonly: boolean;
-  photosDisabled?: boolean;
   busy: boolean;
   error?: string;
   onCommentChange: (comment: string) => void;
@@ -34,7 +38,6 @@ export function WorkItemAdditionalInfo({
   isFinding = false,
   photos,
   readonly,
-  photosDisabled = false,
   busy,
   error,
   onCommentChange,
@@ -54,29 +57,35 @@ export function WorkItemAdditionalInfo({
   }
 
   return (
-    <div className="mt-4 border-t border-slate-200 pt-3">
+    <div className="mt-4 min-w-0 border-t border-slate-200 dark:border-slate-800 pt-3">
       <button
         type="button"
         aria-expanded={expanded}
         onClick={() => setExpanded((current) => !current)}
-        className="flex min-h-10 w-full items-center justify-between gap-3 rounded-md px-1 text-left text-sm font-medium text-slate-600 hover:text-slate-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+        className="flex min-h-10 w-full min-w-0 items-center justify-between gap-3 rounded-md px-1 text-left text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 dark:focus-visible:ring-slate-700"
       >
-        <span className="flex min-w-0 items-center gap-2">
-          <MessageSquareText className="size-4 shrink-0" />
-          <span className="truncate">Comentario y fotografías</span>
-          {comment.trim() ? (
-            <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs">
-              Comentado
-            </span>
-          ) : null}
-          {isFinding ? (
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-900">
-              Posible hallazgo
-            </span>
-          ) : null}
-          {photos.length ? (
-            <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs">
-              {photos.length} {photos.length === 1 ? 'foto' : 'fotos'}
+        <span className="flex min-w-0 flex-1 flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          <span className="flex min-w-0 max-w-full items-center gap-2">
+            <MessageSquareText className="size-4 shrink-0" />
+            <span className="min-w-0 break-words">Comentario y fotografías</span>
+          </span>
+          {comment.trim() || isFinding || photos.length ? (
+            <span className="flex min-w-0 flex-wrap gap-2">
+              {comment.trim() ? (
+                <span className="whitespace-nowrap rounded-full bg-slate-200 dark:bg-slate-700 px-2 py-0.5 text-xs">
+                  Comentado
+                </span>
+              ) : null}
+              {isFinding ? (
+                <span className="whitespace-nowrap rounded-full bg-amber-100 dark:bg-amber-950/40 px-2 py-0.5 text-xs text-amber-900 dark:text-amber-200">
+                  Posible hallazgo
+                </span>
+              ) : null}
+              {photos.length ? (
+                <span className="whitespace-nowrap rounded-full bg-slate-200 dark:bg-slate-700 px-2 py-0.5 text-xs">
+                  {photos.length} {photos.length === 1 ? 'foto' : 'fotos'}
+                </span>
+              ) : null}
             </span>
           ) : null}
         </span>
@@ -88,8 +97,8 @@ export function WorkItemAdditionalInfo({
       </button>
 
       {expanded ? (
-        <div className="mt-3 grid gap-4 rounded-lg bg-slate-50 p-3 sm:p-4">
-          <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+        <div className="mt-3 grid min-w-0 gap-4 rounded-lg bg-slate-50 dark:bg-slate-950 p-3 sm:p-4">
+          <label className="grid min-w-0 gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200">
             Comentario de la revisión
             <textarea
               rows={3}
@@ -98,47 +107,49 @@ export function WorkItemAdditionalInfo({
               disabled={readonly}
               placeholder="Agrega una observación opcional sobre este punto."
               onChange={(event) => onCommentChange(event.target.value)}
-              className="w-full resize-y rounded-lg border border-slate-300 bg-white p-3 text-sm font-normal outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-100"
+              className="w-full min-w-0 resize-y rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 text-sm font-normal outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800 disabled:bg-slate-100 dark:disabled:bg-slate-800"
             />
             <span className="text-right text-xs font-normal text-slate-400">
               {comment.length}/2000
             </span>
           </label>
 
-          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+          <label className="flex min-w-0 items-start gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
             <input
               type="checkbox"
               checked={isFinding}
               disabled={readonly}
               onChange={(event) => onFindingChange?.(event.target.checked)}
-              className="size-4 accent-amber-700"
+              className="mt-0.5 size-4 shrink-0 accent-amber-700"
             />
-            Marcar este comentario como posible hallazgo
+            <span className="min-w-0 break-words">
+              Marcar este comentario como posible hallazgo
+            </span>
           </label>
           {isFinding && !comment.trim() ? (
-            <p className="text-xs text-amber-800">
+            <p className="text-xs text-amber-800 dark:text-amber-200">
               Escribe un comentario para guardar el hallazgo manual.
             </p>
           ) : null}
 
           {photos.length ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {photos.map((photo) => (
                 <figure
                   key={photo.id}
-                  className="group relative overflow-hidden rounded-lg border border-slate-200 bg-white"
+                  className="group relative min-w-0 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
                 >
                   <img
                     src={photo.previewUrl}
                     alt={photo.originalName}
                     className="aspect-square w-full object-cover"
                   />
-                  {!readonly && !photosDisabled ? (
+                  {!readonly && photo.canDelete !== false ? (
                     <button
                       type="button"
                       disabled={busy}
                       onClick={() => void onDelete(photo)}
-                      className="absolute right-2 top-2 grid size-9 place-items-center rounded-full bg-slate-950/80 text-white shadow-sm hover:bg-red-700 disabled:opacity-50"
+                      className="absolute right-2 top-2 grid size-9 place-items-center rounded-full bg-slate-950/80 dark:bg-slate-100/80 text-white dark:text-slate-950 shadow-sm hover:bg-red-700 disabled:opacity-50"
                     >
                       <Trash2 className="size-4" />
                       <span className="sr-only">
@@ -146,19 +157,24 @@ export function WorkItemAdditionalInfo({
                       </span>
                     </button>
                   ) : null}
-                  <figcaption className="truncate px-2 py-2 text-xs text-slate-600">
+                  <figcaption className="truncate px-2 py-2 text-xs text-slate-600 dark:text-slate-300">
                     {photo.originalName}
+                    {photo.pendingUpload ? (
+                      <span className="ml-1 text-amber-700 dark:text-amber-300">
+                        · Pendiente de sincronizar
+                      </span>
+                    ) : null}
                   </figcaption>
                 </figure>
               ))}
             </div>
           ) : (
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               No hay fotografías para este elemento.
             </p>
           )}
 
-          {!readonly && !photosDisabled ? (
+          {!readonly ? (
             <div className="flex flex-wrap gap-2">
               <input
                 ref={galleryInput}
@@ -208,13 +224,7 @@ export function WorkItemAdditionalInfo({
               </Button>
             </div>
           ) : null}
-          {photosDisabled && !readonly ? (
-            <p className="text-xs text-slate-500">
-              La carga de fotografías offline se incorporará con el motor de
-              sincronización.
-            </p>
-          ) : null}
-          {error ? <p className="text-sm text-red-700">{error}</p> : null}
+          {error ? <p className="text-sm text-red-700 dark:text-red-300">{error}</p> : null}
         </div>
       ) : null}
     </div>

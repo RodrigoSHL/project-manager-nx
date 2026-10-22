@@ -13,6 +13,7 @@ import {
   Folder
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { FlowBoardLogo } from '@/components/brand-logo'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -70,9 +71,7 @@ export function MobileSidebar({
       <SheetContent side="left" className="w-72 p-0">
         <SheetHeader className="p-4 border-b">
           <div className="flex items-center gap-2">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground font-bold text-sm">
-              F
-            </div>
+            <FlowBoardLogo className="size-9 shrink-0" />
             <SheetTitle className="font-semibold">FlowBoard</SheetTitle>
           </div>
         </SheetHeader>
@@ -89,7 +88,7 @@ export function MobileSidebar({
                   >
                     <div className="flex items-center gap-2 truncate">
                       <Avatar className="h-5 w-5 rounded">
-                        <AvatarFallback className="rounded text-[10px] bg-primary/10 text-primary">
+                        <AvatarFallback className="rounded text-[10px] bg-primary/10 text-brand-foreground">
                           {currentWorkspace.name.charAt(0)}
                         </AvatarFallback>
                       </Avatar>
@@ -126,13 +125,14 @@ export function MobileSidebar({
                     className={cn(
                       "w-full justify-start h-9 px-2",
                       currentProject === proj.id 
-                        ? "bg-accent text-accent-foreground font-medium" 
+                        ? "bg-accent text-accent-foreground font-medium ring-1 ring-inset ring-primary/25"
                         : "text-muted-foreground hover:text-foreground"
                     )}
                     onClick={() => {
                       onProjectChange(proj.id)
                       onClose()
                     }}
+                    aria-pressed={currentProject === proj.id}
                   >
                     <div 
                       className="w-2.5 h-2.5 rounded-sm mr-2 shrink-0" 
@@ -159,10 +159,11 @@ export function MobileSidebar({
                       className={cn(
                         "w-full justify-start h-10 px-2",
                         isActive 
-                          ? "bg-accent text-primary font-medium" 
+                          ? "bg-accent text-accent-foreground font-medium ring-1 ring-inset ring-primary/25"
                           : "text-muted-foreground hover:text-foreground"
                       )}
                       onClick={() => handleNavClick(item.href)}
+                      aria-pressed={isActive}
                     >
                       <item.icon className="h-4 w-4 mr-3 shrink-0" />
                       <span>{item.name}</span>

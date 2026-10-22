@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily off-VM backup for AtomDev production
+
+[Timer]
+OnCalendar=*-*-* 07:00:00 UTC
+Persistent=true
+Unit=atomdev-oci-backup.service
+
+[Install]
+WantedBy=timers.target

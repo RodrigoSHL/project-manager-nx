@@ -23,21 +23,21 @@ export function FormTemplatePreview({
   const conceptById = new Map(concepts.map((concept) => [concept.id, concept]));
 
   return (
-    <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-      <header className="border-b border-slate-200 bg-slate-50 p-4 sm:p-5">
+    <section className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+      <header className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-white text-slate-700 shadow-sm ring-1 ring-slate-200">
+            <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800">
               <Eye className="size-5" />
             </span>
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
                 Vista previa · no guarda respuestas
               </p>
-              <h3 className="mt-1 text-lg font-semibold text-slate-950">
+              <h3 className="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-100">
                 {template.name}
               </h3>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 Versión {template.version}
               </p>
             </div>
@@ -60,15 +60,15 @@ export function FormTemplatePreview({
             );
           return (
             <section key={section.id}>
-              <div className="border-b border-slate-200 pb-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <div className="border-b border-slate-200 dark:border-slate-800 pb-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Sección {section.order}
                 </p>
-                <h4 className="mt-1 font-semibold text-slate-950">
+                <h4 className="mt-1 font-semibold text-slate-950 dark:text-slate-100">
                   {section.title}
                 </h4>
                 {section.description ? (
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                     {section.description}
                   </p>
                 ) : null}
@@ -85,7 +85,7 @@ export function FormTemplatePreview({
                       return (
                         <label
                           key={item.id}
-                          className="flex items-start gap-3 rounded-lg border border-slate-200 p-3"
+                          className="flex items-start gap-3 rounded-lg border border-slate-200 dark:border-slate-800 p-3"
                         >
                           <input
                             type="checkbox"
@@ -93,11 +93,11 @@ export function FormTemplatePreview({
                             className="mt-0.5 size-5"
                           />
                           <span>
-                            <span className="text-sm font-medium text-slate-800">
+                            <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
                               {item.title}
                               {item.required ? ' *' : ''}
                             </span>
-                            <span className="mt-0.5 block text-xs text-slate-500">
+                            <span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">
                               {item.description ?? 'Actividad por confirmar.'}
                             </span>
                           </span>
@@ -126,7 +126,7 @@ export function FormTemplatePreview({
         })}
       </div>
 
-      <footer className="flex items-center gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500 sm:px-6">
+      <footer className="flex items-center gap-2 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-3 text-xs text-slate-500 dark:text-slate-400 sm:px-6">
         <ClipboardCheck className="size-4" /> Esta pantalla representa la futura
         ejecución, pero todos los controles están deshabilitados.
       </footer>
@@ -148,12 +148,12 @@ function PreviewConcept({
   if (concept.type === 'DIGITAL') {
     return (
       <fieldset>
-        <legend className="text-sm font-medium text-slate-800">{label}</legend>
+        <legend className="text-sm font-medium text-slate-800 dark:text-slate-200">{label}</legend>
         <div className="mt-2 flex flex-wrap gap-2">
           {options.sort(byOrder).map((option) => (
             <label
               key={option.id}
-              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-600"
+              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm text-slate-600 dark:text-slate-300"
             >
               <input type="radio" disabled name={`preview-${item.id}`} />
               {option.label}
@@ -166,29 +166,29 @@ function PreviewConcept({
 
   if (concept.type === 'TEXT') {
     return (
-      <label className="block text-sm font-medium text-slate-800">
+      <label className="block text-sm font-medium text-slate-800 dark:text-slate-200">
         {label}
         <textarea
           disabled
           placeholder="Respuesta de texto"
-          className="mt-2 min-h-20 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm"
+          className="mt-2 min-h-20 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-sm"
         />
       </label>
     );
   }
 
   return (
-    <label className="block text-sm font-medium text-slate-800">
+    <label className="block text-sm font-medium text-slate-800 dark:text-slate-200">
       {label}
       <span className="mt-2 flex items-center gap-2">
         <input
           disabled
           type="number"
           placeholder="Valor"
-          className="h-10 min-w-0 flex-1 rounded-lg border border-slate-300 bg-slate-50 px-3 text-sm sm:max-w-56"
+          className="h-10 min-w-0 flex-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 text-sm sm:max-w-56"
         />
         {concept.unit ? (
-          <span className="text-sm text-slate-500">{concept.unit}</span>
+          <span className="text-sm text-slate-500 dark:text-slate-400">{concept.unit}</span>
         ) : null}
       </span>
     </label>

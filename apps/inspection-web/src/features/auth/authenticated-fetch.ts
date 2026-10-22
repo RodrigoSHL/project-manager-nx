@@ -1,4 +1,5 @@
 import { clearAccessToken, getAccessToken } from './auth-storage';
+import { assertDocumentSession } from './document-session';
 
 export const sessionExpiredEvent = 'gridassets:session-expired';
 
@@ -6,6 +7,7 @@ export async function authenticatedFetch(
   input: RequestInfo | URL,
   init: RequestInit = {}
 ) {
+  assertDocumentSession();
   const token = getAccessToken();
   const response = await fetch(input, {
     ...init,
@@ -16,7 +18,8 @@ export async function authenticatedFetch(
     },
   });
 
-  if (response.status === 401) {
+  assertDocumentSession();
+  if (response.status === 401 && token === getAccessToken()) {
     clearAccessToken();
     window.dispatchEvent(new Event(sessionExpiredEvent));
   }

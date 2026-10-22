@@ -7,25 +7,34 @@ import { TenantAccessProvider } from '../features/tenants/tenant-access-context'
 import { OfflineProvider } from '../features/offline/offline-context';
 import { ConnectivityProvider } from '../features/connectivity/connectivity-context';
 import { PwaUpdatePrompt } from '../features/pwa/pwa-update-prompt';
+import { ThemeProvider } from 'next-themes';
 
 export function App() {
   return (
-    <ConnectivityProvider>
-      <AuthProvider>
-        <OfflineProvider>
-          <TenantAccessProvider>
-            <ConceptCatalogProvider>
-              <FormTemplateCatalogProvider>
-                <WorkCatalogProvider>
-                  <AppRoutes />
-                  <PwaUpdatePrompt />
-                </WorkCatalogProvider>
-              </FormTemplateCatalogProvider>
-            </ConceptCatalogProvider>
-          </TenantAccessProvider>
-        </OfflineProvider>
-      </AuthProvider>
-    </ConnectivityProvider>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      storageKey="gridassets-theme"
+      disableTransitionOnChange
+    >
+      <ConnectivityProvider>
+        <AuthProvider>
+          <OfflineProvider>
+            <TenantAccessProvider>
+              <ConceptCatalogProvider>
+                <FormTemplateCatalogProvider>
+                  <WorkCatalogProvider>
+                    <AppRoutes />
+                    <PwaUpdatePrompt />
+                  </WorkCatalogProvider>
+                </FormTemplateCatalogProvider>
+              </ConceptCatalogProvider>
+            </TenantAccessProvider>
+          </OfflineProvider>
+        </AuthProvider>
+      </ConnectivityProvider>
+    </ThemeProvider>
   );
 }
 

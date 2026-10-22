@@ -1,6 +1,7 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateWorkspaceMemberDto } from './create-workspace-member.dto';
+import { IsEnum } from 'class-validator';
+import { WorkspaceRole } from '../entities/workspace-member.entity';
 
-export class UpdateWorkspaceMemberDto extends PartialType(
-  CreateWorkspaceMemberDto
-) {}
+export class UpdateWorkspaceMemberDto {
+  @IsEnum(WorkspaceRole)
+  role: WorkspaceRole;
+}

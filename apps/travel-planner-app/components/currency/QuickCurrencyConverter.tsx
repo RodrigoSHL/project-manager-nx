@@ -129,14 +129,14 @@ export function QuickCurrencyConverter({
       className="overflow-hidden rounded-[26px] border border-border bg-card shadow-sm"
     >
       <div className="grid lg:grid-cols-[minmax(220px,0.72fr)_minmax(0,2fr)]">
-        <div className="relative overflow-hidden bg-gradient-to-br from-teal-500 via-cyan-500 to-sky-600 p-5 text-white sm:p-6">
+        <div className="relative overflow-hidden brand-banner p-5 text-white sm:p-6">
           <div className="pointer-events-none absolute -right-10 -top-12 size-36 rounded-full border-[28px] border-white/10" />
-          <div className="pointer-events-none absolute -bottom-12 left-10 size-28 rounded-full bg-emerald-200/20 blur-2xl" />
+          <div className="pointer-events-none absolute -bottom-12 left-10 size-28 rounded-full bg-primary/15 blur-2xl" />
           <div className="relative">
             <div className="mb-4 flex size-10 items-center justify-center rounded-2xl bg-white/20 backdrop-blur">
               <Landmark className="size-5" />
             </div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/75">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-100">
               Cambio rápido
             </p>
             <h2
@@ -145,7 +145,7 @@ export function QuickCurrencyConverter({
             >
               ¿Cuánto recibirás?
             </h2>
-            <p className="mt-2 max-w-sm text-sm leading-5 text-white/80">
+            <p className="mt-2 max-w-sm text-sm leading-5 text-sky-100">
               Convierte antes de pagar y viaja con una referencia clara.
             </p>
           </div>
@@ -183,7 +183,7 @@ export function QuickCurrencyConverter({
             <button
               type="button"
               onClick={swapCurrencies}
-              className="mx-auto flex size-11 items-center justify-center rounded-xl border border-border bg-muted text-foreground transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary/20"
+              className="mx-auto flex size-11 items-center justify-center rounded-xl border border-border bg-muted text-foreground transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/10 hover:text-brand-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-primary/20"
               aria-label={`Invertir divisas: ${from} a ${to}`}
               title="Invertir divisas"
             >
@@ -196,7 +196,7 @@ export function QuickCurrencyConverter({
               </span>
               <div className="flex min-h-11 items-center gap-2">
                 <div
-                  className="flex h-11 min-w-0 flex-1 items-center rounded-xl border border-primary/15 bg-primary/[0.06] px-3 text-lg font-bold tabular-nums text-primary"
+                  className="flex h-11 min-w-0 flex-1 items-center rounded-xl border border-primary/15 bg-primary/[0.06] px-3 text-lg font-bold tabular-nums text-brand-foreground"
                   aria-live="polite"
                 >
                   {loading ? (
@@ -267,7 +267,7 @@ export function QuickCurrencyConverter({
                 <button
                   type="button"
                   onClick={onExpand}
-                  className="flex h-9 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 px-3 text-xs font-bold text-white shadow-sm shadow-cyan-950/15 transition hover:-translate-y-0.5 hover:shadow-md"
+                  className="flex h-9 items-center justify-center gap-2 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground shadow-sm shadow-cyan-950/15 transition hover:-translate-y-0.5 hover:shadow-md"
                 >
                   Más divisas
                   <ArrowRightLeft className="size-3.5" />

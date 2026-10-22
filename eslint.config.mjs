@@ -7,6 +7,7 @@ export default [
   {
     ignores: [
       '**/dist/**',
+      '**/dev-dist/**',
       '**/.next/**',
       '**/.nx/**',
       '**/coverage/**',

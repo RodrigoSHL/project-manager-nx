@@ -149,7 +149,7 @@ export function ValorizarDialog({
                       className={cn(
                         'px-2.5 py-1 text-xs rounded-lg border font-medium transition-all',
                         ufValue === String(v)
-                          ? 'border-primary bg-primary/10 text-primary'
+                          ? 'border-primary bg-primary/10 text-brand-foreground'
                           : 'border-border hover:border-primary/40 hover:bg-accent/40',
                       )}
                     >

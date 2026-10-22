@@ -1,0 +1,13 @@
+[Unit]
+Description=Notify OCI about failure of %i
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/project-manager-nx
+EnvironmentFile=/etc/atomdev-backup-alert.env
+ExecStart=/home/ubuntu/.local/oci-cli-venv/bin/python /home/ubuntu/project-manager-nx/scripts/oci-backup-signal.py failure %i
+TimeoutStartSec=2min

@@ -11,6 +11,10 @@
 
 ## Run tasks
 
+El microservicio [Mailer API](apps/mailer-api/README.md) envía correos desde otros
+servicios mediante HTTP, con proveedores intercambiables por inyección de
+dependencias. Incluye Resend y simulación local, y funciona sin PostgreSQL ni BFF.
+
 To run the dev server for your app, use:
 
 ```sh

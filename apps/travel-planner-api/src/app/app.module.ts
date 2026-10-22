@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { databaseConfig } from './config/database.config';
+import { getDatabaseConfig } from './config/database.config';
 import { TripsModule } from './trips/trips.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { TravelDaysModule } from './travel-days/travel-days.module';
@@ -13,7 +13,7 @@ import { CurrencyModule } from './currency/currency.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot(databaseConfig),
+    TypeOrmModule.forRootAsync({ useFactory: getDatabaseConfig }),
     TripsModule,
     ActivitiesModule,
     TravelDaysModule,

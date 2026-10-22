@@ -5,6 +5,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { ExpressRequestWithUser } from '../auth/types/express-request-with-user';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateWorkspaceMemberRoleDto } from './dto/update-workspace-member-role.dto';
 import { UserApiClient, UserRole } from './user-api.client';
 import { WorkspaceAccessService } from './workspace-access.service';
 
@@ -99,9 +100,9 @@ export class UserApiController {
   updateWorkspaceMemberRole(
     @Param('workspaceId') workspaceId: string,
     @Param('userId') userId: string,
-    @Body() dto: Record<string, unknown>,
+    @Body() dto: UpdateWorkspaceMemberRoleDto,
   ) {
-    return this.userApiClient.updateWorkspaceMemberRole(workspaceId, userId, dto);
+    return this.userApiClient.updateWorkspaceMemberRole(workspaceId, userId, { role: dto.role });
   }
 
   @Delete('workspaces/:workspaceId/members/:userId')

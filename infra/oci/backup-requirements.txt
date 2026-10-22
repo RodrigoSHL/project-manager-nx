@@ -1,0 +1,2 @@
+# Installed and tested on the production VM with Python 3.8.
+oci==2.176.0

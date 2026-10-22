@@ -11,7 +11,7 @@ async function bootstrap() {
 
   const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:4200')
     .split(',')
-    .map((o) => o.trim());
+    .map((o) => o.trim()).filter(Boolean);
   app.enableCors({ origin: allowedOrigins, credentials: true });
 
   app.useGlobalPipes(new ValidationPipe({
@@ -24,7 +24,8 @@ async function bootstrap() {
   app.setGlobalPrefix(globalPrefix);
 
   const port = process.env.USER_API_PORT || process.env.PORT || 3001;
-  await app.listen(port);
+  app.enableShutdownHooks();
+  await app.listen(port, '0.0.0.0');
 
   Logger.log(`🚀 User API running on: http://localhost:${port}/${globalPrefix}`);
   Logger.log(`👤 Users endpoint: http://localhost:${port}/${globalPrefix}/users`);

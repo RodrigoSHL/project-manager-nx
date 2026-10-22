@@ -34,6 +34,12 @@ Navegador
 | `jira.atomdev.cl` | Jira Web |
 | `travel.atomdev.cl` | Travel Planner |
 | `inspection.atomdev.cl` | Gestión de inspecciones |
+| `macrofit.atomdev.cl` | MacroFit Contador Nutricional PWA & Vision |
+
+MacroFit usa Vite/React y Nginx, igual que la base de Inspection, sin depender de
+su implementación de sincronización offline. Su entrada pública es BFF:
+`/api/macrofit/analyze-plate`. Caddy y Vite envían `/api/*` al BFF; no deben
+apuntar directamente a MacroFit API. Ver [contrato y errores](../apps/macro-fit-api/README.md).
 
 OCI solo debe publicar `22`, `80` y `443`. Los APIs, PostgreSQL y puertos auxiliares permanecen internos o ligados a `127.0.0.1`.
 
@@ -53,6 +59,13 @@ Antes de crear archivos, completar una matriz:
 | Dominio | `inventory.atomdev.cl` |
 
 Cada API necesita un puerto interno único. Los frontends pueden usar `3000` dentro de sus respectivos contenedores.
+
+`mailer-api` usa `3006` y no necesita base, frontend, BFF ni dominio público.
+Es un servicio opcional del perfil Compose `mailer`, seleccionable por nombre o
+con `bash scripts/deploy-oci.sh --profile mailer-backend`. `platform-full` conserva
+la selección anterior; agregar Mailer explícitamente cuando tenga sus secretos.
+Antes de iniciarlo, configurar `MAILER_SERVICE_TOKEN`, `RESEND_API_KEY` y el
+remitente verificado en `.env.deploy`. Ver [contrato y configuración](../apps/mailer-api/README.md).
 
 ## 2. Implementar el API NestJS
 
@@ -342,6 +355,12 @@ docker compose -f docker-compose.prod.yml \
 
 No desplegar si falla Nx, Webpack, Next.js o TypeScript.
 
+Los builds Vite deben depender de un target `typecheck`; producir un bundle con
+Vite no garantiza que TypeScript sea válido. MacroFit ya incluye esta dependencia.
+Los Dockerfiles copian solamente la app seleccionada y `libs`. El runtime de APIs
+instala el manifiesto generado por Nx usando el lockfile original; Next usa
+`output: 'standalone'` con los assets estáticos y `public` de cada aplicación.
+
 Buscar URLs antiguas en `.next/static`; el origen HTTP no debe aparecer.
 
 ## 11. Desplegar en Oracle
@@ -379,6 +398,8 @@ bash scripts/deploy-oci.sh --profile travel-full
 bash scripts/deploy-oci.sh --profile inspection-backend
 bash scripts/deploy-oci.sh --profile inspection-frontend
 bash scripts/deploy-oci.sh --profile inspection-qa-frontend
+bash scripts/deploy-oci.sh --profile macrofit-full
+bash scripts/deploy-oci.sh --profile macrofit-backend
 bash scripts/deploy-oci.sh --services travel-planner-api,bff-api,travel-planner-app
 ATOMDEV_SSH_KEY=/ruta/segura/oci.key bash scripts/deploy-oci.sh --dry-run
 ```
@@ -387,6 +408,23 @@ La clave puede estar temporalmente en la raíz si termina en `.key`; Git y Docke
 ignoran. El script crea una copia temporal con permisos `0600`, valida su fingerprint
 y la elimina al terminar. Aun así, para almacenamiento permanente se recomienda
 guardarla fuera del repo, por ejemplo en `~/.ssh/`.
+
+Los perfiles MacroFit full/backend incluyen API → BFF → Caddy (y frontend en
+full). Antes del primer despliegue de esta integración, comprobar que
+`GEMINI_MODEL` remoto sea `gemini-3.5-flash-lite`, o el modelo válido elegido
+explícitamente; los ejemplos antiguos fijaban otro nombre. El script preserva
+`.env.deploy` y no corrige ese valor automáticamente. No imprimir la clave.
+El health confirma el proceso; readiness solo confirma configuración. Para
+verificar también Gemini real durante el despliegue, definir
+`MACROFIT_SMOKE_IMAGE=/ruta/foto-comida.jpg`; se realiza una llamada con coste/cuota.
+Si se omite, el script lo informa expresamente y comprueba además que se
+rechace una carga de texto.
+
+User API ahora ejecuta una migración inicial y fuerza `synchronize=false` en
+producción. En bases existentes reconoce el esquema anterior y conserva las
+filas; si faltan columnas se detiene para revisión. Mantener el backup previo del
+script de despliegue. La migración inicial no permite borrar el esquema con
+`down`; el rollback de imágenes preserva las tablas y los datos.
 
 ### Preflight
 

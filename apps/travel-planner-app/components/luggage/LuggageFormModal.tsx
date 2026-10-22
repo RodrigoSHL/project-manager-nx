@@ -111,13 +111,13 @@ export function LuggageFormModal({ open, luggage, preset, onClose, onSave, onArc
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-labelledby="luggage-form-title">
       <button className="absolute inset-0 cursor-default bg-slate-950/45 backdrop-blur-sm" onClick={onClose} aria-label="Cerrar" />
       <section className="relative z-10 flex max-h-[94dvh] w-full flex-col overflow-hidden rounded-t-[28px] border border-white/70 bg-card shadow-2xl sm:max-w-2xl sm:rounded-[28px]">
-        <div className="flex items-center justify-between border-b border-border/70 bg-gradient-to-r from-sky-50 to-indigo-50 px-5 py-5 sm:px-7">
+        <div className="flex items-center justify-between border-b border-border/70 bg-accent px-5 py-5 sm:px-7">
           <div className="flex items-center gap-3">
             <div className="flex size-11 items-center justify-center rounded-2xl text-white shadow-lg" style={{ backgroundColor: form.color }}>
               <Icon className="size-5" />
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary">Mi equipaje</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-foreground">Mi equipaje</p>
               <h2 id="luggage-form-title" className="text-xl font-bold tracking-tight">{luggage ? 'Editar maleta' : 'Agregar maleta'}</h2>
             </div>
           </div>

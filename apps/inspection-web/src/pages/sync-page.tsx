@@ -4,19 +4,17 @@ import {
   Building2,
   CheckCircle2,
   Cloud,
-  CloudOff,
   ListChecks,
   LoaderCircle,
   MessageSquareText,
   RefreshCw,
-  ServerOff,
 } from 'lucide-react';
 import { PageHeader } from '../components/page-header';
 import { Button } from '../components/ui/button';
 import { useConnectivity } from '../hooks/use-connectivity';
 import { useOffline } from '../features/offline/offline-context';
 import type {
-  PendingChangeKind,
+  PendingChangeItem,
   PendingSyncSummary,
 } from '../features/offline/models';
 import { useTenantAccess } from '../features/tenants/tenant-access-context';
@@ -26,12 +24,16 @@ import {
   resolveAvailableSelection,
 } from '../features/tenants/organization-selection-storage';
 import { offlineRepository } from '../repositories/offline-repository';
+import { connectionPresentation } from '../features/connectivity/connectivity-presentation';
+import { connectivityAppearances } from '../features/offline/components/connectivity-appearance';
+import { AnalyticsIcon } from '../features/analytics/components/analytics-icon';
 
-const kindLabels: Record<PendingChangeKind, string> = {
+const kindLabels: Record<PendingChangeItem['kind'], string> = {
   WORK: 'Trabajo',
   RESPONSE: 'Respuesta',
   TASK_COMPLETION: 'Tarea',
   ANNOTATION: 'Comentario',
+  PHOTO: 'Fotografía',
 };
 
 const emptyPendingSummary: PendingSyncSummary = {
@@ -43,6 +45,7 @@ const emptyPendingSummary: PendingSyncSummary = {
   responses: 0,
   taskCompletions: 0,
   annotations: 0,
+  photos: 0,
   items: [],
 };
 
@@ -64,6 +67,7 @@ export function SyncPage() {
     syncProgress,
     lastSyncSummary,
     syncError,
+    hasLegacyLocalData,
   } = useOffline();
   const userId = auth.user?.userId ?? '';
   const [tenantId, setTenantId] = useState('');
@@ -117,26 +121,11 @@ export function SyncPage() {
     await refreshTenantState();
   }
 
-  const connection = !connectivity.browserOnline
-    ? {
-        Icon: CloudOff,
-        title: 'Modo sin conexión',
-        detail: 'La red del dispositivo no está disponible.',
-        color: 'text-amber-700 bg-amber-50 border-amber-200',
-      }
-    : connectivity.apiReachable
-    ? {
-        Icon: Cloud,
-        title: 'En línea',
-        detail: 'El servidor responde correctamente.',
-        color: 'text-emerald-700 bg-emerald-50 border-emerald-200',
-      }
-    : {
-        Icon: ServerOff,
-        title: 'Servidor no disponible',
-        detail: 'Hay red, pero GridAssets no responde.',
-        color: 'text-red-700 bg-red-50 border-red-200',
-      };
+  const presentation = connectionPresentation(connectivity);
+  const connection = {
+    ...presentation,
+    ...connectivityAppearances[presentation.status],
+  };
 
   return (
     <>
@@ -145,16 +134,34 @@ export function SyncPage() {
         description="Envía y descarga cambios únicamente para la empresa seleccionada."
       />
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-        <label className="block text-sm font-medium text-slate-700">
-          Tenant / Empresa
+      {hasLegacyLocalData ? (
+        <div
+          role="status"
+          className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-300/20 dark:bg-amber-400/10"
+        >
+          <AlertTriangle
+            className="mt-0.5 size-4 shrink-0 text-amber-700 dark:text-amber-300"
+            aria-hidden="true"
+          />
+          <p className="text-sm leading-6 text-slate-700 dark:text-slate-300">
+            Los datos offline de una versión anterior están conservados, pero no
+            pueden asociarse automáticamente a esta cuenta. Si tenías cambios
+            pendientes, solicita su recuperación antes de borrar los datos del
+            navegador.
+          </p>
+        </div>
+      ) : null}
+
+      <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm sm:p-5">
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+          Empresa
           <span className="relative mt-2 block">
             <Building2 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
             <select
               value={tenantId}
               onChange={(event) => handleTenantChange(event.target.value)}
               disabled={tenantAccess.isLoading || isSyncing}
-              className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-10 pr-3 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+              className="h-11 w-full min-w-0 rounded-lg border border-slate-300 bg-white pl-10 pr-3 text-sm font-normal text-slate-900 outline-none focus:border-amber-700 focus:ring-2 focus:ring-amber-700/15 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-amber-300 dark:focus:ring-amber-300/15"
             >
               {tenantAccess.accessibleTenants.length === 0 ? (
                 <option value="">No hay empresas disponibles</option>
@@ -167,28 +174,35 @@ export function SyncPage() {
             </select>
           </span>
         </label>
-        <p className="mt-2 text-xs text-slate-500">
+        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
           Los conteos, conflictos, checkpoint y registros mostrados pertenecen
           solamente a {selectedTenant?.name ?? 'la empresa seleccionada'}.
         </p>
       </section>
 
       <section
-        className={`mt-4 flex items-start gap-3 rounded-xl border p-4 ${connection.color}`}
+        className={`mt-4 flex items-start gap-3 rounded-xl border p-4 ${connection.className}`}
       >
-        <connection.Icon className="mt-0.5 size-5 shrink-0" />
-        <div>
-          <h2 className="font-semibold">{connection.title}</h2>
-          <p className="mt-1 text-sm opacity-80">{connection.detail}</p>
-          {!connectivity.apiReachable ? (
-            <p className="mt-2 text-sm font-medium">
-              Puedes seguir trabajando; los cambios se guardarán localmente.
+        <connection.Icon
+          className={`mt-0.5 size-5 shrink-0 ${
+            connection.status === 'checking' ? 'animate-spin' : ''
+          }`}
+          aria-hidden="true"
+        />
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold">{connection.label}</h2>
+          <p className="mt-1 text-sm leading-6 text-slate-700 dark:text-slate-300">
+            {connection.detail}
+          </p>
+          {!connectivity.apiReachable && connection.status !== 'checking' ? (
+            <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-400">
+              La sincronización se habilitará al recuperar la conexión.
             </p>
           ) : null}
         </div>
       </section>
 
-      <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Metric
           icon={RefreshCw}
           label="Cambios pendientes"
@@ -206,11 +220,20 @@ export function SyncPage() {
         />
         <Metric
           icon={Cloud}
-          label="Último sync"
+          label="Última sincronización"
           value={
             syncMetadata.lastSyncAt
-              ? new Date(syncMetadata.lastSyncAt).toLocaleString('es-CL')
+              ? new Date(syncMetadata.lastSyncAt).toLocaleDateString('es-CL')
               : '—'
+          }
+          detail={
+            syncMetadata.lastSyncAt
+              ? new Date(syncMetadata.lastSyncAt).toLocaleTimeString('es-CL', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false,
+                })
+              : undefined
           }
         />
         <Metric
@@ -223,15 +246,20 @@ export function SyncPage() {
           label="Comentarios"
           value={pendingSummary.annotations}
         />
+        <Metric
+          icon={Cloud}
+          label="Fotografías"
+          value={pendingSummary.photos}
+        />
       </section>
 
-      <section className="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <section className="mt-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="font-semibold text-slate-950">
+            <h2 className="font-semibold text-slate-950 dark:text-slate-100">
               Registros pendientes
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Este listado se calcula directamente desde IndexedDB.
             </p>
           </div>
@@ -244,7 +272,7 @@ export function SyncPage() {
           </Button>
         </div>
 
-        <div className="mt-5 divide-y divide-slate-100 rounded-lg border border-slate-200">
+        <div className="mt-5 divide-y divide-slate-100 dark:divide-slate-800 rounded-lg border border-slate-200 dark:border-slate-800">
           {pendingSummary.items.length ? (
             pendingSummary.items.map((item) => (
               <div
@@ -252,10 +280,10 @@ export function SyncPage() {
                 className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm"
               >
                 <div className="min-w-0">
-                  <p className="truncate font-medium text-slate-800">
+                  <p className="truncate font-medium text-slate-800 dark:text-slate-200">
                     {item.label}
                   </p>
-                  <p className="mt-0.5 text-xs text-slate-500">
+                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                     {kindLabels[item.kind]} ·{' '}
                     {new Date(item.updatedAt).toLocaleString('es-CL')}
                   </p>
@@ -263,10 +291,10 @@ export function SyncPage() {
                 <span
                   className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                     item.status === 'ERROR'
-                      ? 'bg-red-50 text-red-700'
+                      ? 'bg-red-50 dark:bg-red-400/10 text-red-700 dark:text-red-200'
                       : item.status === 'SENDING'
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'bg-amber-50 text-amber-800'
+                      ? 'bg-blue-50 dark:bg-blue-400/10 text-blue-700 dark:text-blue-200'
+                      : 'bg-amber-50 dark:bg-amber-400/10 text-amber-800 dark:text-amber-200'
                   }`}
                 >
                   {item.status === 'ERROR'
@@ -280,20 +308,20 @@ export function SyncPage() {
                     : 'Modificado'}
                 </span>
                 {item.lastError ? (
-                  <p className="w-full text-xs text-red-600">
+                  <p className="w-full text-xs text-red-600 dark:text-red-300">
                     {item.lastError}
                   </p>
                 ) : null}
               </div>
             ))
           ) : (
-            <p className="p-6 text-center text-sm text-slate-500">
+            <p className="p-6 text-center text-sm text-slate-500 dark:text-slate-400">
               No hay cambios locales pendientes.
             </p>
           )}
         </div>
 
-        <div className="mt-5 rounded-lg bg-slate-50 p-4">
+        <div className="mt-5 rounded-lg bg-slate-50 dark:bg-slate-950 p-4">
           <Button
             type="button"
             disabled={!tenantId || !connectivity.apiReachable || isSyncing}
@@ -308,15 +336,15 @@ export function SyncPage() {
           </Button>
           {isSyncing && showSyncFeedback && syncProgress ? (
             <div className="mt-3" aria-live="polite">
-              <div className="mb-1 flex justify-between text-xs text-slate-600">
+              <div className="mb-1 flex justify-between text-xs text-slate-600 dark:text-slate-300">
                 <span>{progressLabel(syncProgress.phase)}</span>
                 <span>
                   {syncProgress.processed} / {syncProgress.total}
                 </span>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+              <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
                 <div
-                  className="h-full rounded-full bg-slate-900 transition-all"
+                  className="h-full rounded-full bg-slate-900 dark:bg-slate-200 transition-all"
                   style={{
                     width: `${
                       syncProgress.total
@@ -333,22 +361,22 @@ export function SyncPage() {
               className="mt-3 flex flex-wrap gap-4 text-sm"
               aria-live="polite"
             >
-              <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700">
+              <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-300">
                 <CheckCircle2 className="size-4" />
                 {lastSyncSummary.pushed} enviados
               </span>
-              <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700">
+              <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-300">
                 <CheckCircle2 className="size-4" />
                 {lastSyncSummary.pulled} recibidos
               </span>
               {lastSyncSummary.conflicts > 0 ? (
-                <span className="inline-flex items-center gap-1.5 font-medium text-amber-700">
+                <span className="inline-flex items-center gap-1.5 font-medium text-amber-700 dark:text-amber-300">
                   <AlertTriangle className="size-4" />
                   {lastSyncSummary.conflicts} conflictos pendientes
                 </span>
               ) : null}
               {lastSyncSummary.errors > 0 ? (
-                <span className="inline-flex items-center gap-1.5 font-medium text-red-700">
+                <span className="inline-flex items-center gap-1.5 font-medium text-red-700 dark:text-red-300">
                   <AlertTriangle className="size-4" />
                   {lastSyncSummary.errors} con error
                 </span>
@@ -356,12 +384,15 @@ export function SyncPage() {
             </div>
           ) : null}
           {showSyncFeedback && syncError ? (
-            <p className="mt-3 text-sm font-medium text-red-700" role="alert">
+            <p
+              className="mt-3 text-sm font-medium text-red-700 dark:text-red-300"
+              role="alert"
+            >
               {syncError}
             </p>
           ) : null}
           {!connectivity.apiReachable ? (
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
               El botón se habilitará cuando la API vuelva a estar disponible.
             </p>
           ) : null}
@@ -375,16 +406,37 @@ function Metric({
   icon: Icon,
   label,
   value,
+  detail,
 }: {
   icon: typeof RefreshCw;
   label: string;
   value: number | string;
+  detail?: string;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <Icon className="size-4 text-slate-400" />
-      <p className="mt-3 text-2xl font-semibold text-slate-950">{value}</p>
-      <p className="text-xs text-slate-500">{label}</p>
+    <div className="min-h-36 min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex min-h-10 items-start justify-between gap-3">
+        <p className="min-w-0 text-sm font-medium text-slate-600 dark:text-slate-300">
+          {label}
+        </p>
+        <span className="hidden sm:block">
+          <AnalyticsIcon icon={Icon} />
+        </span>
+      </div>
+      <p
+        className={`mt-3 min-h-8 break-words font-semibold text-slate-950 dark:text-slate-100 ${
+          typeof value === 'string' && value !== '—'
+            ? 'text-base leading-6'
+            : 'text-2xl leading-8'
+        }`}
+      >
+        {value}
+      </p>
+      {detail ? (
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          {detail}
+        </p>
+      ) : null}
     </div>
   );
 }

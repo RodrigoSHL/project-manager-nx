@@ -138,6 +138,9 @@ const teamRoles = [
   { value: "qa", label: "QA" },
   { value: "designer", label: "Diseñador" },
   { value: "architect", label: "Arquitecto" },
+  { value: "member", label: "Miembro" },
+  { value: "analyst", label: "Analista" },
+  { value: "technician", label: "Técnico" },
 ]
 
 interface CreateProjectDialogProps {

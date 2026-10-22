@@ -53,13 +53,13 @@ export function ActivityDocumentsSection({ activityId, staged, onStagedChange, d
     {!loading && documents.length === 0 && staged.length === 0 && <p className="rounded-lg bg-muted/50 p-4 text-center text-sm text-muted-foreground">No hay documentos asociados a esta actividad.</p>}
     <div className="space-y-2">
       {documents.map(item => <div key={item.id} className="flex items-center gap-3 rounded-lg border p-3">
-        <FileText className="h-5 w-5 shrink-0 text-primary" />
+        <FileText className="h-5 w-5 shrink-0 text-brand-foreground" />
         <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{item.originalName}</p><p className="text-xs text-muted-foreground">{labels[(item.metadata?.documentType as ActivityDocumentType) || 'other']} · {(item.size / 1024).toFixed(0)} KB</p></div>
         <button type="button" disabled={disabled || loading} onClick={() => downloadActivityDocument(item.id, item.originalName).catch(err => setError(err.message))} aria-label={`Descargar ${item.originalName}`} className="rounded-lg p-2 hover:bg-muted"><Download className="h-4 w-4" /></button>
         <button type="button" disabled={disabled || loading} onClick={() => remove(item)} aria-label={`Eliminar ${item.originalName}`} className="rounded-lg p-2 text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" /></button>
       </div>)}
       {staged.map((item, index) => <div key={`${item.file.name}-${index}`} className="flex items-center gap-3 rounded-lg border border-dashed border-primary/50 p-3">
-        <FileText className="h-5 w-5 shrink-0 text-primary" />
+        <FileText className="h-5 w-5 shrink-0 text-brand-foreground" />
         <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{item.file.name}</p><p className="text-xs text-muted-foreground">{labels[item.documentType]} · pendiente de subir</p></div>
         <button type="button" disabled={disabled} onClick={() => onStagedChange(staged.filter((_, itemIndex) => itemIndex !== index))} aria-label={`Quitar ${item.file.name}`} className="rounded-lg p-2"><X className="h-4 w-4" /></button>
       </div>)}

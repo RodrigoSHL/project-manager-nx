@@ -149,6 +149,9 @@ GET    /projects/business-unit/:businessUnit - Proyectos por unidad de negocio
 - `critical` - Crítica
 
 ### TeamRole
+- `member` - Miembro
+- `analyst` - Analista
+- `technician` - Técnico
 - `tech_lead` - Tech Lead
 - `developer` - Desarrollador
 - `devops` - DevOps
@@ -157,6 +160,132 @@ GET    /projects/business-unit/:businessUnit - Proyectos por unidad de negocio
 - `qa` - QA
 - `designer` - Diseñador
 - `architect` - Arquitecto
+
+Miembro, Analista y Técnico se guardan como `member`, `analyst` y `technician`.
+Compose de producción desactiva la sincronización automática en project-api.
+Con `PROJECT_MIGRATIONS_RUN=true`, TypeORM ejecuta las migraciones pendientes al
+iniciar la API y las registra en su tabla `migrations`, igual que en inspection-api.
+[AddProjectTeamRoles](src/migrations/1790812800000-AddProjectTeamRoles.ts) amplía
+el enum y admite bases donde esos valores ya existen. El rollback exige que los
+roles nuevos no estén asignados; PostgreSQL rechaza la conversión si están en uso.
+
+### Numeración de tickets
+
+`projects.lastTicketNumber` guarda el último número asignado a un ticket del
+proyecto. Es un campo interno y no se incluye en las lecturas habituales de
+proyectos. La migración `AddProjectTicketCounter` lo inicializa con el mayor
+sufijo numérico de los tickets existentes, conservando sus claves y cualquier
+contador previo más alto.
+
+La creación incrementa el contador mediante `UPDATE ... RETURNING` y guarda el
+ticket en la misma transacción. PostgreSQL coordina las solicitudes concurrentes
+por proyecto. Los detalles de soporte también se guardan en esa transacción;
+si falla cualquiera de los pasos, se revierten el ticket y el incremento.
+Eliminar tickets nunca reduce el contador. Las importaciones que escriban
+directamente en la BD deben mantener este contador al menos en el mayor número
+importado.
+
+Compose ejecuta la migración al iniciar con `PROJECT_MIGRATIONS_RUN=true`.
+Desplegar `project-api` con backup previo. La columna es compatible con la imagen
+anterior y puede conservarse si hay que revertir la imagen; la imagen anterior
+vuelve a tener el defecto de numeración por cantidad de tickets.
+
+Las pruebas de integración crean y eliminan un esquema aislado en una base
+temporal local; requieren explícitamente la base `ticket_counter_validation`:
+
+```sh
+docker run -d --rm --name ticket-counter-validation \
+  -e POSTGRES_PASSWORD=validation-only -e POSTGRES_DB=ticket_counter_validation \
+  -p 127.0.0.1:55439:5432 postgres:15-alpine
+TICKET_COUNTER_TEST_DATABASE_URL=postgres://postgres:validation-only@127.0.0.1:55439/ticket_counter_validation \
+  npx jest --config apps/project-api/jest.config.ts --runInBand
+docker stop ticket-counter-validation
+```
+
+### Respuestas a comentarios
+
+`comments.parentCommentId` relaciona una respuesta con otro comentario del mismo
+ticket. La API valida esa pertenencia al crear la respuesta; editar un comentario
+solo cambia su contenido. La migración `AddCommentReplies` añade la columna,
+el índice y la clave foránea. Si se elimina el comentario original, `ON DELETE
+SET NULL` conserva sus respuestas como comentarios independientes.
+
+### Notificaciones de menciones en Jira
+
+Al crear un comentario o respuesta, Project API detecta las menciones persistidas
+por el selector de Jira Web (`@{member:<uuid>:<nombre codificado>}`). Al editar,
+detecta las menciones añadidas. Escribir un nombre como texto libre no identifica
+a una cuenta. Los miembros deben estar activos y vinculados mediante `userId` a
+un usuario real; no se notifica al autor de su propio comentario.
+
+El comentario y sus eventos se guardan en una misma transacción PostgreSQL. Una
+restricción única limita el aviso a uno por comentario/usuario, incluso al quitar
+y volver a añadir una mención. No se generan avisos retroactivos para comentarios
+anteriores a la activación. La migración `AddCommentMentionNotifications` crea la
+tabla e índices; `PROJECT_MIGRATIONS_RUN=true` la aplica al iniciar sobre el esquema
+existente. En una base nueva de desarrollo, la sincronización también la crea.
+
+Un worker interno reclama un evento cada cinco segundos con `FOR UPDATE SKIP
+LOCKED` y una reserva de dos minutos. Comprueba la mención actual, proyecto,
+miembro activo, roles del usuario y acceso al workspace antes de enviar. Usa el
+email actual de User API y llama directamente a la plantilla de Mailer API.
+Los administradores mantienen el acceso global existente. El BFF sigue atendiendo
+los comentarios de Jira Web y aplica sus controles de acceso habituales.
+
+Activación:
+
+```env
+# Project API: el mismo token configurado en Mailer
+JIRA_MENTION_EMAILS_ENABLED=true
+MAILER_API_URL=http://localhost:3006/api
+MAILER_SERVICE_TOKEN=<token interno compartido>
+USER_API_URL=http://localhost:3001/api
+# Mailer API: destino del botón del correo
+JIRA_WEB_URL=http://localhost:4201
+```
+
+Los ejemplos dejan los avisos desactivados. En producción, usar
+`JIRA_WEB_URL=https://jira.atomdev.cl` y las variables/secretos en `.env.deploy`.
+Compose configura las URLs internas de Project API; ejecutar Mailer junto con
+Project API y User API, y reconstruir Jira Web para habilitar la navegación.
+
+```sh
+docker compose --env-file .env.deploy -f docker-compose.prod.yml \
+  --profile mailer up -d --build mailer-api project-api jira-web
+```
+
+El contenido se congela antes del primer envío para conservar idéntico payload y
+clave `jira-mention/<comment-id>/<user-id>` en los reintentos. Si cambia el email
+del usuario se omite el evento, evitando enviarlo a la dirección anterior. Los
+fallos transitorios usan backoff de 5 segundos hasta 10 minutos, máximo ocho
+intentos dentro de 23 horas; los permanentes terminan como `failed`. Esta ventana
+queda dentro de las 24 horas de idempotencia de Resend. No se reintenta después
+de esa ventana, ni se altera el remitente/configuración durante un reintento.
+`sent` con código `accepted` significa aceptación del proveedor, no entrega.
+
+Para diagnosticar eventos, consultar `status`, `attempts`, `lastCode` y
+`nextAttemptAt` en `comment_mention_notifications`. Los estados terminales son
+`sent`, `failed` y `skipped`; no hay UI para reenvío manual ni webhooks de entrega.
+La tabla conserva contenido del correo; eliminar un comentario elimina sus eventos
+mediante FK en cascada. Los logs contienen solo ID del evento y código del error.
+
+Validación completa en una base temporal local, con User API de prueba y Mailer
+real usando un proveedor simulado (no consume cuota ni envía correo):
+
+```sh
+docker run -d --name jira-mention-validation \
+  -e POSTGRES_PASSWORD=mention-validation-only -e POSTGRES_DB=jira_mention_validation \
+  -p 127.0.0.1:31547:5432 postgres:15-alpine
+JIRA_MENTION_TEST_DATABASE_URL=postgres://postgres:mention-validation-only@127.0.0.1:31547/jira_mention_validation \
+  npx ts-node --project tsconfig.base.json \
+  --compiler-options '{"module":"CommonJS","esModuleInterop":true}' scripts/verify-jira-mention-flow.ts
+docker rm -f jira-mention-validation
+```
+
+El script exige exactamente esa base en localhost/127.0.0.1, crea fixtures y prueba
+migración up/down, cola persistente, deduplicación, permisos, réplicas concurrentes,
+contrato HTTP de plantilla, reintentos, respuestas y borrado en cascada. Usar una
+base vacía por ejecución.
 
 ### TaskStatus
 - `todo` - Por hacer
@@ -215,10 +344,12 @@ DATABASE_PASSWORD=secure_password
    - Crear base de datos PostgreSQL
    - Configurar variables de entorno
 
-3. **Ejecutar migraciones**:
-   ```bash
-   npm run migration:run
-   ```
+3. **Ejecutar migraciones sobre una base existente**:
+   - Configurar `PROJECT_MIGRATIONS_RUN=true` y `TYPEORM_SYNCHRONIZE=false`.
+   - Iniciar project-api; TypeORM ejecuta las migraciones pendientes.
+   - El catálogo actual de migraciones amplía el esquema existente; no crea
+     todas las tablas de una instalación nueva. En desarrollo, la sincronización
+     de TypeORM sigue disponible para inicializar una base nueva.
 
 4. **Ejecutar seeds** (opcional):
    ```bash
@@ -251,4 +382,4 @@ DATABASE_PASSWORD=secure_password
 - [ ] Exportación de datos
 - [ ] API de búsqueda avanzada
 - [ ] Cache con Redis
-- [ ] Monitoreo y alertas 
+- [ ] Monitoreo y alertas

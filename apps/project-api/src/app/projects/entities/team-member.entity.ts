@@ -9,7 +9,10 @@ export enum TeamRole {
   SCRUM_MASTER = 'scrum_master',
   QA = 'qa',
   DESIGNER = 'designer',
-  ARCHITECT = 'architect'
+  ARCHITECT = 'architect',
+  MEMBER = 'member',
+  ANALYST = 'analyst',
+  TECHNICIAN = 'technician',
 }
 
 @Entity('team_members')
@@ -54,4 +57,4 @@ export class TeamMember {
 
   @Column({ type: 'uuid' })
   projectId: string;
-} 
+}

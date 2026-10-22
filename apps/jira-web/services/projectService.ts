@@ -21,3 +21,14 @@ export async function getProjectTeamMembers(projectId: string): Promise<ApiTeamM
   const project = await res.json()
   return project.teamMembers ?? []
 }
+
+export interface ProjectPermissions {
+  canWrite: boolean
+  workspaceRole: 'owner' | 'admin' | 'member' | 'viewer' | null
+}
+
+export async function getProjectPermissions(projectId: string): Promise<ProjectPermissions> {
+  const res = await authenticatedFetch(`${API_BASE_URL}/projects/${projectId}/permissions`, { cache: 'no-store' })
+  if (!res.ok) throw new Error(`Error fetching project permissions: ${res.status}`)
+  return res.json()
+}

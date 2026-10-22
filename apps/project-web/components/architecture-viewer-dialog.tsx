@@ -87,7 +87,7 @@ export function ArchitectureViewerDialog({
             <Image className="h-5 w-5" />
             Diagrama de Arquitectura
             {architectureFiles.length > 1 && (
-              <span className="ml-2 text-sm text-gray-500 font-medium">
+              <span className="ml-2 text-sm text-muted-foreground font-medium">
                 {currentFileIndex + 1} / {architectureFiles.length}
               </span>
             )}
@@ -122,7 +122,7 @@ export function ArchitectureViewerDialog({
             )}
 
             {/* Imagen principal */}
-            <div className="flex-1 bg-gray-50 rounded-lg overflow-hidden flex items-center justify-center min-h-0">
+            <div className="flex-1 bg-muted/40 rounded-lg overflow-hidden flex items-center justify-center min-h-0">
               {currentFile.mimetype.startsWith('image/') ? (
                 <img
                   src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'}/files/${currentFile.id}`}
@@ -130,7 +130,7 @@ export function ArchitectureViewerDialog({
                   className="max-w-full max-h-full object-contain"
                 />
               ) : (
-                <div className="text-center text-gray-500">
+                <div className="text-center text-muted-foreground">
                   <div className="text-6xl mb-4">{getFileIcon(currentFile.mimetype)}</div>
                   <p className="text-lg font-medium">{currentFile.filename}</p>
                   <p className="text-sm">Este archivo no se puede previsualizar</p>
@@ -139,21 +139,21 @@ export function ArchitectureViewerDialog({
             </div>
 
             {/* Información del archivo */}
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+            <div className="mt-4 p-4 bg-muted/40 rounded-lg">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-medium">{currentFile.filename}</h3>
                   <div className="flex items-center gap-2 mt-1">
                     <Badge variant="outline">{currentFile.type}</Badge>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-muted-foreground">
                       {formatFileSize(currentFile.size)}
                     </span>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-muted-foreground">
                       {new Date(currentFile.uploadedAt).toLocaleDateString('es-ES')}
                     </span>
                   </div>
                   {currentFile.description && (
-                    <p className="text-sm text-gray-600 mt-2">{currentFile.description}</p>
+                    <p className="text-sm text-muted-foreground mt-2">{currentFile.description}</p>
                   )}
                 </div>
                 <Button onClick={handleDownload}>
@@ -174,8 +174,8 @@ export function ArchitectureViewerDialog({
                     key={file.id}
                     className={`cursor-pointer transition-colors ${
                       index === currentFileIndex 
-                        ? 'border-blue-500 bg-blue-50' 
-                        : 'hover:bg-gray-50'
+                        ? 'border-primary/50 bg-primary/10'
+                        : 'hover:bg-muted/40'
                     }`}
                     onClick={() => setCurrentFileIndex(index)}
                   >
@@ -186,10 +186,10 @@ export function ArchitectureViewerDialog({
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm truncate">{file.filename}</p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-muted-foreground">
                             {new Date(file.uploadedAt).toLocaleDateString('es-ES')}
                           </p>
-                          <p className="text-xs text-gray-400">
+                          <p className="text-xs text-muted-foreground">
                             {formatFileSize(file.size)}
                           </p>
                         </div>

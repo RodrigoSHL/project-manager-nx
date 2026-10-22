@@ -21,7 +21,7 @@ import {
   type ChartRow,
 } from '../measurement-comparison';
 
-const colors = ['#0f766e', '#1d4ed8', '#7c3aed', '#b45309', '#be185d'];
+const colors = ['var(--chart-series-1)', 'var(--chart-series-2)', 'var(--chart-series-3)', 'var(--chart-series-4)', 'var(--chart-series-5)'];
 
 type DotProps = {
   cx?: number;
@@ -50,8 +50,8 @@ function MeasurementDot({
     return (
       <path
         d={`M ${cx} ${cy - 7} L ${cx + 7} ${cy + 6} L ${cx - 7} ${cy + 6} Z`}
-        fill="#fff7ed"
-        stroke="#c2410c"
+        fill="var(--chart-alert-fill)"
+        stroke="var(--chart-alert)"
         strokeWidth={2}
         {...common}
       />
@@ -100,26 +100,26 @@ function MeasurementTooltip({
   const point = asset && row.points[asset.assetId];
   if (!asset || !point) return null;
   return (
-    <div className="max-w-72 rounded-lg border border-slate-200 bg-white p-3 text-xs shadow-lg">
-      <p className="font-semibold text-slate-950">{asset.assetName}</p>
-      <p className="mt-1 text-lg font-semibold text-slate-950">
+    <div className="max-w-72 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 text-xs shadow-lg">
+      <p className="font-semibold text-slate-950 dark:text-slate-100">{asset.assetName}</p>
+      <p className="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-100">
         {formatMeasurementValue(point.value, unit)}
       </p>
-      <p className="mt-1 text-slate-600">
+      <p className="mt-1 text-slate-600 dark:text-slate-300">
         Medido el {formatMeasurementDateTime(point)}
       </p>
-      <p className="text-slate-600">
+      <p className="text-slate-600 dark:text-slate-300">
         Rango aplicado: {point.minValue ?? '—'} a {point.maxValue ?? '—'}{' '}
         {unit ?? ''}
       </p>
-      <p className="font-medium text-slate-800">{measurementStatus(point)}</p>
-      <p className="mt-1 text-slate-600">
+      <p className="font-medium text-slate-800 dark:text-slate-200">{measurementStatus(point)}</p>
+      <p className="mt-1 text-slate-600 dark:text-slate-300">
         Trabajo: {point.workTitle || point.workId}
       </p>
       {point.findingTitle && (
-        <p className="text-amber-800">Hallazgo: {point.findingTitle}</p>
+        <p className="text-amber-800 dark:text-amber-200">Hallazgo: {point.findingTitle}</p>
       )}
-      <p className="mt-2 text-slate-500">
+      <p className="mt-2 text-slate-500 dark:text-slate-400">
         Selecciona el punto para abrir sus enlaces.
       </p>
     </div>
@@ -144,7 +144,7 @@ export function MeasurementChart({
   const axisTicks = measurementAxisTicks(rows, hasTime);
   if (!rows.length)
     return (
-      <p className="rounded-lg border border-dashed border-slate-200 p-8 text-center text-sm text-slate-600">
+      <p className="rounded-lg border border-dashed border-slate-200 dark:border-slate-800 p-8 text-center text-sm text-slate-600 dark:text-slate-300">
         Aún no existen mediciones para este concepto en el período seleccionado.
       </p>
     );
@@ -153,9 +153,9 @@ export function MeasurementChart({
     new Date(rows[rows.length - 1].timestamp).getUTCFullYear();
   return (
     <>
-      <div className="overflow-x-auto pb-2">
+      <div className="min-w-0 pb-2">
         <div
-          className="h-96 min-w-[680px]"
+          className="h-72 w-full min-w-0 md:h-96"
           role="img"
           aria-label="Evolución histórica de mediciones por activo; cada símbolo es una medición real"
         >
@@ -164,7 +164,7 @@ export function MeasurementChart({
               data={historicalLines.rows}
               margin={{ top: 20, right: 28, left: 4, bottom: 12 }}
             >
-              <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
+              <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
               <XAxis
                 dataKey="timestamp"
                 type="number"
@@ -181,12 +181,12 @@ export function MeasurementChart({
                     : fullDate.slice(0, 5);
                   return hasTime ? `${date} ${iso.slice(11, 16)}` : date;
                 }}
-                tick={{ fontSize: 11, fill: '#64748b' }}
+                tick={{ fontSize: 11, fill: 'var(--chart-text)' }}
               />
               <YAxis
                 type="number"
                 domain={['auto', 'auto']}
-                tick={{ fontSize: 11, fill: '#64748b' }}
+                tick={{ fontSize: 11, fill: 'var(--chart-text)' }}
                 width={55}
               />
               <Tooltip
@@ -205,12 +205,12 @@ export function MeasurementChart({
                 <ReferenceLine
                   y={limits.minValue}
                   ifOverflow="extendDomain"
-                  stroke="#64748b"
+                  stroke="var(--chart-text)"
                   strokeDasharray="5 4"
                   label={{
                     value: 'Mínimo permitido',
                     position: 'insideTopLeft',
-                    fill: '#64748b',
+                    fill: 'var(--chart-text)',
                     fontSize: 11,
                   }}
                 />
@@ -219,12 +219,12 @@ export function MeasurementChart({
                 <ReferenceLine
                   y={limits.maxValue}
                   ifOverflow="extendDomain"
-                  stroke="#c2410c"
+                  stroke="var(--chart-alert)"
                   strokeDasharray="5 4"
                   label={{
                     value: 'Máximo permitido',
                     position: 'insideBottomLeft',
-                    fill: '#c2410c',
+                    fill: 'var(--chart-alert)',
                     fontSize: 11,
                   }}
                 />
@@ -274,7 +274,7 @@ export function MeasurementChart({
           </ResponsiveContainer>
         </div>
       </div>
-      <div className="mt-1 flex flex-wrap justify-center gap-x-5 gap-y-1 text-sm text-slate-700">
+      <div className="mt-1 flex flex-wrap justify-center gap-x-5 gap-y-1 text-sm text-slate-700 dark:text-slate-200">
         {series.map((asset, index) => (
           <span key={asset.assetId} className="flex items-center gap-2">
             <span
@@ -286,7 +286,7 @@ export function MeasurementChart({
           </span>
         ))}
       </div>
-      <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-600">
+      <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-600 dark:text-slate-300">
         <span>
           <span aria-hidden="true" className="font-bold text-teal-700">
             ●
@@ -294,35 +294,40 @@ export function MeasurementChart({
           En rango
         </span>
         <span>
-          <span aria-hidden="true" className="font-bold text-orange-700">
+          <span aria-hidden="true" className="font-bold text-orange-700 dark:text-orange-300">
             ▲
           </span>{' '}
           Fuera de rango
         </span>
         <span>
-          <span aria-hidden="true" className="font-bold text-slate-700">
+          <span aria-hidden="true" className="font-bold text-slate-700 dark:text-slate-200">
             ■
           </span>{' '}
           Sin rango evaluable
         </span>
       </div>
       {!limits && (
-        <p className="mt-3 text-xs text-slate-500">
+        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
           Los límites cambian entre mediciones o no están configurados. Consulta
           el rango histórico de cada punto en su detalle.
         </p>
       )}
       {historicalLines.hasAmbiguousDays && (
-        <p className="mt-2 text-xs text-amber-800">
+        <p className="mt-2 text-xs text-amber-800 dark:text-amber-200">
           Algunas lecturas comparten día y no tienen horas distintas. Sus puntos
           se muestran, pero no se unen porque se desconoce su orden.
         </p>
       )}
-      <p className="mt-1 text-xs text-slate-500">
-        Las líneas unen únicamente observaciones reales de Works; no se crean
-        mediciones intermedias. La fecha es el día de inspección; si existe una
-        hora, se usa para ordenar las lecturas.
-      </p>
+      <details className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-slate-700 dark:text-slate-200">
+          Cómo leer este gráfico
+        </summary>
+        <p className="pb-2">
+          Las líneas unen únicamente observaciones reales de trabajos; no se
+          crean mediciones intermedias. La fecha es el día de inspección; si
+          existe una hora, se usa para ordenar las lecturas.
+        </p>
+      </details>
     </>
   );
 }

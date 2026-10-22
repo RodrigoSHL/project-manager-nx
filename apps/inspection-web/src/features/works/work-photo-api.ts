@@ -3,6 +3,8 @@ import type { WorkItemPhoto } from './models';
 
 const filesUrl = '/api/storage/files';
 
+export class PhotoNetworkError extends Error {}
+
 export const MAX_WORK_PHOTO_SIZE = 10 * 1024 * 1024;
 export const WORK_PHOTO_ACCEPT = 'image/jpeg,image/png,image/webp';
 
@@ -20,7 +22,8 @@ export async function uploadWorkPhoto(
   tenantId: string,
   workId: string,
   formItemId: string,
-  file: File
+  file: File,
+  offlineCapture?: { clientPhotoId: string; capturedAt: string }
 ) {
   if (file.size > MAX_WORK_PHOTO_SIZE) {
     throw new Error('La foto supera el límite de 10 MB.');
@@ -35,19 +38,28 @@ export async function uploadWorkPhoto(
   form.append('ownerId', workId);
   form.append(
     'metadata',
-    JSON.stringify({ category: 'work-item-photo', tenantId, formItemId })
+    JSON.stringify({
+      category: 'work-item-photo',
+      tenantId,
+      formItemId,
+      ...offlineCapture,
+    })
   );
   return request<WorkItemPhoto>(filesUrl, { method: 'POST', body: form });
 }
 
 export async function loadWorkPhotoUrl(id: string) {
+  return URL.createObjectURL(await loadWorkPhotoBlob(id));
+}
+
+export async function loadWorkPhotoBlob(id: string) {
   const response = await authenticatedFetch(
     `${filesUrl}/${encodeURIComponent(id)}/content`
   );
   if (!response.ok) {
     throw new Error(await errorMessage(response, 'No se pudo cargar la foto.'));
   }
-  return URL.createObjectURL(await response.blob());
+  return response.blob();
 }
 
 export async function deleteWorkPhoto(id: string) {
@@ -59,7 +71,9 @@ async function request<T = unknown>(url: string, init: RequestInit = {}) {
   try {
     response = await authenticatedFetch(url, init);
   } catch {
-    throw new Error('No fue posible conectar con el servidor de archivos.');
+    throw new PhotoNetworkError(
+      'No fue posible conectar con el servidor de archivos.'
+    );
   }
   if (!response.ok) {
     throw new Error(

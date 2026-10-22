@@ -141,6 +141,10 @@ export class TravelApiClient {
     return this.authedGet(`/trips/${tripId}/activities/${activityId}`, user);
   }
 
+  getEditableActivity(tripId: string, activityId: string, user: AuthenticatedUser) {
+    return this.authedGet(`/trips/${tripId}/activities/${activityId}/edit-access`, user);
+  }
+
   createActivity(tripId: string, dto: Body, user: AuthenticatedUser) {
     return this.authedPost(`/trips/${tripId}/activities`, dto, user);
   }

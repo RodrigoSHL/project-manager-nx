@@ -88,6 +88,10 @@ export class Project {
   @Column({ type: 'varchar', length: 10, nullable: true, unique: true })
   key: string;
 
+  // Internal high-water mark; deleting tickets must never decrement it.
+  @Column({ type: 'integer', default: 0, select: false })
+  lastTicketNumber: number;
+
   @Column({ type: 'varchar', length: 7, nullable: true })
   color: string;
 
@@ -123,4 +127,4 @@ export class Project {
 
   @OneToMany(() => UsefulLink, usefulLink => usefulLink.project, { cascade: true })
   usefulLinks: UsefulLink[];
-} 
+}

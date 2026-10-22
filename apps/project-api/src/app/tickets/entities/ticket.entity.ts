@@ -55,7 +55,7 @@ export class Ticket {
 
   @Column({ type: 'uuid', nullable: true })
   @Index()
-  sprintId: string;
+  sprintId: string | null;
 
   @Column({ type: 'varchar', length: 500 })
   title: string;
@@ -103,7 +103,7 @@ export class Ticket {
 
   @ManyToOne(() => Sprint, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'sprintId' })
-  sprint: Sprint;
+  sprint: Sprint | null;
 
   @ManyToOne(() => Ticket, (ticket) => ticket.stories, {
     nullable: true,

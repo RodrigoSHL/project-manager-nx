@@ -32,13 +32,13 @@ import { Project, CloudService } from "@/types/project"
 import { ProjectService } from "@/services/projectService"
 
 const CLOUD_PROVIDERS = [
-  { value: 'aws', label: 'AWS', icon: Cloud, color: 'text-orange-600' },
-  { value: 'azure', label: 'Azure', icon: Cloud, color: 'text-blue-600' },
-  { value: 'gcp', label: 'Google Cloud', icon: Cloud, color: 'text-red-600' },
-  { value: 'digital_ocean', label: 'Digital Ocean', icon: Cloud, color: 'text-blue-500' },
-  { value: 'heroku', label: 'Heroku', icon: Cloud, color: 'text-purple-600' },
-  { value: 'vercel', label: 'Vercel', icon: Cloud, color: 'text-black' },
-  { value: 'netlify', label: 'Netlify', icon: Cloud, color: 'text-green-600' }
+  { value: 'aws', label: 'AWS', icon: Cloud, color: 'text-orange-700 dark:text-orange-400' },
+  { value: 'azure', label: 'Azure', icon: Cloud, color: 'text-blue-700 dark:text-blue-400' },
+  { value: 'gcp', label: 'Google Cloud', icon: Cloud, color: 'text-destructive' },
+  { value: 'digital_ocean', label: 'Digital Ocean', icon: Cloud, color: 'text-blue-600 dark:text-blue-400' },
+  { value: 'heroku', label: 'Heroku', icon: Cloud, color: 'text-violet-700 dark:text-violet-400' },
+  { value: 'vercel', label: 'Vercel', icon: Cloud, color: 'text-foreground' },
+  { value: 'netlify', label: 'Netlify', icon: Cloud, color: 'text-emerald-700 dark:text-emerald-400' }
 ]
 
 const SERVICE_TYPES = [
@@ -197,7 +197,7 @@ export function EditCloudServicesDialog({
       const IconComponent = providerInfo.icon
       return <IconComponent className={`h-4 w-4 ${providerInfo.color}`} />
     }
-    return <Cloud className="h-4 w-4 text-gray-600" />
+    return <Cloud className="h-4 w-4 text-muted-foreground" />
   }
 
   const getProviderLabel = (provider: string) => {
@@ -222,7 +222,7 @@ export function EditCloudServicesDialog({
       'Other': Cloud
     }
     const IconComponent = iconMap[type] || Cloud
-    return <IconComponent className="h-4 w-4 text-gray-600" />
+    return <IconComponent className="h-4 w-4 text-muted-foreground" />
   }
 
   return (
@@ -266,7 +266,7 @@ export function EditCloudServicesDialog({
                           <div>
                             <div className="font-medium">{service.name}</div>
                             {service.description && (
-                              <div className="text-sm text-gray-500 truncate max-w-xs">
+                              <div className="text-sm text-muted-foreground truncate max-w-xs">
                                 {service.description}
                               </div>
                             )}
@@ -287,9 +287,9 @@ export function EditCloudServicesDialog({
                         <TableCell>
                           <div className="flex items-center gap-2">
                             {service.isActive ? (
-                              <CheckCircle className="h-4 w-4 text-green-600" />
+                              <CheckCircle className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
                             ) : (
-                              <AlertCircle className="h-4 w-4 text-gray-400" />
+                              <AlertCircle className="h-4 w-4 text-muted-foreground" />
                             )}
                             <Badge variant={service.isActive ? "default" : "secondary"}>
                               {service.isActive ? "Activo" : "Inactivo"}
@@ -297,7 +297,7 @@ export function EditCloudServicesDialog({
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className="text-sm text-gray-600">
+                          <span className="text-sm text-muted-foreground">
                             {service.region || '-'}
                           </span>
                         </TableCell>
@@ -315,7 +315,7 @@ export function EditCloudServicesDialog({
                               size="sm"
                               onClick={() => service.id && handleDeleteService(service.id)}
                             >
-                              <Trash2 className="h-4 w-4 text-red-600" />
+                              <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </div>
                         </TableCell>
@@ -324,8 +324,8 @@ export function EditCloudServicesDialog({
                   </TableBody>
                 </Table>
               ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <Cloud className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                <div className="text-center py-8 text-muted-foreground">
+                  <Cloud className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
                   <p>No hay servicios cloud configurados</p>
                   <p className="text-sm">Haz clic en &quot;Agregar Servicio&quot; para comenzar</p>
                 </div>
@@ -477,4 +477,4 @@ export function EditCloudServicesDialog({
       </DialogContent>
     </Dialog>
   )
-} 
+}

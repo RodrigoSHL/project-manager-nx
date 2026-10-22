@@ -22,9 +22,9 @@ type AssetDetailProps = {
 };
 
 const statusClasses: Record<Asset['status'], string> = {
-  ACTIVE: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
-  OUT_OF_SERVICE: 'bg-amber-50 text-amber-700 ring-amber-600/20',
-  INACTIVE: 'bg-slate-100 text-slate-600 ring-slate-500/20',
+  ACTIVE: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 ring-emerald-600/20',
+  OUT_OF_SERVICE: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 ring-amber-600/20',
+  INACTIVE: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 ring-slate-500/20 dark:ring-slate-500/20',
 };
 
 export function AssetDetail({
@@ -38,15 +38,15 @@ export function AssetDetail({
 
   if (!asset) {
     return (
-      <section className="grid min-h-80 place-items-center rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center">
+      <section className="grid min-h-80 place-items-center rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-8 text-center">
         <div>
-          <span className="mx-auto grid size-12 place-items-center rounded-full bg-slate-100 text-slate-500">
+          <span className="mx-auto grid size-12 place-items-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
             <Box className="size-6" />
           </span>
-          <h2 className="mt-4 font-semibold text-slate-900">
+          <h2 className="mt-4 font-semibold text-slate-900 dark:text-slate-100">
             Selecciona un activo
           </h2>
-          <p className="mt-2 max-w-xs text-sm text-slate-500">
+          <p className="mt-2 max-w-xs text-sm text-slate-500 dark:text-slate-400">
             El detalle aparecerá aquí sin salir del árbol.
           </p>
         </div>
@@ -58,9 +58,9 @@ export function AssetDetail({
   const isSubstation = isSubstationAsset(asset, assetTypes);
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-24">
+    <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm lg:sticky lg:top-24">
       <div className="flex items-start justify-between gap-4">
-        <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-slate-900 text-white">
+        <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-950">
           {isSubstation ? (
             <Building2 className="size-5" />
           ) : (
@@ -76,34 +76,34 @@ export function AssetDetail({
         </span>
       </div>
 
-      <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
         {asset.code}
       </p>
-      <h2 className="mt-1 text-xl font-semibold text-slate-950">
+      <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-100">
         {asset.name}
       </h2>
-      <p className="mt-1 text-sm text-slate-500">
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
         {assetType?.name ?? 'Tipo de activo no disponible'}
       </p>
 
-      <dl className="mt-6 divide-y divide-slate-100 border-y border-slate-100 text-sm">
+      <dl className="mt-6 divide-y divide-slate-100 dark:divide-slate-800 border-y border-slate-100 dark:border-slate-800 text-sm">
         <div className="grid grid-cols-[7rem_1fr] gap-3 py-3">
-          <dt className="text-slate-500">Empresa</dt>
-          <dd className="font-medium text-slate-800">{tenant.name}</dd>
+          <dt className="text-slate-500 dark:text-slate-400">Empresa</dt>
+          <dd className="font-medium text-slate-800 dark:text-slate-200">{tenant.name}</dd>
         </div>
         <div className="grid grid-cols-[7rem_1fr] gap-3 py-3">
-          <dt className="text-slate-500">Ubicación</dt>
-          <dd className="font-medium text-slate-800">{site.name}</dd>
+          <dt className="text-slate-500 dark:text-slate-400">Ubicación</dt>
+          <dd className="font-medium text-slate-800 dark:text-slate-200">{site.name}</dd>
         </div>
         <div className="grid grid-cols-[7rem_1fr] gap-3 py-3">
-          <dt className="text-slate-500">Contenedor</dt>
-          <dd className="text-slate-700">
+          <dt className="text-slate-500 dark:text-slate-400">Contenedor</dt>
+          <dd className="text-slate-700 dark:text-slate-200">
             {formatSiteType(site.type)} · {site.code}
           </dd>
         </div>
         <div className="grid grid-cols-[7rem_1fr] gap-3 py-3">
-          <dt className="text-slate-500">Activo padre</dt>
-          <dd className="text-slate-700">
+          <dt className="text-slate-500 dark:text-slate-400">Activo padre</dt>
+          <dd className="text-slate-700 dark:text-slate-200">
             {parent
               ? `${parent.name} · ${parent.code}`
               : 'Nodo superior del árbol'}
@@ -111,9 +111,9 @@ export function AssetDetail({
         </div>
       </dl>
 
-      <div className="mt-5 flex gap-3 rounded-lg bg-slate-50 p-3">
-        <MapPin className="mt-0.5 size-4 shrink-0 text-slate-500" />
-        <p className="text-sm leading-6 text-slate-600">
+      <div className="mt-5 flex gap-3 rounded-lg bg-slate-50 dark:bg-slate-950 p-3">
+        <MapPin className="mt-0.5 size-4 shrink-0 text-slate-500 dark:text-slate-400" />
+        <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
           {asset.description ?? 'Este activo aún no tiene una descripción.'}
         </p>
       </div>

@@ -6,10 +6,17 @@ import type { Asset, Site } from '../features/assets/models';
 import { useAuth } from '../features/auth/auth-context';
 import { analyticsApi } from '../features/analytics/analytics-api';
 import { VariableComparisonChart } from '../features/analytics/components/variable-comparison-chart';
+import { DashboardFilters } from '../features/analytics/components/dashboard-filters';
 import {
+  VariablePairSelector,
+  type VariablePair as Pair,
+} from '../features/analytics/components/variable-pair-selector';
+import {
+  changeDashboardFilters,
   presetDates,
   readDashboardFilters,
   type PeriodPreset,
+  type DashboardFilterValues,
 } from '../features/analytics/dashboard-filters';
 import type { AnalyticsMeasurements } from '../features/analytics/models';
 import { useAnalyticsSection } from '../features/analytics/use-analytics-section';
@@ -20,10 +27,6 @@ import {
   resolveAvailableSelection,
 } from '../features/tenants/organization-selection-storage';
 import { useTenantAccess } from '../features/tenants/tenant-access-context';
-
-const selectClass =
-  'mt-1.5 h-11 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900';
-type Pair = { assetId: string; conceptId: string };
 
 export function VariableComparisonPage() {
   const [searchParams] = useSearchParams();
@@ -48,7 +51,7 @@ export function VariableComparisonPage() {
   const [first, setFirst] = useState<Pair>({ assetId: '', conceptId: '' });
   const [second, setSecond] = useState<Pair>({ assetId: '', conceptId: '' });
   const filter = { siteId, from: dates.from, to: dates.to };
-  const validPeriod = dates.from <= dates.to;
+  const validPeriod = Boolean(dates.from && dates.to && dates.from <= dates.to);
   const enabled = mode === 'REMOTE' && !!tenantId;
 
   const sites = useAnalyticsSection<Site[]>(
@@ -150,56 +153,24 @@ export function VariableComparisonPage() {
     if (next !== 'custom') setDates(presetDates(next));
   }
 
-  function pairFields(
-    label: string,
-    value: Pair,
-    update: (pair: Pair) => void
-  ) {
-    return (
-      <fieldset className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-        <legend className="px-1 font-semibold text-slate-900">{label}</legend>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="text-sm font-medium text-slate-700">
-            Activo
-            <select
-              className={selectClass}
-              value={value.assetId}
-              onChange={(event) =>
-                update({ ...value, assetId: event.target.value })
-              }
-              disabled={!siteId || assets.loading}
-            >
-              <option value="">Selecciona un activo</option>
-              {(assets.data ?? []).map((asset) => (
-                <option key={asset.id} value={asset.id}>
-                  {asset.name} · {asset.code}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-sm font-medium text-slate-700">
-            Concepto analógico
-            <select
-              className={selectClass}
-              value={value.conceptId}
-              onChange={(event) =>
-                update({ ...value, conceptId: event.target.value })
-              }
-              disabled={!siteId || concepts.loading}
-            >
-              <option value="">Selecciona un concepto</option>
-              {(concepts.data ?? []).map((concept) => (
-                <option key={concept.id} value={concept.id}>
-                  {concept.name}
-                  {concept.unit ? ` (${concept.unit})` : ''}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      </fieldset>
-    );
+  function applyFilters(nextTenantId: string, next: DashboardFilterValues) {
+    if (nextTenantId !== tenantId) updateTenant(nextTenantId);
+    else if ((next.siteId ?? '') !== siteId) updateSite(next.siteId ?? '');
+    setPeriod(next.period);
+    setDates({ from: next.from, to: next.to });
   }
+
+  const returnParams = changeDashboardFilters(searchParams, {
+    period,
+    ...dates,
+    siteId,
+  });
+  returnParams.set('tenantId', tenantId);
+  if (tenantId !== searchParams.get('tenantId')) {
+    for (const key of ['conceptId', 'assetIds', 'workTypeId', 'assetTypeId'])
+      returnParams.delete(key);
+  } else if (siteId !== (searchParams.get('siteId') ?? ''))
+    returnParams.delete('assetIds');
 
   const tooMany =
     result.data?.some((item) => item.totalMeasurements > MAX_VARIABLE_POINTS) ??
@@ -211,155 +182,115 @@ export function VariableComparisonPage() {
     <>
       <PageHeader
         title="Comparar variables"
-        description="Observa dos conceptos analógicos, incluso de activos distintos, sobre una misma línea de tiempo. Las mediciones provienen de trabajos finalizados o revisados."
+        description="Elige dos mediciones y compara su evolución en el tiempo."
       />
       <Link
-        to={`/analytics/measurements?${searchParams.toString()}`}
-        className="mb-5 inline-block text-sm font-medium text-slate-600 hover:text-slate-950"
+        to={`/analytics/measurements?${returnParams.toString()}`}
+        className="mb-4 inline-flex min-h-11 items-center text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-slate-100"
       >
-        ← Volver a análisis de mediciones
+        ← Volver a mediciones
       </Link>
       {mode !== 'REMOTE' ? (
-        <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <p className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-4 text-sm text-amber-900 dark:text-amber-200">
           El comparador histórico requiere conexión. Puedes seguir registrando
           mediciones y sincronizarlas después.
         </p>
       ) : (
-        <div className="space-y-5">
-          <section
-            className="grid gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4 sm:p-5"
-            aria-label="Filtros de comparación"
-          >
-            <label className="text-sm font-medium text-slate-700">
-              Empresa
-              <select
-                className={selectClass}
-                value={tenantId}
-                onChange={(event) => updateTenant(event.target.value)}
-              >
-                {access.accessibleTenants.map((tenant) => (
-                  <option key={tenant.id} value={tenant.id}>
-                    {tenant.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="text-sm font-medium text-slate-700">
-              Faena / Sitio
-              <select
-                className={selectClass}
-                value={siteId}
-                onChange={(event) => updateSite(event.target.value)}
-                disabled={sites.loading}
-              >
-                <option value="">Selecciona una faena</option>
-                {(sites.data ?? []).map((site) => (
-                  <option key={site.id} value={site.id}>
-                    {site.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="text-sm font-medium text-slate-700">
-              Período
-              <select
-                className={selectClass}
-                value={period}
-                onChange={(event) =>
-                  updatePeriod(event.target.value as PeriodPreset)
-                }
-              >
-                <option value="30d">Últimos 30 días</option>
-                <option value="3m">Últimos 3 meses</option>
-                <option value="6m">Últimos 6 meses</option>
-                <option value="12m">Últimos 12 meses</option>
-                <option value="custom">Personalizado</option>
-              </select>
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <label className="text-sm font-medium text-slate-700">
-                Desde
-                <input
-                  className={selectClass}
-                  type="date"
-                  value={dates.from}
-                  max={dates.to}
-                  onChange={(event) => {
-                    setPeriod('custom');
-                    setDates((current) => ({
-                      ...current,
-                      from: event.target.value,
-                    }));
-                  }}
-                />
-              </label>
-              <label className="text-sm font-medium text-slate-700">
-                Hasta
-                <input
-                  className={selectClass}
-                  type="date"
-                  value={dates.to}
-                  min={dates.from}
-                  onChange={(event) => {
-                    setPeriod('custom');
-                    setDates((current) => ({
-                      ...current,
-                      to: event.target.value,
-                    }));
-                  }}
-                />
-              </label>
-            </div>
-          </section>
+        <div className="min-w-0 space-y-4 md:space-y-5">
+          <DashboardFilters
+            label="Filtros de comparación"
+            showTypeFilters={false}
+            emptySiteLabel="Selecciona una faena"
+            filters={{ period, ...dates, siteId }}
+            tenantId={tenantId}
+            tenants={access.accessibleTenants}
+            sites={sites.data ?? []}
+            workTypes={[]}
+            assetTypes={[]}
+            loadingOptions={sites.loading}
+            optionsError={null}
+            onTenantChange={updateTenant}
+            onChange={(change) => {
+              if (change.siteId !== undefined) updateSite(change.siteId);
+              if (change.period) updatePeriod(change.period);
+              if (change.from !== undefined || change.to !== undefined) {
+                setPeriod('custom');
+                setDates((current) => ({
+                  from: change.from ?? current.from,
+                  to: change.to ?? current.to,
+                }));
+              }
+            }}
+            onApply={applyFilters}
+          />
           {[sites.error, assets.error, concepts.error, result.error]
             .filter(Boolean)
             .map((error) => (
               <p
                 key={error}
                 role="alert"
-                className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+                className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-800 dark:text-red-200"
               >
                 {error}
               </p>
             ))}
-          {pairFields('Variable A', first, setFirst)}
-          {pairFields('Variable B', second, setSecond)}
+          <div className="grid min-w-0 gap-3 md:grid-cols-2">
+            <VariablePairSelector
+              label="Variable A"
+              value={first}
+              onChange={setFirst}
+              assets={assets.data ?? []}
+              concepts={concepts.data ?? []}
+              disabled={!siteId || !validPeriod}
+              loading={assets.loading || concepts.loading}
+            />
+            <VariablePairSelector
+              label="Variable B"
+              value={second}
+              onChange={setSecond}
+              assets={assets.data ?? []}
+              concepts={concepts.data ?? []}
+              disabled={!siteId || !validPeriod}
+              loading={assets.loading || concepts.loading}
+            />
+          </div>
           {!siteId && (
-            <p className="text-sm text-slate-600">
-              Selecciona una faena para cargar sus activos y conceptos medidos.
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              Abre Filtros y selecciona una faena para comenzar.
             </p>
           )}
           {siteId && !bothSelected && (
-            <p className="text-sm text-slate-600">
-              Elige un activo y un concepto para cada variable.
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              Elige un activo y una medición para cada variable.
             </p>
           )}
           {samePair && (
-            <p role="alert" className="text-sm text-amber-800">
+            <p role="alert" className="text-sm text-amber-800 dark:text-amber-200">
               Elige dos pares activo–concepto distintos.
             </p>
           )}
           {!validPeriod && (
-            <p role="alert" className="text-sm text-red-700">
-              La fecha inicial debe ser anterior a la final.
+            <p role="alert" className="text-sm text-red-700 dark:text-red-300">
+              Completa el período; la fecha inicial debe ser anterior o igual a
+              la final.
             </p>
           )}
           {result.loading && (
-            <p role="status" className="text-sm text-slate-600">
+            <p role="status" className="text-sm text-slate-600 dark:text-slate-300">
               Cargando mediciones…
             </p>
           )}
           {tooMany && (
             <p
               role="alert"
-              className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+              className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-4 text-sm text-amber-900 dark:text-amber-200"
             >
               Hay más de {MAX_VARIABLE_POINTS} mediciones en al menos una
               variable. Acota el período para mostrar una comparación completa.
             </p>
           )}
           {selectedWithoutData && !tooMany && (
-            <p className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-600">
+            <p className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 text-sm text-slate-600 dark:text-slate-300">
               Uno de los pares elegidos no tiene mediciones en este período.
               Prueba otro activo o concepto.
             </p>
@@ -371,7 +302,7 @@ export function VariableComparisonPage() {
               tenantId={tenantId}
             />
           )}
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             La coincidencia temporal de dos curvas puede sugerir una relación,
             pero no demuestra causalidad. La hora es opcional y corresponde a la
             hora local registrada en la faena.

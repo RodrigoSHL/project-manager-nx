@@ -1,4 +1,5 @@
 import type { Table } from 'dexie';
+import { normalizeCatalogOrder } from '../db/repair-local-form-order';
 import {
   inspectionDb,
   offlineSiteKey,
@@ -136,7 +137,10 @@ async function applyChange(
     return false;
   }
 
-  const payload = requirePayload(tenantId, change);
+  const payload = normalizeCatalogOrder(
+    change.entityType,
+    requirePayload(tenantId, change)
+  );
   if (change.entityType === 'WORK') {
     const { formSnapshot, ...work } = payload;
     await table.put({ ...work, syncStatus: 'SYNCED' } as StoredRecord);

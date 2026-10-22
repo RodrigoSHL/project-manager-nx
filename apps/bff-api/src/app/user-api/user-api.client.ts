@@ -23,6 +23,13 @@ export interface UserApiWorkspace {
   description?: string | null;
 }
 
+export type WorkspaceRole = 'owner' | 'admin' | 'member' | 'viewer';
+
+export interface UserApiWorkspaceMember {
+  userId: string;
+  role: WorkspaceRole;
+}
+
 @Injectable()
 export class UserApiClient {
   private readonly baseUrl = this.resolveBaseUrl();
@@ -110,8 +117,8 @@ export class UserApiClient {
     return this.write(`/workspaces/${encodeURIComponent(workspaceId)}/members`, 'POST', dto);
   }
 
-  async findWorkspaceMembers(workspaceId: string) {
-    return this.get(`/workspaces/${encodeURIComponent(workspaceId)}/members`);
+  async findWorkspaceMembers(workspaceId: string): Promise<UserApiWorkspaceMember[]> {
+    return this.get<UserApiWorkspaceMember[]>(`/workspaces/${encodeURIComponent(workspaceId)}/members`);
   }
 
   async updateWorkspaceMemberRole(workspaceId: string, userId: string, dto: JsonBody) {

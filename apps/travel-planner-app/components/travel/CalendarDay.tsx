@@ -139,7 +139,7 @@ export function CalendarDay({
             e.stopPropagation();
             onAddActivity(date);
           }}
-          className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary"
+          className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-primary/10 text-muted-foreground hover:text-brand-foreground"
           aria-label="Agregar actividad"
         >
           <Plus className="w-3.5 h-3.5" />

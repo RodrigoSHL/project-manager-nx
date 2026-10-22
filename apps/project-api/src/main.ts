@@ -1,8 +1,3 @@
-/**
- * This is not a production server yet!
- * This is only a minimal backend to get started.
- */
-
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
@@ -21,7 +16,7 @@ async function bootstrap() {
   // Configurar CORS — soporta múltiples orígenes separados por coma
   const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:4200')
     .split(',')
-    .map((o) => o.trim());
+    .map((o) => o.trim()).filter(Boolean);
   app.enableCors({
     origin: allowedOrigins,
     credentials: true,
@@ -38,7 +33,8 @@ async function bootstrap() {
   app.setGlobalPrefix(globalPrefix);
   
   const port = process.env.API_PORT || process.env.PORT || 3002;
-  await app.listen(port);
+  app.enableShutdownHooks();
+  await app.listen(port, '0.0.0.0');
   
   Logger.log(
     `🚀 Application is running on: http://localhost:${port}/${globalPrefix}`

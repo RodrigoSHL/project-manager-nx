@@ -6,9 +6,10 @@ import { Ticket } from './entities/ticket.entity';
 import { Project } from '../projects/entities/project.entity';
 import { TicketSupportDetail } from '../support-details/entities/ticket-support-detail.entity';
 import { TeamMember } from '../projects/entities/team-member.entity';
+import { Sprint } from '../sprints/entities/sprint.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Ticket, Project, TicketSupportDetail, TeamMember])],
+  imports: [TypeOrmModule.forFeature([Ticket, Project, TicketSupportDetail, TeamMember, Sprint])],
   controllers: [TicketsController],
   providers: [TicketsService],
   exports: [TicketsService],

@@ -1,0 +1,7 @@
+[
+  "Allow dynamic-group atomdev-prod-backup-uploader to read buckets in tenancy where target.bucket.name='atomdev-prod-backups-scl'",
+  "Allow dynamic-group atomdev-prod-backup-uploader to manage objects in tenancy where all {target.bucket.name='atomdev-prod-backups-scl', any {request.permission='OBJECT_CREATE', request.permission='OBJECT_INSPECT', request.permission='OBJECT_READ'}}",
+  "Allow dynamic-group atomdev-prod-backup-uploader to use metrics in tenancy where target.metrics.namespace='atomdev_backup'",
+  "Allow dynamic-group atomdev-prod-backup-uploader to {ONS_TOPIC_PUBLISH} in tenancy",
+  "Allow service objectstorage-sa-santiago-1 to manage object-family in tenancy where all {target.bucket.name='atomdev-prod-backups-scl', any {request.permission='BUCKET_INSPECT', request.permission='BUCKET_READ', request.permission='OBJECT_INSPECT', request.permission='OBJECT_UPDATE_TIER', request.permission='OBJECT_DELETE', request.permission='OBJECT_VERSION_DELETE'}}"
+]

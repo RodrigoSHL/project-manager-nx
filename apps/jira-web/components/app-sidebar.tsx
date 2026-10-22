@@ -19,6 +19,7 @@ import {
   ExternalLink,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { FlowBoardLogo } from '@/components/brand-logo'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -81,17 +82,13 @@ export function AppSidebar({
         <div className="flex items-center h-14 px-3 border-b border-sidebar-border">
           {!collapsed && (
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground font-bold text-sm">
-                F
-              </div>
+              <FlowBoardLogo className="size-9 shrink-0" />
               <span className="font-semibold text-sidebar-foreground truncate">FlowBoard</span>
             </div>
           )}
           {collapsed && (
             <div className="flex items-center justify-center w-full">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground font-bold text-sm">
-                F
-              </div>
+              <FlowBoardLogo className="size-9 shrink-0" alt="FlowBoard" />
             </div>
           )}
           <Button
@@ -102,6 +99,7 @@ export function AppSidebar({
               collapsed && "hidden"
             )}
             onClick={onToggle}
+            aria-label="Contraer menú"
           >
             <PanelLeftClose className="h-4 w-4" />
           </Button>
@@ -118,7 +116,7 @@ export function AppSidebar({
                 >
                   <div className="flex items-center gap-2 truncate">
                     <Avatar className="h-5 w-5 rounded">
-                      <AvatarFallback className="rounded text-[10px] bg-primary/10 text-primary">
+                      <AvatarFallback className="rounded text-[10px] bg-primary/10 text-brand-foreground">
                         {selectedWorkspace?.name.charAt(0) ?? '?'}
                       </AvatarFallback>
                     </Avatar>
@@ -168,10 +166,11 @@ export function AppSidebar({
                   className={cn(
                     "w-full justify-start h-8 px-2 text-sm font-normal",
                     currentProject === proj.id 
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground" 
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium ring-1 ring-inset ring-primary/25"
                       : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
                   )}
                   onClick={() => onProjectChange(proj.id)}
+                  aria-pressed={currentProject === proj.id}
                 >
                   <div 
                     className="w-2.5 h-2.5 rounded-sm mr-2 shrink-0" 
@@ -202,10 +201,12 @@ export function AppSidebar({
                     "w-full h-9 text-sm font-normal",
                     collapsed ? "justify-center px-0" : "justify-start px-2",
                     isActive 
-                      ? "bg-sidebar-accent text-sidebar-primary font-medium" 
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium ring-1 ring-inset ring-primary/25"
                       : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
                   )}
                   onClick={() => onViewChange(item.href.replace('#', ''))}
+                  aria-pressed={isActive}
+                  aria-label={collapsed ? item.name : undefined}
                 >
                   <item.icon className={cn("h-4 w-4 shrink-0", !collapsed && "mr-2")} />
                   {!collapsed && <span>{item.name}</span>}
@@ -239,10 +240,10 @@ export function AppSidebar({
               rel="noopener noreferrer"
               className={cn(
                 'flex items-center gap-2 w-full h-9 px-2 rounded-md text-sm font-normal',
-                'text-sidebar-foreground/60 hover:text-sky-500 hover:bg-sidebar-accent transition-colors',
+                'text-brand-foreground hover:bg-sidebar-accent transition-colors',
               )}
             >
-              <LifeBuoy className="h-4 w-4 shrink-0 text-sky-500/70" />
+              <LifeBuoy className="h-4 w-4 shrink-0" />
               <span>Portal de soporte</span>
               <ExternalLink className="h-3 w-3 ml-auto opacity-60" />
             </a>
@@ -259,6 +260,7 @@ export function AppSidebar({
                   size="icon"
                   className="w-full h-9 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
                   onClick={onToggle}
+                  aria-label="Expandir menú"
                 >
                   <PanelLeft className="h-4 w-4" />
                 </Button>

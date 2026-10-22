@@ -44,6 +44,9 @@ const TEAM_ROLES = [
   { value: 'qa', label: 'QA' },
   { value: 'designer', label: 'Designer' },
   { value: 'architect', label: 'Architect' },
+  { value: 'member', label: 'Miembro' },
+  { value: 'analyst', label: 'Analista' },
+  { value: 'technician', label: 'Técnico' },
 ]
 
 function getInitials(name: string) {
@@ -248,7 +251,7 @@ export function EditTeamMembersDialog({
                     className="flex items-center gap-3 p-2.5 rounded-lg border bg-card"
                   >
                     <Avatar className="h-8 w-8 shrink-0">
-                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                      <AvatarFallback className="text-xs bg-primary/10 text-brand-foreground">
                         {getInitials(member.name)}
                       </AvatarFallback>
                     </Avatar>

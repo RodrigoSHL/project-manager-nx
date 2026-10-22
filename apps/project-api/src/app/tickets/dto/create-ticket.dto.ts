@@ -33,7 +33,7 @@ export class CreateTicketDto {
 
   @IsUUID()
   @IsOptional()
-  sprintId?: string;
+  sprintId?: string | null;
 
   @IsUUID()
   @IsOptional()

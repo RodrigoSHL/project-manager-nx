@@ -1,6 +1,6 @@
 import { ForbiddenException } from '@nestjs/common';
 import { AuthenticatedUser } from '../auth/types/authenticated-user';
-import { UserRole } from '../user-api/user-api.client';
+import { UserApiClient, UserRole } from '../user-api/user-api.client';
 import { WorkspaceAccessService } from '../user-api/workspace-access.service';
 import { ProjectAccessService } from './project-access.service';
 import { ProjectApiClient } from './project-api.client';
@@ -28,6 +28,7 @@ describe('ProjectAccessService', () => {
     findAccessibleWorkspaces: jest.Mock;
     assertWorkspaceIdAccess: jest.Mock;
   };
+  let userApi: { findWorkspaceMembers: jest.Mock };
   let service: ProjectAccessService;
 
   beforeEach(() => {
@@ -41,9 +42,11 @@ describe('ProjectAccessService', () => {
       findAccessibleWorkspaces: jest.fn(),
       assertWorkspaceIdAccess: jest.fn(),
     };
+    userApi = { findWorkspaceMembers: jest.fn() };
     service = new ProjectAccessService(
       projectClient as unknown as ProjectApiClient,
       workspaceAccess as unknown as WorkspaceAccessService,
+      userApi as unknown as UserApiClient,
     );
   });
 
@@ -95,5 +98,36 @@ describe('ProjectAccessService', () => {
 
     await expect(service.findAccessibleProject('project-1', user))
       .rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it.each(['owner', 'admin', 'member'])('permits ticket writes for workspace %s', async role => {
+    projectClient.findOne.mockResolvedValue({ id: 'project-1', workspaceId: 'workspace-1', teamMembers: [{ userId: user.userId }] });
+    userApi.findWorkspaceMembers.mockResolvedValue([{ userId: user.userId, role }]);
+
+    await expect(service.getProjectPermissions('project-1', user)).resolves.toEqual({ canWrite: true, workspaceRole: role });
+    await expect(service.assertProjectWriteAccess('project-1', user)).resolves.toBeUndefined();
+  });
+
+  it('lets a viewer read the project but rejects ticket writes', async () => {
+    projectClient.findOne.mockResolvedValue({ id: 'project-1', workspaceId: 'workspace-1', teamMembers: [{ userId: user.userId }] });
+    userApi.findWorkspaceMembers.mockResolvedValue([{ userId: user.userId, role: 'viewer' }]);
+
+    await expect(service.findAccessibleProject('project-1', user)).resolves.toMatchObject({ id: 'project-1' });
+    await expect(service.getProjectPermissions('project-1', user)).resolves.toEqual({ canWrite: false, workspaceRole: 'viewer' });
+    await expect(service.assertProjectWriteAccess('project-1', user)).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('rejects writes when the workspace membership is missing', async () => {
+    projectClient.findOne.mockResolvedValue({ id: 'project-1', workspaceId: 'workspace-1', teamMembers: [{ userId: user.userId }] });
+    userApi.findWorkspaceMembers.mockResolvedValue([]);
+    await expect(service.assertProjectWriteAccess('project-1', user)).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('uses the workspace role even when the user is a global administrator', async () => {
+    projectClient.findOne.mockResolvedValue({ id: 'project-1', workspaceId: 'workspace-1' });
+    userApi.findWorkspaceMembers.mockResolvedValue([{ userId: admin.userId, role: 'viewer' }]);
+    await expect(service.assertProjectWriteAccess('project-1', admin)).rejects.toBeInstanceOf(ForbiddenException);
+    userApi.findWorkspaceMembers.mockResolvedValue([{ userId: admin.userId, role: 'admin' }]);
+    await expect(service.getProjectPermissions('project-1', admin)).resolves.toEqual({ canWrite: true, workspaceRole: 'admin' });
   });
 });

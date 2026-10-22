@@ -6,9 +6,10 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY nx.json tsconfig.base.json jest.preset.js jest.config.ts eslint.config.mjs ./
-COPY apps ./apps
-
 ARG APP
+COPY apps/${APP} ./apps/${APP}
+COPY libs ./libs
+
 ENV NX_DAEMON=false
 RUN npx nx build ${APP} --configuration=production --skip-nx-cache
 

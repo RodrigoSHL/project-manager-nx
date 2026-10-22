@@ -13,19 +13,19 @@ export function AssetWorkList({ asset }: { asset: Asset }) {
     .sort((a, b) => b.executionDate.localeCompare(a.executionDate));
 
   return (
-    <section className="mt-6 border-t border-slate-200 pt-5">
+    <section className="mt-6 border-t border-slate-200 dark:border-slate-800 pt-5">
       <div className="flex items-center gap-2">
-        <ClipboardList className="size-4 text-slate-500" />
-        <h3 className="font-semibold text-slate-900">Trabajos</h3>
+        <ClipboardList className="size-4 text-slate-500 dark:text-slate-400" />
+        <h3 className="font-semibold text-slate-900 dark:text-slate-100">Trabajos</h3>
       </div>
       {isLoading ? (
-        <p className="mt-3 text-sm text-slate-500">Cargando trabajos...</p>
+        <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">Cargando trabajos...</p>
       ) : assetWorks.length === 0 ? (
-        <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-500">
+        <p className="mt-3 rounded-lg bg-slate-50 dark:bg-slate-950 p-3 text-sm text-slate-500 dark:text-slate-400">
           Este activo todavía no tiene trabajos.
         </p>
       ) : (
-        <div className="mt-3 divide-y divide-slate-100 rounded-lg border border-slate-200">
+        <div className="mt-3 divide-y divide-slate-100 dark:divide-slate-800 rounded-lg border border-slate-200 dark:border-slate-800">
           {assetWorks.map((work) => {
             const workType = catalog?.workTypes.find(
               (item) => item.id === work.workTypeId
@@ -34,13 +34,13 @@ export function AssetWorkList({ asset }: { asset: Asset }) {
               <Link
                 key={work.id}
                 to={`/works/${work.id}?tenantId=${work.tenantId}`}
-                className="flex items-center gap-3 p-3 transition-colors hover:bg-slate-50"
+                className="flex items-center gap-3 p-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-950"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-slate-900">
+                  <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
                     {workType?.name ?? work.title}
                   </p>
-                  <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-slate-500">
+                  <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-slate-500 dark:text-slate-400">
                     <span className="inline-flex items-center gap-1">
                       <CalendarDays className="size-3.5" />
                       {formatWorkDate(work.executionDate)}

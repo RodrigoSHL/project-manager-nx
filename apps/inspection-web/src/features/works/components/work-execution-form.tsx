@@ -24,6 +24,7 @@ import {
   deleteWorkPhoto,
   listWorkPhotos,
   loadWorkPhotoUrl,
+  PhotoNetworkError,
   uploadWorkPhoto,
 } from '../work-photo-api';
 import {
@@ -31,6 +32,12 @@ import {
   type WorkItemPhotoPreview,
 } from './work-item-additional-info';
 import { useOffline } from '../../offline/offline-context';
+import {
+  localPhotoAsWorkPhoto,
+  localPhotoRepository,
+} from '../../../repositories/local-photo-repository';
+import { MeasurementDateTimeEditor } from './measurement-date-time-editor';
+import { localMeasurementDateTime } from '../measurement-date-time';
 
 type WorkExecutionFormProps = {
   work: Work;
@@ -59,7 +66,7 @@ export function WorkExecutionForm({
   onStart,
   onFinish,
 }: WorkExecutionFormProps) {
-  const { mode } = useOffline();
+  const { mode, refresh: refreshOfflineState } = useOffline();
   const localMode = mode === 'LOCAL';
   const [values, setValues] = useState<Record<string, WorkItemValue>>({});
   const [notice, setNotice] = useState<string | null>(null);
@@ -73,6 +80,17 @@ export function WorkExecutionForm({
   const readonly =
     accessReadonly || work.status === 'FINISHED' || work.status === 'REVIEWED';
   const formSections = groupSnapshotBySection(snapshot, work.assetId);
+  const analogItemIds = new Set(
+    snapshot.sections
+      .flatMap((section) => section.items)
+      .filter((item) => item.concept?.type === 'ANALOG')
+      .map((item) => item.id)
+  );
+  const savedResponseIds = new Set(
+    responses
+      .filter((response) => response.workId === work.id)
+      .map((response) => response.formItemId)
+  );
   const candidates = deriveFindingCandidates(
     work,
     snapshot,
@@ -118,41 +136,116 @@ export function WorkExecutionForm({
   }, [annotations, responses, taskCompletions, work.id]);
 
   useEffect(() => {
-    if (localMode) {
-      setPhotos([]);
-      setPhotoErrors({});
-      return;
-    }
     let cancelled = false;
     const workPreviewUrls = new Set<string>();
     previewUrls.current = workPreviewUrls;
+    setPhotos([]);
     async function loadPhotos() {
       try {
-        const records = await listWorkPhotos(work.tenantId, work.id);
-        const loaded = await Promise.allSettled(
-          records.map(async (photo) => ({
-            ...photo,
-            previewUrl: await loadWorkPhotoUrl(photo.id),
-          }))
+        const references = await localPhotoRepository.list(
+          work.tenantId,
+          work.id
         );
-        if (cancelled) {
-          loaded.forEach((result) => {
-            if (result.status === 'fulfilled') {
-              URL.revokeObjectURL(result.value.previewUrl);
+        let remote: Awaited<ReturnType<typeof listWorkPhotos>> = [];
+        let remoteError = false;
+        if (!localMode) {
+          try {
+            remote = await listWorkPhotos(work.tenantId, work.id);
+          } catch {
+            remoteError = true;
+          }
+        }
+        const locallyLoaded = await Promise.allSettled(
+          references.map(async (reference) => {
+            const stored = await localPhotoRepository.blob(reference.id);
+            if (!stored) return null;
+            const alreadyUploaded = remote.find(
+              (photo) => photo.metadata.clientPhotoId === reference.id
+            );
+            if (alreadyUploaded && reference.status !== 'REMOTE_ONLY') {
+              await localPhotoRepository.markUploaded(
+                reference.id,
+                alreadyUploaded.id
+              );
             }
-          });
+            const currentReference = alreadyUploaded
+              ? {
+                  ...reference,
+                  remoteFileId: alreadyUploaded.id,
+                  status: 'REMOTE_ONLY' as const,
+                }
+              : reference;
+            return {
+              ...localPhotoAsWorkPhoto(currentReference),
+              previewUrl: URL.createObjectURL(stored.blob),
+              localId: reference.id,
+              canDelete:
+                currentReference.status === 'PENDING_UPLOAD'
+                  ? false
+                  : currentReference.status !== 'REMOTE_ONLY' || !localMode,
+              pendingUpload: currentReference.status !== 'REMOTE_ONLY',
+            } satisfies WorkItemPhotoPreview;
+          })
+        );
+        const allLocalPhotos = locallyLoaded.flatMap((result) =>
+          result.status === 'fulfilled' && result.value ? [result.value] : []
+        );
+        const localPhotos = allLocalPhotos.filter((photo, index) => {
+          const first = allLocalPhotos.findIndex(
+            (candidate) => candidate.id === photo.id
+          );
+          if (first === index) return true;
+          URL.revokeObjectURL(photo.previewUrl);
+          return false;
+        });
+        const loadedIds = new Set(localPhotos.map((photo) => photo.id));
+        const remotelyLoaded = await Promise.allSettled(
+          remote
+            .filter((photo) => !loadedIds.has(photo.id))
+            .map(async (photo) => ({
+              ...photo,
+              previewUrl: await loadWorkPhotoUrl(photo.id),
+              canDelete: true,
+            }))
+        );
+        const loaded = [
+          ...localPhotos,
+          ...remotelyLoaded.flatMap((result) =>
+            result.status === 'fulfilled' ? [result.value] : []
+          ),
+        ];
+        if (cancelled) {
+          loaded.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
           return;
         }
-        const available = loaded.flatMap((result) =>
-          result.status === 'fulfilled' ? [result.value] : []
-        );
+        const available = loaded;
         available.forEach((photo) => workPreviewUrls.add(photo.previewUrl));
-        setPhotos(available);
-        if (available.length !== records.length) {
+        setPhotos((current) => {
+          const availableIds = new Set(available.map((photo) => photo.id));
+          return [
+            ...available,
+            ...current.filter(
+              (photo) =>
+                photo.ownerId === work.id &&
+                workPreviewUrls.has(photo.previewUrl) &&
+                !availableIds.has(photo.id)
+            ),
+          ];
+        });
+        if (
+          remoteError ||
+          [...locallyLoaded, ...remotelyLoaded].some(
+            (result) => result.status === 'rejected'
+          ) ||
+          (localMode && references.length !== localPhotos.length)
+        ) {
           setPhotoErrors((current) => ({
             ...current,
-            general: 'Algunas fotografías no se pudieron cargar.',
+            general:
+              'Algunas fotografías no están disponibles en este dispositivo.',
           }));
+        } else {
+          setPhotoErrors((current) => ({ ...current, general: '' }));
         }
       } catch (error) {
         if (!cancelled) {
@@ -172,10 +265,24 @@ export function WorkExecutionForm({
   }, [localMode, work.id, work.tenantId]);
 
   function update(itemId: string, value: WorkItemValue) {
-    setValues((current) => ({
-      ...current,
-      [itemId]: { ...current[itemId], ...value },
-    }));
+    const now = localMeasurementDateTime();
+    const editsMeasurement =
+      'valueNumber' in value ||
+      'measuredAt' in value ||
+      'measuredAtTime' in value;
+    setValues((current) => {
+      const next = { ...current[itemId], ...value };
+      if (
+        editsMeasurement &&
+        analogItemIds.has(itemId) &&
+        !savedResponseIds.has(itemId)
+      ) {
+        next.measuredAt ??= now.measuredAt;
+        if (next.measuredAtTime === undefined)
+          next.measuredAtTime = now.measuredAtTime;
+      }
+      return { ...current, [itemId]: next };
+    });
     setNotice(null);
     setFinishError(null);
   }
@@ -185,15 +292,62 @@ export function WorkExecutionForm({
     setPhotoErrors((current) => ({ ...current, [itemId]: '' }));
     try {
       for (const file of files) {
-        const photo = await uploadWorkPhoto(
-          work.tenantId,
-          work.id,
-          itemId,
-          file
-        );
-        const previewUrl = await loadWorkPhotoUrl(photo.id);
+        const identity = {
+          id: crypto.randomUUID(),
+          capturedAt: new Date().toISOString(),
+        };
+        async function saveLocally() {
+          const reference = await localPhotoRepository.save(
+            work.tenantId,
+            work.id,
+            itemId,
+            file,
+            identity
+          );
+          const previewUrl = URL.createObjectURL(file);
+          previewUrls.current.add(previewUrl);
+          setPhotos((current) => [
+            ...current,
+            {
+              ...localPhotoAsWorkPhoto(reference),
+              previewUrl,
+              localId: reference.id,
+              canDelete: true,
+              pendingUpload: true,
+            },
+          ]);
+          await refreshOfflineState().catch(() => undefined);
+        }
+        if (localMode) {
+          await saveLocally();
+          continue;
+        }
+        let photo;
+        try {
+          photo = await uploadWorkPhoto(work.tenantId, work.id, itemId, file, {
+            clientPhotoId: identity.id,
+            capturedAt: identity.capturedAt,
+          });
+        } catch (error) {
+          if (!(error instanceof PhotoNetworkError)) throw error;
+          await saveLocally();
+          continue;
+        }
+        const previewUrl = URL.createObjectURL(file);
         previewUrls.current.add(previewUrl);
-        setPhotos((current) => [...current, { ...photo, previewUrl }]);
+        setPhotos((current) => [
+          ...current,
+          { ...photo, previewUrl, canDelete: true },
+        ]);
+        try {
+          await localPhotoRepository.cacheRemote(photo, file);
+        } catch {
+          setPhotoErrors((current) => ({
+            ...current,
+            [itemId]:
+              'La foto se subió, pero no quedó disponible sin conexión en este dispositivo.',
+          }));
+        }
       }
     } catch (error) {
       setPhotoErrors((current) => ({
@@ -210,7 +364,30 @@ export function WorkExecutionForm({
     setPhotoBusyItems((current) => [...new Set([...current, itemId])]);
     setPhotoErrors((current) => ({ ...current, [itemId]: '' }));
     try {
-      await deleteWorkPhoto(photo.id);
+      const localReference = photo.localId
+        ? (await localPhotoRepository.list(work.tenantId, work.id)).find(
+            (item) => item.id === photo.localId
+          )
+        : undefined;
+      if (localReference && localReference.status !== 'REMOTE_ONLY') {
+        await localPhotoRepository.removeLocal(
+          work.tenantId,
+          work.id,
+          localReference.id
+        );
+        await refreshOfflineState();
+      } else if (localMode) {
+        throw new Error(
+          'La foto sincronizada solo se puede eliminar con conexión.'
+        );
+      } else {
+        await deleteWorkPhoto(photo.id);
+        await localPhotoRepository.removeRemoteCopy(
+          work.tenantId,
+          work.id,
+          photo.id
+        );
+      }
       URL.revokeObjectURL(photo.previewUrl);
       previewUrls.current.delete(photo.previewUrl);
       setPhotos((current) => current.filter((item) => item.id !== photo.id));
@@ -283,10 +460,10 @@ export function WorkExecutionForm({
       return (
         <div
           key={item.id}
-          className={`rounded-lg border p-4 ${
+          className={`min-w-0 rounded-lg border p-4 ${
             itemCandidates.length
-              ? 'border-amber-300 bg-amber-50/40'
-              : 'border-slate-200 bg-slate-50'
+              ? 'border-amber-300 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/40'
+              : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950'
           }`}
         >
           <label className="flex gap-3">
@@ -299,18 +476,18 @@ export function WorkExecutionForm({
               }
               className="mt-0.5 size-5 shrink-0"
             />
-            <div>
-              <p className="text-sm font-medium text-slate-800">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
                 {item.title ?? 'Actividad'}
                 {item.required ? ' *' : ''}
               </p>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 {item.description ?? 'Confirma la ejecución de esta actividad.'}
               </p>
             </div>
           </label>
           {itemCandidates.length ? (
-            <p className="mt-2 text-xs font-medium text-amber-800">
+            <p className="mt-2 text-xs font-medium text-amber-800 dark:text-amber-200">
               Observación marcada como posible hallazgo
             </p>
           ) : null}
@@ -323,7 +500,6 @@ export function WorkExecutionForm({
               (photo) => photo.metadata.formItemId === item.id
             )}
             readonly={readonly}
-            photosDisabled={localMode}
             busy={photoBusyItems.includes(item.id)}
             error={photoErrors[item.id]}
             onCommentChange={(comment) => update(item.id, { comment })}
@@ -337,21 +513,23 @@ export function WorkExecutionForm({
     const concept = item.concept;
     if (!concept) return null;
     const value = values[item.id] ?? {};
+    const newMeasurement = !readonly && !savedResponseIds.has(item.id);
+    const currentMoment = localMeasurementDateTime();
     return (
       <fieldset
         key={item.id}
         className={`min-w-0 rounded-lg border p-4 ${
           candidateItems.has(item.id)
-            ? 'border-amber-300 bg-amber-50/30'
-            : 'border-slate-200'
+            ? 'border-amber-300 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-950/30'
+            : 'border-slate-200 dark:border-slate-800'
         }`}
       >
-        <legend className="text-sm font-semibold text-slate-800">
+        <legend className="text-sm font-semibold text-slate-800 dark:text-slate-200">
           {concept.name}
           {item.required ? ' *' : ''}
         </legend>
         {candidateItems.has(item.id) ? (
-          <p className="mb-2 text-xs font-medium text-amber-800">
+          <p className="mb-2 text-xs font-medium text-amber-800 dark:text-amber-200">
             {itemCandidates.some((candidate) => candidate.source === 'ANALOG')
               ? '⚠ Valor fuera de rango'
               : itemCandidates.some(
@@ -372,12 +550,15 @@ export function WorkExecutionForm({
           </p>
         ) : null}
         {concept.description ? (
-          <p className="mt-1 text-xs text-slate-500">{concept.description}</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            {concept.description}
+          </p>
         ) : null}
         {concept.type === 'ANALOG' ? (
           <div className="mt-2 flex flex-wrap items-end gap-2">
             <input
               type="number"
+              aria-label={concept.name}
               disabled={readonly}
               value={value.valueNumber ?? ''}
               onChange={(event) =>
@@ -388,52 +569,47 @@ export function WorkExecutionForm({
                       : Number(event.target.value),
                 })
               }
-              className="h-11 min-w-0 flex-1 rounded-lg border border-slate-300 px-3 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-50"
+              className="h-11 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-base outline-none focus:border-amber-700 focus:ring-2 focus:ring-amber-700/15 disabled:bg-slate-50 sm:text-sm dark:border-slate-700 dark:bg-slate-950 dark:focus:border-amber-300 dark:focus:ring-amber-300/15 dark:disabled:bg-slate-950"
             />
             {concept.unit ? (
-              <span className="shrink-0 text-sm font-medium text-slate-600">
+              <span className="shrink-0 text-sm font-medium text-slate-600 dark:text-slate-300">
                 {concept.unit}
               </span>
             ) : null}
-            <label className="flex min-w-40 flex-col text-xs font-medium text-slate-600">
-              Fecha de medición
-              <input
-                type="date"
-                disabled={readonly}
-                value={
-                  value.measuredAt?.slice(0, 10) ??
-                  work.executionDate.slice(0, 10)
-                }
-                onChange={(event) =>
-                  update(item.id, {
-                    measuredAt: event.target.value || undefined,
-                  })
-                }
-                className="mt-1 h-11 rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-900 disabled:bg-slate-50"
-              />
-            </label>
-            <label className="flex min-w-32 flex-col text-xs font-medium text-slate-600">
-              Hora de medición (opcional)
-              <input
-                type="time"
-                disabled={readonly}
-                value={value.measuredAtTime?.slice(0, 5) ?? ''}
-                onChange={(event) =>
-                  update(item.id, {
-                    measuredAtTime: event.target.value || null,
-                  })
-                }
-                className="mt-1 h-11 rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-900 disabled:bg-slate-50"
-              />
-            </label>
           </div>
+        ) : null}
+        {concept.type === 'ANALOG' ? (
+          <MeasurementDateTimeEditor
+            key={`${work.id}:${item.id}`}
+            label={concept.name}
+            date={
+              value.measuredAt?.slice(0, 10) ??
+              (newMeasurement
+                ? currentMoment.measuredAt
+                : work.executionDate.slice(0, 10))
+            }
+            time={
+              value.measuredAtTime === undefined
+                ? newMeasurement
+                  ? currentMoment.measuredAtTime
+                  : null
+                : value.measuredAtTime?.slice(0, 5) ?? null
+            }
+            readonly={readonly}
+            useCurrentMoment={
+              newMeasurement &&
+              value.measuredAt === undefined &&
+              value.measuredAtTime === undefined
+            }
+            onChange={(patch) => update(item.id, patch)}
+          />
         ) : null}
         {concept.type === 'DIGITAL' ? (
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {concept.options.map((option) => (
               <label
                 key={option.id}
-                className="flex min-h-11 items-center gap-3 rounded-lg border border-slate-200 px-3 text-sm text-slate-700 has-[:checked]:border-slate-700 has-[:checked]:bg-slate-50"
+                className="flex min-h-11 items-center gap-3 rounded-lg border border-slate-200 dark:border-slate-800 px-3 text-sm text-slate-700 dark:text-slate-200 has-[:checked]:border-slate-700 has-[:checked]:bg-slate-50"
               >
                 <input
                   type="radio"
@@ -457,7 +633,7 @@ export function WorkExecutionForm({
             onChange={(event) =>
               update(item.id, { valueText: event.target.value })
             }
-            className="mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-50"
+            className="mt-2 w-full rounded-lg border border-slate-300 dark:border-slate-700 p-3 text-sm outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800 disabled:bg-slate-50 dark:disabled:bg-slate-950"
           />
         ) : null}
         <WorkItemAdditionalInfo
@@ -469,7 +645,6 @@ export function WorkExecutionForm({
             (photo) => photo.metadata.formItemId === item.id
           )}
           readonly={readonly}
-          photosDisabled={localMode}
           busy={photoBusyItems.includes(item.id)}
           error={photoErrors[item.id]}
           onCommentChange={(comment) => update(item.id, { comment })}
@@ -481,77 +656,79 @@ export function WorkExecutionForm({
   }
 
   return (
-    <section className="mt-6 rounded-xl border border-slate-200 bg-white shadow-sm">
-      <header className="border-b border-slate-200 p-4 sm:p-6">
+    <section className="mt-6 min-w-0 break-words rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+      <header className="border-b border-slate-200 dark:border-slate-800 p-4 sm:p-6">
         <div className="flex items-start gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-700">
+          <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
             <ClipboardCheck className="size-5" />
           </span>
-          <div>
-            <h2 className="font-semibold text-slate-950">{snapshot.name}</h2>
-            <p className="mt-1 text-sm text-slate-500">
+          <div className="min-w-0">
+            <h2 className="font-semibold text-slate-950 dark:text-slate-100">
+              {snapshot.name}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Plantilla conservada · versión {snapshot.formTemplateVersion}
             </p>
           </div>
         </div>
       </header>
 
-      <div className="grid gap-8 p-4 sm:p-6">
+      <div className="grid min-w-0 gap-8 p-4 sm:p-6">
         {photoErrors.general ? (
-          <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          <p className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-3 text-sm text-amber-800 dark:text-amber-200">
             {photoErrors.general}
           </p>
         ) : null}
         {formSections.map((section) => (
-          <section key={section.id}>
-            <div className="border-b border-slate-200 pb-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <section key={section.id} className="min-w-0">
+            <div className="border-b border-slate-200 dark:border-slate-800 pb-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 Sección {section.order}
               </p>
-              <h3 className="mt-1 font-semibold text-slate-950">
+              <h3 className="mt-1 font-semibold text-slate-950 dark:text-slate-100">
                 {section.title}
               </h3>
               {section.description ? (
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                   {section.description}
                 </p>
               ) : null}
             </div>
 
-            <div className="mt-5 grid gap-6">
+            <div className="mt-5 grid min-w-0 gap-6">
               {section.assetGroups.map((group) =>
                 group.assetDepth === 0 ? (
-                  <div key={group.assetId} className="grid gap-6">
+                  <div key={group.assetId} className="grid min-w-0 gap-6">
                     {group.items.map(renderItem)}
                   </div>
                 ) : (
                   <details
                     key={group.assetId}
-                    className="group rounded-xl border border-slate-200 bg-slate-50/60"
+                    className="group min-w-0 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/60"
                   >
                     <summary className="flex cursor-pointer list-none items-start justify-between gap-3 px-4 py-4 marker:content-none sm:px-5">
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                           Activo descendiente · nivel {group.assetDepth}
                         </p>
-                        <h4 className="mt-1 truncate font-semibold text-slate-950">
+                        <h4 className="mt-1 truncate font-semibold text-slate-950 dark:text-slate-100">
                           {group.assetName}
                         </h4>
                         {group.assetCode ? (
-                          <p className="mt-1 text-xs font-medium text-slate-500">
+                          <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
                             {group.assetCode}
                           </p>
                         ) : null}
                       </div>
                       <span className="flex shrink-0 items-center gap-2">
-                        <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200">
+                        <span className="rounded-full bg-white dark:bg-slate-900 px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 ring-1 ring-slate-200 dark:ring-slate-800">
                           {group.items.length}{' '}
                           {group.items.length === 1 ? 'elemento' : 'elementos'}
                         </span>
-                        <ChevronDown className="size-4 text-slate-500 transition-transform group-open:rotate-180" />
+                        <ChevronDown className="size-4 text-slate-500 dark:text-slate-400 transition-transform group-open:rotate-180" />
                       </span>
                     </summary>
-                    <div className="grid gap-6 border-t border-slate-200 bg-white p-4 sm:p-5">
+                    <div className="grid min-w-0 gap-6 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5">
                       {group.items.map(renderItem)}
                     </div>
                   </details>
@@ -562,14 +739,14 @@ export function WorkExecutionForm({
         ))}
       </div>
 
-      <section className="mx-4 mb-4 rounded-xl border border-amber-200 bg-amber-50/40 p-4 sm:mx-6 sm:mb-6">
-        <h3 className="font-semibold text-slate-900">
+      <section className="mx-4 mb-4 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/40 p-4 sm:mx-6 sm:mb-6">
+        <h3 className="font-semibold text-slate-900 dark:text-slate-100">
           Candidatos de hallazgo{' '}
-          <span className="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-900">
+          <span className="ml-1 rounded-full bg-amber-100 dark:bg-amber-950/40 px-2 py-0.5 text-xs text-amber-900 dark:text-amber-200">
             {candidates.length}
           </span>
         </h3>
-        <p className="mt-1 text-xs text-slate-600">
+        <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
           Vista preliminar. Se guardan con el trabajo; aún no son hallazgos
           confirmados.
         </p>
@@ -585,19 +762,19 @@ export function WorkExecutionForm({
               return (
                 <li
                   key={candidate.id}
-                  className="rounded-lg border border-amber-200 bg-white p-3 text-sm"
+                  className="rounded-lg border border-amber-200 dark:border-amber-800 bg-white dark:bg-slate-900 p-3 text-sm"
                 >
-                  <span className="font-medium text-slate-900">
+                  <span className="font-medium text-slate-900 dark:text-slate-100">
                     {candidate.title}
                   </span>
-                  <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+                  <span className="ml-2 rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-xs text-slate-600 dark:text-slate-300">
                     {candidate.status === 'PENDING'
                       ? 'Pendiente'
                       : candidate.status === 'CONFIRMED'
                       ? 'Confirmado'
                       : 'Descartado'}
                   </span>
-                  <p className="mt-1 text-xs text-slate-600">
+                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
                     {item?.assetNameSnapshot ?? 'Activo'} ·{' '}
                     {item?.concept?.name ?? item?.title ?? 'Observación'} ·{' '}
                     {candidate.source === 'MANUAL'
@@ -611,13 +788,13 @@ export function WorkExecutionForm({
                     {severity ? ` · Severidad sugerida: ${severity.name}` : ''}
                   </p>
                   {candidate.description ? (
-                    <p className="mt-1 text-xs text-slate-600">
+                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
                       {candidate.description}
                     </p>
                   ) : null}
                   {candidate.source !== 'MANUAL' &&
                   values[candidate.workItemId]?.comment?.trim() ? (
-                    <p className="mt-1 text-xs text-slate-600">
+                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
                       Observación: {values[candidate.workItemId].comment}
                     </p>
                   ) : null}
@@ -626,15 +803,15 @@ export function WorkExecutionForm({
             })}
           </ul>
         ) : (
-          <p className="mt-3 text-sm text-slate-600">
+          <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
             Sin candidatos por ahora.
           </p>
         )}
       </section>
 
-      <footer className="border-t border-slate-200 p-4 sm:p-6">
+      <footer className="border-t border-slate-200 dark:border-slate-800 p-4 sm:p-6">
         {finishError && !finishError.ok ? (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <div className="mb-4 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-4 text-sm text-red-800 dark:text-red-200">
             <p className="flex items-center gap-2 font-semibold">
               <AlertCircle className="size-4" /> No se puede finalizar.
             </p>
@@ -649,7 +826,7 @@ export function WorkExecutionForm({
           </div>
         ) : null}
         {notice ? (
-          <p className="mb-4 flex items-center gap-2 text-sm font-medium text-emerald-700">
+          <p className="mb-4 flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-300">
             <CheckCircle2 className="size-4" /> {notice}
           </p>
         ) : null}
@@ -697,7 +874,7 @@ export function WorkExecutionForm({
             </Button>
           ) : null}
           {readonly ? (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               El formulario está cerrado para edición.
             </p>
           ) : null}

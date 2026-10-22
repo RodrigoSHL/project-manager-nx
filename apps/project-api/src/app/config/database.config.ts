@@ -14,8 +14,13 @@ import { Ticket } from '../tickets/entities/ticket.entity';
 import { Comment } from '../comments/entities/comment.entity';
 import { Subtask } from '../subtasks/entities/subtask.entity';
 import { TicketSupportDetail } from '../support-details/entities/ticket-support-detail.entity';
+import { AddProjectTeamRoles1790812800000 } from '../../migrations/1790812800000-AddProjectTeamRoles';
+import { AddCommentReplies1790938800000 } from '../../migrations/1790938800000-AddCommentReplies';
+import { CommentMentionNotification } from '../comments/entities/comment-mention-notification.entity';
+import { AddCommentMentionNotifications1791072000000 } from '../../migrations/1791072000000-AddCommentMentionNotifications';
+import { AddProjectTicketCounter1791547200000 } from '../../migrations/1791547200000-AddProjectTicketCounter';
 
-export const databaseConfig: TypeOrmModuleOptions = {
+export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
   type: 'postgres',
   host: process.env.DATABASE_HOST || 'localhost',
   port: parseInt(process.env.DATABASE_PORT) || 5432,
@@ -36,12 +41,21 @@ export const databaseConfig: TypeOrmModuleOptions = {
     Label,
     Ticket,
     Comment,
+    CommentMentionNotification,
     Subtask,
     TicketSupportDetail,
   ],
+  migrations: [
+    AddProjectTeamRoles1790812800000,
+    AddCommentReplies1790938800000,
+    AddCommentMentionNotifications1791072000000,
+    AddProjectTicketCounter1791547200000,
+  ],
+  migrationsRun: process.env.PROJECT_MIGRATIONS_RUN === 'true',
   synchronize: process.env.TYPEORM_SYNCHRONIZE
     ? process.env.TYPEORM_SYNCHRONIZE === 'true'
     : process.env.NODE_ENV !== 'production',
   logging: process.env.NODE_ENV === 'development',
-  ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
-}; 
+  ssl:
+    process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
+});

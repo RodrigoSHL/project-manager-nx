@@ -25,7 +25,8 @@ async function bootstrap() {
     })
   );
 
-  await app.listen(port);
+  app.enableShutdownHooks();
+  await app.listen(port, '0.0.0.0');
   Logger.log(`Files API running on http://localhost:${port}/${globalPrefix}`);
 }
 

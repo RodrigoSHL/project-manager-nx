@@ -7,6 +7,7 @@ export default {
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
   moduleNameMapper: {
+    '^@project-manager/security-navigation$': '<rootDir>/../../libs/security-navigation/src/index.ts',
     '^@/(.*)$': '<rootDir>/$1',
   },
   coverageDirectory: '../../coverage/apps/project-web',

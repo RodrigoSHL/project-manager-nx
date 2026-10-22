@@ -482,6 +482,8 @@ function SupportDetailSheet({ ticket, open, onClose, projectId, teamMembers, onU
 // ─── Main SupportView ─────────────────────────────────────────────────────────
 
 interface SupportViewProps {
+  canWrite: boolean
+  onTicketClick: (ticket: ApiTicket) => void
   tickets: ApiTicket[]
   projectId: string
   teamMembers: ApiTeamMember[]
@@ -492,7 +494,7 @@ interface SupportViewProps {
 type BillableFilter = 'all' | 'billable' | 'non_billable' | 'billed'
 type SlaFilter = 'all' | 'overdue' | 'no_sla'
 
-export function SupportView({ tickets, projectId, teamMembers, onCreateSupport, onTicketUpdated }: SupportViewProps) {
+export function SupportView({ tickets, projectId, teamMembers, onCreateSupport, onTicketUpdated, canWrite, onTicketClick }: SupportViewProps) {
   const supportTickets = React.useMemo(() => tickets.filter(t => t.type === 'support'), [tickets])
 
   // Support details cache: ticketId → ApiSupportDetail
@@ -565,6 +567,7 @@ export function SupportView({ tickets, projectId, teamMembers, onCreateSupport, 
   }, [supportTickets, statusFilter, billableFilter, slaFilter, search, detailsMap])
 
   const handleRowClick = (ticket: ApiTicket) => {
+    if (!canWrite) { onTicketClick(ticket); return }
     setSelectedTicket(ticket)
     setSheetOpen(true)
   }
@@ -601,10 +604,10 @@ export function SupportView({ tickets, projectId, teamMembers, onCreateSupport, 
             Gestión de tickets de soporte técnico y facturación en UF
           </p>
         </div>
-        <Button onClick={onCreateSupport} className="gap-2">
+        {canWrite && <Button onClick={onCreateSupport} className="gap-2">
           <Plus className="h-4 w-4" />
           Nuevo soporte
-        </Button>
+        </Button>}
       </div>
 
       {/* Stats */}
@@ -732,9 +735,9 @@ export function SupportView({ tickets, projectId, teamMembers, onCreateSupport, 
                 Crea el primer ticket de soporte para este proyecto
               </p>
             </div>
-            <Button onClick={onCreateSupport} className="gap-2">
+            {canWrite && <Button onClick={onCreateSupport} className="gap-2">
               <Plus className="h-4 w-4" /> Nuevo soporte
-            </Button>
+            </Button>}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -879,7 +882,7 @@ export function SupportView({ tickets, projectId, teamMembers, onCreateSupport, 
 
                       {/* Quick action: Valorizar */}
                       <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
-                        {ticket.status !== 'cancelled' && !isBilled && (
+                        {canWrite && ticket.status !== 'cancelled' && !isBilled && (
                           <Button
                             size="sm"
                             variant={ticket.status === 'done' ? 'default' : 'outline'}
@@ -923,24 +926,24 @@ export function SupportView({ tickets, projectId, teamMembers, onCreateSupport, 
       </Card>
 
       {/* Detail sheet */}
-      <SupportDetailSheet
+      {canWrite && <SupportDetailSheet
         ticket={selectedTicket}
         open={sheetOpen}
         onClose={() => { setSheetOpen(false); setSelectedTicket(null) }}
         projectId={projectId}
         teamMembers={teamMembers}
         onUpdated={handleUpdated}
-      />
+      />}
 
       {/* Valorizar dialog */}
-      <ValorizarDialog
+      {canWrite && <ValorizarDialog
         open={valorizarOpen}
         onOpenChange={setValorizarOpen}
         ticket={valorizarTicket}
         currentDetail={valorizarTicket ? (detailsMap[valorizarTicket.id] ?? null) : null}
         projectId={projectId}
         onSaved={handleValorizarSaved}
-      />
+      />}
     </div>
   )
 }

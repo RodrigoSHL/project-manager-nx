@@ -37,6 +37,8 @@ CANONICAL_SERVICES=(
   travel-planner-api
   files-api
   inspection-api
+  mailer-api
+  macro-fit-api
   bff-api
   inspection-web
   inspection-web-qa
@@ -44,6 +46,7 @@ CANONICAL_SERVICES=(
   jira-web
   travel-planner-app
   atomdev-landing
+  macro-fit-web
   caddy
 )
 
@@ -70,7 +73,8 @@ Opciones:
   --profile PERFIL       travel-full, travel-frontend, travel-backend,
                          inspection-full, inspection-frontend,
                          inspection-qa-frontend,
-                         inspection-backend, platform-full o custom
+                         inspection-backend, mailer-backend, macrofit-full,
+                         macrofit-frontend, macrofit-backend, platform-full o custom
   --services LISTA       Servicios separados por coma; implica perfil custom
   --key RUTA             Clave privada SSH (también ATOMDEV_SSH_KEY)
   --dry-run              Preflight y rsync simulado; no cambia producción
@@ -147,7 +151,11 @@ select_profile_interactively() {
   printf '  7) Solo frontend Inspection QA y Caddy\n'
   printf '  8) Plataforma completa (APIs, BFF y frontends)\n'
   printf '  9) Selección personalizada\n'
-  read -r -p 'Selecciona [1-9]: ' selection
+  printf ' 10) Mailer API\n'
+  printf ' 11) MacroFit completo (API, BFF, frontend y Caddy)\n'
+  printf ' 12) Solo frontend MacroFit y Caddy\n'
+  printf ' 13) Backend MacroFit (API, BFF y Caddy)\n'
+  read -r -p 'Selecciona [1-13]: ' selection
 
   case "$selection" in
     1) PROFILE="travel-full" ;;
@@ -159,6 +167,10 @@ select_profile_interactively() {
     7) PROFILE="inspection-qa-frontend" ;;
     8) PROFILE="platform-full" ;;
     9) PROFILE="custom" ;;
+    10) PROFILE="mailer-backend" ;;
+    11) PROFILE="macrofit-full" ;;
+    12) PROFILE="macrofit-frontend" ;;
+    13) PROFILE="macrofit-backend" ;;
     *) die "Selección inválida" ;;
   esac
 }
@@ -196,8 +208,20 @@ resolve_services() {
     inspection-backend)
       raw_services="inspection-api,bff-api"
       ;;
+    mailer-backend)
+      raw_services="mailer-api"
+      ;;
+    macrofit-full)
+      raw_services="macro-fit-api,bff-api,macro-fit-web,caddy"
+      ;;
+    macrofit-frontend)
+      raw_services="macro-fit-web,caddy"
+      ;;
+    macrofit-backend)
+      raw_services="macro-fit-api,bff-api,caddy"
+      ;;
     platform-full)
-      raw_services="project-api,user-api,travel-planner-api,files-api,inspection-api,bff-api,inspection-web,project-web,jira-web,travel-planner-app,atomdev-landing"
+      raw_services="project-api,user-api,travel-planner-api,files-api,inspection-api,bff-api,inspection-web,project-web,jira-web,travel-planner-app,atomdev-landing,macro-fit-api,macro-fit-web,caddy"
       ;;
     custom)
       raw_services="$CUSTOM_SERVICES"
@@ -732,6 +756,15 @@ cd "$REMOTE_DIR"
 
 docker compose --env-file .env.deploy -f docker-compose.prod.yml ps
 
+if printf '%s\n' "${SERVICES[@]}" | grep -qx mailer-api; then
+  MAILER_CONTAINER=$(docker compose --env-file .env.deploy -f docker-compose.prod.yml ps -q mailer-api)
+  test -n "$MAILER_CONTAINER"
+  docker exec "$MAILER_CONTAINER" node -e "Promise.all([fetch('http://127.0.0.1:3006/api/health'),fetch('http://127.0.0.1:3006/api/emails',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})]).then(r=>{console.log('MAILER_HEALTH='+r[0].status);console.log('MAILER_WITHOUT_TOKEN='+r[1].status);if(r[0].status!==200||r[1].status!==401)process.exit(1)}).catch(()=>process.exit(1))"
+  if [[ ${#SERVICES[@]} -eq 1 ]]; then
+    exit 0
+  fi
+fi
+
 BFF_CONTAINER=$(docker compose --env-file .env.deploy -f docker-compose.prod.yml ps -q bff-api)
 docker exec "$BFF_CONTAINER" node -e "Promise.all([fetch('http://127.0.0.1:3000/health'),fetch('http://127.0.0.1:3000/api/trips'),fetch('http://travel-planner-api:3003/api'),fetch('http://user-api:3001/api/health'),fetch('http://files-api:3004/api/health'),fetch('http://inspection-api:3005/api/health'),fetch('http://127.0.0.1:3000/api/inspection/tenants')]).then(r=>{console.log('BFF_HEALTH='+r[0].status);console.log('TRIPS_WITHOUT_JWT='+r[1].status);console.log('TRAVEL_UPSTREAM='+r[2].status);console.log('USER_UPSTREAM='+r[3].status);console.log('FILES_UPSTREAM='+r[4].status);console.log('INSPECTION_UPSTREAM='+r[5].status);console.log('INSPECTION_WITHOUT_JWT='+r[6].status);if(r[0].status!==200||r[1].status!==401||r[2].status!==200||r[3].status!==200||r[4].status!==200||r[5].status!==200||r[6].status!==401)process.exit(1)})"
 
@@ -744,8 +777,8 @@ done
 
 if printf '%s\n' "${SERVICES[@]}" | grep -qx travel-planner-app; then
   TRAVEL_APP_CONTAINER=$(docker compose --env-file .env.deploy -f docker-compose.prod.yml ps -q travel-planner-app)
-  docker exec "$TRAVEL_APP_CONTAINER" node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync('/app/.next/routes-manifest.json'));console.log('TRAVEL_REWRITE='+m.rewrites.afterFiles[0].destination)"
-  if docker exec "$TRAVEL_APP_CONTAINER" grep -RIlE '161\.153\.194\.227|http://localhost:3000/api|http://bff-api:3000' /app/.next/static; then
+  docker exec "$TRAVEL_APP_CONTAINER" node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync('/app/apps/travel-planner-app/.next/routes-manifest.json'));console.log('TRAVEL_REWRITE='+m.rewrites.afterFiles[0].destination)"
+  if docker exec "$TRAVEL_APP_CONTAINER" grep -RIlE '161\.153\.194\.227|http://localhost:3000/api|http://bff-api:3000' /app/apps/travel-planner-app/.next/static; then
     printf 'El bundle público contiene una URL prohibida.\n' >&2
     exit 1
   fi
@@ -765,10 +798,25 @@ for INSPECTION_SERVICE in inspection-web inspection-web-qa; do
     printf '%s_PUBLIC_BUNDLE_URL_CHECK=clean\n' "$INSPECTION_SERVICE"
   fi
 done
+
+if printf '%s\n' "${SERVICES[@]}" | grep -qx macro-fit-web; then
+  MACROFIT_WEB_CONTAINER=$(docker compose --env-file .env.deploy -f docker-compose.prod.yml ps -q macro-fit-web)
+  docker exec "$MACROFIT_WEB_CONTAINER" wget -q --spider http://127.0.0.1/health
+  if docker exec "$MACROFIT_WEB_CONTAINER" grep -RlE \
+    '161\.153\.194\.227|http://localhost|http://macro-fit-api|http://bff-api' /usr/share/nginx/html; then
+    printf 'El bundle de macro-fit-web contiene una URL prohibida.\n' >&2
+    exit 1
+  fi
+  printf 'MACROFIT_PUBLIC_BUNDLE_URL_CHECK=clean\n'
+fi
 REMOTE
 }
 
 verify_external() {
+  if [[ ${#SERVICES[@]} -eq 1 && "${SERVICES[0]}" == mailer-api ]]; then
+    log "Mailer API es interno; verificado dentro de su contenedor"
+    return 0
+  fi
   log "Ejecutando smoke tests HTTPS externos"
   expect_http_status TRAVEL_ROOT https://travel.atomdev.cl/ 200
   expect_http_status TRAVEL_LOGIN https://travel.atomdev.cl/login 200
@@ -783,6 +831,24 @@ verify_external() {
     expect_http_status INSPECTION_QA_ROOT https://qa-inspection.atomdev.cl/ 200
     expect_http_status INSPECTION_QA_LOGIN https://qa-inspection.atomdev.cl/login 200
     expect_http_status INSPECTION_QA_API_WITHOUT_JWT https://qa-inspection.atomdev.cl/api/inspection/tenants 401
+  fi
+  if contains_service macro-fit-web "${SERVICES[@]}"; then
+    expect_http_status MACROFIT_ROOT https://macrofit.atomdev.cl/ 200
+  fi
+  if contains_service macro-fit-api "${SERVICES[@]}" || contains_service macro-fit-web "${SERVICES[@]}"; then
+    expect_http_status MACROFIT_API_HEALTH https://macrofit.atomdev.cl/api/macrofit/health 200
+    expect_http_status MACROFIT_API_READY https://macrofit.atomdev.cl/api/macrofit/ready 200
+    local invalid_status
+    invalid_status=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' \
+      -F 'image=invalid;filename=invalid.txt;type=text/plain' \
+      https://macrofit.atomdev.cl/api/macrofit/analyze-plate)
+    [[ "$invalid_status" == 415 ]] || die "MacroFit aceptó un archivo no permitido (HTTP $invalid_status)"
+    printf 'MACROFIT_INVALID_IMAGE_REJECTED=415\n'
+    if [[ -n "${MACROFIT_SMOKE_IMAGE:-}" ]]; then
+      node "$ROOT_DIR/scripts/smoke-macrofit.mjs" https://macrofit.atomdev.cl "$MACROFIT_SMOKE_IMAGE"
+    else
+      warn "Gemini solo fue verificado a nivel de configuración. Para probar el proveedor real define MACROFIT_SMOKE_IMAGE con una foto de comida (consume una llamada)."
+    fi
   fi
   expect_http_status JIRA_ROOT https://jira.atomdev.cl/ 200
   expect_http_status ATOMDEV_ROOT https://atomdev.cl/ 200

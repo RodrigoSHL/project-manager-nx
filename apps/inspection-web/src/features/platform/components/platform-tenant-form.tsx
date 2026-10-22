@@ -55,13 +55,13 @@ export function PlatformTenantForm({
   }
 
   return (
-    <section className="rounded-xl border border-slate-300 bg-white p-5 shadow-sm">
+    <section className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-5 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700 dark:text-amber-300">
             {tenant ? 'Edición' : 'Alta de cliente'}
           </p>
-          <h2 className="mt-2 text-lg font-semibold text-slate-950">
+          <h2 className="mt-2 text-lg font-semibold text-slate-950 dark:text-slate-100">
             {tenant ? tenant.name : 'Nuevo cliente'}
           </h2>
         </div>
@@ -77,7 +77,7 @@ export function PlatformTenantForm({
       </div>
 
       <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
           Código
           <input
             required
@@ -90,14 +90,14 @@ export function PlatformTenantForm({
             }
             maxLength={50}
             placeholder="MINERA_NUEVA"
-            className="mt-2 h-11 w-full rounded-lg border border-slate-300 px-3 font-mono text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+            className="mt-2 h-11 w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 font-mono text-sm outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
           />
-          <span className="mt-1 block text-xs font-normal text-slate-500">
+          <span className="mt-1 block text-xs font-normal text-slate-500 dark:text-slate-400">
             Identificador único dentro de la plataforma.
           </span>
         </label>
 
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
           Nombre de la empresa
           <input
             required
@@ -107,11 +107,11 @@ export function PlatformTenantForm({
             }
             maxLength={160}
             placeholder="Empresa Minera Nueva"
-            className="mt-2 h-11 w-full rounded-lg border border-slate-300 px-3 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+            className="mt-2 h-11 w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
           />
         </label>
 
-        <label className="flex items-start gap-3 rounded-lg border border-slate-200 p-3">
+        <label className="flex items-start gap-3 rounded-lg border border-slate-200 dark:border-slate-800 p-3">
           <input
             type="checkbox"
             checked={form.active}
@@ -124,10 +124,10 @@ export function PlatformTenantForm({
             className="mt-0.5 size-4 accent-slate-950"
           />
           <span>
-            <span className="block text-sm font-medium text-slate-800">
+            <span className="block text-sm font-medium text-slate-800 dark:text-slate-200">
               Cliente activo
             </span>
-            <span className="mt-1 block text-xs text-slate-500">
+            <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
               Al desactivarlo deja de aparecer en la operación, pero sus datos
               se conservan.
             </span>
@@ -135,7 +135,7 @@ export function PlatformTenantForm({
         </label>
 
         {error ? (
-          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="rounded-lg bg-red-50 dark:bg-red-950/40 px-3 py-2 text-sm text-red-700 dark:text-red-300">
             {error}
           </p>
         ) : null}

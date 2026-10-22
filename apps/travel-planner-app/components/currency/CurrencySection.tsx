@@ -41,14 +41,7 @@ const DEFAULT_PREFERENCES: CurrencyPreferences = {
   updatedAt: null,
 };
 
-const CARD_STYLES = [
-  'from-cyan-500/15 via-sky-500/5 to-transparent border-cyan-500/20',
-  'from-teal-500/15 via-emerald-500/5 to-transparent border-teal-500/20',
-  'from-blue-500/15 via-indigo-500/5 to-transparent border-blue-500/20',
-  'from-fuchsia-500/10 via-violet-500/5 to-transparent border-violet-500/20',
-  'from-rose-500/10 via-pink-500/5 to-transparent border-rose-500/20',
-  'from-lime-500/10 via-emerald-500/5 to-transparent border-lime-500/20',
-];
+const CURRENCY_CARD_STYLE = 'border-primary/20 bg-accent';
 
 function CurrencyPicker({
   label,
@@ -66,7 +59,7 @@ function CurrencyPicker({
       aria-label={label}
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm font-bold outline-none transition focus:border-teal-500 focus:ring-3 focus:ring-teal-500/15"
+      className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm font-bold outline-none transition focus:border-primary focus:ring-3 focus:ring-ring/20"
     >
       {currencies.map((currency) => (
         <option key={currency.code} value={currency.code}>
@@ -270,17 +263,17 @@ export function CurrencySection() {
 
   return (
     <div className="space-y-5">
-      <section className="relative overflow-hidden rounded-[30px] border border-cyan-300/20 bg-gradient-to-br from-slate-950 via-teal-950 to-cyan-950 p-5 text-white shadow-2xl shadow-cyan-950/15 sm:p-7">
-        <div className="pointer-events-none absolute -right-20 -top-28 size-80 rounded-full border-[54px] border-cyan-300/[0.06]" />
-        <div className="pointer-events-none absolute -bottom-24 left-1/4 size-72 rounded-full bg-teal-300/10 blur-3xl" />
+      <section className="relative overflow-hidden rounded-[30px] border border-primary/20 brand-banner p-5 text-white shadow-2xl shadow-cyan-950/15 sm:p-7">
+        <div className="pointer-events-none absolute -right-20 -top-28 size-80 rounded-full border-[54px] border-primary/[0.06]" />
+        <div className="pointer-events-none absolute -bottom-24 left-1/4 size-72 rounded-full bg-primary/10 blur-3xl" />
 
         <div className="relative flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
           <div>
             <div className="mb-4 flex items-center gap-2">
-              <span className="flex size-10 items-center justify-center rounded-2xl bg-cyan-300/15 text-cyan-200 backdrop-blur">
+              <span className="flex size-10 items-center justify-center rounded-2xl bg-primary/15 text-cyan-200 backdrop-blur">
                 <BadgeDollarSign className="size-5" />
               </span>
-              <span className="flex items-center gap-1.5 rounded-full border border-cyan-200/15 bg-cyan-200/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-cyan-100">
+              <span className="flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-cyan-100">
                 <span className="size-1.5 animate-pulse rounded-full bg-emerald-300" />
                 Radar en vivo
               </span>
@@ -288,7 +281,7 @@ export function CurrencySection() {
             <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
               Tu tablero de divisas
             </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-cyan-50/65">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-sky-100">
               Un monto, todas tus monedas importantes y una estimación más
               realista de lo que recibirás al pagar.
             </p>
@@ -296,7 +289,7 @@ export function CurrencySection() {
 
           <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.07] p-2 backdrop-blur">
             <div className="px-2">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-cyan-100/50">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-sky-100">
                 Fuente
               </p>
               <p className="text-xs font-semibold text-cyan-50">
@@ -307,7 +300,7 @@ export function CurrencySection() {
               type="button"
               onClick={() => setRefreshKey((key) => key + 1)}
               disabled={loading}
-              className="flex size-9 items-center justify-center rounded-xl bg-cyan-300/15 text-cyan-100 transition hover:bg-cyan-300/25 disabled:opacity-50"
+              className="flex size-9 items-center justify-center rounded-xl bg-primary/15 text-cyan-100 transition hover:bg-primary/25 disabled:opacity-50"
               aria-label="Actualizar todas las tasas"
             >
               <RefreshCw
@@ -334,7 +327,7 @@ export function CurrencySection() {
                   value={amount}
                   onChange={(event) => setAmount(event.target.value)}
                   inputMode="decimal"
-                  className="h-12 w-0 min-w-0 flex-1 rounded-2xl border border-border bg-background px-4 text-xl font-bold tabular-nums outline-none transition focus:border-teal-500 focus:ring-3 focus:ring-teal-500/15"
+                  className="h-12 w-0 min-w-0 flex-1 rounded-2xl border border-border bg-background px-4 text-xl font-bold tabular-nums outline-none transition focus:border-primary focus:ring-3 focus:ring-ring/20"
                   aria-invalid={!amountIsValid}
                 />
                 <div className="w-36 shrink-0">
@@ -355,8 +348,8 @@ export function CurrencySection() {
                   onClick={() => setAmount(String(quickAmount))}
                   className={`rounded-xl border px-3 py-2 text-xs font-bold tabular-nums transition ${
                     numericAmount === quickAmount
-                      ? 'border-teal-500 bg-teal-500 text-white shadow-sm'
-                      : 'border-border bg-background text-muted-foreground hover:border-teal-500/30 hover:text-teal-600'
+                      ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                      : 'border-border bg-background text-muted-foreground hover:border-primary/30 hover:text-brand-foreground'
                   }`}
                 >
                   {new Intl.NumberFormat('es-CL', {
@@ -377,17 +370,17 @@ export function CurrencySection() {
           )}
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            {targetResults.map(({ currency, result }, index) => (
+            {targetResults.map(({ currency, result }) => (
               <article
                 key={currency}
-                className={`group relative overflow-hidden rounded-3xl border bg-gradient-to-br p-5 transition duration-300 hover:-translate-y-1 hover:shadow-lg ${
-                  CARD_STYLES[index % CARD_STYLES.length]
+                className={`group relative overflow-hidden rounded-3xl border p-5 transition duration-300 hover:-translate-y-1 hover:shadow-lg ${
+                  CURRENCY_CARD_STYLE
                 }`}
               >
                 <div className="pointer-events-none absolute -right-7 -top-8 size-24 rounded-full border-[18px] border-current opacity-[0.035]" />
                 <div className="relative flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <span className="flex size-11 items-center justify-center rounded-2xl border border-white/30 bg-background/80 text-sm font-black text-teal-600 shadow-sm backdrop-blur dark:text-cyan-300">
+                    <span className="flex size-11 items-center justify-center rounded-2xl border border-white/30 bg-background/80 text-sm font-black text-brand-foreground shadow-sm backdrop-blur dark:text-cyan-300">
                       {currency}
                     </span>
                     <div>
@@ -401,7 +394,7 @@ export function CurrencySection() {
                     </div>
                   </div>
                   {loading && (
-                    <Loader2 className="size-4 animate-spin text-teal-500" />
+                    <Loader2 className="size-4 animate-spin text-brand-foreground" />
                   )}
                 </div>
 
@@ -431,7 +424,7 @@ export function CurrencySection() {
 
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-border bg-muted/35 p-4">
-              <CircleGauge className="size-4 text-teal-500" />
+              <CircleGauge className="size-4 text-brand-foreground" />
               <p className="mt-3 text-xs font-bold">Referencia clara</p>
               <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
                 {rateDate
@@ -444,7 +437,7 @@ export function CurrencySection() {
               </p>
             </div>
             <div className="rounded-2xl border border-border bg-muted/35 p-4">
-              <CreditCard className="size-4 text-cyan-500" />
+              <CreditCard className="size-4 text-brand-foreground" />
               <p className="mt-3 text-xs font-bold">Costo más real</p>
               <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
                 {draft.feePercent
@@ -453,7 +446,7 @@ export function CurrencySection() {
               </p>
             </div>
             <div className="rounded-2xl border border-border bg-muted/35 p-4">
-              <Sparkles className="size-4 text-violet-500" />
+              <Sparkles className="size-4 text-brand-foreground" />
               <p className="mt-3 text-xs font-bold">Tu selección</p>
               <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
                 {draft.targetCurrencies.length} monedas visibles al mismo
@@ -466,7 +459,7 @@ export function CurrencySection() {
         <aside className="rounded-[28px] border border-border bg-card p-5 shadow-sm sm:p-6">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <span className="flex size-9 items-center justify-center rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-300">
+              <span className="flex size-9 items-center justify-center rounded-xl bg-accent text-brand-foreground">
                 <Settings2 className="size-4" />
               </span>
               <h3 className="mt-4 text-lg font-bold">Tu configuración</h3>
@@ -508,14 +501,14 @@ export function CurrencySection() {
                 {draft.targetCurrencies.map((currency) => (
                   <span
                     key={currency}
-                    className="flex items-center gap-1.5 rounded-xl border border-teal-500/20 bg-teal-500/10 py-1.5 pl-2.5 pr-1.5 text-xs font-bold text-teal-700 dark:text-teal-200"
+                    className="flex items-center gap-1.5 rounded-xl border border-primary/20 bg-accent py-1.5 pl-2.5 pr-1.5 text-xs font-bold text-brand-foreground"
                   >
                     {currency}
                     <button
                       type="button"
                       onClick={() => removeCurrency(currency)}
                       disabled={draft.targetCurrencies.length === 1}
-                      className="flex size-5 items-center justify-center rounded-md transition hover:bg-teal-500/15 disabled:opacity-30"
+                      className="flex size-5 items-center justify-center rounded-md transition hover:bg-primary/15 disabled:opacity-30"
                       aria-label={`Quitar ${currency}`}
                     >
                       <X className="size-3" />
@@ -533,7 +526,7 @@ export function CurrencySection() {
                         addCurrency(event.target.value);
                         event.target.value = '';
                       }}
-                      className="h-9 min-w-0 flex-1 rounded-xl border border-dashed border-border bg-background px-2 text-xs font-semibold text-muted-foreground outline-none focus:border-teal-500"
+                      className="h-9 min-w-0 flex-1 rounded-xl border border-dashed border-border bg-background px-2 text-xs font-semibold text-muted-foreground outline-none focus:border-primary"
                     >
                       <option value="" disabled>
                         Agregar otra moneda
@@ -559,7 +552,7 @@ export function CurrencySection() {
                 >
                   Margen banco o tarjeta
                 </label>
-                <span className="rounded-lg bg-cyan-500/10 px-2 py-1 text-xs font-black text-cyan-700 dark:text-cyan-200">
+                <span className="rounded-lg bg-accent px-2 py-1 text-xs font-black text-brand-foreground">
                   {draft.feePercent}%
                 </span>
               </div>
@@ -576,7 +569,7 @@ export function CurrencySection() {
                     feePercent: Number(event.target.value),
                   }))
                 }
-                className="h-2 w-full cursor-pointer accent-teal-500"
+                className="h-2 w-full cursor-pointer accent-primary"
               />
               <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
                 <span>Sin margen</span>
@@ -598,7 +591,7 @@ export function CurrencySection() {
                         updateQuickAmount(index, event.target.value)
                       }
                       inputMode="decimal"
-                      className="h-9 w-full rounded-xl border border-border bg-background px-2.5 text-xs font-bold tabular-nums outline-none focus:border-teal-500"
+                      className="h-9 w-full rounded-xl border border-border bg-background px-2.5 text-xs font-bold tabular-nums outline-none focus:border-primary"
                     />
                   </div>
                 ))}
@@ -610,7 +603,7 @@ export function CurrencySection() {
             type="button"
             onClick={savePreferences}
             disabled={saving}
-            className="mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-teal-500 via-cyan-500 to-sky-500 text-sm font-bold text-white shadow-lg shadow-cyan-900/15 transition hover:-translate-y-0.5 hover:shadow-xl disabled:pointer-events-none disabled:opacity-60"
+            className="mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-sm font-bold text-primary-foreground shadow-lg shadow-cyan-900/15 transition hover:-translate-y-0.5 hover:shadow-xl disabled:pointer-events-none disabled:opacity-60"
           >
             {saving ? (
               <Loader2 className="size-4 animate-spin" />

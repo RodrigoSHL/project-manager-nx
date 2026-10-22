@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
-import { Bell, Moon, Sun, Settings, LogOut, Shield, UserRound } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation"
+import { Bell, Settings, LogOut, Shield, UserRound } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
-import { useTheme } from "@/components/theme-provider"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { NotificationsDialog } from "./notifications-dialog"
 import {
   Breadcrumb,
@@ -27,6 +27,7 @@ import {
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { useAuth } from "@/contexts/auth-context"
 import { isProjectAdmin } from "@/lib/auth"
+import { ProjectHubLogo } from "@/components/brand-logo"
 
 // Datos de ejemplo de notificaciones
 const notifications = [
@@ -66,19 +67,18 @@ const notifications = [
 
 export function TopNavbar() {
   const router = useRouter()
-  const { theme, setTheme } = useTheme()
+  const pathname = usePathname()
   const { user, logout } = useAuth()
   const [isNotificationsOpen, setIsNotificationsOpen] = React.useState(false)
   const isAdmin = isProjectAdmin(user.roles)
 
   const unreadCount = notifications.filter((n) => !n.read).length
+  const currentPage = pathname.startsWith("/settings")
+    ? "Configuración"
+    : pathname.startsWith("/projects/") ? "Detalle del proyecto" : "Dashboard"
 
   const handleSettings = () => {
     router.push("/settings")
-  }
-
-  const toggleTheme = () => {
-    setTheme(theme === "light" ? "dark" : "light")
   }
 
   const initials = user.name
@@ -89,43 +89,41 @@ export function TopNavbar() {
     .join("") || user.email[0]?.toUpperCase() || "U"
 
   return (
-    <div className="flex items-center justify-between gap-4 px-6 py-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div className="flex w-full min-w-0 items-center justify-between gap-2 border-b bg-background/95 px-3 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:gap-4 sm:px-6 sm:py-4">
       {/* Left side - Sidebar Trigger, Logo and Breadcrumbs */}
-      <div className="flex items-center gap-4">
-        <SidebarTrigger className="-ml-1" />
-        <div className="flex items-center gap-2">
-          {/* <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Folder className="h-4 w-4" />
-          </div> */}
-          <span className="font-semibold text-lg">ProjectHub</span>
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
+        <SidebarTrigger className="-ml-1 size-10 shrink-0 sm:size-7" />
+        <div className="flex min-w-0 items-center gap-2">
+          <ProjectHubLogo className="size-8 shrink-0 sm:size-9" />
+          <span className="truncate text-sm font-semibold sm:text-lg">ProjectHub</span>
         </div>
-        <div className="text-muted-foreground">
+        <div className="hidden text-muted-foreground lg:block">
           <span>›</span>
         </div>
-        <Breadcrumb>
+        <Breadcrumb className="hidden min-w-0 lg:block">
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink href="#" className="text-muted-foreground">
+              <BreadcrumbLink href="/" className="text-muted-foreground">
                 Proyectos
               </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage className="font-medium">Dashboard</BreadcrumbPage>
+              <BreadcrumbPage className="font-medium">{currentPage}</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
       </div>
 
       {/* Right side - Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
         {/* Notificaciones */}
         <NotificationsDialog
           notifications={notifications}
           open={isNotificationsOpen}
           onOpenChange={setIsNotificationsOpen}
         >
-          <Button variant="ghost" size="sm" className="relative">
+          <Button variant="ghost" size="icon" className="relative size-10 sm:size-9">
             <Bell className="h-4 w-4" />
             {unreadCount > 0 && (
               <Badge
@@ -140,16 +138,12 @@ export function TopNavbar() {
         </NotificationsDialog>
 
         {/* Toggle modo oscuro */}
-        <Button variant="ghost" size="sm" onClick={toggleTheme}>
-          <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-          <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-          <span className="sr-only">Cambiar tema</span>
-        </Button>
+        <ThemeToggle className="size-10 shrink-0 sm:size-9" />
 
         {/* Avatar y menú de usuario */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+            <Button variant="ghost" size="icon" className="relative size-10 rounded-full sm:size-8" aria-label="Menú de usuario">
               <Avatar className="h-8 w-8">
                 <AvatarFallback>{initials}</AvatarFallback>
               </Avatar>

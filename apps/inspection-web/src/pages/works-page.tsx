@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
   CalendarDays,
@@ -12,48 +12,42 @@ import { PageHeader } from '../components/page-header';
 import { Button } from '../components/ui/button';
 import { useAssetCatalog } from '../features/assets/use-asset-catalog';
 import { WorkStatusBadge } from '../features/works/components/work-status-badge';
+import { formatWorkDate } from '../features/works/work-formatters';
 import {
-  formatWorkDate,
-  workStatusLabels,
-} from '../features/works/work-formatters';
-import type { WorkStatus } from '../features/works/models';
+  WorkListFilters,
+  emptyWorkFilters,
+  type WorkListFilterValues,
+} from '../features/works/components/work-list-filters';
 import { useWorkCatalog } from '../features/works/use-work-catalog';
 import { SyncStatusBadge } from '../features/offline/components/sync-status-badge';
 import { OfflineContentUnavailable } from '../features/offline/components/offline-content-unavailable';
 import { useOffline } from '../features/offline/offline-context';
 
-const allStatuses: WorkStatus[] = [
-  'DRAFT',
-  'IN_PROGRESS',
-  'FINISHED',
-  'REVIEWED',
-];
-
 export function WorksPage() {
   const { mode } = useOffline();
   const organization = useAssetCatalog();
   const catalog = useWorkCatalog(organization.tenantId);
-  const [siteId, setSiteId] = useState('');
-  const [assetId, setAssetId] = useState('');
-  const [workTypeId, setWorkTypeId] = useState('');
-  const [status, setStatus] = useState('');
+  const [filters, setFilters] = useState(emptyWorkFilters);
+  const { siteId, assetId, workTypeId, status } = filters;
 
   useEffect(() => {
-    setSiteId('');
-    setAssetId('');
-    setWorkTypeId('');
-    setStatus('');
+    setFilters(emptyWorkFilters);
   }, [organization.tenantId]);
-  useEffect(() => setAssetId(''), [siteId]);
 
   const references = catalog.catalog;
-  const assetOptions = useMemo(
-    () =>
-      (references?.assets ?? []).filter(
-        (asset) => !siteId || asset.siteId === siteId
-      ),
-    [references?.assets, siteId]
-  );
+  function applyFilters(next: WorkListFilterValues) {
+    if (next.tenantId !== organization.tenantId) {
+      organization.selectTenant(next.tenantId);
+      setFilters(emptyWorkFilters);
+    } else {
+      setFilters({
+        siteId: next.siteId,
+        assetId: next.assetId,
+        workTypeId: next.workTypeId,
+        status: next.status,
+      });
+    }
+  }
   const filteredWorks = useMemo(
     () =>
       catalog.works
@@ -76,74 +70,32 @@ export function WorksPage() {
     <>
       <PageHeader
         title="Trabajos"
-        description="Ejecuciones reales de formularios sobre activos, persistidas para continuar su avance más adelante."
+        description="Consulta tus inspecciones y continúa el trabajo en terreno."
       />
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <Filter
-            label="Tenant / Empresa"
-            value={organization.tenantId}
-            onChange={organization.selectTenant}
-          >
-            {organization.tenants.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </Filter>
-          <Filter label="Sitio" value={siteId} onChange={setSiteId}>
-            <option value="">Todos</option>
-            {(references?.sites ?? []).map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.code} · {item.name}
-              </option>
-            ))}
-          </Filter>
-          <Filter label="Activo" value={assetId} onChange={setAssetId}>
-            <option value="">Todos</option>
-            {assetOptions.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.code} · {item.name}
-              </option>
-            ))}
-          </Filter>
-          <Filter
-            label="Tipo de trabajo"
-            value={workTypeId}
-            onChange={setWorkTypeId}
-          >
-            <option value="">Todos</option>
-            {(references?.workTypes ?? []).map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </Filter>
-          <Filter label="Estado" value={status} onChange={setStatus}>
-            <option value="">Todos</option>
-            {allStatuses.map((item) => (
-              <option key={item} value={item}>
-                {workStatusLabels[item]}
-              </option>
-            ))}
-          </Filter>
-        </div>
-      </section>
+      <WorkListFilters
+        values={{ tenantId: organization.tenantId, ...filters }}
+        tenants={organization.tenants}
+        sites={references?.sites ?? []}
+        assets={references?.assets ?? []}
+        workTypes={references?.workTypes ?? []}
+        loading={catalog.isLoading}
+        onChange={applyFilters}
+      />
 
       {catalog.error ? (
-        <section className="mt-6 rounded-xl border border-red-200 bg-white p-6 text-center shadow-sm">
-          <AlertCircle className="mx-auto size-7 text-red-500" />
-          <p className="mt-3 text-sm text-red-700">{catalog.error}</p>
+        <section className="mt-6 rounded-xl border border-red-200 dark:border-red-800 bg-white dark:bg-slate-900 p-6 text-center shadow-sm">
+          <AlertCircle className="mx-auto size-7 text-red-500 dark:text-red-300" />
+          <p className="mt-3 text-sm text-red-700 dark:text-red-300">{catalog.error}</p>
           <Button className="mt-4" onClick={catalog.retry}>
             Reintentar
           </Button>
         </section>
       ) : null}
       {catalog.isLoading && !references ? (
-        <section className="mt-6 grid min-h-64 place-items-center rounded-xl border border-slate-200 bg-white shadow-sm">
+        <section className="mt-6 grid min-h-64 place-items-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
           <div className="text-center">
-            <LoaderCircle className="mx-auto size-8 animate-spin text-slate-500" />
-            <p className="mt-3 text-sm text-slate-600">
+            <LoaderCircle className="mx-auto size-8 animate-spin text-slate-500 dark:text-slate-400" />
+            <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
               Cargando trabajos locales...
             </p>
           </div>
@@ -156,12 +108,12 @@ export function WorksPage() {
       !catalog.isLoading &&
       references &&
       filteredWorks.length === 0 ? (
-        <section className="mt-6 rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center">
+        <section className="mt-6 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-10 text-center">
           <ClipboardList className="mx-auto size-8 text-slate-400" />
-          <h2 className="mt-3 font-semibold text-slate-900">
+          <h2 className="mt-3 font-semibold text-slate-900 dark:text-slate-100">
             No hay trabajos para estos filtros
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Selecciona un activo y usa “Nuevo trabajo” para crear uno.
           </p>
         </section>
@@ -182,19 +134,19 @@ export function WorksPage() {
               <Link
                 key={work.id}
                 to={`/works/${work.id}?tenantId=${work.tenantId}`}
-                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow md:p-5"
+                className="min-w-0 break-words rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm transition hover:border-slate-300 dark:hover:border-slate-700 hover:shadow md:p-5"
               >
                 <div className="flex items-start gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-700">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
                     <ClipboardList className="size-5" />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                           {workType?.name}
                         </p>
-                        <h2 className="mt-1 font-semibold text-slate-950">
+                        <h2 className="mt-1 font-semibold text-slate-950 dark:text-slate-100">
                           {work.title}
                         </h2>
                       </div>
@@ -203,7 +155,7 @@ export function WorksPage() {
                         <SyncStatusBadge work={work} />
                       </div>
                     </div>
-                    <div className="mt-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="mt-4 grid gap-2 text-sm text-slate-600 dark:text-slate-300 sm:grid-cols-2 lg:grid-cols-4">
                       <span>
                         {asset
                           ? `${asset.code} · ${asset.name}`
@@ -228,30 +180,5 @@ export function WorksPage() {
         </section>
       ) : null}
     </>
-  );
-}
-
-function Filter({
-  label,
-  value,
-  onChange,
-  children,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  children: ReactNode;
-}) {
-  return (
-    <label className="text-xs font-semibold text-slate-600">
-      {label}
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-2 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-normal text-slate-800 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-      >
-        {children}
-      </select>
-    </label>
   );
 }

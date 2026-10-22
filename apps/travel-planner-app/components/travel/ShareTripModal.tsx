@@ -211,7 +211,7 @@ export function ShareTripModal({
       />
 
       <section className="relative z-10 flex max-h-[94dvh] w-full flex-col overflow-hidden rounded-t-[28px] border border-white/60 bg-card shadow-2xl sm:max-w-2xl sm:rounded-[28px]">
-        <div className="relative overflow-hidden border-b border-border/70 bg-gradient-to-br from-sky-50 via-white to-amber-50 px-5 pb-5 pt-6 sm:px-7 sm:pb-6">
+        <div className="relative overflow-hidden border-b border-border/70 bg-accent px-5 pb-5 pt-6 sm:px-7 sm:pb-6">
           <div className="absolute -right-12 -top-16 h-44 w-44 rounded-full bg-sky-200/35 blur-3xl" />
           <div className="relative flex items-start justify-between gap-4">
             <div className="flex min-w-0 items-start gap-3.5">
@@ -219,7 +219,7 @@ export function ShareTripModal({
                 <Users className="size-5" />
               </div>
               <div className="min-w-0">
-                <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
+                <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-brand-foreground">
                   Viaje compartido
                 </p>
                 <h2
@@ -237,7 +237,7 @@ export function ShareTripModal({
             </div>
             <button
               onClick={onClose}
-              className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border/70 bg-white/80 text-muted-foreground shadow-sm transition hover:bg-white hover:text-foreground"
+              className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border/70 bg-card/80 text-muted-foreground shadow-sm transition hover:bg-accent hover:text-foreground"
               aria-label="Cerrar"
             >
               <X className="size-4" />
@@ -252,7 +252,7 @@ export function ShareTripModal({
               className="border-b border-border/70 p-5 sm:p-7"
             >
               <div className="mb-3 flex items-center gap-2">
-                <UserPlus className="size-4 text-primary" />
+                <UserPlus className="size-4 text-brand-foreground" />
                 <h3 className="text-sm font-semibold">Invitar a alguien</h3>
               </div>
               <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_140px_auto]">
@@ -324,7 +324,7 @@ export function ShareTripModal({
 
             <div className="space-y-2">
               <div className="flex items-center gap-3 rounded-2xl border border-primary/15 bg-primary/[0.035] p-3.5">
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-sky-400 text-xs font-bold text-white shadow-sm">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground shadow-sm">
                   {initials(resolvedOwnerName)}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -335,7 +335,7 @@ export function ShareTripModal({
                     Propietario del viaje
                   </p>
                 </div>
-                <span className="flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
+                <span className="flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-brand-foreground">
                   <ShieldCheck className="size-3.5" />
                   Propietario
                 </span>
@@ -365,7 +365,7 @@ export function ShareTripModal({
                       key={member.id}
                       className="group flex flex-wrap items-center gap-3 rounded-2xl border border-transparent p-3 transition hover:border-border hover:bg-muted/40"
                     >
-                      <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-amber-200 to-orange-300 text-xs font-bold text-amber-950">
+                      <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent text-xs font-bold text-accent-foreground">
                         {member.profile?.avatarUrl ? (
                           <img
                             src={member.profile.avatarUrl}

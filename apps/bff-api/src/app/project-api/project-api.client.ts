@@ -85,10 +85,11 @@ export class ProjectApiClient {
     return response.json();
   }
 
-  async createTicketComment(projectId: string, ticketId: string, body: string, user: AuthenticatedUser) {
+  async createTicketComment(projectId: string, ticketId: string, body: string, user: AuthenticatedUser, parentCommentId?: string) {
     return this.commentRequest('POST', this.commentPath(projectId, ticketId), {
       body,
       authorId: user.userId,
+      ...(parentCommentId ? { parentCommentId } : {}),
     });
   }
 

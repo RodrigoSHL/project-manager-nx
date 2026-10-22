@@ -183,9 +183,9 @@ function SessionMessage({
   children?: ReactNode;
 }) {
   return (
-    <main className="grid min-h-screen place-items-center bg-slate-100 p-4">
+    <main className="grid min-h-screen place-items-center bg-slate-100 dark:bg-slate-800 p-4">
       <div className="space-y-4 text-center">
-        <p className="text-sm font-medium text-slate-600">{message}</p>
+        <p className="text-sm font-medium text-slate-600 dark:text-slate-300">{message}</p>
         {children}
       </div>
     </main>

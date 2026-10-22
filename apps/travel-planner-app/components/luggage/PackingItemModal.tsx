@@ -59,7 +59,7 @@ export function PackingItemModal({ open, item, luggage, onClose, onSave }: Props
       <button className="absolute inset-0 cursor-default bg-slate-950/45 backdrop-blur-sm" onClick={onClose} aria-label="Cerrar" />
       <section className="relative z-10 w-full rounded-t-[28px] border border-white/70 bg-card shadow-2xl sm:max-w-lg sm:rounded-[28px]">
         <div className="flex items-center justify-between border-b border-border px-5 py-5 sm:px-6">
-          <div className="flex items-center gap-3"><div className="flex size-10 items-center justify-center rounded-2xl bg-primary/10 text-primary"><PackagePlus className="size-5" /></div><div><p className="text-[11px] font-bold uppercase tracking-wider text-primary">Checklist</p><h2 id="packing-item-title" className="text-lg font-bold">{item ? 'Editar artículo' : 'Agregar artículo'}</h2></div></div>
+          <div className="flex items-center gap-3"><div className="flex size-10 items-center justify-center rounded-2xl bg-primary/10 text-brand-foreground"><PackagePlus className="size-5" /></div><div><p className="text-[11px] font-bold uppercase tracking-wider text-brand-foreground">Checklist</p><h2 id="packing-item-title" className="text-lg font-bold">{item ? 'Editar artículo' : 'Agregar artículo'}</h2></div></div>
           <button onClick={onClose} className="flex size-9 items-center justify-center rounded-full bg-muted text-muted-foreground" aria-label="Cerrar"><X className="size-4" /></button>
         </div>
         <form onSubmit={submit}>

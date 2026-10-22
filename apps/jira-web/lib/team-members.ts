@@ -1,5 +1,22 @@
 import type { ApiTeamMember } from '@/types/project'
 
+export function getTeamRoleLabel(role: string): string {
+  const labels: Record<string, string> = {
+    tech_lead: 'Tech Lead',
+    developer: 'Developer',
+    devops: 'DevOps',
+    product_owner: 'Product Owner',
+    scrum_master: 'Scrum Master',
+    qa: 'QA',
+    designer: 'Designer',
+    architect: 'Architect',
+    member: 'Miembro',
+    analyst: 'Analista',
+    technician: 'Técnico',
+  }
+  return labels[role] ?? role.replaceAll('_', ' ')
+}
+
 export function getTeamMemberAssigneeId(member: ApiTeamMember): string {
   return member.userId ?? member.id
 }

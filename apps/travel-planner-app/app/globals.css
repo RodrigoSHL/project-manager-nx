@@ -14,6 +14,8 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-panel: var(--brand-panel);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -41,34 +43,36 @@
 
 :root {
   color-scheme: light;
-  /* Travel planner: warm cream + ocean blue palette */
-  --background: oklch(0.978 0.006 75);
+  /* Celeste del logo, superficies neutras y texto de marca por tema. */
+  --background: #f8fafc;
   --foreground: oklch(0.22 0.02 250);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.22 0.02 250);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.22 0.02 250);
-  --primary: oklch(0.48 0.18 230);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.94 0.01 75);
+  --primary: #38bdf8;
+  --primary-foreground: #082f49;
+  --brand-foreground: #075985;
+  --brand-panel: #12384b;
+  --secondary: #f1f5f9;
   --secondary-foreground: oklch(0.32 0.03 250);
-  --muted: oklch(0.94 0.008 75);
+  --muted: #f1f5f9;
   --muted-foreground: oklch(0.52 0.02 250);
-  --accent: oklch(0.88 0.06 60);
-  --accent-foreground: oklch(0.32 0.06 60);
+  --accent: #edf9ff;
+  --accent-foreground: #075985;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.89 0.01 75);
-  --input: oklch(0.89 0.01 75);
-  --ring: oklch(0.48 0.18 230);
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #075985;
   --radius: 0.625rem;
-  --sidebar: oklch(0.965 0.008 75);
+  --sidebar: #f1f5f9;
   --sidebar-foreground: oklch(0.22 0.02 250);
-  --sidebar-primary: oklch(0.48 0.18 230);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.94 0.01 75);
-  --sidebar-accent-foreground: oklch(0.32 0.03 250);
-  --sidebar-border: oklch(0.89 0.01 75);
-  --sidebar-ring: oklch(0.48 0.18 230);
+  --sidebar-primary: #38bdf8;
+  --sidebar-primary-foreground: #082f49;
+  --sidebar-accent: #edf9ff;
+  --sidebar-accent-foreground: #075985;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #075985;
 }
 
 .dark {
@@ -79,26 +83,27 @@
   --card-foreground: oklch(0.95 0.01 240);
   --popover: oklch(0.15 0.018 255);
   --popover-foreground: oklch(0.95 0.01 240);
-  --primary: oklch(0.68 0.16 230);
-  --primary-foreground: oklch(0.11 0.02 255);
+  --primary: #38bdf8;
+  --primary-foreground: #082f49;
+  --brand-foreground: #7dd3fc;
   --secondary: oklch(0.2 0.018 255);
   --secondary-foreground: oklch(0.91 0.01 240);
   --muted: oklch(0.2 0.018 255);
   --muted-foreground: oklch(0.65 0.015 240);
-  --accent: oklch(0.29 0.045 70);
-  --accent-foreground: oklch(0.94 0.035 75);
+  --accent: #102c3d;
+  --accent-foreground: #bae6fd;
   --destructive: oklch(0.65 0.2 25);
   --border: oklch(0.27 0.018 255);
   --input: oklch(0.24 0.018 255);
-  --ring: oklch(0.68 0.16 230);
+  --ring: #38bdf8;
   --sidebar: oklch(0.13 0.018 255);
   --sidebar-foreground: oklch(0.95 0.01 240);
-  --sidebar-primary: oklch(0.68 0.16 230);
-  --sidebar-primary-foreground: oklch(0.11 0.02 255);
-  --sidebar-accent: oklch(0.2 0.018 255);
-  --sidebar-accent-foreground: oklch(0.95 0.01 240);
+  --sidebar-primary: #38bdf8;
+  --sidebar-primary-foreground: #082f49;
+  --sidebar-accent: #102c3d;
+  --sidebar-accent-foreground: #bae6fd;
   --sidebar-border: oklch(0.27 0.018 255);
-  --sidebar-ring: oklch(0.68 0.16 230);
+  --sidebar-ring: #38bdf8;
 }
 
 @layer base {
@@ -116,6 +121,11 @@
 }
 
 @layer components {
+  .brand-banner {
+    color: #ffffff;
+    background: linear-gradient(135deg, #0f172a, var(--brand-panel) 60%, #0f172a);
+  }
+
   .country-strip {
     background: var(--country-strip-light);
   }

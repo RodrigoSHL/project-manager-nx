@@ -10,6 +10,7 @@ import { Environment } from './entities/environment.entity';
 import { Repository as ProjectRepository } from './entities/repository.entity';
 import { CloudService } from './entities/cloud-service.entity';
 import { UsefulLink } from './entities/useful-link.entity';
+import { File } from '../files/entities/file.entity';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto, GranularUpdateProjectDto } from './dto/update-project.dto';
 import { NotFoundException } from '@nestjs/common';
@@ -86,6 +87,7 @@ describe('ProjectsService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProjectsService,
+        { provide: getRepositoryToken(File), useValue: { find: jest.fn().mockResolvedValue([]) } },
         {
           provide: getRepositoryToken(Project),
           useValue: mockProjectRepository,
@@ -204,6 +206,7 @@ describe('ProjectsService', () => {
       const result = await service.findAll();
 
       expect(mockProjectRepository.find).toHaveBeenCalledWith({
+        where: {},
         relations: [
           'repositories',
           'environments',
@@ -294,6 +297,7 @@ describe('ProjectsService', () => {
       const updatedProject = {
         ...existingProject,
         ...updateProjectDto,
+        files: [],
       };
 
       mockProjectRepository.findOne.mockResolvedValue(existingProject);
@@ -582,4 +586,4 @@ describe('ProjectsService', () => {
     });
   });
 
-}); 
+});

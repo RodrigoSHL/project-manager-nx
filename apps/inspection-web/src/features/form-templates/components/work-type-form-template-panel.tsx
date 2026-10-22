@@ -108,21 +108,21 @@ export function WorkTypeFormTemplatePanel({
   return (
     <section
       aria-busy={catalog.isMutating}
-      className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+      className="min-w-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm"
     >
-      <header className="border-b border-slate-200 p-4 sm:p-5">
+      <header className="border-b border-slate-200 dark:border-slate-800 p-4 sm:p-5">
         <div className="flex min-w-0 items-start gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-700">
+          <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
             <ClipboardList className="size-5" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-slate-500">
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
               Formulario asociado
             </p>
-            <h3 className="mt-0.5 truncate font-semibold text-slate-950">
+            <h3 className="mt-0.5 truncate font-semibold text-slate-950 dark:text-slate-100">
               {workType.name}
             </h3>
-            <p className="mt-1 text-xs leading-5 text-slate-500">
+            <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
               Configura la estructura que se utilizará en una ejecución futura.
             </p>
           </div>
@@ -130,8 +130,8 @@ export function WorkTypeFormTemplatePanel({
             <span
               className={`shrink-0 rounded-full px-2 py-1 text-xs font-medium ${
                 template.active
-                  ? 'bg-emerald-50 text-emerald-700'
-                  : 'bg-slate-100 text-slate-500'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
               }`}
             >
               v{template.version} · {template.active ? 'Activa' : 'Inactiva'}
@@ -152,12 +152,12 @@ export function WorkTypeFormTemplatePanel({
               }}
             />
           ) : (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+            <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 p-6 text-center">
               <FileText className="mx-auto size-8 text-slate-400" />
-              <h4 className="mt-3 font-semibold text-slate-900">
+              <h4 className="mt-3 font-semibold text-slate-900 dark:text-slate-100">
                 Este tipo de trabajo no tiene formulario
               </h4>
-              <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
+              <p className="mx-auto mt-1 max-w-md text-sm text-slate-500 dark:text-slate-400">
                 Crea una plantilla vacía y luego agrega sus secciones y
                 elementos.
               </p>
@@ -172,12 +172,12 @@ export function WorkTypeFormTemplatePanel({
           )
         ) : (
           <>
-            <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl bg-slate-50 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl bg-slate-50 dark:bg-slate-950 p-4">
               <div className="min-w-0">
-                <h4 className="font-semibold text-slate-950">
+                <h4 className="font-semibold text-slate-950 dark:text-slate-100">
                   {template.name}
                 </h4>
-                <p className="mt-1 text-sm leading-5 text-slate-500">
+                <p className="mt-1 text-sm leading-5 text-slate-500 dark:text-slate-400">
                   {template.description ?? 'Sin descripción.'}
                 </p>
               </div>
@@ -218,7 +218,7 @@ export function WorkTypeFormTemplatePanel({
 
             <div className="mt-5 grid gap-4">
               {sections.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+                <p className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-6 text-center text-sm text-slate-500 dark:text-slate-400">
                   Agrega la primera sección del formulario.
                 </p>
               ) : null}
@@ -230,18 +230,18 @@ export function WorkTypeFormTemplatePanel({
                 return (
                   <article
                     key={section.id}
-                    className="overflow-hidden rounded-xl border border-slate-200"
+                    className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800"
                   >
-                    <header className="flex flex-wrap items-start gap-3 bg-slate-50 p-3 sm:flex-nowrap sm:p-4">
-                      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-slate-900 text-sm font-semibold text-white">
+                    <header className="flex flex-wrap items-start gap-3 bg-slate-50 dark:bg-slate-950 p-3 sm:flex-nowrap sm:p-4">
+                      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-slate-900 dark:bg-slate-200 text-sm font-semibold text-white dark:text-slate-950">
                         {section.order}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <h5 className="font-semibold text-slate-900">
+                        <h5 className="font-semibold text-slate-900 dark:text-slate-100">
                           {section.title}
                         </h5>
                         {section.description ? (
-                          <p className="mt-0.5 text-xs leading-5 text-slate-500">
+                          <p className="mt-0.5 text-xs leading-5 text-slate-500 dark:text-slate-400">
                             {section.description}
                           </p>
                         ) : null}
@@ -281,7 +281,7 @@ export function WorkTypeFormTemplatePanel({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="text-red-600 hover:bg-red-50"
+                          className="text-red-600 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/40"
                           title="Eliminar sección"
                           aria-label={`Eliminar ${section.title}`}
                           onClick={() => {
@@ -301,7 +301,7 @@ export function WorkTypeFormTemplatePanel({
 
                     {editor?.kind === 'section' &&
                     editor.sectionId === section.id ? (
-                      <div className="border-t border-slate-200 p-3 sm:p-4">
+                      <div className="border-t border-slate-200 dark:border-slate-800 p-3 sm:p-4">
                         <FormSectionForm
                           section={section}
                           onCancel={() => setEditor(null)}
@@ -316,7 +316,7 @@ export function WorkTypeFormTemplatePanel({
                       </div>
                     ) : null}
 
-                    <div className="divide-y divide-slate-100 px-3 sm:px-4">
+                    <div className="divide-y divide-slate-100 dark:divide-slate-800 px-3 sm:px-4">
                       {sectionItems.length === 0 ? (
                         <p className="py-4 text-sm text-slate-400">
                           Esta sección todavía no tiene elementos.
@@ -351,7 +351,7 @@ export function WorkTypeFormTemplatePanel({
 
                     {editor?.kind === 'item' &&
                     editor.sectionId === section.id ? (
-                      <div className="border-t border-slate-200 p-3 sm:p-4">
+                      <div className="border-t border-slate-200 dark:border-slate-800 p-3 sm:p-4">
                         <FormItemForm
                           item={catalog.items.find(
                             (item) => item.id === editor.itemId
@@ -381,7 +381,7 @@ export function WorkTypeFormTemplatePanel({
                         />
                       </div>
                     ) : (
-                      <div className="border-t border-slate-200 p-3 sm:px-4">
+                      <div className="border-t border-slate-200 dark:border-slate-800 p-3 sm:px-4">
                         <Button
                           type="button"
                           variant="ghost"
@@ -419,7 +419,7 @@ export function WorkTypeFormTemplatePanel({
             </div>
 
             {compatibleConcepts.error ? (
-              <p className="mt-4 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
+              <p className="mt-4 rounded-lg bg-amber-50 dark:bg-amber-950/40 p-3 text-xs text-amber-800 dark:text-amber-200">
                 No se pudo calcular la recomendación de conceptos:{' '}
                 {compatibleConcepts.error}
               </p>
@@ -455,8 +455,8 @@ function FormItemRow({
       <span
         className={`grid size-8 shrink-0 place-items-center rounded-lg ${
           item.type === 'TASK'
-            ? 'bg-blue-50 text-blue-700'
-            : 'bg-amber-50 text-amber-700'
+            ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300'
+            : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300'
         }`}
       >
         {item.type === 'TASK' ? (
@@ -467,18 +467,18 @@ function FormItemRow({
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
-          <p className="truncate text-sm font-medium text-slate-800">
+          <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-200">
             {item.type === 'TASK'
               ? item.title
               : concept?.name ?? 'Concepto no disponible'}
           </p>
           {item.required ? (
-            <span className="shrink-0 text-xs font-semibold text-red-600">
+            <span className="shrink-0 text-xs font-semibold text-red-600 dark:text-red-300">
               Obligatorio
             </span>
           ) : null}
         </div>
-        <p className="mt-0.5 truncate text-xs text-slate-500">
+        <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
           {item.type === 'TASK'
             ? 'Tarea'
             : concept
@@ -509,7 +509,7 @@ function FormItemRow({
         type="button"
         variant="ghost"
         size="icon"
-        className="text-red-600 hover:bg-red-50"
+        className="text-red-600 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/40"
         title="Eliminar elemento"
         aria-label="Eliminar elemento"
         onClick={onDelete}

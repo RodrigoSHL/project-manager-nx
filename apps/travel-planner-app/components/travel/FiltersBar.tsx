@@ -133,7 +133,7 @@ export function FiltersBar({ filters, onChange }: Props) {
 
 function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <span className="flex items-center gap-1 bg-primary/10 text-primary rounded-full px-2.5 py-1 text-xs font-medium">
+    <span className="flex items-center gap-1 bg-primary/10 text-brand-foreground rounded-full px-2.5 py-1 text-xs font-medium">
       {label}
       <button onClick={onRemove} className="hover:text-destructive ml-0.5" aria-label="Quitar filtro">
         <X className="w-3 h-3" />

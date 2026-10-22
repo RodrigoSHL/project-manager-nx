@@ -36,8 +36,13 @@ services:
       DATABASE_NAME: ${DATABASE_NAME:-project_management_db}
       DATABASE_USERNAME: ${DATABASE_USERNAME:-project_user}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD is required}
+      PROJECT_MIGRATIONS_RUN: "true"
+      JIRA_MENTION_EMAILS_ENABLED: ${JIRA_MENTION_EMAILS_ENABLED:-false}
+      MAILER_API_URL: http://mailer-api:3006/api
+      MAILER_SERVICE_TOKEN: ${MAILER_SERVICE_TOKEN:-}
+      USER_API_URL: http://user-api:3001/api
       DATABASE_SSL: ${DATABASE_SSL:-false}
-      TYPEORM_SYNCHRONIZE: ${TYPEORM_SYNCHRONIZE:-true}
+      TYPEORM_SYNCHRONIZE: "false"
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost,http://localhost:8081,http://localhost:8082}
     depends_on:
       postgres:
@@ -65,7 +70,8 @@ services:
       USER_DATABASE_NAME: ${USER_DATABASE_NAME:-user_management_db}
       DATABASE_USERNAME: ${DATABASE_USERNAME:-project_user}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD is required}
-      TYPEORM_SYNCHRONIZE: ${TYPEORM_SYNCHRONIZE:-true}
+      USER_MIGRATIONS_RUN: "true"
+      TYPEORM_SYNCHRONIZE: "false"
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost,http://localhost:8081,http://localhost:8082}
     depends_on:
       postgres:
@@ -136,6 +142,31 @@ services:
       timeout: 5s
       retries: 10
 
+  mailer-api:
+    profiles: [mailer]
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+      args:
+        APP: mailer-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      MAILER_API_PORT: 3006
+      JIRA_WEB_URL: ${JIRA_WEB_URL:-https://jira.atomdev.cl}
+      API_PREFIX: api
+      MAILER_PROVIDER: ${MAILER_PROVIDER:-resend}
+      MAILER_SERVICE_TOKEN: ${MAILER_SERVICE_TOKEN:-}
+      MAILER_FROM_EMAIL: ${MAILER_FROM_EMAIL:-onboarding@resend.dev}
+      MAILER_FROM_NAME: ${MAILER_FROM_NAME:-Project Manager}
+      MAILER_TIMEOUT_MS: ${MAILER_TIMEOUT_MS:-10000}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3006/api/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   bff-api:
     build:
       context: .
@@ -151,6 +182,7 @@ services:
       TRAVEL_API_URL: http://travel-planner-api:3003/api
       FILES_API_URL: http://files-api:3004/api
       INSPECTION_API_URL: http://inspection-api:3005/api
+      MACROFIT_API_URL: http://macro-fit-api:3007/api
       FILES_MAX_FILE_SIZE_BYTES: ${FILES_MAX_FILE_SIZE_BYTES:-10485760}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
@@ -165,6 +197,8 @@ services:
       files-api:
         condition: service_healthy
       inspection-api:
+        condition: service_healthy
+      macro-fit-api:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
@@ -198,6 +232,42 @@ services:
     depends_on:
       bff-api:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  macro-fit-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+      args:
+        APP: macro-fit-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      MACRO_FIT_API_PORT: 3007
+      API_PREFIX: api
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
+      GEMINI_TIMEOUT_MS: ${GEMINI_TIMEOUT_MS:-30000}
+      MACROFIT_REQUESTS_PER_MINUTE: ${MACROFIT_REQUESTS_PER_MINUTE:-10}
+      MACROFIT_MAX_CONCURRENT_ANALYSES: ${MACROFIT_MAX_CONCURRENT_ANALYSES:-2}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost,http://localhost:8081,http://localhost:8082}
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3007/api/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  macro-fit-web:
+    build:
+      context: .
+      dockerfile: Dockerfile.vite
+      args:
+        APP: macro-fit-web
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/health"]
       interval: 10s
@@ -333,6 +403,8 @@ services:
         condition: service_healthy
       atomdev-landing:
         condition: service_started
+      macro-fit-web:
+        condition: service_healthy
 
 volumes:
   postgres_data:

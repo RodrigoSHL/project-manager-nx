@@ -44,7 +44,6 @@ import {
   LogOut,
   Luggage,
   WalletCards,
-  MapPin,
   Pencil,
   Plus,
   Share2,
@@ -58,6 +57,7 @@ import { getUserProfile } from '@/services/tripService';
 import { QuickCurrencyConverter } from '../currency/QuickCurrencyConverter';
 import { CurrencySection } from '../currency/CurrencySection';
 import { ThemeToggle } from '../theme-toggle';
+import { TravelPlannerLogo } from '../brand-logo';
 
 const EMPTY_FILTERS: Filters = {
   country: '',
@@ -257,37 +257,35 @@ export function TravelCalendar() {
     <div className="flex flex-col gap-6">
       {/* Header */}
       <header className="flex flex-col gap-5">
-        <div className="relative overflow-hidden rounded-[28px] border border-white/70 bg-gradient-to-br from-sky-600 via-blue-600 to-indigo-700 px-5 py-5 text-white shadow-xl shadow-blue-950/10 sm:px-7 sm:py-6">
+        <div className="relative overflow-hidden rounded-[28px] border border-primary/20 brand-banner px-5 py-5 text-white shadow-xl shadow-foreground/10 sm:px-7 sm:py-6">
           <div className="pointer-events-none absolute -right-16 -top-24 size-64 rounded-full border-[42px] border-white/[0.07]" />
           <div className="pointer-events-none absolute -bottom-24 left-1/3 size-56 rounded-full bg-cyan-300/15 blur-3xl" />
 
           <div className="relative flex flex-col gap-6">
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-sm font-semibold text-white/90">
-                <div className="flex size-8 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
-                  <MapPin className="size-4" />
-                </div>
-                <span>Travel Planner</span>
+              <div className="flex min-w-0 items-center gap-2 text-sm font-semibold text-white/90">
+                <TravelPlannerLogo className="size-9 shrink-0" />
+                <span className="truncate">Travel Planner</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2">
                 <div className="hidden text-right sm:block">
                   <p className="text-xs font-semibold">
                     {store.currentUser?.name}
                   </p>
-                  <p className="max-w-40 truncate text-[10px] text-white/60">
+                  <p className="max-w-40 truncate text-[10px] text-sky-100">
                     {store.currentUser?.email}
                   </p>
                 </div>
                 <div className="flex size-9 items-center justify-center rounded-full border border-white/20 bg-white/15 text-xs font-bold backdrop-blur">
                   {store.currentUser?.name?.slice(0, 2).toUpperCase() || 'TU'}
                 </div>
-                <ThemeToggle />
+                <ThemeToggle variant="panel" />
                 <button
                   onClick={() => {
                     clearToken();
                     window.location.href = '/login';
                   }}
-                  className="flex size-9 items-center justify-center rounded-xl text-white/70 transition hover:bg-white/15 hover:text-white"
+                  className="flex size-9 items-center justify-center rounded-xl text-sky-100 transition hover:bg-white/15 hover:text-white"
                   aria-label="Cerrar sesión"
                   title="Cerrar sesión"
                 >
@@ -297,7 +295,7 @@ export function TravelCalendar() {
             </div>
 
             <div className="flex flex-col items-start justify-between gap-5 lg:flex-row lg:items-end">
-              <div className="min-w-0 flex-1">
+              <div className="w-full min-w-0 flex-1">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <span className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[11px] font-semibold backdrop-blur">
                     {access === 'owner' ? (
@@ -314,20 +312,21 @@ export function TravelCalendar() {
                       : 'Sólo lectura'}
                   </span>
                   {(store.currentTrip.members?.length ?? 0) > 0 && (
-                    <span className="flex items-center gap-1.5 text-[11px] font-medium text-white/70">
+                    <span className="flex items-center gap-1.5 text-[11px] font-medium text-sky-100">
                       <Users className="size-3" />
                       {(store.currentTrip.members?.length ?? 0) + 1} personas
                     </span>
                   )}
                 </div>
 
-                <div className="relative inline-flex max-w-full items-center">
+                <div className="relative inline-flex min-w-0 max-w-full items-center">
                   <select
                     value={store.currentTrip.id}
                     onChange={(event) => store.selectTrip(event.target.value)}
                     disabled={store.switchingTrip}
-                    className="max-w-full appearance-none bg-transparent py-0 pr-9 text-2xl font-bold tracking-tight text-white outline-none disabled:opacity-60 sm:text-3xl"
+                    className="min-w-0 max-w-full truncate appearance-none bg-transparent py-0 pr-9 text-2xl font-bold tracking-tight text-white outline-none disabled:opacity-60 sm:text-3xl"
                     aria-label="Seleccionar viaje"
+                    title={store.currentTrip.title}
                   >
                     {store.trips.map((trip) => (
                       <option
@@ -340,13 +339,13 @@ export function TravelCalendar() {
                     ))}
                   </select>
                   {store.switchingTrip ? (
-                    <Loader2 className="pointer-events-none absolute right-1 size-5 animate-spin text-white/70" />
+                    <Loader2 className="pointer-events-none absolute right-1 size-5 animate-spin text-sky-100" />
                   ) : (
-                    <ChevronDown className="pointer-events-none absolute right-1 size-5 text-white/70" />
+                    <ChevronDown className="pointer-events-none absolute right-1 size-5 text-sky-100" />
                   )}
                 </div>
 
-                <div className="mt-2 flex items-center gap-2 text-sm text-white/65">
+                <div className="mt-2 flex items-center gap-2 text-sm text-sky-100">
                   <CalendarDays className="size-4" />
                   <span>
                     {store.currentTrip.startDate && store.currentTrip.endDate
@@ -383,7 +382,7 @@ export function TravelCalendar() {
                     onClick={() =>
                       openNewActivity(format(currentDate, 'yyyy-MM-dd'))
                     }
-                    className="flex h-11 items-center justify-center gap-2 rounded-xl bg-white px-4 text-sm font-semibold text-blue-700 shadow-lg shadow-blue-950/15 transition hover:-translate-y-0.5 hover:bg-blue-50"
+                    className="flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/15 transition hover:-translate-y-0.5 hover:bg-primary/90"
                   >
                     <Plus className="size-4" />
                     <span className="sm:hidden">Actividad</span>
@@ -399,10 +398,11 @@ export function TravelCalendar() {
           <button
             type="button"
             onClick={() => setSection('itinerary')}
+            aria-pressed={section === 'itinerary'}
             className={cn(
               'flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-all',
               section === 'itinerary'
-                ? 'bg-foreground text-background shadow-sm'
+                ? 'bg-accent text-accent-foreground ring-1 ring-inset ring-primary/30 shadow-sm'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             )}
           >
@@ -412,26 +412,28 @@ export function TravelCalendar() {
           <button
             type="button"
             onClick={() => setSection('currency')}
+            aria-pressed={section === 'currency'}
             className={cn(
               'flex h-11 items-center justify-center gap-2 rounded-xl px-2 text-sm font-semibold transition-all',
               section === 'currency'
-                ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-sm'
+                ? 'bg-accent text-accent-foreground ring-1 ring-inset ring-primary/30 shadow-sm'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             )}
           >
             <BadgeDollarSign className="size-4" />
             Divisas
           </button>
-          <button type="button" onClick={() => setSection('finance')} className={cn('flex h-11 items-center justify-center gap-2 rounded-xl px-2 text-sm font-semibold transition-all',section === 'finance'?'bg-foreground text-background shadow-sm':'text-muted-foreground hover:bg-muted hover:text-foreground')}>
+          <button type="button" onClick={() => setSection('finance')} aria-pressed={section === 'finance'} className={cn('flex h-11 items-center justify-center gap-2 rounded-xl px-2 text-sm font-semibold transition-all',section === 'finance'?'bg-accent text-accent-foreground ring-1 ring-inset ring-primary/30 shadow-sm':'text-muted-foreground hover:bg-muted hover:text-foreground')}>
             <WalletCards className="size-4"/><span className="hidden sm:inline">Finanzas</span><span className="sm:hidden">Gastos</span>
           </button>
           <button
             type="button"
             onClick={() => setSection('luggage')}
+            aria-pressed={section === 'luggage'}
             className={cn(
               'flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-all',
               section === 'luggage'
-                ? 'bg-foreground text-background shadow-sm'
+                ? 'bg-accent text-accent-foreground ring-1 ring-inset ring-primary/30 shadow-sm'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             )}
           >
@@ -442,10 +444,11 @@ export function TravelCalendar() {
           <button
             type="button"
             onClick={() => setSection('documents')}
+            aria-pressed={section === 'documents'}
             className={cn(
               'flex h-11 items-center justify-center gap-2 rounded-xl px-2 text-sm font-semibold transition-all',
               section === 'documents'
-                ? 'bg-foreground text-background shadow-sm'
+                ? 'bg-accent text-accent-foreground ring-1 ring-inset ring-primary/30 shadow-sm'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             )}
           >

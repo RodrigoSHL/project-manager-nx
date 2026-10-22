@@ -1,0 +1,14 @@
+FlowBoard · Notificaciones
+
+Hola, Sebastián.
+Carolina Rojas te mencionó en un comentario.
+
+Project Manager NX · PM-142
+Integrar las notificaciones de comentarios
+
+@Sebastián, ya dejé lista la integración con Mailer API.
+¿Puedes revisar el flujo de menciones antes de cerrar el ticket?
+
+Ver comentario: https://jira.atomdev.cl/?workspaceId=00000000-0000-4000-8000-000000000001&projectId=00000000-0000-4000-8000-000000000002&ticketId=00000000-0000-4000-8000-000000000003&commentId=00000000-0000-4000-8000-000000000004
+
+Recibiste este correo porque te mencionaron en este ticket. Este mensaje es automático; responde desde FlowBoard.

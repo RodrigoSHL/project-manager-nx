@@ -25,6 +25,7 @@ export function ConnectivityProvider({ children }: { children: ReactNode }) {
     lastCheckedAt: null as string | null,
   }));
   const checkingRef = useRef(false);
+  const initialCheckRef = useRef(true);
 
   const refresh = useCallback(async () => {
     const browserOnline = navigator.onLine;
@@ -45,7 +46,12 @@ export function ConnectivityProvider({ children }: { children: ReactNode }) {
       browserOnline: true,
       checking: true,
     }));
-    const apiReachable = await checkApiReachability();
+    let apiReachable = await checkApiReachability();
+    // Una primera conexión lenta no debe convertirse inmediatamente en fallo.
+    if (!apiReachable && initialCheckRef.current && navigator.onLine) {
+      apiReachable = await checkApiReachability();
+    }
+    initialCheckRef.current = false;
     checkingRef.current = false;
     setState({
       browserOnline: navigator.onLine,

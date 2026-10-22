@@ -19,6 +19,7 @@ import {
   Loader2,
   LifeBuoy,
   Pencil,
+  Reply,
   Paperclip,
   Upload,
   Download,
@@ -26,13 +27,14 @@ import {
   Image as ImageIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getTicketSprintUpdate } from '@/lib/ticket-sprint'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Textarea } from '@/components/ui/textarea'
+import { CommentMentionEditor } from '@/components/comment-mention-editor'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Sheet,
   SheetContent,
@@ -62,8 +64,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { typeConfig } from '@/lib/mock-data'
-import type { ApiComment, ApiTicket, ApiTeamMember, ApiTicketAttachment } from '@/types/project'
-import { updateTicket } from '@/services/ticketService'
+import type { ApiComment, ApiTicket, ApiSprint, ApiTeamMember, ApiTicketAttachment } from '@/types/project'
+import { deleteTicket, updateTicket } from '@/services/ticketService'
 import {
   createTicketComment,
   deleteTicketComment,
@@ -71,9 +73,16 @@ import {
   updateTicketComment,
 } from '@/services/commentService'
 import { useAuth } from '@/contexts/auth-context'
+import { buildCommentThreads } from '@/lib/comment-threads'
+import {
+  parseCommentMentions,
+  serializeCommentMentions,
+  type CommentMention,
+} from '@/lib/comment-mentions'
 import {
   findTeamMemberByAssigneeId,
   getTeamMemberAssigneeId,
+  getTeamRoleLabel,
 } from '@/lib/team-members'
 import {
   TICKET_ATTACHMENT_ACCEPT,
@@ -125,25 +134,35 @@ const typeIcons: Record<string, React.ElementType> = {
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface TicketDetailProps {
+  canWrite: boolean
   ticket: ApiTicket | null
+  highlightedCommentId?: string
   open: boolean
   onClose: () => void
   projectId: string
   teamMembers?: ApiTeamMember[]
   tickets?: ApiTicket[]
+  sprints?: ApiSprint[]
   onUpdated: (ticket: ApiTicket) => void
+  onDeleted: (ticketId: string) => void
+  onSelectTicket: (ticket: ApiTicket) => void
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function TicketDetail({
+  canWrite,
   ticket,
+  highlightedCommentId,
   open,
   onClose,
   projectId,
   teamMembers = [],
   tickets = [],
+  sprints = [],
   onUpdated,
+  onDeleted,
+  onSelectTicket,
 }: TicketDetailProps) {
   const { user } = useAuth()
   const [saving, setSaving] = React.useState(false)
@@ -164,17 +183,27 @@ export function TicketDetail({
   const [showLabelInput, setShowLabelInput] = React.useState(false)
 
   const [newComment, setNewComment] = React.useState('')
+  const [newCommentMentions, setNewCommentMentions] = React.useState<CommentMention[]>([])
+  const [replyingToCommentId, setReplyingToCommentId] = React.useState<string | null>(null)
+  const [replyComment, setReplyComment] = React.useState('')
+  const [replyCommentMentions, setReplyCommentMentions] = React.useState<CommentMention[]>([])
   const [comments, setComments] = React.useState<ApiComment[]>([])
   const [commentsLoading, setCommentsLoading] = React.useState(false)
   const [commentSaving, setCommentSaving] = React.useState(false)
   const [commentError, setCommentError] = React.useState<string | null>(null)
   const [editingCommentId, setEditingCommentId] = React.useState<string | null>(null)
   const [editingCommentBody, setEditingCommentBody] = React.useState('')
+  const [editingCommentMentions, setEditingCommentMentions] = React.useState<CommentMention[]>([])
   const [attachments, setAttachments] = React.useState<ApiTicketAttachment[]>([])
   const [attachmentsLoading, setAttachmentsLoading] = React.useState(false)
   const [attachmentAction, setAttachmentAction] = React.useState<string | null>(null)
   const [attachmentError, setAttachmentError] = React.useState<string | null>(null)
   const attachmentInputRef = React.useRef<HTMLInputElement>(null)
+  const contentRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    contentRef.current?.scrollTo({ top: 0 })
+  }, [ticket?.id])
 
   React.useEffect(() => {
     if (!ticket) return
@@ -187,11 +216,16 @@ export function TicketDetail({
     setIsEditingDescription(false)
     setIsEditingAcceptanceCriteria(false)
     setNewComment('')
+    setNewCommentMentions([])
+    setReplyingToCommentId(null)
+    setReplyComment('')
+    setReplyCommentMentions([])
     setLabelInput('')
     setShowLabelInput(false)
     setCommentError(null)
     setEditingCommentId(null)
     setEditingCommentBody('')
+    setEditingCommentMentions([])
     setAttachments([])
     setAttachmentError(null)
     setAttachmentAction(null)
@@ -223,6 +257,14 @@ export function TicketDetail({
       cancelled = true
     }
   }, [open, projectId, ticket?.id])
+
+  React.useEffect(() => {
+    if (!open || commentsLoading || !highlightedCommentId || !comments.some(comment => comment.id === highlightedCommentId)) return
+    const frame = requestAnimationFrame(() => {
+      document.getElementById(`comment-${highlightedCommentId}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [open, commentsLoading, comments, highlightedCommentId])
 
   React.useEffect(() => {
     if (!open || !ticket) return
@@ -257,6 +299,8 @@ export function TicketDetail({
     bgColor: 'bg-muted',
   }
   const selectedAssignee = findTeamMemberByAssigneeId(teamMembers, ticket.assigneeId)
+  const projectSprints = sprints.filter(sprint => sprint.projectId === projectId)
+  const selectedSprint = projectSprints.find(sprint => sprint.id === ticket.sprintId)
   const availableEpics = tickets.filter(candidate => candidate.type === 'epic' && candidate.id !== ticket.id)
   const epicStories = ticket.type === 'epic'
     ? tickets.filter(candidate => candidate.type === 'story' && candidate.epicId === ticket.id)
@@ -271,6 +315,7 @@ export function TicketDetail({
   // ── API helpers ────────────────────────────────────────────────────────────
 
   const patch = async (data: Parameters<typeof updateTicket>[2]): Promise<boolean> => {
+    if (!canWrite) return false
     setSaving(true)
     setSaveError(null)
     try {
@@ -281,6 +326,20 @@ export function TicketDetail({
       console.error('Error saving ticket', err)
       setSaveError(err instanceof Error ? err.message : 'No se pudo guardar el ticket.')
       return false
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const removeTicket = async () => {
+    if (!canWrite || !window.confirm(`¿Eliminar el ticket ${ticket.key}?`)) return
+    setSaving(true)
+    setSaveError(null)
+    try {
+      await deleteTicket(projectId, ticket.id)
+      onDeleted(ticket.id)
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'No se pudo eliminar el ticket.')
     } finally {
       setSaving(false)
     }
@@ -322,16 +381,33 @@ export function TicketDetail({
 
   // ── Comment helpers ────────────────────────────────────────────────────────
 
-  const addComment = async () => {
-    const body = newComment.trim()
+  const cancelReply = () => {
+    setReplyingToCommentId(null)
+    setReplyComment('')
+    setReplyCommentMentions([])
+  }
+
+  const addComment = async (parentCommentId?: string) => {
+    const body = serializeCommentMentions(
+      parentCommentId ? replyComment : newComment,
+      parentCommentId ? replyCommentMentions : newCommentMentions,
+    ).trim()
     if (!body || commentSaving) return
+    if (body.length > 5000) {
+      setCommentError('El comentario supera el límite de 5000 caracteres.')
+      return
+    }
 
     setCommentSaving(true)
     setCommentError(null)
     try {
-      const created = await createTicketComment(projectId, ticket.id, body)
+      const created = await createTicketComment(projectId, ticket.id, body, parentCommentId)
       setComments(prev => [...prev, created])
-      setNewComment('')
+      if (parentCommentId) cancelReply()
+      else {
+        setNewComment('')
+        setNewCommentMentions([])
+      }
     } catch (error) {
       setCommentError(error instanceof Error ? error.message : 'No se pudo publicar el comentario.')
     } finally {
@@ -340,14 +416,21 @@ export function TicketDetail({
   }
 
   const startEditingComment = (comment: ApiComment) => {
+    cancelReply()
+    const parsed = parseCommentMentions(comment.body)
     setEditingCommentId(comment.id)
-    setEditingCommentBody(comment.body)
+    setEditingCommentBody(parsed.text)
+    setEditingCommentMentions(parsed.mentions)
     setCommentError(null)
   }
 
   const saveComment = async (commentId: string) => {
-    const body = editingCommentBody.trim()
+    const body = serializeCommentMentions(editingCommentBody, editingCommentMentions).trim()
     if (!body || commentSaving) return
+    if (body.length > 5000) {
+      setCommentError('El comentario supera el límite de 5000 caracteres.')
+      return
+    }
 
     setCommentSaving(true)
     setCommentError(null)
@@ -356,6 +439,7 @@ export function TicketDetail({
       setComments(prev => prev.map(comment => comment.id === commentId ? updated : comment))
       setEditingCommentId(null)
       setEditingCommentBody('')
+      setEditingCommentMentions([])
     } catch (error) {
       setCommentError(error instanceof Error ? error.message : 'No se pudo editar el comentario.')
     } finally {
@@ -370,7 +454,10 @@ export function TicketDetail({
     setCommentError(null)
     try {
       await deleteTicketComment(projectId, ticket.id, commentId)
-      setComments(prev => prev.filter(comment => comment.id !== commentId))
+      setComments(prev => prev.filter(comment => comment.id !== commentId).map(comment =>
+        comment.parentCommentId === commentId ? { ...comment, parentCommentId: null } : comment
+      ))
+      if (replyingToCommentId === commentId) cancelReply()
     } catch (error) {
       setCommentError(error instanceof Error ? error.message : 'No se pudo eliminar el comentario.')
     } finally {
@@ -396,8 +483,26 @@ export function TicketDetail({
       .join('') || 'U'
   }
 
+  const renderCommentBody = (body: string) => {
+    const { text, mentions } = parseCommentMentions(body)
+    const parts: React.ReactNode[] = []
+    let cursor = 0
+    for (const mention of mentions) {
+      parts.push(text.slice(cursor, mention.start))
+      const member = teamMembers.find(candidate => candidate.id === mention.memberId)
+      parts.push(
+        <span key={`${mention.start}-${mention.memberId}`} className="rounded bg-primary/10 px-0.5 font-medium text-brand-foreground" title={member?.email}>
+          {text.slice(mention.start, mention.end)}
+        </span>
+      )
+      cursor = mention.end
+    }
+    parts.push(text.slice(cursor))
+    return parts
+  }
+
   const addAttachment = async (file?: File) => {
-    if (!file || attachmentAction) return
+    if (!canWrite || !file || attachmentAction) return
     setAttachmentAction('upload')
     setAttachmentError(null)
     try {
@@ -425,7 +530,7 @@ export function TicketDetail({
   }
 
   const removeAttachment = async (attachment: ApiTicketAttachment) => {
-    if (attachmentAction || !window.confirm(`¿Eliminar ${attachment.originalName}?`)) return
+    if (!canWrite || attachmentAction || !window.confirm(`¿Eliminar ${attachment.originalName}?`)) return
     setAttachmentAction(attachment.id)
     setAttachmentError(null)
     try {
@@ -449,7 +554,7 @@ export function TicketDetail({
   return (
     <>
     <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-2xl p-0 flex flex-col">
+      <SheetContent className="h-dvh w-full sm:max-w-[850px] gap-0 overflow-hidden p-0">
 
         {/* Header — pr-14 leaves space for Radix's built-in close button */}
         <SheetHeader className="px-6 py-4 border-b shrink-0 pr-14">
@@ -457,7 +562,7 @@ export function TicketDetail({
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <DropdownMenu>
+              {canWrite ? <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
@@ -502,7 +607,7 @@ export function TicketDetail({
                     )
                   })}
                 </DropdownMenuContent>
-              </DropdownMenu>
+              </DropdownMenu> : <span className={cn('flex h-8 w-8 items-center justify-center rounded-md', type.bgColor)}><TypeIcon className={cn('h-4 w-4', type.color)} /></span>}
               <span className="text-sm font-mono text-muted-foreground">{ticket.key}</span>
               {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
             </div>
@@ -511,7 +616,7 @@ export function TicketDetail({
               <Button variant="ghost" size="icon" className="h-8 w-8">
                 <Share2 className="h-4 w-4" />
               </Button>
-              <DropdownMenu>
+              {canWrite && <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-8 w-8">
                     <MoreHorizontal className="h-4 w-4" />
@@ -523,22 +628,22 @@ export function TicketDetail({
                     Copiar enlace
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive">
+                  <DropdownMenuItem className="text-destructive" onClick={() => void removeTicket()}>
                     <Trash2 className="h-4 w-4 mr-2" />
                     Eliminar
                   </DropdownMenuItem>
                 </DropdownMenuContent>
-              </DropdownMenu>
+              </DropdownMenu>}
             </div>
           </div>
         </SheetHeader>
 
-        <ScrollArea className="flex-1">
+        <div ref={contentRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain" tabIndex={0}>
           <div className="px-6 py-4">
 
             {/* ── Title ─────────────────────────────────────────────────────── */}
             <div className="mb-6">
-              {isEditingTitle ? (
+              {canWrite && isEditingTitle ? (
                 <Input
                   value={title}
                   onChange={e => setTitle(e.target.value)}
@@ -549,8 +654,8 @@ export function TicketDetail({
                 />
               ) : (
                 <h2
-                  className="text-xl font-semibold cursor-text hover:bg-accent/50 rounded px-1 -mx-1 py-0.5 transition-colors"
-                  onClick={() => setIsEditingTitle(true)}
+                  className={cn('text-xl font-semibold rounded px-1 -mx-1 py-0.5 transition-colors', canWrite && 'cursor-text hover:bg-accent/50')}
+                  onClick={() => { if (canWrite) setIsEditingTitle(true) }}
                 >
                   {title || ticket.title}
                 </h2>
@@ -560,12 +665,44 @@ export function TicketDetail({
             {/* ── Meta grid ─────────────────────────────────────────────────── */}
             <div className="grid grid-cols-2 gap-4 mb-6">
 
+              {ticket.type !== 'epic' && (
+                <div className="space-y-1.5 col-span-2">
+                  <label htmlFor="ticket-sprint" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Sprint
+                  </label>
+                  <Select
+                    disabled={!canWrite || saving}
+                    value={ticket.sprintId ?? 'none'}
+                    onValueChange={value => patch(getTicketSprintUpdate(ticket, value === 'none' ? null : value))}
+                  >
+                    <SelectTrigger id="ticket-sprint" className="w-full h-9">
+                      <SelectValue placeholder="Selecciona un sprint" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin sprint (Backlog)</SelectItem>
+                      {ticket.sprintId && !selectedSprint && (
+                        <SelectItem value={ticket.sprintId} disabled>Sprint no disponible</SelectItem>
+                      )}
+                      {projectSprints.map(sprint => (
+                        <SelectItem key={sprint.id} value={sprint.id}>
+                          {sprint.name}{sprint.isActive ? ' · En curso' : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Se guarda al seleccionar. Los tickets en Backlog pasan a To Do al asignar un sprint.
+                  </p>
+                </div>
+              )}
+
               {ticket.type === 'story' && (
                 <div className="space-y-1.5 col-span-2">
                   <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Épica
                   </label>
                   <Select
+                    disabled={!canWrite}
                     value={ticket.epicId ?? 'none'}
                     onValueChange={value => {
                       if (value !== 'none') patch({ epicId: value })
@@ -591,6 +728,7 @@ export function TicketDetail({
                   Estado
                 </label>
                 <Select
+                  disabled={!canWrite}
                   value={ticket.status}
                   onValueChange={v => patch({ status: v as ApiTicket['status'] })}
                 >
@@ -615,6 +753,7 @@ export function TicketDetail({
                   Prioridad
                 </label>
                 <Select
+                  disabled={!canWrite}
                   value={ticket.priority}
                   onValueChange={v => patch({ priority: v as ApiTicket['priority'] })}
                 >
@@ -639,6 +778,7 @@ export function TicketDetail({
                   Asignado
                 </label>
                 <Select
+                  disabled={!canWrite}
                   value={selectedAssignee ? getTeamMemberAssigneeId(selectedAssignee) : 'unassigned'}
                   onValueChange={v => patch({ assigneeId: v === 'unassigned' ? null : v })}
                 >
@@ -663,7 +803,7 @@ export function TicketDetail({
                           </Avatar>
                           <span className="truncate">{member.name}</span>
                           <span className="text-[10px] text-muted-foreground shrink-0 capitalize">
-                            {member.role.replace('_', ' ')}
+                            {getTeamRoleLabel(member.role)}
                           </span>
                         </div>
                       </SelectItem>
@@ -677,6 +817,7 @@ export function TicketDetail({
                   Story Points
                 </label>
                 <Select
+                  disabled={!canWrite}
                   value={ticket.storyPoints?.toString() ?? 'none'}
                   onValueChange={v => patch({ storyPoints: v === 'none' ? null : Number(v) })}
                 >
@@ -712,12 +853,17 @@ export function TicketDetail({
                 {epicStories.length > 0 ? (
                   <div className="space-y-2">
                     {epicStories.map(story => (
-                      <div key={story.id} className="flex items-center gap-2 rounded-md bg-background px-3 py-2 text-sm">
+                      <button
+                        key={story.id}
+                        type="button"
+                        className="flex w-full items-center gap-2 rounded-md bg-background px-3 py-2 text-left text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        onClick={() => onSelectTicket(story)}
+                      >
                         <BookOpen className="h-3.5 w-3.5 text-green-600 shrink-0" />
                         <span className="font-mono text-xs text-muted-foreground">{story.key}</span>
-                        <span className="truncate">{story.title}</span>
-                        <Badge variant="outline" className="ml-auto text-[10px]">{story.status}</Badge>
-                      </div>
+                        <span className="min-w-0 flex-1 truncate">{story.title}</span>
+                        <Badge variant="outline" className="ml-auto shrink-0 text-[10px]">{story.status}</Badge>
+                      </button>
                     ))}
                   </div>
                 ) : (
@@ -731,7 +877,7 @@ export function TicketDetail({
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">
                 Descripción
               </label>
-              {isEditingDescription ? (
+              {canWrite && isEditingDescription ? (
                 <Textarea
                   value={description}
                   onChange={e => setDescription(e.target.value)}
@@ -743,13 +889,13 @@ export function TicketDetail({
               ) : (
                 <div
                   className={cn(
-                    'p-3 rounded-lg bg-muted/50 min-h-20 cursor-text text-sm leading-relaxed',
-                    'hover:bg-muted/80 transition-colors',
+                    'p-3 rounded-lg bg-muted/50 min-h-20 text-sm leading-relaxed',
+                    canWrite && 'cursor-text hover:bg-muted/80 transition-colors',
                     !description && 'text-muted-foreground italic',
                   )}
-                  onClick={() => setIsEditingDescription(true)}
+                  onClick={() => { if (canWrite) setIsEditingDescription(true) }}
                 >
-                  {description || 'Haz clic para añadir descripción...'}
+                  {description || (canWrite ? 'Haz clic para añadir descripción...' : 'Sin descripción')}
                 </div>
               )}
             </div>
@@ -758,7 +904,7 @@ export function TicketDetail({
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">
                 Criterios de aceptación
               </label>
-              {isEditingAcceptanceCriteria ? (
+              {canWrite && isEditingAcceptanceCriteria ? (
                 <Textarea
                   value={acceptanceCriteria}
                   onChange={e => setAcceptanceCriteria(e.target.value)}
@@ -770,13 +916,13 @@ export function TicketDetail({
               ) : (
                 <div
                   className={cn(
-                    'p-3 rounded-lg bg-muted/50 min-h-20 cursor-text text-sm leading-relaxed whitespace-pre-wrap',
-                    'hover:bg-muted/80 transition-colors',
+                    'p-3 rounded-lg bg-muted/50 min-h-20 text-sm leading-relaxed whitespace-pre-wrap',
+                    canWrite && 'cursor-text hover:bg-muted/80 transition-colors',
                     !acceptanceCriteria && 'text-muted-foreground italic',
                   )}
-                  onClick={() => setIsEditingAcceptanceCriteria(true)}
+                  onClick={() => { if (canWrite) setIsEditingAcceptanceCriteria(true) }}
                 >
-                  {acceptanceCriteria || 'Haz clic para añadir criterios de aceptación...'}
+                  {acceptanceCriteria || (canWrite ? 'Haz clic para añadir criterios de aceptación...' : 'Sin criterios de aceptación')}
                 </div>
               )}
             </div>
@@ -790,16 +936,16 @@ export function TicketDetail({
                 {localLabels.map(label => (
                   <Badge key={label.id} variant="secondary" className="text-xs gap-1 pr-1">
                     {label.name}
-                    <button
+                    {canWrite && <button
                       className="ml-0.5 rounded-full hover:bg-foreground/10 p-0.5 transition-colors"
                       onClick={() => removeLabel(label.id)}
                     >
                       <X className="h-2.5 w-2.5" />
-                    </button>
+                    </button>}
                   </Badge>
                 ))}
 
-                {showLabelInput ? (
+                {canWrite && (showLabelInput ? (
                   <Input
                     className="h-6 w-28 text-xs px-2"
                     placeholder="Etiqueta..."
@@ -822,7 +968,7 @@ export function TicketDetail({
                     <Plus className="h-3 w-3 mr-1" />
                     Añadir
                   </Button>
-                )}
+                ))}
               </div>
             </div>
 
@@ -856,14 +1002,14 @@ export function TicketDetail({
                   <Paperclip className="h-4 w-4" />
                   <h3 className="text-sm font-semibold">Archivos ({attachments.length})</h3>
                 </div>
-                <input
+                {canWrite && <input
                   ref={attachmentInputRef}
                   type="file"
                   accept={TICKET_ATTACHMENT_ACCEPT}
                   className="hidden"
                   onChange={event => void addAttachment(event.target.files?.[0])}
-                />
-                <Button
+                />}
+                {canWrite && <Button
                   type="button"
                   variant="outline"
                   size="sm"
@@ -876,7 +1022,7 @@ export function TicketDetail({
                     <Upload className="mr-2 h-3.5 w-3.5" />
                   )}
                   Adjuntar
-                </Button>
+                </Button>}
               </div>
 
               <p className="mb-3 text-xs text-muted-foreground">
@@ -931,7 +1077,7 @@ export function TicketDetail({
                           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                           <span className="sr-only">Descargar {attachment.originalName}</span>
                         </Button>
-                        <Button
+                        {canWrite && <Button
                           type="button"
                           variant="ghost"
                           size="icon"
@@ -941,7 +1087,7 @@ export function TicketDetail({
                         >
                           <Trash2 className="h-4 w-4" />
                           <span className="sr-only">Eliminar {attachment.originalName}</span>
-                        </Button>
+                        </Button>}
                       </div>
                     )
                   })}
@@ -963,19 +1109,17 @@ export function TicketDetail({
                   <AvatarFallback className="text-xs">{getInitials(user.name)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 space-y-2">
-                  <Textarea
+                  <CommentMentionEditor
                     placeholder="Escribe un comentario..."
                     value={newComment}
-                    onChange={e => setNewComment(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void addComment()
-                    }}
+                    mentions={newCommentMentions}
+                    onChange={(value, mentions) => { setNewComment(value); setNewCommentMentions(mentions) }}
+                    onSubmit={() => void addComment()}
+                    teamMembers={teamMembers}
                     disabled={commentSaving}
-                    maxLength={5000}
-                    className="min-h-20 resize-none"
                   />
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-muted-foreground">⌘ + Enter para enviar</span>
+                    <span className="text-[11px] text-muted-foreground">Escribe @ para etiquetar · ⌘ + Enter para enviar</span>
                     <Button size="sm" disabled={!newComment.trim() || commentSaving} onClick={() => void addComment()}>
                       {commentSaving && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
                       Publicar
@@ -1003,18 +1147,23 @@ export function TicketDetail({
 
               {!commentsLoading && comments.length > 0 && (
                 <div className="space-y-4">
-                  {comments.map(comment => {
+                  {buildCommentThreads(comments).map(({ comment, parent, depth }) => {
                     const author = getCommentAuthor(comment.authorId)
                     const isOwnComment = comment.authorId === user.userId
                     const wasEdited = comment.updatedAt !== comment.createdAt
 
                     return (
-                      <div key={comment.id} className="flex gap-3">
+                      <div key={comment.id} id={`comment-${comment.id}`} className={cn('flex gap-3', depth > 0 && 'border-l-2 pl-3', highlightedCommentId === comment.id && 'rounded-lg bg-primary/5 p-3 ring-1 ring-primary/30')} style={{ marginLeft: Math.min(depth, 2) * 16 }}>
                         <Avatar className="h-8 w-8 shrink-0">
                           {author.avatar && <AvatarImage src={author.avatar} alt={author.name} />}
                           <AvatarFallback className="text-xs">{getInitials(author.name)}</AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">
+                          {parent && (
+                            <p className="mb-1 text-[11px] text-muted-foreground">
+                              En respuesta a {getCommentAuthor(parent.authorId).name}
+                            </p>
+                          )}
                           <div className="mb-1 flex items-center gap-2">
                             <span className="text-sm font-medium">{isOwnComment ? 'Tú' : author.name}</span>
                             <span className="text-xs text-muted-foreground">{formatDate(comment.createdAt)}</span>
@@ -1047,21 +1196,19 @@ export function TicketDetail({
 
                           {editingCommentId === comment.id ? (
                             <div className="space-y-2">
-                              <Textarea
+                              <CommentMentionEditor
                                 value={editingCommentBody}
-                                onChange={event => setEditingCommentBody(event.target.value)}
-                                onKeyDown={event => {
-                                  if (event.key === 'Escape') {
-                                    setEditingCommentId(null)
-                                    setEditingCommentBody('')
-                                  }
-                                  if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-                                    void saveComment(comment.id)
-                                  }
+                                mentions={editingCommentMentions}
+                                onChange={(value, mentions) => { setEditingCommentBody(value); setEditingCommentMentions(mentions) }}
+                                onSubmit={() => void saveComment(comment.id)}
+                                onCancel={() => {
+                                  setEditingCommentId(null)
+                                  setEditingCommentBody('')
+                                  setEditingCommentMentions([])
                                 }}
+                                teamMembers={teamMembers}
+                                placeholder="Edita tu comentario..."
                                 disabled={commentSaving}
-                                maxLength={5000}
-                                className="min-h-20 resize-none"
                                 autoFocus
                               />
                               <div className="flex justify-end gap-2">
@@ -1072,6 +1219,7 @@ export function TicketDetail({
                                   onClick={() => {
                                     setEditingCommentId(null)
                                     setEditingCommentBody('')
+                                    setEditingCommentMentions([])
                                   }}
                                 >
                                   Cancelar
@@ -1088,8 +1236,47 @@ export function TicketDetail({
                             </div>
                           ) : (
                             <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
-                              {comment.body}
+                              {renderCommentBody(comment.body)}
                             </p>
+                          )}
+                          {editingCommentId !== comment.id && replyingToCommentId !== comment.id && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="mt-1 h-7 px-2 text-xs text-muted-foreground"
+                              disabled={commentSaving}
+                              onClick={() => {
+                                cancelReply()
+                                setReplyingToCommentId(comment.id)
+                                setCommentError(null)
+                              }}
+                            >
+                              <Reply className="mr-1 h-3.5 w-3.5" />
+                              Responder
+                            </Button>
+                          )}
+                          {replyingToCommentId === comment.id && (
+                            <div className="mt-2 space-y-2 rounded-lg border p-3">
+                              <p className="text-xs text-muted-foreground">Responder a {author.name}</p>
+                              <CommentMentionEditor
+                                value={replyComment}
+                                mentions={replyCommentMentions}
+                                onChange={(value, mentions) => { setReplyComment(value); setReplyCommentMentions(mentions) }}
+                                onSubmit={() => void addComment(comment.id)}
+                                onCancel={cancelReply}
+                                teamMembers={teamMembers}
+                                placeholder="Escribe una respuesta..."
+                                disabled={commentSaving}
+                                autoFocus
+                              />
+                              <div className="flex justify-end gap-2">
+                                <Button variant="ghost" size="sm" disabled={commentSaving} onClick={cancelReply}>Cancelar</Button>
+                                <Button size="sm" disabled={!replyComment.trim() || commentSaving} onClick={() => void addComment(comment.id)}>
+                                  {commentSaving && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                                  Responder
+                                </Button>
+                              </div>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -1100,7 +1287,7 @@ export function TicketDetail({
             </div>
 
           </div>
-        </ScrollArea>
+        </div>
       </SheetContent>
     </Sheet>
 

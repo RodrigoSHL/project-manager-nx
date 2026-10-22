@@ -13,6 +13,7 @@ import {
   Bug,
   BookOpen,
   LifeBuoy,
+  Loader2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -22,20 +23,24 @@ import { typeConfig } from '@/lib/mock-data'
 import type { ApiTicket, ApiSprint } from '@/types/project'
 
 interface BacklogViewProps {
+  canWrite: boolean
   tickets: ApiTicket[]
   sprints: ApiSprint[]
   currentProject: string
   onTicketClick: (ticket: ApiTicket) => void
+  onMoveTicketToSprint: (ticket: ApiTicket, sprintId: string) => Promise<void>
   onCreateTicket: (sprintId?: string | null) => void
   onCreateEpic: () => void
   onCreateStory: (epicId: string) => void
 }
 
 export function BacklogView({
+  canWrite,
   tickets,
   sprints,
   currentProject,
   onTicketClick,
+  onMoveTicketToSprint,
   onCreateTicket,
   onCreateEpic,
   onCreateStory,
@@ -44,7 +49,15 @@ export function BacklogView({
     Record<string, boolean>
   >({
     backlog: true,
+    epics: true,
   })
+  const epicsContentId = React.useId()
+  const [movingTicketId, setMovingTicketId] = React.useState<string | null>(null)
+  const [moveError, setMoveError] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    setMoveError(null)
+  }, [currentProject])
 
   const projectSprints = sprints
     .filter((s) => s.projectId === currentProject)
@@ -55,12 +68,26 @@ export function BacklogView({
       )
     })
   const epics = tickets.filter((ticket) => ticket.type === 'epic')
+  const activeSprint = projectSprints.find(sprint => sprint.isActive)
   const backlogTickets = tickets.filter(
     (t) => t.type !== 'epic' && (!t.sprintId || t.status === 'backlog')
   )
 
   const toggleSection = (section: string) => {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }))
+  }
+
+  const moveToActiveSprint = async (ticket: ApiTicket) => {
+    if (!canWrite || !activeSprint || movingTicketId) return
+    setMovingTicketId(ticket.id)
+    setMoveError(null)
+    try {
+      await onMoveTicketToSprint(ticket, activeSprint.id)
+    } catch (error) {
+      setMoveError(error instanceof Error ? error.message : 'No se pudo mover el ticket al sprint.')
+    } finally {
+      setMovingTicketId(null)
+    }
   }
 
   const formatDate = (dateStr: string | null) => {
@@ -119,61 +146,81 @@ export function BacklogView({
     <div className="space-y-6 pb-8">
       <section className="space-y-3">
         <div className="flex items-center gap-3 p-4 rounded-xl border border-purple-500/20 bg-purple-500/5">
-          <div className="p-1.5 rounded-md bg-purple-500/10">
-            <Layers className="h-4 w-4 text-purple-500" />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold">Épicas</h3>
-            <p className="text-xs text-muted-foreground">
-              {epics.length} {epics.length === 1 ? 'épica' : 'épicas'} · agrupan historias de usuario
-            </p>
-          </div>
-          <div className="flex-1" />
-          <Button variant="outline" size="sm" onClick={onCreateEpic}>
+          <button
+            type="button"
+            className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            onClick={() => toggleSection('epics')}
+            aria-expanded={expandedSections.epics}
+            aria-controls={epicsContentId}
+          >
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center">
+              {expandedSections.epics ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </span>
+            <span className="p-1.5 rounded-md bg-purple-500/10">
+              <Layers className="h-4 w-4 text-purple-500" />
+            </span>
+            <span>
+              <span className="block text-sm font-semibold">Épicas</span>
+              <span className="block text-xs text-muted-foreground">
+                {epics.length} {epics.length === 1 ? 'épica' : 'épicas'} · agrupan historias de usuario
+              </span>
+            </span>
+          </button>
+          {canWrite && <Button variant="outline" size="sm" className="shrink-0" onClick={onCreateEpic}>
             <Plus className="h-3.5 w-3.5" />
             Crear épica
-          </Button>
+          </Button>}
         </div>
 
-        {epics.length > 0 ? (
-          <div className="grid gap-3 ml-0 md:grid-cols-2 md:ml-10">
-            {epics.map(epic => {
-              const stories = tickets.filter(ticket => ticket.type === 'story' && ticket.epicId === epic.id)
-              const doneStories = stories.filter(story => story.status === 'done').length
-              const progress = stories.length ? (doneStories / stories.length) * 100 : 0
+        <div id={epicsContentId} hidden={!expandedSections.epics}>
+          {epics.length > 0 ? (
+            <div className="grid gap-2 ml-0 md:grid-cols-2 md:ml-10">
+              {epics.map(epic => {
+                const stories = tickets.filter(ticket => ticket.type === 'story' && ticket.epicId === epic.id)
+                const doneStories = stories.filter(story => story.status === 'done').length
+                const progress = stories.length ? (doneStories / stories.length) * 100 : 0
 
-              return (
-                <div key={epic.id} className="rounded-xl border bg-card p-4 space-y-3">
-                  <button className="w-full text-left" onClick={() => onTicketClick(epic)}>
-                    <div className="flex items-center gap-2">
-                      <Layers className="h-4 w-4 text-purple-500 shrink-0" />
-                      <span className="text-xs font-mono text-muted-foreground">{epic.key}</span>
+                return (
+                  <div key={epic.id} className="rounded-xl border bg-card p-3 space-y-2">
+                    <div className="flex items-start gap-2">
+                      <button type="button" className="min-w-0 flex-1 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={() => onTicketClick(epic)}>
+                        <span className="flex items-center gap-2">
+                          <Layers className="h-4 w-4 text-purple-500 shrink-0" />
+                          <span className="text-xs font-mono text-muted-foreground">{epic.key}</span>
+                        </span>
+                        <span className="mt-1 block text-sm font-semibold line-clamp-2" title={epic.title}>{epic.title}</span>
+                      </button>
+                      {canWrite && <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => onCreateStory(epic.id)}
+                        aria-label={`Crear historia en ${epic.key ?? epic.title}`}
+                        title="Crear historia en esta épica"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>}
                     </div>
-                    <p className="mt-2 text-sm font-semibold line-clamp-2">{epic.title}</p>
-                  </button>
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>{doneStories}/{stories.length} historias completadas</span>
-                      <span>{Math.round(progress)}%</span>
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>{doneStories}/{stories.length} historias completadas</span>
+                        <span>{Math.round(progress)}%</span>
+                      </div>
+                      <Progress value={progress} className="h-1.5" />
                     </div>
-                    <Progress value={progress} className="h-1.5" />
                   </div>
-                  <Button variant="outline" size="sm" className="w-full" onClick={() => onCreateStory(epic.id)}>
-                    <Plus className="h-3.5 w-3.5" />
-                    Crear historia en esta épica
-                  </Button>
-                </div>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="ml-0 md:ml-10 rounded-xl border border-dashed p-6 text-center">
-            <p className="text-sm font-medium">Aún no hay épicas</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Crea un ticket de tipo Épica para empezar a organizar las historias.
-            </p>
-          </div>
-        )}
+                )
+              })}
+            </div>
+          ) : (
+            <div className="ml-0 md:ml-10 rounded-xl border border-dashed p-6 text-center">
+              <p className="text-sm font-medium">Aún no hay épicas</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Crea un ticket de tipo Épica para empezar a organizar las historias.
+              </p>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* Sprint Sections */}
@@ -209,7 +256,7 @@ export function BacklogView({
 
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 rounded-md bg-primary/10">
-                    <Zap className="h-4 w-4 text-primary" />
+                    <Zap className="h-4 w-4 text-brand-foreground" />
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold">{sprint.name}</h3>
@@ -262,7 +309,7 @@ export function BacklogView({
                   </div>
                 </div>
 
-                <Button
+                {canWrite && <Button
                   variant="outline"
                   size="sm"
                   className="shrink-0 gap-1.5"
@@ -272,8 +319,8 @@ export function BacklogView({
                   }}
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  Añadir
-                </Button>
+                  Crear ticket
+                </Button>}
               </div>
 
               {/* Sprint Goal */}
@@ -332,7 +379,7 @@ export function BacklogView({
 
                           {/* Story Points */}
                           {ticket.storyPoints && (
-                            <div className="h-5 w-5 flex items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-bold border border-primary/20 shrink-0">
+                            <div className="h-5 w-5 flex items-center justify-center rounded-full bg-primary/10 text-brand-foreground text-[10px] font-bold border border-primary/20 shrink-0">
                               {ticket.storyPoints}
                             </div>
                           )}
@@ -350,13 +397,13 @@ export function BacklogView({
                       <p className="text-sm text-muted-foreground mb-2">
                         No hay tickets en este sprint
                       </p>
-                      <Button
+                      {canWrite && <Button
                         variant="outline"
                         size="sm"
                         onClick={() => onCreateTicket(sprint.id)}
                       >
                         Crear ticket
-                      </Button>
+                      </Button>}
                     </div>
                   )}
                 </div>
@@ -378,6 +425,11 @@ export function BacklogView({
 
       {/* Backlog Section */}
       <section className="space-y-3">
+        {moveError && (
+          <p role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {moveError}
+          </p>
+        )}
         {/* Backlog Header */}
         <div
           className="flex items-center gap-3 p-4 rounded-xl bg-card border cursor-pointer hover:border-primary/30 transition-colors"
@@ -430,7 +482,7 @@ export function BacklogView({
             })}
           </div>
 
-          <Button
+          {canWrite && <Button
             variant="outline"
             size="sm"
             className="shrink-0 gap-1.5"
@@ -440,11 +492,16 @@ export function BacklogView({
             }}
           >
             <Plus className="h-3.5 w-3.5" />
-            Añadir
-          </Button>
+            Crear ticket
+          </Button>}
         </div>
 
         {/* Backlog Tickets */}
+        {canWrite && !activeSprint && (
+          <p className="text-xs text-muted-foreground ml-10">
+            Activa un sprint desde Sprint actual para mover tickets del backlog.
+          </p>
+        )}
         {expandedSections.backlog && (
           <div className="space-y-2 ml-10">
             {backlogTickets.length > 0 ? (
@@ -453,7 +510,7 @@ export function BacklogView({
                 return (
                   <div
                     key={ticket.id}
-                    className="group flex items-center gap-3 px-4 py-2.5 rounded-lg border bg-card hover:border-primary/30 hover:bg-accent/30 transition-all duration-150 cursor-pointer"
+                    className="group flex flex-wrap items-center gap-3 px-4 py-2.5 rounded-lg border bg-card hover:border-primary/30 hover:bg-accent/30 transition-all duration-150 cursor-pointer"
                     onClick={() => onTicketClick(ticket)}
                   >
                     {/* Type Icon */}
@@ -472,7 +529,7 @@ export function BacklogView({
                     </span>
 
                     {/* Title */}
-                    <span className="flex-1 text-sm font-medium truncate">
+                    <span className="min-w-0 flex-1 text-sm font-medium truncate">
                       {ticket.title}
                     </span>
 
@@ -492,13 +549,30 @@ export function BacklogView({
 
                     {/* Story Points */}
                     {ticket.storyPoints && (
-                      <div className="h-5 w-5 flex items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-bold border border-primary/20 shrink-0">
+                      <div className="h-5 w-5 flex items-center justify-center rounded-full bg-primary/10 text-brand-foreground text-[10px] font-bold border border-primary/20 shrink-0">
                         {ticket.storyPoints}
                       </div>
                     )}
 
                     {/* Assignee Avatar */}
                     <div className="h-5 w-5 rounded-full border-2 border-dashed border-muted-foreground/30 shrink-0" />
+                    {canWrite && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full sm:w-auto"
+                        disabled={!activeSprint || movingTicketId !== null}
+                        title={activeSprint ? `Mover a ${activeSprint.name}` : 'Activa un sprint para mover este ticket'}
+                        aria-label={`Mover ${ticket.key} al sprint actual`}
+                        onClick={event => {
+                          event.stopPropagation()
+                          void moveToActiveSprint(ticket)
+                        }}
+                      >
+                        {movingTicketId === ticket.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+                        Mover al sprint actual
+                      </Button>
+                    )}
                   </div>
                 )
               })

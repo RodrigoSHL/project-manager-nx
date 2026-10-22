@@ -5,21 +5,35 @@ import { pullSyncBatch, pushSyncBatch } from '../features/offline/sync-api';
 import type { LocalWork, OutboxItem } from '../features/offline/models';
 import { checkApiReachability } from './connectivity-service';
 import { SyncService } from './sync-service';
+import {
+  listWorkPhotos,
+  uploadWorkPhoto,
+} from '../features/works/work-photo-api';
+import { localPhotoRepository } from '../repositories/local-photo-repository';
 
 vi.mock('../features/offline/sync-api', () => ({
   pushSyncBatch: vi.fn(),
   pullSyncBatch: vi.fn(),
 }));
 vi.mock('./connectivity-service', () => ({ checkApiReachability: vi.fn() }));
+vi.mock('../features/works/work-photo-api', () => ({
+  listWorkPhotos: vi.fn(),
+  uploadWorkPhoto: vi.fn(),
+  MAX_WORK_PHOTO_SIZE: 10 * 1024 * 1024,
+  WORK_PHOTO_ACCEPT: 'image/jpeg,image/png,image/webp',
+}));
 
 const mockedPush = vi.mocked(pushSyncBatch);
 const mockedPull = vi.mocked(pullSyncBatch);
 const mockedReachability = vi.mocked(checkApiReachability);
+const mockedListPhotos = vi.mocked(listWorkPhotos);
+const mockedUploadPhoto = vi.mocked(uploadWorkPhoto);
 
 describe('SyncService', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     mockedReachability.mockResolvedValue(true);
+    mockedListPhotos.mockResolvedValue([]);
     await inspectionDb.delete();
     await inspectionDb.open();
     await inspectionDb.works.add(work());
@@ -175,6 +189,105 @@ describe('SyncService', () => {
       status: 'PENDING',
       attempts: 0,
     });
+  });
+
+  it('sube una foto offline una sola vez después de enviar el trabajo', async () => {
+    const photo = await localPhotoRepository.save(
+      'tenant-1',
+      'work-1',
+      'item-1',
+      new File(['imagen'], 'equipo.jpg', { type: 'image/jpeg' })
+    );
+    await localPhotoRepository.save(
+      'tenant-2',
+      'work-2',
+      'item-2',
+      new File(['otra'], 'otra.jpg', { type: 'image/jpeg' })
+    );
+    mockedPush.mockResolvedValue([
+      { outboxId: 'outbox-1', entityId: 'work-1', success: true },
+    ]);
+    mockedUploadPhoto.mockResolvedValue({
+      id: 'remote-photo-1',
+      application: 'inspection-web',
+      ownerType: 'work',
+      ownerId: 'work-1',
+      originalName: 'equipo.jpg',
+      mimeType: 'image/jpeg',
+      size: 6,
+      metadata: {
+        category: 'work-item-photo',
+        tenantId: 'tenant-1',
+        formItemId: 'item-1',
+        clientPhotoId: photo.id,
+      },
+      createdAt: '2026-09-15T12:00:00.000Z',
+      updatedAt: '2026-09-15T12:00:00.000Z',
+    });
+    mockedPull.mockResolvedValue({
+      changes: [],
+      checkpoint: 0,
+      hasMore: false,
+    });
+
+    await expect(new SyncService().sync('tenant-1')).resolves.toMatchObject({
+      pushed: 2,
+      errors: 0,
+    });
+    expect(mockedUploadPhoto).toHaveBeenCalledWith(
+      'tenant-1',
+      'work-1',
+      'item-1',
+      expect.any(File),
+      { clientPhotoId: photo.id, capturedAt: photo.createdAt }
+    );
+    expect(mockedPush.mock.invocationCallOrder[0]).toBeLessThan(
+      mockedUploadPhoto.mock.invocationCallOrder[0]
+    );
+    expect(await localPhotoRepository.retryable('tenant-1')).toHaveLength(0);
+    expect(await localPhotoRepository.retryable('tenant-2')).toHaveLength(1);
+  });
+
+  it('recupera una foto subida cuando se perdió la respuesta del servidor', async () => {
+    const photo = await localPhotoRepository.save(
+      'tenant-1',
+      'work-1',
+      'item-1',
+      new File(['imagen'], 'equipo.jpg', { type: 'image/jpeg' })
+    );
+    const remote = {
+      id: 'remote-photo-1',
+      application: 'inspection-web' as const,
+      ownerType: 'work' as const,
+      ownerId: 'work-1',
+      originalName: 'equipo.jpg',
+      mimeType: 'image/jpeg',
+      size: 6,
+      metadata: {
+        category: 'work-item-photo' as const,
+        tenantId: 'tenant-1',
+        formItemId: 'item-1',
+        clientPhotoId: photo.id,
+      },
+      createdAt: '2026-09-15T12:00:00.000Z',
+      updatedAt: '2026-09-15T12:00:00.000Z',
+    };
+    mockedListPhotos.mockResolvedValueOnce([]).mockResolvedValueOnce([remote]);
+    mockedUploadPhoto.mockRejectedValueOnce(new Error('Conexión interrumpida'));
+
+    const service = new SyncService();
+    await expect(service.pushPendingPhotos('tenant-1')).resolves.toEqual({
+      total: 1,
+      synced: 0,
+      failed: 1,
+    });
+    await expect(service.pushPendingPhotos('tenant-1')).resolves.toEqual({
+      total: 1,
+      synced: 1,
+      failed: 0,
+    });
+    expect(mockedUploadPhoto).toHaveBeenCalledTimes(1);
+    expect(await localPhotoRepository.retryable('tenant-1')).toHaveLength(0);
   });
 });
 

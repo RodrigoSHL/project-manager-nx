@@ -70,10 +70,10 @@ const sections = [
 export function AdminOverviewPage() {
   return (
     <section>
-      <h2 className="text-xl font-semibold text-slate-950">
+      <h2 className="text-xl font-semibold text-slate-950 dark:text-slate-100">
         Centro de administración
       </h2>
-      <p className="mt-2 text-sm text-slate-600">
+      <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
         Selecciona la configuración que quieres administrar.
       </p>
 
@@ -82,27 +82,27 @@ export function AdminOverviewPage() {
           <Link
             key={to}
             to={to}
-            className="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300 hover:shadow-md"
+            className="group rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm transition hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md"
           >
             <div className="flex items-start justify-between gap-4">
-              <span className="grid size-11 place-items-center rounded-lg bg-slate-100 text-slate-700 transition-colors group-hover:bg-slate-950 group-hover:text-white">
+              <span className="grid size-11 place-items-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors group-hover:bg-slate-950 group-hover:text-white">
                 <Icon className="size-5" />
               </span>
               <span
                 className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                   status === 'Disponible'
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : 'bg-slate-100 text-slate-500'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
                 }`}
               >
                 {status}
               </span>
             </div>
-            <h3 className="mt-5 font-semibold text-slate-950">{title}</h3>
-            <p className="mt-2 min-h-10 text-sm leading-5 text-slate-500">
+            <h3 className="mt-5 font-semibold text-slate-950 dark:text-slate-100">{title}</h3>
+            <p className="mt-2 min-h-10 text-sm leading-5 text-slate-500 dark:text-slate-400">
               {description}
             </p>
-            <span className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-slate-800">
+            <span className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-slate-800 dark:text-slate-200">
               Abrir sección
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
             </span>

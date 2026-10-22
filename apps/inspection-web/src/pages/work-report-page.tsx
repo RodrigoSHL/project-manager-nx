@@ -120,16 +120,16 @@ export function WorkReportPage() {
     <div className="mx-auto max-w-5xl space-y-5 pb-12">
       <Link
         to={`/works/${id}?tenantId=${encodeURIComponent(tenantId)}`}
-        className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-950"
+        className="inline-flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-slate-100"
       >
         <ArrowLeft className="size-4" /> Volver al trabajo
       </Link>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-950">
+          <h1 className="text-2xl font-semibold text-slate-950 dark:text-slate-100">
             Informe del trabajo
           </h1>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-slate-600 dark:text-slate-300">
             Vista previa y versiones guardadas.
           </p>
         </div>
@@ -139,7 +139,7 @@ export function WorkReportPage() {
               to={`/works/${id}?tenantId=${encodeURIComponent(
                 tenantId
               )}#review-findings`}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800"
+              className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-sm font-medium text-slate-800 dark:text-slate-200"
             >
               Aprobar hallazgos
             </Link>
@@ -151,7 +151,7 @@ export function WorkReportPage() {
               <button
                 onClick={() => void save('DRAFT')}
                 disabled={busy || !live}
-                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium disabled:opacity-50"
+                className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-sm font-medium disabled:opacity-50"
               >
                 Guardar borrador
               </button>
@@ -180,14 +180,14 @@ export function WorkReportPage() {
                     live?.header.status || ''
                   )))
             }
-            className="inline-flex items-center gap-2 rounded-lg bg-slate-950 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-lg bg-slate-950 dark:bg-slate-100 px-4 py-2 text-sm font-medium text-white dark:text-slate-950 disabled:opacity-50"
           >
             <Download className="size-4" /> Generar PDF
           </button>
         </div>
       </div>
       {mode !== 'REMOTE' && (
-        <p className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <p className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-4 text-sm text-amber-900 dark:text-amber-200">
           La vista del informe requiere conexión. Tu trabajo local sigue
           disponible.
         </p>
@@ -195,13 +195,13 @@ export function WorkReportPage() {
       {error && (
         <p
           role="alert"
-          className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+          className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-4 text-sm text-red-800 dark:text-red-200"
         >
           {error}
         </p>
       )}
       {versions.length > 0 && (
-        <div className="rounded-xl border border-slate-200 bg-white p-4">
+        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
           <label
             htmlFor="report-version"
             className="mb-2 block text-sm font-medium"
@@ -212,7 +212,7 @@ export function WorkReportPage() {
             id="report-version"
             value={selected}
             onChange={(event) => setSelected(event.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm"
           >
             <option value="">Vista actual del trabajo</option>
             {versions.map((version) => (
@@ -226,11 +226,11 @@ export function WorkReportPage() {
         </div>
       )}
       {!selected && canReview && report && (
-        <div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2">
+        <div className="grid gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:grid-cols-2">
           {fields.map(([key, label]) => (
             <label
               key={key}
-              className={`text-sm font-medium text-slate-700 ${
+              className={`text-sm font-medium text-slate-700 dark:text-slate-200 ${
                 key === 'introduction' ? 'sm:col-span-2' : ''
               }`}
             >
@@ -245,7 +245,7 @@ export function WorkReportPage() {
                     }))
                   }
                   rows={3}
-                  className="mt-1 block w-full rounded-lg border border-slate-300 p-2"
+                  className="mt-1 block w-full rounded-lg border border-slate-300 dark:border-slate-700 p-2"
                 />
               ) : (
                 <input
@@ -256,7 +256,7 @@ export function WorkReportPage() {
                       [key]: event.target.value,
                     }))
                   }
-                  className="mt-1 block w-full rounded-lg border border-slate-300 p-2"
+                  className="mt-1 block w-full rounded-lg border border-slate-300 dark:border-slate-700 p-2"
                 />
               )}
             </label>
@@ -302,8 +302,8 @@ function ReportDocument({
   ];
   return (
     <div className="mx-auto max-w-[820px] space-y-6">
-      <article className="min-h-[620px] rounded-lg border border-slate-200 bg-white px-5 py-10 shadow-sm sm:min-h-[850px] sm:px-10 sm:py-16">
-        <p className="text-center text-xs text-slate-500">
+      <article className="min-h-[620px] rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-5 py-10 shadow-sm sm:min-h-[850px] sm:px-10 sm:py-16">
+        <p className="text-center text-xs text-slate-500 dark:text-slate-400">
           {report.branding.companyName} · {h.workType}
         </p>
         <div className="mt-16 flex justify-center sm:mt-20">
@@ -318,26 +318,26 @@ function ReportDocument({
           />
         </div>
         <div className="mt-24 text-center sm:mt-32">
-          <p className="text-sm font-semibold uppercase tracking-widest text-slate-500">
+          <p className="text-sm font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
             {report.branding.companyName}
           </p>
-          <h2 className="mt-4 text-3xl font-semibold text-slate-950 sm:text-4xl">
+          <h2 className="mt-4 text-3xl font-semibold text-slate-950 dark:text-slate-100 sm:text-4xl">
             Informe de trabajo
           </h2>
-          <p className="mt-3 text-lg text-slate-700 sm:text-xl">{h.title}</p>
+          <p className="mt-3 text-lg text-slate-700 dark:text-slate-200 sm:text-xl">{h.title}</p>
         </div>
       </article>
-      <article className="min-h-[620px] space-y-8 rounded-lg border border-slate-200 bg-white px-5 py-8 shadow-sm sm:min-h-[850px] sm:px-10">
+      <article className="min-h-[620px] space-y-8 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-5 py-8 shadow-sm sm:min-h-[850px] sm:px-10">
         <div>
-          <h2 className="text-2xl font-semibold text-slate-950">
+          <h2 className="text-2xl font-semibold text-slate-950 dark:text-slate-100">
             Datos del informe
           </h2>
           {version && (
             <p
               className={`mt-3 text-xs font-semibold uppercase tracking-wide ${
                 version.status === 'FINAL'
-                  ? 'text-emerald-700'
-                  : 'text-amber-700'
+                  ? 'text-emerald-700 dark:text-emerald-300'
+                  : 'text-amber-700 dark:text-amber-300'
               }`}
             >
               Informe v{version.version} ·{' '}
@@ -346,7 +346,7 @@ function ReportDocument({
           )}
         </div>
         <section>
-          <h3 className="mb-3 border-b border-slate-200 pb-2 text-lg font-semibold">
+          <h3 className="mb-3 border-b border-slate-200 dark:border-slate-800 pb-2 text-lg font-semibold">
             Identificación
           </h3>
           <dl className="grid gap-3 text-sm sm:grid-cols-2">
@@ -354,16 +354,16 @@ function ReportDocument({
               .filter(([, value]) => value)
               .map(([label, value]) => (
                 <div key={label}>
-                  <dt className="inline font-medium text-slate-500">
+                  <dt className="inline font-medium text-slate-500 dark:text-slate-400">
                     {label}:{' '}
                   </dt>
-                  <dd className="inline text-slate-900">{value}</dd>
+                  <dd className="inline text-slate-900 dark:text-slate-100">{value}</dd>
                 </div>
               ))}
           </dl>
         </section>
         <section>
-          <h3 className="mb-3 border-b border-slate-200 pb-2 text-lg font-semibold">
+          <h3 className="mb-3 border-b border-slate-200 dark:border-slate-800 pb-2 text-lg font-semibold">
             Trabajo y activo
           </h3>
           <dl className="grid gap-3 text-sm sm:grid-cols-2">
@@ -371,52 +371,52 @@ function ReportDocument({
               .filter(([, value]) => value)
               .map(([label, value]) => (
                 <div key={label}>
-                  <dt className="inline font-medium text-slate-500">
+                  <dt className="inline font-medium text-slate-500 dark:text-slate-400">
                     {label}:{' '}
                   </dt>
-                  <dd className="inline text-slate-900">{value}</dd>
+                  <dd className="inline text-slate-900 dark:text-slate-100">{value}</dd>
                 </div>
               ))}
           </dl>
         </section>
       </article>
-      <article className="space-y-8 rounded-lg border border-slate-200 bg-white px-5 py-8 shadow-sm sm:px-10">
+      <article className="space-y-8 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-5 py-8 shadow-sm sm:px-10">
         {h.introduction && (
           <section>
-            <h2 className="mb-3 text-2xl font-semibold text-slate-950">
+            <h2 className="mb-3 text-2xl font-semibold text-slate-950 dark:text-slate-100">
               Introducción
             </h2>
-            <p className="whitespace-pre-wrap text-sm text-slate-700">
+            <p className="whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-200">
               {h.introduction}
             </p>
           </section>
         )}
-        <h2 className="text-2xl font-semibold text-slate-950">
+        <h2 className="text-2xl font-semibold text-slate-950 dark:text-slate-100">
           Contenido del informe
         </h2>
         {sections.map((section) => (
           <section key={section.id} className="break-inside-avoid-page">
-            <h3 className="border-b border-slate-200 pb-2 text-lg font-semibold">
+            <h3 className="border-b border-slate-200 dark:border-slate-800 pb-2 text-lg font-semibold">
               {section.title}
             </h3>
             {section.description && (
-              <p className="mt-2 text-sm text-slate-600">
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
                 {section.description}
               </p>
             )}
             <div className="mt-3 space-y-4">
               {(section.assetGroups ?? []).map((assetGroup) => (
                 <div key={assetGroup.id} className="space-y-2">
-                  <h4 className="text-sm font-semibold text-slate-600">
+                  <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-300">
                     {assetGroup.assetPath}
                   </h4>
                   {assetGroup.items.map((item) => (
                     <div
                       key={item.id}
-                      className="break-inside-avoid rounded-lg border border-slate-200 p-3 text-sm"
+                      className="break-inside-avoid rounded-lg border border-slate-200 dark:border-slate-800 p-3 text-sm"
                     >
                       <div className="flex gap-3">
-                        <span className="font-semibold text-slate-700">
+                        <span className="font-semibold text-slate-700 dark:text-slate-200">
                           {item.type === 'TASK'
                             ? item.completed
                               ? '✓'
@@ -424,19 +424,19 @@ function ReportDocument({
                             : '•'}
                         </span>
                         <div>
-                          <p className="font-medium text-slate-950">
+                          <p className="font-medium text-slate-950 dark:text-slate-100">
                             {item.title}
                             {item.type === 'CONCEPT' && (
-                              <span className="ml-2 font-normal text-slate-700">
+                              <span className="ml-2 font-normal text-slate-700 dark:text-slate-200">
                                 {item.value || '—'}
                               </span>
                             )}
                           </p>
                           {item.description && (
-                            <p className="text-slate-600">{item.description}</p>
+                            <p className="text-slate-600 dark:text-slate-300">{item.description}</p>
                           )}
                           {item.observation && (
-                            <p className="mt-1 text-slate-700">
+                            <p className="mt-1 text-slate-700 dark:text-slate-200">
                               <span className="font-medium">Observación:</span>{' '}
                               {item.observation}
                             </p>
@@ -465,7 +465,7 @@ function ReportDocument({
           <h3 className="mb-2 text-lg font-semibold">
             Observaciones adicionales
           </h3>
-          <p className="whitespace-pre-wrap text-sm text-slate-700">
+          <p className="whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-200">
             {report.observations || 'Sin observaciones adicionales.'}
           </p>
         </section>
@@ -475,10 +475,10 @@ function ReportDocument({
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-left text-xs">
                 <thead>
-                  <tr className="bg-slate-100">
+                  <tr className="bg-slate-100 dark:bg-slate-800">
                     {['Nº', 'Hallazgo', 'Criticidad', 'HH', 'Materiales'].map(
                       (label) => (
-                        <th key={label} className="border border-slate-200 p-2">
+                        <th key={label} className="border border-slate-200 dark:border-slate-800 p-2">
                           {label}
                         </th>
                       )
@@ -488,11 +488,11 @@ function ReportDocument({
                 <tbody>
                   {report.findings.map((finding) => (
                     <tr key={finding.id} className="align-top">
-                      <td className="border border-slate-200 p-2">
+                      <td className="border border-slate-200 dark:border-slate-800 p-2">
                         {finding.number}
                       </td>
-                      <td className="border border-slate-200 p-2">
-                        <p className="text-slate-500">{finding.assetPath}</p>
+                      <td className="border border-slate-200 dark:border-slate-800 p-2">
+                        <p className="text-slate-500 dark:text-slate-400">{finding.assetPath}</p>
                         <p className="font-medium">{finding.title}</p>
                         {finding.description && (
                           <p className="whitespace-pre-wrap">
@@ -500,13 +500,13 @@ function ReportDocument({
                           </p>
                         )}
                       </td>
-                      <td className="border border-slate-200 p-2">
+                      <td className="border border-slate-200 dark:border-slate-800 p-2">
                         {finding.severity || '—'}
                       </td>
-                      <td className="border border-slate-200 p-2">
+                      <td className="border border-slate-200 dark:border-slate-800 p-2">
                         {finding.manHours ?? '—'}
                       </td>
-                      <td className="border border-slate-200 p-2">
+                      <td className="border border-slate-200 dark:border-slate-800 p-2">
                         {finding.materials || '—'}
                       </td>
                     </tr>
@@ -515,12 +515,12 @@ function ReportDocument({
               </table>
             </div>
           ) : (
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
               No se registraron hallazgos durante la ejecución del trabajo.
             </p>
           )}
         </section>
-        <footer className="border-t border-slate-200 pt-3 text-xs text-slate-500">
+        <footer className="border-t border-slate-200 dark:border-slate-800 pt-3 text-xs text-slate-500 dark:text-slate-400">
           {report.branding.footerText || 'Documento generado por sistema'}
         </footer>
       </article>
@@ -554,11 +554,11 @@ function ReportPhoto({ id, caption }: { id: string; caption: string }) {
           className="max-h-72 w-full rounded object-contain"
         />
       ) : (
-        <div className="grid h-40 place-items-center rounded bg-slate-100 text-xs text-slate-500">
+        <div className="grid h-40 place-items-center rounded bg-slate-100 dark:bg-slate-800 text-xs text-slate-500 dark:text-slate-400">
           Cargando fotografía
         </div>
       )}
-      <figcaption className="mt-1 text-xs text-slate-500">{caption}</figcaption>
+      <figcaption className="mt-1 text-xs text-slate-500 dark:text-slate-400">{caption}</figcaption>
     </figure>
   );
 }

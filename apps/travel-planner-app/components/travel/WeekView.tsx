@@ -124,7 +124,7 @@ export function WeekView({
                   onClick={() => onAddActivity(dateStr)}
                   className={cn(
                     'flex items-center justify-center gap-1 rounded-lg border-2 border-dashed',
-                    'border-border text-muted-foreground hover:border-primary hover:text-primary',
+                    'border-border text-muted-foreground hover:border-primary hover:text-brand-foreground',
                     'py-2 text-xs transition-colors',
                     dayActivities.length === 0 && 'flex-1'
                   )}

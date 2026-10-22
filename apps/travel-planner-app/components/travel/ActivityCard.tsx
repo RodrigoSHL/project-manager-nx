@@ -176,7 +176,7 @@ export function ActivityCard({
                 href={activity.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-xs text-primary hover:underline w-fit"
+                className="flex items-center gap-1 text-xs text-brand-foreground hover:underline w-fit"
               >
                 <ExternalLink className="w-3 h-3" />
                 Ver reserva

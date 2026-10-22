@@ -4,6 +4,7 @@
     "outDir": "../../dist/out-tsc",
     "baseUrl": ".",
     "paths": {
+      "@project-manager/security-navigation": ["../../libs/security-navigation/src/index.ts"],
       "@/*": ["src/*"]
     },
     "types": [

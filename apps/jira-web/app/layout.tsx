@@ -1,36 +1,41 @@
-import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
-import { AppProviders } from '@/components/app-providers'
-import './globals.css'
+import type { Metadata, Viewport } from 'next';
+import { Inter } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/next';
+import { AppProviders } from '@/components/app-providers';
+import './globals.css';
 
-const inter = Inter({ 
-  subsets: ["latin"],
-  variable: '--font-inter'
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
 });
 
 export const metadata: Metadata = {
-  title: 'FlowBoard - Agile Project Management',
-  description: 'Modern agile project management tool for teams',
-  generator: 'v0.app',
+  title: 'FlowBoard | Gestión ágil de proyectos',
+  description:
+    'Organiza backlogs, sprints, tickets y soporte de tus equipos en un solo lugar.',
   icons: {
     icon: [
       {
         url: '/icon-light-32x32.png',
+        type: 'image/png',
+        sizes: '32x32',
         media: '(prefers-color-scheme: light)',
       },
       {
         url: '/icon-dark-32x32.png',
+        type: 'image/png',
+        sizes: '32x32',
         media: '(prefers-color-scheme: dark)',
       },
       {
-        url: '/icon.svg',
+        url: '/flowboard-icon.svg',
         type: 'image/svg+xml',
+        sizes: 'any',
       },
     ],
     apple: '/apple-icon.png',
   },
-}
+};
 
 export const viewport: Viewport = {
   themeColor: [
@@ -39,19 +44,19 @@ export const viewport: Viewport = {
   ],
   width: 'device-width',
   initialScale: 1,
-}
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
         <AppProviders>{children}</AppProviders>
         <Analytics />
       </body>
     </html>
-  )
+  );
 }

@@ -3,6 +3,8 @@
 import * as React from 'react'
 import { Layers, LayoutGrid, Zap, Ticket as TicketIcon, BarChart3, Plus, Calendar, Pencil, Trash2, Bug, BookOpen, CheckSquare, LifeBuoy } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getTicketSprintUpdate } from '@/lib/ticket-sprint'
+import { parseTicketLink } from '@/lib/ticket-link'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { AppSidebar } from '@/components/app-sidebar'
 import { MobileSidebar } from '@/components/mobile-sidebar'
@@ -17,7 +19,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { getProjectsByWorkspace, getProjectTeamMembers } from '@/services/projectService'
+import { getProjectsByWorkspace, getProjectTeamMembers, getProjectPermissions } from '@/services/projectService'
 import { getSprintsByProject, activateSprint, deleteSprint } from '@/services/sprintService'
 import { getTicketsByProject, updateTicket } from '@/services/ticketService'
 import { Button } from '@/components/ui/button'
@@ -46,6 +48,8 @@ export default function ProjectManagement() {
   const [sprints, setSprints] = React.useState<ApiSprint[]>([])
   const [tickets, setTickets] = React.useState<ApiTicket[]>([])
   const [teamMembers, setTeamMembers] = React.useState<ApiTeamMember[]>([])
+  const [projectPermission, setProjectPermission] = React.useState<{ projectId: string; canWrite: boolean } | null>(null)
+  const canWrite = projectPermission?.projectId === currentProject && projectPermission.canWrite
   const [selectedTicket, setSelectedTicket] = React.useState<ApiTicket | null>(null)
   const [createSprintOpen, setCreateSprintOpen] = React.useState(false)
   const [editingSprint, setEditingSprint] = React.useState<ApiSprint | null>(null)
@@ -55,6 +59,8 @@ export default function ProjectManagement() {
   const [createTicketInitialType, setCreateTicketInitialType] = React.useState<ApiTicket['type']>('task')
   const [createTicketInitialEpicId, setCreateTicketInitialEpicId] = React.useState<string | null>(null)
   const [ticketDetailOpen, setTicketDetailOpen] = React.useState(false)
+  const [highlightedCommentId, setHighlightedCommentId] = React.useState<string | undefined>()
+  const openedLinkedTicket = React.useRef(false)
   const [createSupportOpen, setCreateSupportOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState('')
   const [filters, setFilters] = React.useState({
@@ -72,17 +78,25 @@ export default function ProjectManagement() {
       return
     }
     setLoadingProjects(true)
+    let cancelled = false
     getProjectsByWorkspace(selectedWorkspace.id)
       .then((data) => {
+        if (cancelled) return
         setApiProjects(data)
-        setCurrentProject(prev => data.find(p => p.id === prev) ? prev : (data[0]?.id ?? ''))
+        const link = parseTicketLink(window.location.search)
+        const linkedProject = !openedLinkedTicket.current && link?.workspaceId === selectedWorkspace.id
+          ? data.find(p => p.id === link.projectId) : undefined
+        setCurrentProject(prev => linkedProject?.id ?? (data.find(p => p.id === prev) ? prev : (data[0]?.id ?? '')))
       })
       .catch(console.error)
-      .finally(() => setLoadingProjects(false))
+      .finally(() => { if (!cancelled) setLoadingProjects(false) })
+    return () => { cancelled = true }
   }, [selectedWorkspace])
 
   React.useEffect(() => {
+    setProjectPermission(null)
     if (!currentProject) return
+    let cancelled = false
     setSprints([])
     setTickets([])
     setTeamMembers([])
@@ -93,11 +107,28 @@ export default function ProjectManagement() {
       getTicketsByProject(currentProject),
       getProjectTeamMembers(currentProject),
     ]).then(([sprintsData, ticketsData, membersData]) => {
+      if (cancelled) return
       setSprints(sprintsData)
       setTickets(ticketsData)
       setTeamMembers(membersData.filter(member => member.isActive !== false))
     }).catch(console.error)
+    getProjectPermissions(currentProject)
+      .then(permissions => { if (!cancelled) setProjectPermission({ projectId: currentProject, canWrite: permissions.canWrite }) })
+      .catch(console.error)
+    return () => { cancelled = true }
   }, [currentProject])
+
+  React.useEffect(() => {
+    if (openedLinkedTicket.current) return
+    const link = parseTicketLink(window.location.search)
+    if (!link || selectedWorkspace?.id !== link.workspaceId || currentProject !== link.projectId) return
+    const ticket = tickets.find(item => item.id === link.ticketId && item.projectId === link.projectId)
+    if (!ticket) return
+    openedLinkedTicket.current = true
+    setHighlightedCommentId(link.commentId)
+    setSelectedTicket(ticket)
+    setTicketDetailOpen(true)
+  }, [tickets, currentProject, selectedWorkspace])
 
   const activeSprint = sprints.find(s => s.projectId === currentProject && s.isActive)
 
@@ -130,6 +161,7 @@ export default function ProjectManagement() {
   })
 
   const handleTicketClick = (ticket: ApiTicket) => {
+    setHighlightedCommentId(undefined)
     setSelectedTicket(ticket)
     setTicketDetailOpen(true)
   }
@@ -140,6 +172,7 @@ export default function ProjectManagement() {
     type: ApiTicket['type'] = 'task',
     epicId: string | null = null,
   ) => {
+    if (!canWrite) return
     setCreateTicketInitialStatus(status ?? 'todo')
     setCreateTicketInitialSprintId(sprintId)
     setCreateTicketInitialType(type)
@@ -156,7 +189,15 @@ export default function ProjectManagement() {
     setSelectedTicket(ticket)
   }
 
+  const handleMoveTicketToSprint = async (ticket: ApiTicket, sprintId: string) => {
+    if (!canWrite || ticket.type === 'epic') return
+    const updated = await updateTicket(currentProject, ticket.id, getTicketSprintUpdate(ticket, sprintId))
+    setTickets(prev => prev.map(t => t.id === updated.id ? updated : t))
+    setSelectedTicket(prev => prev?.id === updated.id ? updated : prev)
+  }
+
   const handleStatusChange = async (ticketId: string, status: ApiTicket['status']) => {
+    if (!canWrite) return
     try {
       const updated = await updateTicket(currentProject, ticketId, { status })
       setTickets(prev => prev.map(t => t.id === ticketId ? updated : t))
@@ -175,6 +216,7 @@ export default function ProjectManagement() {
   }
 
   const handleDeleteSprint = async (sprintId: string) => {
+    if (!canWrite) return
     try {
       await deleteSprint(currentProject, sprintId)
       setSprints(prev => prev.filter(s => s.id !== sprintId))
@@ -184,6 +226,7 @@ export default function ProjectManagement() {
   }
 
   const handleActivateSprint = async (sprintId: string) => {
+    if (!canWrite) return
     try {
       const activated = await activateSprint(currentProject, sprintId)
       setSprints(prev => prev.map(s => ({ ...s, isActive: s.id === activated.id })))
@@ -234,7 +277,7 @@ export default function ProjectManagement() {
           <Card className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
-                <Zap className="h-5 w-5 text-primary" />
+                <Zap className="h-5 w-5 text-brand-foreground" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{inProgressCount}</p>
@@ -331,7 +374,7 @@ export default function ProjectManagement() {
     }
 
     const ticketTypeConfig: Record<string, { label: string; Icon: React.ElementType; className: string; bgClassName: string }> = {
-      task: { label: 'Task', Icon: CheckSquare, className: 'text-primary', bgClassName: 'bg-primary/10' },
+      task: { label: 'Task', Icon: CheckSquare, className: 'text-brand-foreground', bgClassName: 'bg-primary/10' },
       bug: { label: 'Bug', Icon: Bug, className: 'text-destructive', bgClassName: 'bg-destructive/10' },
       story: { label: 'Story', Icon: BookOpen, className: 'text-emerald-400', bgClassName: 'bg-emerald-400/10' },
       epic: { label: 'Epic', Icon: Layers, className: 'text-purple-400', bgClassName: 'bg-purple-400/10' },
@@ -577,19 +620,21 @@ export default function ProjectManagement() {
                 <h1 className="text-2xl font-bold tracking-tight mb-1">Backlog</h1>
                 <p className="text-muted-foreground">Gestiona y prioriza el trabajo pendiente</p>
               </div>
-              <Button onClick={() => setCreateSprintOpen(true)} size="sm" className="gap-2">
+              {canWrite && <Button onClick={() => setCreateSprintOpen(true)} size="sm" className="gap-2">
                 <Plus className="h-4 w-4" />
                 Nuevo sprint
-              </Button>
+              </Button>}
             </div>
             <BacklogView 
               tickets={filteredTickets}
               sprints={sprints}
               currentProject={currentProject}
               onTicketClick={handleTicketClick}
+              onMoveTicketToSprint={handleMoveTicketToSprint}
               onCreateTicket={(sprintId) => handleCreateTicket(undefined, sprintId)}
               onCreateEpic={() => handleCreateTicket('backlog', null, 'epic')}
               onCreateStory={(epicId) => handleCreateTicket('backlog', null, 'story', epicId)}
+              canWrite={canWrite}
             />
           </div>
         )
@@ -601,7 +646,7 @@ export default function ProjectManagement() {
                 <h1 className="text-2xl font-bold tracking-tight mb-1">Sprint actual</h1>
                 <p className="text-muted-foreground">Vista del sprint activo y tablero Kanban</p>
               </div>
-              {!activeSprint && (
+              {!activeSprint && canWrite && (
                 <Button onClick={() => setCreateSprintOpen(true)} size="sm" className="gap-2">
                   <Plus className="h-4 w-4" />
                   Nuevo sprint
@@ -621,10 +666,10 @@ export default function ProjectManagement() {
                       Activa un sprint existente o crea uno nuevo para empezar.
                     </p>
                   </div>
-                  <Button onClick={() => setCreateSprintOpen(true)} className="gap-2">
+                  {canWrite && <Button onClick={() => setCreateSprintOpen(true)} className="gap-2">
                     <Plus className="h-4 w-4" />
                     Crear sprint
-                  </Button>
+                  </Button>}
                 </div>
 
                 {sprints.filter(s => !s.isActive).length > 0 && (
@@ -663,7 +708,7 @@ export default function ProjectManagement() {
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {canWrite && <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button size="icon" variant="ghost" className="h-7 w-7" title="Editar sprint" onClick={() => setEditingSprint(s)}>
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
@@ -672,11 +717,11 @@ export default function ProjectManagement() {
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             )}
-                          </div>
+                          </div>}
 
-                          <Button size="sm" variant="outline" className="shrink-0 h-7 text-xs" onClick={() => handleActivateSprint(s.id)}>
+                          {canWrite && <Button size="sm" variant="outline" className="shrink-0 h-7 text-xs" onClick={() => handleActivateSprint(s.id)}>
                             Activar
-                          </Button>
+                          </Button>}
                         </div>
                       )
                     })}
@@ -687,7 +732,7 @@ export default function ProjectManagement() {
 
             {activeSprint && (
               <>
-                <SprintInfo sprint={activeSprint} tickets={sprintTickets} onEdit={() => setEditingSprint(activeSprint)} />
+                <SprintInfo sprint={activeSprint} tickets={sprintTickets} onEdit={canWrite ? () => setEditingSprint(activeSprint) : undefined} />
 
                 <AssigneeFilter
                   members={teamMembers}
@@ -713,6 +758,7 @@ export default function ProjectManagement() {
                       onCreateTicket={handleCreateTicket}
                       onStatusChange={handleStatusChange}
                       teamMembers={teamMembers}
+                      canWrite={canWrite}
                     />
                   </TabsContent>
                   <TabsContent value="list">
@@ -774,7 +820,7 @@ export default function ProjectManagement() {
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {canWrite && <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               <Button
                                 size="icon"
                                 variant="ghost"
@@ -795,16 +841,16 @@ export default function ProjectManagement() {
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
                               )}
-                            </div>
+                            </div>}
 
-                            <Button
+                            {canWrite && <Button
                               size="sm"
                               variant="outline"
                               className="shrink-0 h-7 text-xs"
                               onClick={() => handleActivateSprint(s.id)}
                             >
                               Activar
-                            </Button>
+                            </Button>}
                           </div>
                         )
                       })}
@@ -825,6 +871,8 @@ export default function ProjectManagement() {
             teamMembers={teamMembers}
             onCreateSupport={() => setCreateSupportOpen(true)}
             onTicketUpdated={handleTicketUpdated}
+            canWrite={canWrite}
+            onTicketClick={handleTicketClick}
           />
         )
       case 'reports':
@@ -872,6 +920,7 @@ export default function ProjectManagement() {
           currentProject={currentProject}
           onProjectChange={setCurrentProject}
           onCreateTicket={() => handleCreateTicket()}
+          canWrite={canWrite}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           filters={filters}
@@ -891,25 +940,34 @@ export default function ProjectManagement() {
       {/* Ticket Detail Panel */}
       <TicketDetail
         ticket={selectedTicket}
+        highlightedCommentId={highlightedCommentId}
         open={ticketDetailOpen}
         projectId={currentProject}
         teamMembers={teamMembers}
         tickets={tickets}
+        sprints={sprints}
         onUpdated={handleTicketUpdated}
+        onSelectTicket={handleTicketClick}
+        onDeleted={ticketId => {
+          setTickets(prev => prev.filter(ticket => ticket.id !== ticketId))
+          setTicketDetailOpen(false)
+          setSelectedTicket(null)
+        }}
+        canWrite={canWrite}
         onClose={() => {
           setTicketDetailOpen(false)
           setSelectedTicket(null)
         }}
       />
 
-      <CreateSprintDialog
+      {canWrite && <CreateSprintDialog
         open={createSprintOpen}
         onOpenChange={setCreateSprintOpen}
         projectId={currentProject}
         onCreated={handleSprintCreated}
-      />
+      />}
 
-      {editingSprint && (
+      {canWrite && editingSprint && (
         <EditSprintDialog
           open
           onOpenChange={open => { if (!open) setEditingSprint(null) }}
@@ -919,7 +977,7 @@ export default function ProjectManagement() {
         />
       )}
 
-      <CreateTicketDialog
+      {canWrite && <CreateTicketDialog
         open={createTicketOpen}
         onOpenChange={setCreateTicketOpen}
         projectId={currentProject}
@@ -931,15 +989,15 @@ export default function ProjectManagement() {
         initialType={createTicketInitialType}
         initialEpicId={createTicketInitialEpicId}
         onCreated={handleTicketCreated}
-      />
+      />}
 
-      <CreateSupportDialog
+      {canWrite && <CreateSupportDialog
         open={createSupportOpen}
         onOpenChange={setCreateSupportOpen}
         projectId={currentProject}
         teamMembers={teamMembers}
         onCreated={handleTicketCreated}
-      />
+      />}
     </div>
   )
 }

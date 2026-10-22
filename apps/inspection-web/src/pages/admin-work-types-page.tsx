@@ -66,10 +66,10 @@ export function AdminWorkTypesPage() {
     <section>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-slate-950">
+          <h2 className="text-xl font-semibold text-slate-950 dark:text-slate-100">
             Tipos de trabajo
           </h2>
-          <p className="mt-2 max-w-2xl text-sm text-slate-600">
+          <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-300">
             Administra cada clase de trabajo y construye la plantilla que
             utilizará el técnico en una fase posterior.
           </p>
@@ -79,15 +79,15 @@ export function AdminWorkTypesPage() {
         </Button>
       </div>
 
-      <div className="mt-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="mt-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
         <CatalogTenantSelector
           tenants={catalog.tenants}
           tenantId={catalog.tenantId}
           onChange={catalog.selectTenant}
         />
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
           <span>Tipos de trabajo, conceptos y plantillas: PostgreSQL.</span>
-          <span className="inline-flex items-center gap-1 font-medium text-emerald-700">
+          <span className="inline-flex items-center gap-1 font-medium text-emerald-700 dark:text-emerald-300">
             <ClipboardList className="size-3.5" /> Los cambios quedan guardados.
           </span>
         </div>
@@ -97,7 +97,7 @@ export function AdminWorkTypesPage() {
       catalog.mutationError ||
       conceptCatalog.error ||
       formCatalog.error ? (
-        <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <div className="mt-5 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-4 text-sm text-red-700 dark:text-red-300">
           <div className="flex items-center gap-2">
             <AlertCircle className="size-5" />{' '}
             {catalog.mutationError ??
@@ -137,8 +137,8 @@ export function AdminWorkTypesPage() {
       {catalog.isLoading ||
       conceptCatalog.isLoading ||
       formCatalog.isLoading ? (
-        <div className="mt-5 grid min-h-48 place-items-center rounded-xl border border-slate-200 bg-white">
-          <LoaderCircle className="size-7 animate-spin text-slate-500" />
+        <div className="mt-5 grid min-h-48 place-items-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+          <LoaderCircle className="size-7 animate-spin text-slate-500 dark:text-slate-400" />
         </div>
       ) : null}
 
@@ -149,18 +149,18 @@ export function AdminWorkTypesPage() {
       !formCatalog.isLoading &&
       !formCatalog.error ? (
         <div className="mt-5 grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(18rem,0.7fr)_minmax(28rem,1.3fr)]">
-          <section className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm lg:sticky lg:top-24 lg:flex lg:max-h-[calc(100vh-7rem)] lg:flex-col">
-            <div className="shrink-0 border-b border-slate-200 p-3 sm:p-4">
+          <section className="min-w-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm lg:sticky lg:top-24 lg:flex lg:max-h-[calc(100vh-7rem)] lg:flex-col">
+            <div className="shrink-0 border-b border-slate-200 dark:border-slate-800 p-3 sm:p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900">
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                     Catálogo de trabajos
                   </h3>
-                  <p className="mt-0.5 text-xs text-slate-500">
+                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                     Selecciona uno para editar su formulario.
                   </p>
                 </div>
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-slate-500 dark:text-slate-400">
                   {filteredWorkTypes.length} visibles
                 </span>
               </div>
@@ -172,7 +172,7 @@ export function AdminWorkTypesPage() {
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Buscar por nombre o código..."
-                  className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                  className="h-10 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 pl-9 pr-3 text-sm outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
                 />
               </label>
             </div>
@@ -211,7 +211,7 @@ export function AdminWorkTypesPage() {
               catalog={formCatalog}
             />
           ) : (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
+            <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-8 text-center text-sm text-slate-500 dark:text-slate-400">
               Selecciona un tipo de trabajo para configurar su formulario.
             </div>
           )}

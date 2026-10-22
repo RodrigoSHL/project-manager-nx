@@ -42,8 +42,8 @@ export function NewWorkPage() {
   }
   if (tenantAccess.isLoading) {
     return (
-      <section className="grid min-h-72 place-items-center rounded-xl border border-slate-200 bg-white">
-        <LoaderCircle className="size-8 animate-spin text-slate-500" />
+      <section className="grid min-h-72 place-items-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+        <LoaderCircle className="size-8 animate-spin text-slate-500 dark:text-slate-400" />
       </section>
     );
   }
@@ -65,10 +65,10 @@ export function NewWorkPage() {
   }
   if (works.isLoading || !works.catalog) {
     return (
-      <section className="grid min-h-72 place-items-center rounded-xl border border-slate-200 bg-white">
+      <section className="grid min-h-72 place-items-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
         <div className="text-center">
-          <LoaderCircle className="mx-auto size-8 animate-spin text-slate-500" />
-          <p className="mt-3 text-sm text-slate-600">
+          <LoaderCircle className="mx-auto size-8 animate-spin text-slate-500 dark:text-slate-400" />
+          <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
             Preparando el trabajo...
           </p>
         </div>
@@ -203,7 +203,7 @@ function NewWorkForm({
     <>
       <Link
         to="/assets"
-        className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-950"
+        className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-slate-100"
       >
         <ArrowLeft className="size-4" /> Volver a activos
       </Link>
@@ -217,7 +217,7 @@ function NewWorkForm({
       />
       <form
         onSubmit={submit}
-        className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6"
+        className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm sm:p-6"
       >
         <div className="grid gap-5 md:grid-cols-2">
           <ReadonlyField
@@ -317,7 +317,7 @@ function NewWorkForm({
 }
 
 const inputClass =
-  'mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-50';
+  'mt-2 h-11 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-slate-500 dark:focus:border-slate-500 focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800 disabled:bg-slate-50 dark:disabled:bg-slate-950';
 
 function Field({
   label,
@@ -331,11 +331,11 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className={`text-sm font-medium text-slate-700 ${className ?? ''}`}>
+    <label className={`text-sm font-medium text-slate-700 dark:text-slate-200 ${className ?? ''}`}>
       {label}
       {children}
       {error ? (
-        <span className="mt-1 block text-xs text-red-600">{error}</span>
+        <span className="mt-1 block text-xs text-red-600 dark:text-red-300">{error}</span>
       ) : null}
     </label>
   );
@@ -344,8 +344,8 @@ function Field({
 function ReadonlyField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-sm font-medium text-slate-700">{label}</p>
-      <p className="mt-2 flex min-h-11 items-center rounded-lg bg-slate-100 px-3 text-sm font-medium text-slate-700">
+      <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{label}</p>
+      <p className="mt-2 flex min-h-11 items-center rounded-lg bg-slate-100 dark:bg-slate-800 px-3 text-sm font-medium text-slate-700 dark:text-slate-200">
         {value}
       </p>
     </div>
@@ -354,7 +354,7 @@ function ReadonlyField({ label, value }: { label: string; value: string }) {
 
 function ErrorMessage({ message }: { message: string }) {
   return (
-    <p className="mt-4 flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+    <p className="mt-4 flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-700 dark:text-red-300">
       <AlertCircle className="size-4 shrink-0" /> {message}
     </p>
   );
@@ -362,12 +362,12 @@ function ErrorMessage({ message }: { message: string }) {
 
 function InvalidNewWork({ message }: { message: string }) {
   return (
-    <section className="rounded-xl border border-red-200 bg-white p-8 text-center shadow-sm">
-      <AlertCircle className="mx-auto size-8 text-red-500" />
-      <h1 className="mt-3 font-semibold text-slate-950">
+    <section className="rounded-xl border border-red-200 dark:border-red-800 bg-white dark:bg-slate-900 p-8 text-center shadow-sm">
+      <AlertCircle className="mx-auto size-8 text-red-500 dark:text-red-300" />
+      <h1 className="mt-3 font-semibold text-slate-950 dark:text-slate-100">
         No se puede crear el trabajo
       </h1>
-      <p className="mt-2 text-sm text-slate-600">{message}</p>
+      <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{message}</p>
       <Button asChild className="mt-5" variant="outline">
         <Link to="/assets">Volver a activos</Link>
       </Button>

@@ -32,6 +32,89 @@ const group = z.enum([
   'supplements',
   'custom',
 ]);
+const pautaGroup = z.enum([
+  'protein',
+  'carbs',
+  'fats',
+  'dairy',
+  'fruits',
+  'veggies',
+  'supplements',
+]);
+const unit = z.enum(['g', 'ml', 'unit', 'scoop']);
+const contributionsSchema = z
+  .array(z.object({ group: pautaGroup, portions: positive(1000) }).strict())
+  .max(7)
+  .refine(
+    (items) => new Set(items.map((item) => item.group)).size === items.length,
+    'Grupo repetido'
+  );
+export const pautaSelectionSchema = z
+  .object({
+    ruleId: identifierSchema.nullable(),
+    quantity: z
+      .object({ amount: positive(20000), unit })
+      .strict()
+      .optional(),
+  })
+  .strict();
+const nutritionPlanFieldsSchema = z
+  .object({
+    name: text(150),
+    startsOn: dateSchema,
+    enabled: z.boolean(),
+    targets: z
+      .object({
+        protein: number(100).nullable(),
+        carbs: number(100).nullable(),
+        fats: number(100).nullable(),
+        dairy: number(100).nullable(),
+        fruits: number(100).nullable(),
+        veggies: number(100).nullable(),
+        supplements: number(100).nullable(),
+      })
+      .strict(),
+    waterTargetMl: positive(20000),
+    waterIsMinimum: z.boolean(),
+    rules: z
+      .array(
+        z
+          .object({
+            id: identifierSchema,
+            name: text(200),
+            foodIds: z.array(identifierSchema).max(100),
+            aliases: z.array(text(200)).max(30),
+            referenceAmount: positive(20000),
+            unit,
+            gramsPerUnit: positive(20000).optional(),
+            contributions: contributionsSchema,
+            free: z.boolean(),
+            notes: z.string().max(2000),
+          })
+          .strict()
+          .refine(
+            (rule) =>
+              rule.free
+                ? rule.contributions.length === 0
+                : rule.contributions.length > 0,
+            'Una equivalencia libre no lleva porciones; las demás requieren aportes'
+          )
+      )
+      .max(250),
+  })
+  .strict();
+const uniqueRules = (plan: z.infer<typeof nutritionPlanFieldsSchema>) =>
+  new Set(plan.rules.map((rule) => rule.id)).size === plan.rules.length;
+export const nutritionPlanInputSchema = nutritionPlanFieldsSchema.refine(
+  uniqueRules,
+  'Equivalencias repetidas'
+);
+export const nutritionPlanSchema = nutritionPlanFieldsSchema
+  .extend({
+    version: z.number().int().positive(),
+    createdAt: z.string().datetime(),
+  })
+  .refine(uniqueRules, 'Equivalencias repetidas');
 export const profileSchema = z
   .object({
     name: text(150),
@@ -98,6 +181,7 @@ export const foodSchema = z
     brand: text(150).optional(),
     servingUnit: text(150),
     servingSizeGrams: positive(20000),
+    quantityUnit: unit.optional(),
     calories: number(100000),
     protein: number(20000),
     carbs: number(20000),
@@ -124,6 +208,7 @@ export const foodSchema = z
     medsRecommended: z.boolean().optional(),
     notes: z.string().max(2000).optional(),
     isCustom: z.boolean().optional(),
+    pautaSelection: pautaSelectionSchema.optional(),
   })
   .strict();
 export const mealEntrySchema = z
@@ -133,15 +218,34 @@ export const mealEntrySchema = z
     foodId: identifierSchema,
     foodName: text(200),
     amountGrams: positive(20000),
+    quantity: z
+      .object({ amount: positive(20000), unit })
+      .strict()
+      .optional(),
     calories: number(100000),
     protein: number(20000),
     carbs: number(20000),
     fat: number(20000),
     portionGroup: group.optional(),
     portionsCount: number(1000).optional(),
+    pautaSelection: pautaSelectionSchema.optional(),
+    pauta: z
+      .object({
+        planVersion: z.number().int().positive(),
+        ruleId: identifierSchema.optional(),
+        ruleName: text(200).optional(),
+        status: z.enum(['matched', 'pending', 'free']),
+        contributions: contributionsSchema,
+      })
+      .strict()
+      .optional(),
     timestamp: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/),
   })
-  .strict();
+  .strict()
+  .refine(
+    (entry) => !entry.quantity || entry.quantity.amount === entry.amountGrams,
+    'Cantidad inconsistente'
+  );
 export const addMealsSchema = z
   .object({ entries: z.array(mealEntrySchema).min(1).max(100) })
   .strict();
@@ -165,6 +269,7 @@ export const templateSchema = z
           .object({
             foodId: identifierSchema,
             amountGrams: positive(20000),
+            quantityUnit: unit.optional(),
             food: foodSchema.optional(),
           })
           .strict()
@@ -181,6 +286,7 @@ export const dailyLogSchema = z
     waterIntakeMl: z.number().int().min(0).max(30000),
     notes: z.string().max(5000).optional(),
     weightCheckKg: positive(500).optional(),
+    nutritionPlan: nutritionPlanSchema.nullable().optional(),
   })
   .strict();
 export const importSchema = z
@@ -201,6 +307,7 @@ export const nutritionAccountSchema = z
     customFoods: z.array(foodSchema),
     customTemplates: z.array(templateSchema),
     legacyImported: z.boolean(),
+    nutritionPlan: nutritionPlanSchema.nullable().optional(),
   })
   .strict()
   .refine((account) => (account.profile === null) === (account.goals === null));

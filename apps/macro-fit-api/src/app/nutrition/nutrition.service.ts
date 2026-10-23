@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DataSource, EntityManager } from 'typeorm';
+import { DataSource, EntityManager, LessThanOrEqual } from 'typeorm';
 import {
   DailyLog,
   FoodItem,
@@ -14,6 +14,10 @@ import {
   NutritionAccount,
   Settings,
   WaterChange,
+  NutritionPlan,
+  NutritionPlanInput,
+  PautaSelection,
+  calculatePauta,
 } from '@project-manager/macrofit-contracts';
 import {
   NutritionDailyLogEntity,
@@ -22,6 +26,7 @@ import {
   NutritionProfileEntity,
   NutritionTemplateEntity,
   NutritionWaterOperationEntity,
+  NutritionPlanEntity,
 } from './entities/nutrition.entity';
 
 @Injectable()
@@ -51,12 +56,17 @@ export class NutritionService {
     });
     const foods = await manager.findBy(NutritionFoodEntity, { userId });
     const templates = await manager.findBy(NutritionTemplateEntity, { userId });
+    const plan = await manager.findOne(NutritionPlanEntity, {
+      where: { userId },
+      order: { version: 'DESC' },
+    });
     return {
       profile: settings?.profile ?? null,
       goals: settings?.goals ?? null,
       customFoods: foods.map((item) => item.data),
       customTemplates: templates.map((item) => item.data),
       legacyImported: settings?.legacyImported ?? false,
+      nutritionPlan: plan?.data ?? null,
     };
   }
   getAccount(userId: string) {
@@ -76,6 +86,114 @@ export class NutritionService {
     });
   }
 
+  savePlan(userId: string, input: NutritionPlanInput) {
+    return this.transaction(userId, async (manager) => {
+      const today = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Santiago',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date());
+      if (input.startsOn < today)
+        throw new BadRequestException(
+          'La pauta debe comenzar hoy o en una fecha futura. El historial se conserva.'
+        );
+      const previous = await manager.findOne(NutritionPlanEntity, {
+        where: { userId },
+        order: { version: 'DESC' },
+      });
+      const plan: NutritionPlan = {
+        ...input,
+        version: (previous?.version ?? 0) + 1,
+        createdAt: new Date().toISOString(),
+      };
+      await manager.insert(NutritionPlanEntity, {
+        userId,
+        version: plan.version,
+        startsOn: plan.startsOn,
+        data: plan,
+      });
+      return this.account(manager, userId);
+    });
+  }
+
+  private async dayPlan(
+    manager: EntityManager,
+    userId: string,
+    date: string,
+    version?: number | null
+  ): Promise<NutritionPlan | null> {
+    const plan =
+      version != null
+        ? await manager.findOneBy(NutritionPlanEntity, { userId, version })
+        : await manager.findOne(NutritionPlanEntity, {
+            where: { userId, startsOn: LessThanOrEqual(date) },
+            order: { version: 'DESC' },
+          });
+    return plan?.data.enabled ? plan.data : null;
+  }
+
+  private async bindDayPlan(
+    manager: EntityManager,
+    userId: string,
+    date: string
+  ) {
+    const log = await manager.findOneByOrFail(NutritionDailyLogEntity, {
+      userId,
+      date,
+    });
+    const plan = await this.dayPlan(manager, userId, date, log.planVersion);
+    if (plan && log.planVersion == null)
+      await manager.update(
+        NutritionDailyLogEntity,
+        { userId, date },
+        { planVersion: plan.version }
+      );
+    return plan;
+  }
+
+  classifyMeal(
+    userId: string,
+    date: string,
+    id: string,
+    selection: PautaSelection
+  ) {
+    return this.transaction(userId, async (manager) => {
+      const row = await manager.findOneBy(NutritionMealEntryEntity, {
+        userId,
+        date,
+        id,
+      });
+      if (!row) throw new NotFoundException('Alimento no encontrado.');
+      const plan = await this.bindDayPlan(manager, userId, date);
+      if (!plan)
+        throw new BadRequestException('Este día no tiene una pauta activa.');
+      this.validateSelection(plan, selection);
+      await manager.update(
+        NutritionMealEntryEntity,
+        { userId, date, id },
+        {
+          data: {
+            ...row.data,
+            pautaSelection: selection,
+            pauta: calculatePauta(plan, row.data, selection),
+          },
+        }
+      );
+      return this.daily(manager, userId, date);
+    });
+  }
+
+  private validateSelection(plan: NutritionPlan, selection?: PautaSelection) {
+    if (
+      selection?.ruleId &&
+      !plan.rules.some((rule) => rule.id === selection.ruleId)
+    )
+      throw new BadRequestException(
+        'La equivalencia no pertenece a la pauta de este día.'
+      );
+  }
+
   private async daily(
     manager: EntityManager,
     userId: string,
@@ -93,6 +211,12 @@ export class NutritionService {
       date,
       meals: entries.map((entry) => entry.data),
       waterIntakeMl: log?.waterIntakeMl ?? 0,
+      nutritionPlan: await this.dayPlan(
+        manager,
+        userId,
+        date,
+        log?.planVersion
+      ),
       ...(log?.notes != null ? { notes: log.notes } : {}),
       ...(log?.weightCheckKg != null
         ? { weightCheckKg: log.weightCheckKg }
@@ -121,7 +245,8 @@ export class NutritionService {
     manager: EntityManager,
     userId: string,
     date: string,
-    entries: MealEntry[]
+    entries: MealEntry[],
+    plan?: NutritionPlan | null
   ) {
     for (const entry of entries) {
       const previous = await manager.findOneBy(NutritionMealEntryEntity, {
@@ -131,7 +256,7 @@ export class NutritionService {
       if (previous) {
         // Compare JSONB values in PostgreSQL; object key order is irrelevant.
         const [same] = await manager.query(
-          'SELECT date = $3::date AND data = $4::jsonb AS matches FROM nutrition_meal_entries WHERE user_id = $1 AND id = $2',
+          "SELECT date = $3::date AND data - 'pauta' = $4::jsonb - 'pauta' AS matches FROM nutrition_meal_entries WHERE user_id = $1 AND id = $2",
           [userId, entry.id, date, JSON.stringify(entry)]
         );
         if (!same?.matches)
@@ -139,11 +264,19 @@ export class NutritionService {
             'El identificador de la comida ya fue utilizado.'
           );
       } else {
+        const input = { ...entry };
+        delete input.pauta;
+        if (plan) this.validateSelection(plan, entry.pautaSelection);
         await manager.insert(NutritionMealEntryEntity, {
           userId,
           id: entry.id,
           date,
-          data: entry,
+          data: {
+            ...input,
+            ...(plan
+              ? { pauta: calculatePauta(plan, input, input.pautaSelection) }
+              : {}),
+          },
         });
       }
     }
@@ -151,7 +284,8 @@ export class NutritionService {
   addMeals(userId: string, date: string, entries: MealEntry[]) {
     return this.transaction(userId, async (manager) => {
       await this.ensureDay(manager, userId, date);
-      await this.insertEntries(manager, userId, date, entries);
+      const plan = await this.bindDayPlan(manager, userId, date);
+      await this.insertEntries(manager, userId, date, entries, plan);
       if (
         (await manager.countBy(NutritionMealEntryEntity, { userId, date })) >
         1000

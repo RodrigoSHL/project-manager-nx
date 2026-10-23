@@ -5,6 +5,7 @@ import {
   MealEntry,
   MealTemplate,
   UserProfile,
+  NutritionPlan,
 } from '@project-manager/macrofit-contracts';
 
 @Entity('nutrition_profiles')
@@ -24,6 +25,15 @@ export class NutritionDailyLogEntity {
   @Column('text', { nullable: true }) notes!: string | null;
   @Column('double precision', { name: 'weight_check_kg', nullable: true })
   weightCheckKg!: number | null;
+  @Column('integer', { name: 'plan_version', nullable: true })
+  planVersion!: number | null;
+}
+@Entity('nutrition_plans')
+export class NutritionPlanEntity {
+  @PrimaryColumn('uuid', { name: 'user_id' }) userId!: string;
+  @PrimaryColumn('integer') version!: number;
+  @Column('date', { name: 'starts_on' }) startsOn!: string;
+  @Column('jsonb') data!: NutritionPlan;
 }
 @Entity('nutrition_meal_entries')
 export class NutritionMealEntryEntity {
@@ -60,6 +70,7 @@ export class NutritionWaterOperationEntity {
   @Column('jsonb') data!: { amountMl: number; reset?: boolean };
 }
 export const nutritionEntities = [
+  NutritionPlanEntity,
   NutritionProfileEntity,
   NutritionDailyLogEntity,
   NutritionMealEntryEntity,

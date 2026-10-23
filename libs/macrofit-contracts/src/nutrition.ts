@@ -78,7 +78,9 @@ export interface FoodItem {
   name: string;
   brand?: string;
   servingUnit: string; // ej: "50g (1 trozo 6x6 cm)", "1 scoop (30g)"
-  servingSizeGrams: number; // base para cálculos
+  servingSizeGrams: number; // Legacy base quantity; quantityUnit defaults to grams.
+  /** When present, the legacy base above is expressed in this unit, not grams. */
+  quantityUnit?: QuantityUnit;
   calories: number; // kcal por porción base
   protein: number; // gramos
   carbs: number; // gramos
@@ -96,6 +98,8 @@ export interface FoodItem {
   medsRecommended?: boolean;
   notes?: string;
   isCustom?: boolean;
+  /** Explicit selection for this registration/template, independent of nutrient grams. */
+  pautaSelection?: PautaSelection;
 }
 
 export type MealType =
@@ -112,6 +116,8 @@ export interface MealEntry {
   foodId: string;
   foodName: string;
   amountGrams: number;
+  /** Authoritative quantity/unit. amountGrams remains a legacy numeric field. */
+  quantity?: { amount: number; unit: QuantityUnit };
   calories: number;
   protein: number;
   carbs: number;
@@ -119,6 +125,8 @@ export interface MealEntry {
   portionGroup?: FoodGroup;
   portionsCount?: number;
   timestamp: string;
+  pautaSelection?: PautaSelection;
+  pauta?: PautaEntrySnapshot;
 }
 
 export interface DailyLog {
@@ -127,12 +135,68 @@ export interface DailyLog {
   waterIntakeMl: number;
   notes?: string;
   weightCheckKg?: number;
+  nutritionPlan?: NutritionPlan | null;
+}
+
+export const PAUTA_GROUPS = [
+  'protein',
+  'carbs',
+  'fats',
+  'dairy',
+  'fruits',
+  'veggies',
+  'supplements',
+] as const;
+export type PautaGroup = (typeof PAUTA_GROUPS)[number];
+export type QuantityUnit = 'g' | 'ml' | 'unit' | 'scoop';
+export interface PortionContribution {
+  group: PautaGroup;
+  portions: number;
+}
+export interface PautaRule {
+  id: string;
+  name: string;
+  foodIds: string[];
+  /** Exact aliases only: a raw/cooked or branded food must never be guessed. */
+  aliases: string[];
+  referenceAmount: number;
+  unit: QuantityUnit;
+  gramsPerUnit?: number;
+  contributions: PortionContribution[];
+  free: boolean;
+  notes: string;
+}
+export interface NutritionPlanInput {
+  name: string;
+  startsOn: string;
+  enabled: boolean;
+  targets: Record<PautaGroup, number | null>;
+  waterTargetMl: number;
+  waterIsMinimum: boolean;
+  rules: PautaRule[];
+}
+export interface NutritionPlan extends NutritionPlanInput {
+  version: number;
+  createdAt: string;
+}
+export interface PautaSelection {
+  /** null explicitly leaves the food pending instead of automatic matching. */
+  ruleId: string | null;
+  quantity?: { amount: number; unit: QuantityUnit };
+}
+export interface PautaEntrySnapshot {
+  planVersion: number;
+  ruleId?: string;
+  ruleName?: string;
+  status: 'matched' | 'pending' | 'free';
+  contributions: PortionContribution[];
 }
 
 export interface MealTemplateItem {
   food?: FoodItem; // Snapshot for meals analyzed by AI or a changed catalog.
   foodId: string;
   amountGrams: number;
+  quantityUnit?: QuantityUnit;
 }
 
 export interface MealTemplate {

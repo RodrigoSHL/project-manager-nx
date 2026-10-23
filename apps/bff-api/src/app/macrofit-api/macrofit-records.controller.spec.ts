@@ -91,6 +91,48 @@ describe('MacroFit personal records BFF', () => {
     ).toBe(400);
     expect(upstream).not.toHaveBeenCalled();
   });
+  it('requires authentication for plan writes and review of food equivalences', async () => {
+    for (const path of ['/plan', '/days/2026-10-23/meals/entry/pauta']) {
+      expect(
+        (
+          await httpFetch(origin + '/api/macrofit/me' + path, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: '{}',
+          })
+        ).status
+      ).toBe(401);
+    }
+    expect(upstream).not.toHaveBeenCalled();
+  });
+  it('validates plans and forwards food classification using only the verified owner', async () => {
+    upstream.mockResolvedValue(new Response('{}', { status: 200 }));
+    const response = await httpFetch(
+      origin + '/api/macrofit/me/days/2026-10-23/meals/entry/pauta',
+      {
+        method: 'PUT',
+        headers: { ...headers, 'x-user-id': 'forged-owner' },
+        body: JSON.stringify({ ruleId: 'chicken' }),
+      }
+    );
+    expect(response.status).toBe(200);
+    expect(upstream).toHaveBeenCalledWith(
+      expect.stringContaining('/me/days/2026-10-23/meals/entry/pauta'),
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({ ruleId: 'chicken' }),
+        headers: expect.objectContaining({ 'x-user-id': userId }),
+      })
+    );
+    upstream.mockClear();
+    const invalid = await httpFetch(origin + '/api/macrofit/me/plan', {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ name: 'Plan', userId: 'forged' }),
+    });
+    expect(invalid.status).toBe(400);
+    expect(upstream).not.toHaveBeenCalled();
+  });
   it('preserves storage errors so the browser cannot report a successful save', async () => {
     upstream.mockResolvedValue(
       new Response('{"message":"Base no disponible"}', { status: 503 })

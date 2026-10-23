@@ -21,6 +21,8 @@ import {
   settingsSchema,
   templateSchema,
   waterSchema,
+  nutritionPlanInputSchema,
+  pautaSelectionSchema,
 } from '@project-manager/macrofit-contracts';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { MacrofitApiClient } from './macrofit-api.client';
@@ -62,6 +64,29 @@ export class MacrofitRecordsController {
   @Put('settings')
   settings(@Req() req: AuthenticatedRequest, @Body() body: unknown) {
     return this.send(req, '/settings', 'PUT', parse(settingsSchema, body));
+  }
+  @Put('plan')
+  plan(@Req() req: AuthenticatedRequest, @Body() body: unknown) {
+    return this.send(
+      req,
+      '/plan',
+      'PUT',
+      parse(nutritionPlanInputSchema, body)
+    );
+  }
+  @Put('days/:date/meals/:id/pauta')
+  classify(
+    @Req() req: AuthenticatedRequest,
+    @Param('date') date: string,
+    @Param('id') id: string,
+    @Body() body: unknown
+  ) {
+    return this.send(
+      req,
+      `${day(date)}/meals/${segment(id)}/pauta`,
+      'PUT',
+      parse(pautaSelectionSchema, body)
+    );
   }
   @Get('days/:date')
   @Header('Cache-Control', 'no-store')

@@ -7,10 +7,12 @@ import {
   MealEntry,
   FoodItem,
   Settings,
+  NutritionPlanInput,
 } from '@project-manager/macrofit-contracts';
 import { nutritionEntities } from './entities/nutrition.entity';
 import { NutritionService } from './nutrition.service';
 import { NutritionController } from './nutrition.controller';
+import { AddNutritionPlans1792742400000 } from '../../migrations/1792742400000-AddNutritionPlans';
 import { CreateNutritionRecords1792713600000 } from '../../migrations/1792713600000-CreateNutritionRecords';
 
 const url = process.env.MACROFIT_TEST_DATABASE_URL;
@@ -69,7 +71,10 @@ suite('Nutrition PostgreSQL integration', () => {
     type: 'postgres',
     url,
     entities: nutritionEntities,
-    migrations: [CreateNutritionRecords1792713600000],
+    migrations: [
+      CreateNutritionRecords1792713600000,
+      AddNutritionPlans1792742400000,
+    ],
     synchronize: false,
   });
   let service: NutritionService;
@@ -77,7 +82,6 @@ suite('Nutrition PostgreSQL integration', () => {
   let origin: string;
   beforeAll(async () => {
     await db.initialize();
-    if (!(await db.showMigrations())) await db.undoLastMigration();
     await db.runMigrations();
     const module = await Test.createTestingModule({
       controllers: [NutritionController],
@@ -109,6 +113,7 @@ suite('Nutrition PostgreSQL integration', () => {
       customFoods: [],
       customTemplates: [],
       legacyImported: false,
+      nutritionPlan: null,
     });
     expect((await service.getDay(a, date)).meals).toEqual([]);
     expect((await fetch(`${origin}/api/me`)).status).toBe(401);
@@ -162,7 +167,9 @@ suite('Nutrition PostgreSQL integration', () => {
     const entries = [meal(), meal()];
     await service.addMeals(a, date, entries);
     await service.addMeals(a, date, entries); // Idempotent request retry.
-    expect((await service.getDay(a, date)).meals.map((entry) => entry.id)).toEqual(entries.map((entry) => entry.id));
+    expect(
+      (await service.getDay(a, date)).meals.map((entry) => entry.id)
+    ).toEqual(entries.map((entry) => entry.id));
     expect(
       (await service.getAccount(a)).customTemplates[0].items[0].food?.name
     ).toBe('Carne');
@@ -227,12 +234,137 @@ suite('Nutrition PostgreSQL integration', () => {
     expect((await service.getDay(a, '2026-10-22')).waterIntakeMl).toBe(500);
     expect((await service.getAccount(b)).legacyImported).toBe(false);
   });
+  it('calculates exchanges on the server, isolates plan ownership and freezes daily versions', async () => {
+    const owner = randomUUID();
+    const stranger = randomUUID();
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Santiago',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+    const tomorrow = new Date(today + 'T12:00:00Z');
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    const nextDate = tomorrow.toISOString().slice(0, 10);
+    const input: NutritionPlanInput = {
+      name: 'Mi pauta',
+      startsOn: today,
+      enabled: true,
+      targets: {
+        protein: 10,
+        carbs: 4,
+        fats: 2,
+        dairy: 3,
+        fruits: 3,
+        veggies: null,
+        supplements: 0,
+      },
+      waterTargetMl: 2000,
+      waterIsMinimum: true,
+      rules: [
+        {
+          id: 'lentils',
+          name: 'Lentejas cocidas',
+          foodIds: ['own-food'],
+          aliases: [],
+          referenceAmount: 140,
+          unit: 'g',
+          free: false,
+          notes: 'Cocidas',
+          contributions: [
+            { group: 'protein', portions: 1 },
+            { group: 'carbs', portions: 0.5 },
+          ],
+        },
+      ],
+    };
+    expect((await service.getAccount(owner)).nutritionPlan).toBeNull();
+    await service.savePlan(owner, input);
+    expect((await service.getAccount(stranger)).nutritionPlan).toBeNull();
+    const original = {
+      ...meal(),
+      amountGrams: 140,
+      pauta: {
+        planVersion: 999,
+        status: 'matched' as const,
+        contributions: [{ group: 'protein' as const, portions: 999 }],
+      },
+    };
+    const day = await service.addMeals(owner, today, [original]);
+    expect(day.meals[0].pauta).toMatchObject({
+      planVersion: 1,
+      contributions: [
+        { group: 'protein', portions: 1 },
+        { group: 'carbs', portions: 0.5 },
+      ],
+    });
+    await service.savePlan(owner, {
+      ...input,
+      targets: { ...input.targets, protein: 5 },
+      rules: [{ ...input.rules[0], referenceAmount: 280 }],
+    });
+    await service.saveSettings(owner, settings);
+    expect((await service.getAccount(owner)).nutritionPlan?.version).toBe(2);
+    expect(
+      (await service.getDay(owner, today)).nutritionPlan?.targets.protein
+    ).toBe(10);
+    await service.addMeals(owner, today, [original]);
+    expect((await service.getDay(owner, today)).meals).toHaveLength(1);
+    const next = await service.addMeals(owner, nextDate, [
+      { ...meal(), amountGrams: 140 },
+    ]);
+    expect(next.nutritionPlan?.version).toBe(2);
+    expect(next.meals[0].pauta?.contributions[0].portions).toBe(0.5);
+    await expect(
+      service.classifyMeal(stranger, today, original.id, { ruleId: 'lentils' })
+    ).rejects.toThrow('Alimento no encontrado');
+    await expect(
+      service.classifyMeal(owner, today, original.id, { ruleId: 'foreign' })
+    ).rejects.toThrow('no pertenece');
+    await service.classifyMeal(owner, today, original.id, { ruleId: null });
+    expect((await service.getDay(owner, today)).meals[0].pauta?.status).toBe(
+      'pending'
+    );
+    await service.classifyMeal(owner, today, original.id, {
+      ruleId: 'lentils',
+    });
+    expect(
+      (await service.getDay(owner, today)).meals[0].pauta?.contributions[0]
+        .portions
+    ).toBe(1);
+    expect(
+      (await service.getDay(owner, '2020-01-01')).nutritionPlan
+    ).toBeNull();
+    await expect(
+      service.savePlan(owner, { ...input, startsOn: '2020-01-01' })
+    ).rejects.toThrow('historial');
+  });
+  it('rejects malformed plans and snapshot/ownership injection through the HTTP endpoints', async () => {
+    const response = await call('/plan', {
+      method: 'PUT',
+      body: JSON.stringify({ name: 'Invalid', userId: b }),
+    });
+    expect(response.status).toBe(400);
+    expect(
+      (
+        await fetch(origin + '/api/me/plan', {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json' },
+          body: '{}',
+        })
+      ).status
+    ).toBe(401);
+  });
   it('survives a new database connection and runs migration down/up cleanly', async () => {
     await db.destroy();
     await db.initialize();
     expect((await service.getAccount(a)).profile?.name).toBe('Persona real');
     expect((await service.getDay(a, date)).meals).toHaveLength(9);
     expect(await db.runMigrations()).toEqual([]);
+    await db.undoLastMigration();
+    expect(
+      (await db.query("SELECT to_regclass('nutrition_plans') AS name"))[0].name
+    ).toBeNull();
     await db.undoLastMigration();
     expect(
       (

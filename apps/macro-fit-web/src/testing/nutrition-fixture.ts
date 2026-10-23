@@ -72,7 +72,16 @@ export function nutritionFixture(initial: NutritionAccount = testAccount) {
       return response(account);
     }
     if (path === '/foods') {
-      account.customFoods.push(body);
+      account.customFoods = [
+        ...account.customFoods.filter((food) => food.id !== body.id),
+        body,
+      ];
+      return response(account);
+    }
+    if (path.startsWith('/foods/') && init.method === 'DELETE') {
+      account.customFoods = account.customFoods.filter(
+        (food) => food.id !== decodeURIComponent(path.slice('/foods/'.length))
+      );
       return response(account);
     }
     const match = /^\/days\/(\d{4}-\d{2}-\d{2})(.*)$/.exec(path);

@@ -1,5 +1,7 @@
 # MacroFit Web
 
+La sección **Mis productos** permite crear y editar un catálogo personal, importar fichas de Open Food Facts o transcribir una etiqueta con IA. Ver [flujo, contratos y opciones de cámara/galería](../../docs/MACROFIT_PRODUCTS.md).
+
 Frontend Vite/React con instalación PWA y registros personales en PostgreSQL a través de la API. Se construye con `Dockerfile.vite` y se sirve como SPA desde Nginx en el puerto interno 80. El frontend no conecta directamente con PostgreSQL y no necesita Node en runtime ni variables `NEXT_PUBLIC_*`.
 
 Las llamadas de análisis usan `/api/macrofit/analyze-plate` en el mismo origen. En desarrollo, Vite las envía al BFF en localhost:3000; en producción, Caddy las envía a `bff-api:3000`. El BFF llama al API interno en el puerto 3007.

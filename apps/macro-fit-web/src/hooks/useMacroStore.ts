@@ -203,6 +203,20 @@ export function useMacroStore(userId: string) {
       { ...food, id: crypto.randomUUID(), isCustom: true },
       setAccount
     );
+  const saveProduct = (food: FoodItem) =>
+    mutate<NutritionAccount>(
+      '/foods',
+      'PUT',
+      { ...food, isCustom: true },
+      setAccount
+    );
+  const deleteProduct = (id: string) =>
+    mutate<NutritionAccount>(
+      `/foods/${encodeURIComponent(id)}`,
+      'DELETE',
+      undefined,
+      setAccount
+    );
   const allFoods = [...(account?.customFoods ?? []), ...COMMON_FOODS];
   const allTemplates = [
     ...(account?.customTemplates ?? []),
@@ -336,6 +350,8 @@ export function useMacroStore(userId: string) {
     addWater,
     resetWater,
     addCustomFood,
+    saveProduct,
+    deleteProduct,
     applyMealTemplate,
     saveMealAsTemplate,
     importLegacy,

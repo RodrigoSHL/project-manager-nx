@@ -3,12 +3,19 @@ import { Header } from '../components/Header';
 import { PwaInstallBanner } from '../components/PwaInstallBanner';
 import { PwaInstallModal } from '../components/PwaInstallModal';
 import { DailyTrackerView } from '../components/DailyTrackerView';
+import { ProductsView } from '../components/ProductsView';
 import { NutritionPlanView } from '../components/NutritionPlanView';
 import { CalculatorView } from '../components/CalculatorView';
 import { ProfileSetup } from '../components/ProfileSetup';
 import { useMacroStore } from '../hooks/useMacroStore';
 import { usePwaInstall } from '../hooks/usePwaInstall';
-import { BookOpen, Calculator, Download, CheckCircle2 } from 'lucide-react';
+import {
+  BookOpen,
+  Calculator,
+  Download,
+  CheckCircle2,
+  Package,
+} from 'lucide-react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from '../features/auth/auth-context';
 import { CurrentUser } from '../features/auth/auth-session';
@@ -83,9 +90,9 @@ export function MacroFitWorkspace({
   user: CurrentUser;
   onLogout: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<'tracker' | 'calculator' | 'plan'>(
-    'tracker'
-  );
+  const [activeTab, setActiveTab] = useState<
+    'tracker' | 'calculator' | 'plan' | 'products'
+  >('tracker');
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
 
   const {
@@ -109,6 +116,9 @@ export function MacroFitWorkspace({
     addWater,
     resetWater,
     addCustomFood,
+    customFoods,
+    saveProduct,
+    deleteProduct,
     applyMealTemplate,
     saveMealAsTemplate,
     loading,
@@ -228,7 +238,14 @@ export function MacroFitWorkspace({
                 )}
               </section>
             )}
-            {!profile || !goals ? (
+            {activeTab === 'products' ? (
+              <ProductsView
+                foods={customFoods}
+                onSave={saveProduct}
+                onDelete={deleteProduct}
+                onOpenPlan={() => setActiveTab('plan')}
+              />
+            ) : !profile || !goals ? (
               <ProfileSetup userName={user.name} onSave={saveProfileAndGoals} />
             ) : activeTab === 'plan' ? (
               <NutritionPlanView
@@ -320,6 +337,15 @@ export function MacroFitWorkspace({
           <span>Mi pauta</span>
         </button>
 
+        <button
+          onClick={() => setActiveTab('products')}
+          className={`flex flex-col items-center gap-1 text-[11px] font-semibold ${
+            activeTab === 'products' ? 'text-emerald-400' : 'text-slate-400'
+          }`}
+        >
+          <Package className="w-5 h-5" />
+          <span>Productos</span>
+        </button>
         {canInstall && (
           <button
             onClick={handleOpenInstall}

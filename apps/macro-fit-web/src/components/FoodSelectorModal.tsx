@@ -45,7 +45,9 @@ export const FoodSelectorModal: React.FC<FoodSelectorModalProps> = ({
   // Filter foods
   const filteredFoods = useMemo(() => {
     return foods.filter((food) => {
-      const matchesSearch = food.name
+      const matchesSearch = `${food.name} ${food.brand ?? ''} ${
+        food.barcode ?? ''
+      }`
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
       const matchesCategory =
@@ -212,6 +214,11 @@ export const FoodSelectorModal: React.FC<FoodSelectorModalProps> = ({
                         </span>
                       )}
                     </div>
+                    {food.brand && (
+                      <p className="mt-1 text-xs text-slate-400">
+                        {food.brand}
+                      </p>
+                    )}
                     {food.notes && (
                       <div className="text-[10px] text-emerald-400 font-medium mt-0.5">
                         {food.notes}

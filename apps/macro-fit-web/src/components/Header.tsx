@@ -12,8 +12,8 @@ import {
 import { getTodayDateString } from '../hooks/useMacroStore';
 
 interface HeaderProps {
-  activeTab: 'tracker' | 'calculator' | 'plan';
-  setActiveTab: (tab: 'tracker' | 'calculator' | 'plan') => void;
+  activeTab: 'tracker' | 'calculator' | 'plan' | 'products';
+  setActiveTab: (tab: 'tracker' | 'calculator' | 'plan' | 'products') => void;
   selectedDate: string;
   setSelectedDate: (date: string) => void;
   canInstall: boolean;
@@ -63,7 +63,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-30 w-full border-b border-slate-800/80 bg-[#090d16]/85 backdrop-blur-md">
-      <div className="max-w-5xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="max-w-5xl mx-auto px-4 py-3 flex flex-col lg:flex-row flex-wrap items-center justify-between gap-3">
         {/* Brand & Logo */}
         <div className="flex items-center justify-between w-full sm:w-auto">
           <div className="flex items-center gap-2.5">
@@ -145,7 +145,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Navigation Tabs & Actions */}
         <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-          <div className="flex bg-slate-900/90 p-1 rounded-xl border border-slate-800/80">
+          <div className="flex min-w-0 overflow-x-auto bg-slate-900/90 p-1 rounded-xl border border-slate-800/80 [&>button]:shrink-0">
             <button
               onClick={() => setActiveTab('tracker')}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
@@ -176,6 +176,16 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               Mi pauta
+            </button>
+            <button
+              onClick={() => setActiveTab('products')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
+                activeTab === 'products'
+                  ? 'bg-emerald-500 text-slate-950'
+                  : 'text-slate-300 hover:bg-slate-800'
+              }`}
+            >
+              Mis productos
             </button>
           </div>
 

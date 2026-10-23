@@ -5,10 +5,7 @@ import {
   Upload,
   RotateCcw,
   Sparkles,
-  Info,
-  CheckCircle,
   AlertCircle,
-  Utensils,
   Maximize2,
 } from 'lucide-react';
 import { MealType, PlateAnalysisResponse } from '../types/nutrition';
@@ -35,14 +32,18 @@ export const PlateCameraModal: React.FC<PlateCameraModalProps> = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [stream, setStream] = useState<MediaStream | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
-  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>(
+    'environment'
+  );
 
   const [targetMeal, setTargetMeal] = useState<MealType>(defaultMealType);
-  const [plateType, setPlateType] = useState<'plato_extendido' | 'plato_hondo' | 'bowl'>('plato_extendido');
+  const [plateType, setPlateType] = useState<
+    'plato_extendido' | 'plato_hondo' | 'bowl'
+  >('plato_extendido');
   const [userHints, setUserHints] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
@@ -53,56 +54,49 @@ export const PlateCameraModal: React.FC<PlateCameraModalProps> = ({
     }
   }, [defaultMealType]);
 
-  // Start Camera Stream
-  const startCamera = async (mode: 'environment' | 'user') => {
-    setCameraError(null);
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-    }
-
-    try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('La cámara no está soportada en este navegador. Usa la opción de subir foto.');
-      }
-
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: mode,
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      });
-
-      setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
-    } catch (err: any) {
-      console.warn('Camera stream error:', err);
-      setCameraError('No se pudo acceder a la cámara directa. Puedes subir una foto desde tu galería o archivos.');
-    }
-  };
-
   useEffect(() => {
-    if (isOpen && !capturedImage) {
-      startCamera(facingMode);
-    } else {
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-        setStream(null);
+    if (!isOpen || capturedImage) return;
+    let cancelled = false;
+    let currentStream: MediaStream | null = null;
+    setCameraError(null);
+    void (async () => {
+      try {
+        if (!navigator.mediaDevices?.getUserMedia)
+          throw new Error('Camera unavailable');
+        const next = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
+        });
+        if (cancelled) {
+          next.getTracks().forEach((track) => track.stop());
+          return;
+        }
+        currentStream = next;
+        if (videoRef.current) videoRef.current.srcObject = next;
+      } catch {
+        if (!cancelled)
+          setCameraError(
+            'No se pudo acceder a la cámara directa. Puedes tomar una foto con la cámara del celular o elegir una de tu galería.'
+          );
       }
-    }
-
+    })();
     return () => {
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-      }
+      cancelled = true;
+      currentStream?.getTracks().forEach((track) => track.stop());
     };
   }, [isOpen, capturedImage, facingMode]);
 
   const handleCapture = () => {
-    if (!videoRef.current) return;
+    if (cameraError) {
+      cameraInputRef.current?.click();
+      return;
+    }
+    if (!videoRef.current?.videoWidth) {
+      setAnalysisError(
+        'Espera a que la cámara esté lista o elige una imagen de la galería.'
+      );
+      return;
+    }
     const video = videoRef.current;
     const canvas = canvasRef.current || document.createElement('canvas');
     canvas.width = video.videoWidth || 640;
@@ -112,18 +106,24 @@ export const PlateCameraModal: React.FC<PlateCameraModalProps> = ({
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    canvas.toBlob((blob) => {
-      if (blob) {
-        setCapturedBlob(blob);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-        setCapturedImage(dataUrl);
-      }
-    }, 'image/jpeg', 0.9);
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          setCapturedBlob(blob);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+          setCapturedImage(dataUrl);
+        }
+      },
+      'image/jpeg',
+      0.9
+    );
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
+    setAnalysisError(null);
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -176,7 +176,6 @@ export const PlateCameraModal: React.FC<PlateCameraModalProps> = ({
     setCapturedImage(null);
     setCapturedBlob(null);
     setAnalysisError(null);
-    startCamera(facingMode);
   };
 
   const handleStartAnalysis = async () => {
@@ -194,10 +193,11 @@ export const PlateCameraModal: React.FC<PlateCameraModalProps> = ({
       setIsAnalyzing(false);
       onAnalysisSuccess(result, capturedImage || '', targetMeal);
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setIsAnalyzing(false);
       setAnalysisError(
-        err.message || 'Error al conectar con el servicio de análisis de plato. Intenta nuevamente.'
+        (err instanceof Error ? err.message : '') ||
+          'Error al conectar con el servicio de análisis de plato. Intenta nuevamente.'
       );
     }
   };
@@ -261,7 +261,9 @@ export const PlateCameraModal: React.FC<PlateCameraModalProps> = ({
                 <div className="absolute bottom-3 px-3 py-1.5 rounded-full bg-slate-950/80 backdrop-blur-md border border-emerald-500/40 text-center max-w-[90%] shadow-lg">
                   <p className="text-xs font-medium text-emerald-300 flex items-center justify-center gap-1.5">
                     <Maximize2 className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Centra el plato dentro del círculo a 45° o vista cenital</span>
+                    <span>
+                      Centra el plato dentro del círculo a 45° o vista cenital
+                    </span>
                   </p>
                 </div>
               </div>
@@ -270,7 +272,9 @@ export const PlateCameraModal: React.FC<PlateCameraModalProps> = ({
               <button
                 type="button"
                 onClick={() =>
-                  setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'))
+                  setFacingMode((prev) =>
+                    prev === 'environment' ? 'user' : 'environment'
+                  )
                 }
                 className="absolute top-3 right-3 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 backdrop-blur-sm border border-slate-700 transition shadow"
                 title="Cambiar cámara"
@@ -281,7 +285,9 @@ export const PlateCameraModal: React.FC<PlateCameraModalProps> = ({
               {cameraError && (
                 <div className="absolute inset-0 bg-slate-950/95 flex flex-col items-center justify-center p-6 text-center">
                   <AlertCircle className="w-10 h-10 text-amber-400 mb-2" />
-                  <p className="text-xs text-slate-300 max-w-sm mb-4">{cameraError}</p>
+                  <p className="text-xs text-slate-300 max-w-sm mb-4">
+                    {cameraError}
+                  </p>
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 hover:bg-emerald-400 transition"
@@ -315,7 +321,8 @@ export const PlateCameraModal: React.FC<PlateCameraModalProps> = ({
                     Analizando plato con Gemini Vision...
                   </h3>
                   <p className="text-xs text-slate-400 text-center max-w-xs">
-                    Descomponiendo ingredientes individuales y calculando densidad por 100g.
+                    Descomponiendo ingredientes individuales y calculando
+                    densidad por 100g.
                   </p>
                 </div>
               )}
@@ -326,7 +333,16 @@ export const PlateCameraModal: React.FC<PlateCameraModalProps> = ({
             ref={fileInputRef}
             type="file"
             accept="image/*"
+            aria-label="Imagen del plato desde la galería"
+            className="hidden"
+            onChange={handleFileUpload}
+          />
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
             capture="environment"
+            aria-label="Foto nueva del plato"
             className="hidden"
             onChange={handleFileUpload}
           />
@@ -361,10 +377,14 @@ export const PlateCameraModal: React.FC<PlateCameraModalProps> = ({
               </label>
               <select
                 value={plateType}
-                onChange={(e) => setPlateType(e.target.value as any)}
+                onChange={(e) =>
+                  setPlateType(e.target.value as typeof plateType)
+                }
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
               >
-                <option value="plato_extendido">🍽️ Plato Extendido (25 cm est.)</option>
+                <option value="plato_extendido">
+                  🍽️ Plato Extendido (25 cm est.)
+                </option>
                 <option value="plato_hondo">🍲 Plato Hondo</option>
                 <option value="bowl">🥣 Bowl Pequeño</option>
               </select>
@@ -396,7 +416,7 @@ export const PlateCameraModal: React.FC<PlateCameraModalProps> = ({
           )}
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex flex-wrap items-center gap-2 pt-1">
             {!capturedImage ? (
               <>
                 <button
@@ -405,7 +425,7 @@ export const PlateCameraModal: React.FC<PlateCameraModalProps> = ({
                   className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition"
                 >
                   <Upload className="w-4 h-4 text-slate-400" />
-                  <span>Subir Foto</span>
+                  <span>Elegir de la galería</span>
                 </button>
                 <button
                   type="button"
@@ -413,11 +433,19 @@ export const PlateCameraModal: React.FC<PlateCameraModalProps> = ({
                   className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-[0.98] transition"
                 >
                   <Camera className="w-4 h-4" />
-                  <span>Capturar Plato</span>
+                  <span>Tomar foto</span>
                 </button>
               </>
             ) : (
               <>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isAnalyzing}
+                  className="rounded-xl bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-300 disabled:opacity-50"
+                >
+                  Elegir de la galería
+                </button>
                 <button
                   type="button"
                   onClick={handleRetake}
@@ -434,7 +462,9 @@ export const PlateCameraModal: React.FC<PlateCameraModalProps> = ({
                   className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-[0.98] transition disabled:opacity-50"
                 >
                   <Sparkles className="w-4 h-4 text-slate-950" />
-                  <span>{isAnalyzing ? 'Analizando...' : 'Analizar Plato con IA'}</span>
+                  <span>
+                    {isAnalyzing ? 'Analizando...' : 'Analizar Plato con IA'}
+                  </span>
                 </button>
               </>
             )}

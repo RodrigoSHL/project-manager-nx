@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import {
   BadRequestException,
   ConflictException,
@@ -19,6 +20,12 @@ import {
   PautaSelection,
   calculatePauta,
   isNutritionPlanConfigured,
+  UpdateMealQuantity,
+  mealEntrySchema,
+  ProductEquivalenceInput,
+  ProductEquivalenceResult,
+  PautaRule,
+  nutritionPlanSchema,
 } from '@project-manager/macrofit-contracts';
 import {
   NutritionDailyLogEntity,
@@ -29,6 +36,15 @@ import {
   NutritionWaterOperationEntity,
   NutritionPlanEntity,
 } from './entities/nutrition.entity';
+
+// Kept only in the stored JSONB, never accepted from or returned to the browser.
+// Repeated corrections use the same reference to avoid accumulating rounding loss.
+type StoredMealEntry = MealEntry & {
+  quantityReference?: Pick<
+    MealEntry,
+    'amountGrams' | 'calories' | 'protein' | 'carbs' | 'fat' | 'portionsCount'
+  >;
+};
 
 @Injectable()
 export class NutritionService {
@@ -128,7 +144,7 @@ export class NutritionService {
         await manager.update(
           NutritionDailyLogEntity,
           { userId, date: today },
-          { planVersion: plan.version }
+          { planVersion: plan.version, productRules: [] }
         );
         const entries = await manager.findBy(NutritionMealEntryEntity, {
           userId,
@@ -162,7 +178,8 @@ export class NutritionService {
     manager: EntityManager,
     userId: string,
     date: string,
-    version?: number | null
+    version?: number | null,
+    productRules: PautaRule[] = []
   ): Promise<NutritionPlan | null> {
     const plan =
       version != null
@@ -171,7 +188,21 @@ export class NutritionService {
             where: { userId, startsOn: LessThanOrEqual(date) },
             order: { version: 'DESC' },
           });
-    return plan?.data.enabled ? plan.data : null;
+    if (!plan?.data.enabled) return null;
+    // Day-local additions keep frozen goals and all other days intact.
+    let rules = plan.data.rules;
+    for (const extra of productRules) {
+      rules = [
+        ...rules
+          .filter((rule) => rule.id !== extra.id)
+          .map((rule) => ({
+            ...rule,
+            foodIds: rule.foodIds.filter((id) => !extra.foodIds.includes(id)),
+          })),
+        extra,
+      ];
+    }
+    return { ...plan.data, rules };
   }
 
   private async bindDayPlan(
@@ -183,7 +214,13 @@ export class NutritionService {
       userId,
       date,
     });
-    const plan = await this.dayPlan(manager, userId, date, log.planVersion);
+    const plan = await this.dayPlan(
+      manager,
+      userId,
+      date,
+      log.planVersion,
+      log.productRules
+    );
     if (plan && log.planVersion == null)
       await manager.update(
         NutritionDailyLogEntity,
@@ -225,6 +262,138 @@ export class NutritionService {
     });
   }
 
+  classifyProduct(
+    userId: string,
+    date: string,
+    id: string,
+    input: ProductEquivalenceInput
+  ): Promise<ProductEquivalenceResult> {
+    return this.transaction(userId, async (manager) => {
+      const row = await manager.findOneBy(NutritionMealEntryEntity, {
+        userId,
+        date,
+        id,
+      });
+      if (!row) throw new NotFoundException('Consumo no encontrado.');
+      const product = await manager.findOneBy(NutritionFoodEntity, {
+        userId,
+        id: input.productId,
+      });
+      if (!product)
+        throw new NotFoundException('El producto no existe en tu catálogo.');
+      const latest = await manager.findOne(NutritionPlanEntity, {
+        where: { userId },
+        order: { version: 'DESC' },
+      });
+      const day = await manager.findOneByOrFail(NutritionDailyLogEntity, {
+        userId,
+        date,
+      });
+      const plan = await this.bindDayPlan(manager, userId, date);
+      if (!latest?.data.enabled || !plan)
+        throw new BadRequestException(
+          'Necesitas una pauta activa para guardar equivalencias.'
+        );
+      if (
+        latest.version !== input.expectedPlanVersion ||
+        plan.version !== input.expectedDayPlanVersion
+      )
+        throw new ConflictException(
+          'La pauta cambió en otra sesión. Actualiza tus registros antes de clasificar.'
+        );
+      const quantity = row.data.quantity ?? {
+        amount: row.data.amountGrams,
+        unit: 'g',
+      };
+      if (
+        quantity.amount !== input.expectedQuantity.amount ||
+        quantity.unit !== input.expectedQuantity.unit
+      )
+        throw new ConflictException(
+          'La cantidad consumida cambió. Actualiza el diario antes de clasificar.'
+        );
+      // A changed reference gets a new identity; existing consumption snapshots stay valid.
+      const ruleId =
+        'product-' +
+        createHash('sha256')
+          .update(
+            JSON.stringify([product.id, product.data.name, input.equivalence])
+          )
+          .digest('hex')
+          .slice(0, 32);
+      const rule: PautaRule = {
+        id: ruleId,
+        name: product.data.name,
+        foodIds: [product.id],
+        aliases: [],
+        ...input.equivalence,
+      };
+      // Product-specific copies never change the reference of a shared rule.
+      const upsertRules = (rules: PautaRule[]) => [
+        ...rules
+          .filter((item) => item.id !== ruleId)
+          .map((item) => ({
+            ...item,
+            foodIds: item.foodIds.filter((foodId) => foodId !== product.id),
+          })),
+        rule,
+      ];
+      const nextPlan: NutritionPlan = {
+        ...latest.data,
+        rules: upsertRules(latest.data.rules),
+        version: latest.version + 1,
+        createdAt: new Date().toISOString(),
+      };
+      if (
+        !nutritionPlanSchema.safeParse(nextPlan).success ||
+        upsertRules(plan.rules).length > 250
+      )
+        throw new BadRequestException(
+          'La pauta admite hasta 250 equivalencias. Revisa sus reglas antes de agregar otra.'
+        );
+      const selection: PautaSelection = {
+        ruleId,
+        ...(input.quantity ? { quantity: input.quantity } : {}),
+      };
+      const preview = calculatePauta(
+        { ...plan, rules: upsertRules(plan.rules) },
+        row.data,
+        selection
+      );
+      if (preview.status === 'pending')
+        throw new BadRequestException(
+          'Indica la cantidad consumida en la unidad de la equivalencia.'
+        );
+      await manager.insert(NutritionPlanEntity, {
+        userId,
+        version: nextPlan.version,
+        startsOn: nextPlan.startsOn,
+        data: nextPlan,
+      });
+      await manager.update(
+        NutritionDailyLogEntity,
+        { userId, date },
+        {
+          productRules: [
+            ...(day.productRules ?? []).filter((item) => item.id !== ruleId),
+            rule,
+          ],
+        }
+      );
+      await manager.update(
+        NutritionMealEntryEntity,
+        { userId, date, id },
+        {
+          data: { ...row.data, pautaSelection: selection, pauta: preview },
+        }
+      );
+      return {
+        account: await this.account(manager, userId),
+        day: await this.daily(manager, userId, date),
+      };
+    });
+  }
+
   private validateSelection(plan: NutritionPlan, selection?: PautaSelection) {
     if (
       selection?.ruleId &&
@@ -250,13 +419,18 @@ export class NutritionService {
     });
     return {
       date,
-      meals: entries.map((entry) => entry.data),
+      meals: entries.map((entry) => {
+        const data: StoredMealEntry = { ...entry.data };
+        delete data.quantityReference;
+        return data;
+      }),
       waterIntakeMl: log?.waterIntakeMl ?? 0,
       nutritionPlan: await this.dayPlan(
         manager,
         userId,
         date,
-        log?.planVersion
+        log?.planVersion,
+        log?.productRules
       ),
       ...(log?.notes != null ? { notes: log.notes } : {}),
       ...(log?.weightCheckKg != null
@@ -297,7 +471,7 @@ export class NutritionService {
       if (previous) {
         // Compare JSONB values in PostgreSQL; object key order is irrelevant.
         const [same] = await manager.query(
-          "SELECT date = $3::date AND data - 'pauta' = $4::jsonb - 'pauta' AS matches FROM nutrition_meal_entries WHERE user_id = $1 AND id = $2",
+          "SELECT date = $3::date AND data - 'pauta' - 'quantityReference' = $4::jsonb - 'pauta' AS matches FROM nutrition_meal_entries WHERE user_id = $1 AND id = $2",
           [userId, entry.id, date, JSON.stringify(entry)]
         );
         if (!same?.matches)
@@ -341,6 +515,104 @@ export class NutritionService {
   removeMeal(userId: string, date: string, id: string) {
     return this.transaction(userId, async (manager) => {
       await manager.delete(NutritionMealEntryEntity, { userId, date, id });
+      return this.daily(manager, userId, date);
+    });
+  }
+  updateMealQuantity(
+    userId: string,
+    date: string,
+    id: string,
+    input: UpdateMealQuantity
+  ) {
+    return this.transaction(userId, async (manager) => {
+      const row = await manager.findOneBy(NutritionMealEntryEntity, {
+        userId,
+        date,
+        id,
+      });
+      if (!row) throw new NotFoundException('Alimento no encontrado.');
+      const current: StoredMealEntry = row.data;
+      const currentQuantity = current.quantity ?? {
+        amount: current.amountGrams,
+        unit: 'g' as const,
+      };
+      if (
+        input.quantity.unit !== currentQuantity.unit ||
+        input.expectedQuantity.unit !== currentQuantity.unit
+      )
+        throw new BadRequestException(
+          'Conserva la unidad del registro. No se convierten gramos, ml y unidades automáticamente.'
+        );
+      if (currentQuantity.amount === input.quantity.amount)
+        return this.daily(manager, userId, date);
+      if (currentQuantity.amount !== input.expectedQuantity.amount)
+        throw new ConflictException(
+          'La cantidad de este alimento cambió en otra sesión. Actualiza el diario antes de editarlo.'
+        );
+      const reference = current.quantityReference ?? {
+        amountGrams: current.amountGrams,
+        calories: current.calories,
+        protein: current.protein,
+        carbs: current.carbs,
+        fat: current.fat,
+        ...(current.portionsCount != null
+          ? { portionsCount: current.portionsCount }
+          : {}),
+      };
+      if (!Number.isFinite(reference.amountGrams) || reference.amountGrams <= 0)
+        throw new BadRequestException(
+          'Este registro no tiene una cantidad base válida para recalcular.'
+        );
+      const ratio = input.quantity.amount / reference.amountGrams;
+      const scale = (value: number) =>
+        ratio === 1 ? value : Number((value * ratio).toFixed(1));
+      const selection = current.pautaSelection
+        ? {
+            ...current.pautaSelection,
+            ...(current.pautaSelection.quantity
+              ? {
+                  quantity: {
+                    ...current.pautaSelection.quantity,
+                    amount:
+                      (current.pautaSelection.quantity.amount *
+                        input.quantity.amount) /
+                      currentQuantity.amount,
+                  },
+                }
+              : {}),
+          }
+        : undefined;
+      const plan = await this.bindDayPlan(manager, userId, date);
+      const data: StoredMealEntry = {
+        ...current,
+        amountGrams: input.quantity.amount,
+        quantity: input.quantity,
+        calories:
+          ratio === 1
+            ? reference.calories
+            : Math.round(reference.calories * ratio),
+        protein: scale(reference.protein),
+        carbs: scale(reference.carbs),
+        fat: scale(reference.fat),
+        ...(reference.portionsCount != null
+          ? { portionsCount: reference.portionsCount * ratio }
+          : {}),
+        ...(selection ? { pautaSelection: selection } : {}),
+      };
+      delete data.pauta;
+      delete data.quantityReference;
+      if (plan) data.pauta = calculatePauta(plan, data, selection);
+      const validated = mealEntrySchema.safeParse(data);
+      if (!validated.success)
+        throw new BadRequestException(
+          'La cantidad produce valores fuera de los límites permitidos. Revisa el valor ingresado.'
+        );
+      data.quantityReference = reference;
+      await manager.update(
+        NutritionMealEntryEntity,
+        { userId, date, id },
+        { data }
+      );
       return this.daily(manager, userId, date);
     });
   }

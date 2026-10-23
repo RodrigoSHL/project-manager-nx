@@ -6,6 +6,7 @@ import {
   MealTemplate,
   UserProfile,
   NutritionPlan,
+  PautaRule,
 } from '@project-manager/macrofit-contracts';
 
 @Entity('nutrition_profiles')
@@ -27,6 +28,8 @@ export class NutritionDailyLogEntity {
   weightCheckKg!: number | null;
   @Column('integer', { name: 'plan_version', nullable: true })
   planVersion!: number | null;
+  @Column('jsonb', { name: 'product_rules', default: () => "'[]'::jsonb" })
+  productRules!: PautaRule[];
 }
 @Entity('nutrition_plans')
 export class NutritionPlanEntity {

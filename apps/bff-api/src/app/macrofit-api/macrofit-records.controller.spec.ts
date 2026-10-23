@@ -38,6 +38,70 @@ describe('MacroFit personal records BFF', () => {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
   };
+  it('protects and validates the product equivalence write before forwarding the verified owner', async () => {
+    const path =
+      '/api/macrofit/me/days/2026-10-23/meals/meal/product-equivalence';
+    const body = {
+      productId: 'heinz',
+      expectedPlanVersion: 2,
+      expectedDayPlanVersion: 1,
+      expectedQuantity: { amount: 30, unit: 'g' },
+      equivalence: {
+        referenceAmount: 15,
+        unit: 'g',
+        free: false,
+        notes: '',
+        contributions: [{ group: 'fats', portions: 0.25 }],
+      },
+    };
+    expect(
+      (
+        await httpFetch(origin + path, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+      ).status
+    ).toBe(401);
+    expect(upstream).not.toHaveBeenCalled();
+    for (const invalid of [
+      { ...body, userId: 'foreign' },
+      { ...body, expectedPlanVersion: 0 },
+      { ...body, equivalence: { ...body.equivalence, contributions: [] } },
+      { ...body, equivalence: { ...body.equivalence, free: true } },
+    ]) {
+      expect(
+        (
+          await httpFetch(origin + path, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify(invalid),
+          })
+        ).status
+      ).toBe(400);
+    }
+    expect(upstream).not.toHaveBeenCalled();
+    upstream.mockResolvedValue(new Response('{}', { status: 200 }));
+    expect(
+      (
+        await httpFetch(origin + path, {
+          method: 'PUT',
+          headers: { ...headers, 'x-user-id': 'foreign' },
+          body: JSON.stringify(body),
+        })
+      ).status
+    ).toBe(200);
+    expect(upstream).toHaveBeenCalledWith(
+      expect.stringContaining(
+        '/days/2026-10-23/meals/meal/product-equivalence'
+      ),
+      expect.objectContaining({
+        method: 'PUT',
+        headers: expect.objectContaining({ 'x-user-id': userId }),
+      })
+    );
+    expect(JSON.parse(upstream.mock.calls[0][1].body)).toEqual(body);
+  });
   it.each(['/api/macrofit/me', '/api/macrofit/me/days/2026-10-23'])(
     'rejects anonymous and invalid sessions: %s',
     async (path) => {
@@ -194,5 +258,70 @@ describe('MacroFit personal records BFF', () => {
     const response = await httpFetch(`${origin}/api/macrofit/me`, { headers });
     expect(response.status).toBe(503);
     expect((await response.json()).message).toBe('Base no disponible');
+  });
+  it('authenticates quantity edits and forwards only validated quantities under the JWT owner', async () => {
+    const path = '/api/macrofit/me/days/2026-10-23/meals/entry/quantity';
+    const body = {
+      quantity: { amount: 120, unit: 'g' },
+      expectedQuantity: { amount: 140, unit: 'g' },
+    };
+    expect(
+      (
+        await httpFetch(origin + path, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+      ).status
+    ).toBe(401);
+    expect(upstream).not.toHaveBeenCalled();
+    upstream.mockResolvedValue(new Response('{}', { status: 200 }));
+    expect(
+      (
+        await httpFetch(origin + path, {
+          method: 'PUT',
+          headers: { ...headers, 'x-user-id': 'forged' },
+          body: JSON.stringify(body),
+        })
+      ).status
+    ).toBe(200);
+    expect(upstream).toHaveBeenCalledWith(
+      expect.stringContaining('/me/days/2026-10-23/meals/entry/quantity'),
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify(body),
+        headers: expect.objectContaining({ 'x-user-id': userId }),
+      })
+    );
+    upstream.mockClear();
+    for (const invalid of [
+      { ...body, userId: 'forged' },
+      { ...body, calories: 1 },
+      { quantity: body.quantity },
+      { ...body, quantity: { amount: -1, unit: 'g' } },
+      { ...body, quantity: { amount: 20001, unit: 'g' } },
+      { ...body, quantity: { amount: 1, unit: 'kg' } },
+    ]) {
+      expect(
+        (
+          await httpFetch(origin + path, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify(invalid),
+          })
+        ).status
+      ).toBe(400);
+    }
+    expect(upstream).not.toHaveBeenCalled();
+    upstream.mockResolvedValue(
+      new Response('{"message":"La cantidad cambió"}', { status: 409 })
+    );
+    const conflict = await httpFetch(origin + path, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(body),
+    });
+    expect(conflict.status).toBe(409);
+    expect((await conflict.json()).message).toBe('La cantidad cambió');
   });
 });

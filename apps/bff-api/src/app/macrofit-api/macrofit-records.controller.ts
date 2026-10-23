@@ -23,6 +23,8 @@ import {
   waterSchema,
   saveNutritionPlanSchema,
   pautaSelectionSchema,
+  updateMealQuantitySchema,
+  productEquivalenceSchema,
 } from '@project-manager/macrofit-contracts';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { MacrofitApiClient } from './macrofit-api.client';
@@ -83,6 +85,20 @@ export class MacrofitRecordsController {
       parse(pautaSelectionSchema, body)
     );
   }
+  @Put('days/:date/meals/:id/product-equivalence')
+  classifyProduct(
+    @Req() req: AuthenticatedRequest,
+    @Param('date') date: string,
+    @Param('id') id: string,
+    @Body() body: unknown
+  ) {
+    return this.send(
+      req,
+      `${day(date)}/meals/${segment(id)}/product-equivalence`,
+      'PUT',
+      parse(productEquivalenceSchema, body)
+    );
+  }
   @Get('days/:date')
   @Header('Cache-Control', 'no-store')
   log(@Req() req: AuthenticatedRequest, @Param('date') date: string) {
@@ -108,6 +124,20 @@ export class MacrofitRecordsController {
     @Param('id') id: string
   ) {
     return this.send(req, `${day(date)}/meals/${segment(id)}`, 'DELETE');
+  }
+  @Put('days/:date/meals/:id/quantity')
+  quantity(
+    @Req() req: AuthenticatedRequest,
+    @Param('date') date: string,
+    @Param('id') id: string,
+    @Body() body: unknown
+  ) {
+    return this.send(
+      req,
+      `${day(date)}/meals/${segment(id)}/quantity`,
+      'PUT',
+      parse(updateMealQuantitySchema, body)
+    );
   }
   @Post('days/:date/water')
   water(

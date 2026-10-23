@@ -260,6 +260,40 @@ export const mealEntrySchema = z
 export const addMealsSchema = z
   .object({ entries: z.array(mealEntrySchema).min(1).max(100) })
   .strict();
+const mealQuantitySchema = z.object({ amount: positive(20000), unit }).strict();
+export const updateMealQuantitySchema = z
+  .object({
+    quantity: mealQuantitySchema,
+    expectedQuantity: mealQuantitySchema,
+  })
+  .strict();
+export type UpdateMealQuantity = z.infer<typeof updateMealQuantitySchema>;
+export const productEquivalenceSchema = z
+  .object({
+    productId: identifierSchema,
+    expectedPlanVersion: z.number().int().positive(),
+    expectedDayPlanVersion: z.number().int().positive(),
+    expectedQuantity: mealQuantitySchema,
+    equivalence: z
+      .object({
+        referenceAmount: positive(20000),
+        unit,
+        contributions: contributionsSchema,
+        free: z.boolean(),
+        notes: z.string().max(2000),
+      })
+      .strict()
+      .refine(
+        (rule) =>
+          rule.free
+            ? rule.contributions.length === 0
+            : rule.contributions.length > 0,
+        'Indica porciones o marca el producto como libre según tu pauta.'
+      ),
+    quantity: mealQuantitySchema.optional(),
+  })
+  .strict();
+export type ProductEquivalenceInput = z.infer<typeof productEquivalenceSchema>;
 export const waterSchema = z
   .object({
     operationId: z.string().uuid(),
@@ -323,3 +357,12 @@ export const nutritionAccountSchema = z
   .strict()
   .refine((account) => (account.profile === null) === (account.goals === null));
 export type NutritionAccount = z.infer<typeof nutritionAccountSchema>;
+export const productEquivalenceResultSchema = z
+  .object({
+    account: nutritionAccountSchema,
+    day: dailyLogSchema,
+  })
+  .strict();
+export type ProductEquivalenceResult = z.infer<
+  typeof productEquivalenceResultSchema
+>;

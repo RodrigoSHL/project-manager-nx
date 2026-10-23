@@ -8,14 +8,19 @@ import {
   FoodItem,
   Settings,
   NutritionPlanInput,
+  dailyLogSchema,
+  productEquivalenceResultSchema,
+  ProductEquivalenceInput,
 } from '@project-manager/macrofit-contracts';
 import {
+  NutritionMealEntryEntity,
   NutritionPlanEntity,
   nutritionEntities,
 } from './entities/nutrition.entity';
 import { NutritionService } from './nutrition.service';
 import { NutritionController } from './nutrition.controller';
 import { AddNutritionPlans1792742400000 } from '../../migrations/1792742400000-AddNutritionPlans';
+import { AddDayProductEquivalences1792785600000 } from '../../migrations/1792785600000-AddDayProductEquivalences';
 import { CreateNutritionRecords1792713600000 } from '../../migrations/1792713600000-CreateNutritionRecords';
 
 const url = process.env.MACROFIT_TEST_DATABASE_URL;
@@ -77,6 +82,7 @@ suite('Nutrition PostgreSQL integration', () => {
     migrations: [
       CreateNutritionRecords1792713600000,
       AddNutritionPlans1792742400000,
+      AddDayProductEquivalences1792785600000,
     ],
     synchronize: false,
   });
@@ -531,12 +537,526 @@ suite('Nutrition PostgreSQL integration', () => {
       ).status
     ).toBe(401);
   });
+  it('edits historical quantities in place, recalculates the frozen plan and avoids cumulative nutrient rounding', async () => {
+    const owner = randomUUID();
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Santiago',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+    const input: NutritionPlanInput = {
+      name: 'Pauta para edición',
+      startsOn: today,
+      enabled: true,
+      targets: {
+        protein: 10,
+        carbs: null,
+        fats: null,
+        dairy: null,
+        fruits: null,
+        veggies: null,
+        supplements: null,
+      },
+      waterTargetMl: 2000,
+      waterIsMinimum: false,
+      rules: [
+        {
+          id: 'tuna',
+          name: 'Atún',
+          foodIds: ['own-food'],
+          aliases: [],
+          referenceAmount: 60,
+          unit: 'g',
+          free: false,
+          notes: '',
+          contributions: [{ group: 'protein', portions: 1 }],
+        },
+      ],
+    };
+    await service.savePlan(owner, input);
+    const original: MealEntry = {
+      ...meal(),
+      foodName: 'Atún',
+      amountGrams: 140,
+      quantity: { amount: 140, unit: 'g' },
+      calories: 163,
+      protein: 31.7,
+      carbs: 0.2,
+      fat: 2.1,
+    };
+    const sibling = meal();
+    await service.addMeals(owner, today, [original, sibling]);
+    await service.changeWater(owner, today, {
+      operationId: randomUUID(),
+      amountMl: 250,
+    });
+    const before = await service.getDay(owner, today);
+    const originalRow = await db.manager.findOneByOrFail(
+      NutritionMealEntryEntity,
+      { userId: owner, id: original.id }
+    );
+    // A later plan and a changed catalog must not replace this meal's historical basis.
+    await service.savePlan(owner, {
+      ...input,
+      rules: [{ ...input.rules[0], referenceAmount: 120 }],
+    });
+    await service.saveFood(owner, { ...food, calories: 900, protein: 80 });
+    const edit = (amount: number, expected: number) =>
+      call(`/days/${today}/meals/${original.id}/quantity`, {
+        method: 'PUT',
+        headers: { 'x-user-id': owner },
+        body: JSON.stringify({
+          quantity: { amount, unit: 'g' },
+          expectedQuantity: { amount: expected, unit: 'g' },
+        }),
+      });
+    const response = await edit(120, 140);
+    expect(response.status).toBe(200);
+    const edited = await response.json();
+    expect(dailyLogSchema.safeParse(edited).success).toBe(true);
+    expect(edited.meals[0]).toMatchObject({
+      id: original.id,
+      foodName: 'Atún',
+      amountGrams: 120,
+      quantity: { amount: 120, unit: 'g' },
+      calories: 140,
+      protein: 27.2,
+      carbs: 0.2,
+      fat: 1.8,
+      timestamp: original.timestamp,
+      pauta: {
+        planVersion: 1,
+        contributions: [{ group: 'protein', portions: 2 }],
+      },
+    });
+    expect(edited.meals[0]).not.toHaveProperty('quantityReference');
+    expect(edited.meals[1]).toEqual(before.meals[1]);
+    expect(edited.waterIntakeMl).toBe(250);
+    expect((await edit(120, 140)).status).toBe(200); // Exact request retry is a no-op.
+    expect((await edit(100, 140)).status).toBe(409); // A stale correction cannot overwrite the current quantity.
+    expect((await service.getDay(owner, today)).meals[0].amountGrams).toBe(120);
+    expect((await edit(1, 120)).status).toBe(200);
+    expect((await edit(140, 1)).status).toBe(200);
+    const restored = await service.getDay(owner, today);
+    expect(restored.meals).toEqual(before.meals); // Nutrients return exactly, even after a tiny rounded portion.
+    const afterRow = await db.manager.findOneByOrFail(
+      NutritionMealEntryEntity,
+      { userId: owner, id: original.id }
+    );
+    expect(afterRow.position).toBe(originalRow.position);
+    expect(afterRow.createdAt).toEqual(originalRow.createdAt);
+  });
+  it('supports native units, scales explicit pauta quantities and rejects foreign, invalid or conflicting edits atomically', async () => {
+    const owner = randomUUID();
+    const stranger = randomUUID();
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Santiago',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+    await service.savePlan(owner, {
+      name: 'Pauta',
+      startsOn: today,
+      enabled: true,
+      targets: {
+        protein: 10,
+        carbs: null,
+        fats: null,
+        dairy: null,
+        fruits: null,
+        veggies: null,
+        supplements: null,
+      },
+      waterTargetMl: 2000,
+      waterIsMinimum: false,
+      rules: [
+        {
+          id: 'powder',
+          name: 'Proteína',
+          foodIds: [],
+          aliases: [],
+          referenceAmount: 30,
+          unit: 'g',
+          free: false,
+          notes: '',
+          contributions: [{ group: 'protein', portions: 1 }],
+        },
+      ],
+    });
+    const original = {
+      ...meal(),
+      amountGrams: 0.5,
+      quantity: { amount: 0.5, unit: 'scoop' as const },
+      calories: 60,
+      protein: 10,
+      carbs: 1,
+      fat: 0.5,
+      pautaSelection: {
+        ruleId: 'powder',
+        quantity: { amount: 15, unit: 'g' as const },
+      },
+    };
+    await service.addMeals(owner, today, [original]);
+    const input = {
+      quantity: { amount: 1, unit: 'scoop' as const },
+      expectedQuantity: { amount: 0.5, unit: 'scoop' as const },
+    };
+    const edited = await service.updateMealQuantity(
+      owner,
+      today,
+      original.id,
+      input
+    );
+    expect(edited.meals[0]).toMatchObject({
+      amountGrams: 1,
+      quantity: { amount: 1, unit: 'scoop' },
+      calories: 120,
+      protein: 20,
+      pautaSelection: { quantity: { amount: 30, unit: 'g' } },
+      pauta: { contributions: [{ group: 'protein', portions: 1 }] },
+    });
+    await expect(
+      service.updateMealQuantity(stranger, today, original.id, input)
+    ).rejects.toMatchObject({ status: 404 });
+    await expect(
+      service.updateMealQuantity(owner, '2020-01-01', original.id, input)
+    ).rejects.toMatchObject({ status: 404 });
+    const path = `/days/${today}/meals/${original.id}/quantity`;
+    for (const body of [
+      { ...input, quantity: { amount: 2, unit: 'g' } },
+      { ...input, quantity: { amount: 0, unit: 'scoop' } },
+      { ...input, calories: 100 },
+      { ...input, userId: stranger },
+      { ...input, quantityReference: {} },
+    ]) {
+      expect(
+        (
+          await call(path, {
+            method: 'PUT',
+            headers: { 'x-user-id': owner },
+            body: JSON.stringify(body),
+          })
+        ).status
+      ).toBe(400);
+    }
+    expect(
+      (
+        await fetch(origin + '/api/me' + path, {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(input),
+        })
+      ).status
+    ).toBe(401);
+    const concurrent = await Promise.allSettled(
+      [2, 3].map((amount) =>
+        service.updateMealQuantity(owner, today, original.id, {
+          quantity: { amount, unit: 'scoop' },
+          expectedQuantity: { amount: 1, unit: 'scoop' },
+        })
+      )
+    );
+    expect(
+      concurrent.filter((result) => result.status === 'fulfilled')
+    ).toHaveLength(1);
+    expect(
+      concurrent.filter((result) => result.status === 'rejected')
+    ).toHaveLength(1);
+    // Bounds failures roll back both the food update and any plan binding.
+    const tiny = { ...meal(), amountGrams: 0.01, calories: 99999 };
+    await service.addMeals(owner, today, [tiny]);
+    await expect(
+      service.updateMealQuantity(owner, today, tiny.id, {
+        quantity: { amount: 20000, unit: 'g' },
+        expectedQuantity: { amount: 0.01, unit: 'g' },
+      })
+    ).rejects.toMatchObject({ status: 400 });
+    expect(
+      (await service.getDay(owner, today)).meals.find(
+        (entry) => entry.id === tiny.id
+      )?.calories
+    ).toBe(99999);
+  });
+  it('classifies a saved branded product atomically, preserving frozen days and reusing its reference for future consumption', async () => {
+    const owner = randomUUID();
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Santiago',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+    const future = new Date(today + 'T12:00:00Z');
+    future.setUTCDate(future.getUTCDate() + 1);
+    const tomorrow = future.toISOString().slice(0, 10);
+    const planInput = {
+      name: 'Pauta original',
+      startsOn: today,
+      enabled: true,
+      targets: {
+        protein: 10,
+        carbs: null,
+        fats: 2,
+        dairy: null,
+        fruits: null,
+        veggies: null,
+        supplements: null,
+      },
+      waterTargetMl: 2000,
+      waterIsMinimum: false,
+      rules: [
+        {
+          id: 'original',
+          name: 'Carne',
+          foodIds: ['own-food'],
+          aliases: [],
+          referenceAmount: 50,
+          unit: 'g' as const,
+          free: false,
+          notes: '',
+          contributions: [{ group: 'protein' as const, portions: 1 }],
+        },
+      ],
+    };
+    await service.savePlan(owner, planInput);
+    const mustard = {
+      ...meal(),
+      foodId: 'ai-mustard',
+      foodName: 'Mostaza',
+      amountGrams: 30,
+      quantity: { amount: 30, unit: 'g' as const },
+      calories: 18,
+      protein: 1.2,
+      carbs: 1.5,
+      fat: 0.8,
+    };
+    const sibling = meal();
+    await service.addMeals(owner, today, [mustard, sibling]);
+    await service.addMeals(owner, tomorrow, [{ ...meal(), id: randomUUID() }]);
+    await service.changeWater(owner, today, {
+      operationId: randomUUID(),
+      amountMl: 250,
+    });
+    const frozenFuture = await service.getDay(owner, tomorrow);
+    const before = await service.getDay(owner, today);
+    await service.savePlan(owner, {
+      ...planInput,
+      targets: { ...planInput.targets, protein: 12 },
+    });
+    const product = {
+      ...food,
+      id: 'heinz-mustard',
+      name: 'Mostaza Heinz',
+      brand: 'Heinz',
+      servingSizeGrams: 100,
+      calories: 90,
+      protein: 5,
+      carbs: 10,
+      fat: 3,
+      isCustom: true,
+    };
+    await service.saveFood(owner, product);
+    const input: ProductEquivalenceInput = {
+      productId: product.id,
+      expectedPlanVersion: 2,
+      expectedDayPlanVersion: 1,
+      expectedQuantity: { amount: 30, unit: 'g' },
+      equivalence: {
+        referenceAmount: 15,
+        unit: 'g',
+        contributions: [{ group: 'fats', portions: 0.25 }],
+        free: false,
+        notes:
+          'Referencia de prueba ingresada explícitamente; no es una recomendación.',
+      },
+    };
+    const route = `/days/${today}/meals/${mustard.id}/product-equivalence`;
+    const response = await call(route, {
+      method: 'PUT',
+      headers: { 'x-user-id': owner },
+      body: JSON.stringify(input),
+    });
+    expect(response.status).toBe(200);
+    const result = await response.json();
+    expect(productEquivalenceResultSchema.safeParse(result).success).toBe(true);
+    expect(result.account.nutritionPlan.version).toBe(3);
+    expect(result.account.nutritionPlan.targets.protein).toBe(12);
+    expect(result.day.nutritionPlan.version).toBe(1);
+    expect(result.day.nutritionPlan.targets.protein).toBe(10);
+    expect(result.day.meals[0]).toMatchObject({
+      id: mustard.id,
+      foodId: 'ai-mustard',
+      calories: 18,
+      protein: 1.2,
+      amountGrams: 30,
+      pauta: {
+        status: 'matched',
+        ruleName: product.name,
+        contributions: [{ group: 'fats', portions: 0.5 }],
+      },
+    });
+    expect(result.day.meals[1]).toEqual(before.meals[1]);
+    expect(result.day.waterIntakeMl).toBe(250);
+    expect(await service.getDay(owner, tomorrow)).toEqual(frozenFuture);
+    await expect(
+      service.classifyProduct(owner, today, mustard.id, input)
+    ).rejects.toMatchObject({ status: 409 });
+    // New consumes of this saved product resolve automatically in an unbound day.
+    const later = new Date(future);
+    later.setUTCDate(later.getUTCDate() + 1);
+    const newDay = later.toISOString().slice(0, 10);
+    const reused = await service.addMeals(owner, newDay, [
+      {
+        ...mustard,
+        id: randomUUID(),
+        foodId: product.id,
+        foodName: product.name,
+      },
+    ]);
+    expect(reused.meals[0].pauta?.contributions).toEqual([
+      { group: 'fats', portions: 0.5 },
+    ]);
+    // A later reference has a distinct identity and must not corrupt earlier entries.
+    const second = { ...mustard, id: randomUUID() };
+    await service.addMeals(owner, today, [second]);
+    await service.classifyProduct(owner, today, second.id, {
+      ...input,
+      expectedPlanVersion: 3,
+      equivalence: {
+        ...input.equivalence,
+        contributions: [{ group: 'fats', portions: 0.5 }],
+      },
+    });
+    const edited = await service.updateMealQuantity(owner, today, mustard.id, {
+      quantity: { amount: 15, unit: 'g' },
+      expectedQuantity: { amount: 30, unit: 'g' },
+    });
+    expect(edited.meals[0].pauta?.contributions).toEqual([
+      { group: 'fats', portions: 0.25 },
+    ]);
+    expect(
+      edited.meals.find((entry) => entry.id === second.id)?.pauta?.contributions
+    ).toEqual([{ group: 'fats', portions: 1 }]);
+    await db.destroy();
+    await db.initialize();
+    expect(
+      (await service.getDay(owner, today)).meals[0].pauta?.contributions
+    ).toEqual([{ group: 'fats', portions: 0.25 }]);
+  });
+  it('rejects foreign products, invalid equivalences, stale quantities and unit mismatches without partial plan writes', async () => {
+    const owner = randomUUID(),
+      foreign = randomUUID();
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Santiago',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+    await service.savePlan(owner, {
+      name: 'Plan',
+      startsOn: today,
+      enabled: true,
+      targets: {
+        protein: 10,
+        carbs: null,
+        fats: null,
+        dairy: null,
+        fruits: null,
+        veggies: null,
+        supplements: null,
+      },
+      waterTargetMl: 2000,
+      waterIsMinimum: false,
+      rules: [
+        {
+          id: 'base',
+          name: 'Base',
+          foodIds: [],
+          aliases: [],
+          referenceAmount: 50,
+          unit: 'g',
+          free: false,
+          notes: '',
+          contributions: [{ group: 'protein', portions: 1 }],
+        },
+      ],
+    });
+    const item = meal();
+    await service.addMeals(owner, today, [item]);
+    await service.saveFood(foreign, { ...food, id: 'foreign-product' });
+    await service.saveFood(owner, food);
+    const input: ProductEquivalenceInput = {
+      productId: food.id,
+      expectedPlanVersion: 1,
+      expectedDayPlanVersion: 1,
+      expectedQuantity: { amount: item.amountGrams, unit: 'g' },
+      equivalence: {
+        referenceAmount: 1,
+        unit: 'ml',
+        free: false,
+        notes: '',
+        contributions: [{ group: 'fats', portions: 1 }],
+      },
+    };
+    await expect(
+      service.classifyProduct(owner, today, item.id, {
+        ...input,
+        productId: 'foreign-product',
+      })
+    ).rejects.toMatchObject({ status: 404 });
+    await expect(
+      service.classifyProduct(foreign, today, item.id, input)
+    ).rejects.toMatchObject({ status: 404 });
+    await expect(
+      service.classifyProduct(owner, today, item.id, input)
+    ).rejects.toMatchObject({ status: 400 });
+    await expect(
+      service.classifyProduct(owner, today, item.id, {
+        ...input,
+        expectedQuantity: { amount: 1, unit: 'g' },
+      })
+    ).rejects.toMatchObject({ status: 409 });
+    for (const body of [
+      { ...input, userId: foreign },
+      { ...input, equivalence: { ...input.equivalence, contributions: [] } },
+      { ...input, equivalence: { ...input.equivalence, free: true } },
+      { ...input, equivalence: { ...input.equivalence, referenceAmount: 0 } },
+    ]) {
+      expect(
+        (
+          await call(`/days/${today}/meals/${item.id}/product-equivalence`, {
+            method: 'PUT',
+            headers: { 'x-user-id': owner },
+            body: JSON.stringify(body),
+          })
+        ).status
+      ).toBe(400);
+    }
+    expect((await service.getAccount(owner)).nutritionPlan?.version).toBe(1);
+    const result = await service.classifyProduct(owner, today, item.id, {
+      ...input,
+      quantity: { amount: 2, unit: 'ml' },
+    });
+    expect(result.day.meals[0].pauta?.contributions).toEqual([
+      { group: 'fats', portions: 2 },
+    ]);
+    expect(result.day.meals[0].amountGrams).toBe(item.amountGrams);
+  });
   it('survives a new database connection and runs migration down/up cleanly', async () => {
     await db.destroy();
     await db.initialize();
     expect((await service.getAccount(a)).profile?.name).toBe('Persona real');
     expect((await service.getDay(a, date)).meals).toHaveLength(9);
     expect(await db.runMigrations()).toEqual([]);
+    await db.undoLastMigration();
+    expect(
+      (
+        await db.query(
+          "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_name = 'nutrition_daily_logs' AND column_name = 'product_rules'"
+        )
+      )[0].count
+    ).toBe(0);
     await db.undoLastMigration();
     expect(
       (await db.query("SELECT to_regclass('nutrition_plans') AS name"))[0].name

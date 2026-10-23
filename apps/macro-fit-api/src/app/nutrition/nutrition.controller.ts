@@ -27,6 +27,8 @@ import {
   waterSchema,
   saveNutritionPlanSchema,
   pautaSelectionSchema,
+  updateMealQuantitySchema,
+  productEquivalenceSchema,
 } from '@project-manager/macrofit-contracts';
 import { NutritionService } from './nutrition.service';
 
@@ -84,6 +86,20 @@ export class NutritionController {
       parseInput(pautaSelectionSchema, body)
     );
   }
+  @Put('days/:date/meals/:id/product-equivalence')
+  classifyProduct(
+    @Headers('x-user-id') userId: string,
+    @Param('date') date: string,
+    @Param('id') id: string,
+    @Body() body: unknown
+  ) {
+    return this.service.classifyProduct(
+      userId,
+      parseInput(dateSchema, date),
+      parseInput(identifierSchema, id),
+      parseInput(productEquivalenceSchema, body)
+    );
+  }
   @Get('days/:date')
   @Header('Cache-Control', 'no-store')
   day(@Headers('x-user-id') userId: string, @Param('date') date: string) {
@@ -111,6 +127,20 @@ export class NutritionController {
       userId,
       parseInput(dateSchema, date),
       parseInput(identifierSchema, id)
+    );
+  }
+  @Put('days/:date/meals/:id/quantity')
+  quantity(
+    @Headers('x-user-id') userId: string,
+    @Param('date') date: string,
+    @Param('id') id: string,
+    @Body() body: unknown
+  ) {
+    return this.service.updateMealQuantity(
+      userId,
+      parseInput(dateSchema, date),
+      parseInput(identifierSchema, id),
+      parseInput(updateMealQuantitySchema, body)
     );
   }
   @Post('days/:date/water')

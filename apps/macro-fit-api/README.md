@@ -101,6 +101,8 @@ Todas las rutas públicas siguientes requieren JWT y usan el prefijo `/api/macro
 | `PUT /settings` | Guardar `{profile, goals}` de forma atómica |
 | `GET /days/:date` | Diario `YYYY-MM-DD`, vacío si todavía no existe |
 | `POST /days/:date/meals` | Agregar `{entries: [...]}` en una transacción |
+| `PUT /days/:date/meals/:id/quantity` | Corregir `{quantity: {amount, unit}, expectedQuantity: {amount, unit}}` conservando la unidad original |
+| `PUT /days/:date/meals/:id/product-equivalence` | Guardar una equivalencia de un producto propio y clasificar el consumo de forma atómica |
 | `DELETE /days/:date/meals/:id` | Retirar una comida propia |
 | `POST /days/:date/water` | `{operationId, amountMl, reset?}`; incremento o reinicio |
 | `PUT /foods`, `PUT /templates` | Guardar alimentos o combos propios |
@@ -108,6 +110,12 @@ Todas las rutas públicas siguientes requieren JWT y usan el prefijo `/api/macro
 | `POST /import` | Importar `{settings?, foods, templates, logs}` una vez sin sobrescribir datos del servidor |
 
 Fechas reales, cantidades finitas, campos anidados, límites y campos desconocidos se validan con Zod. No se aceptan propietarios en los cuerpos. Lecturas personales llevan `Cache-Control: no-store`. El JSON de API/BFF admite hasta 5 MiB para historiales; no cambia el límite independiente de imágenes. `/api/health` ahora comprueba la conexión PostgreSQL y responde 503 si falla.
+
+Editar una cantidad conserva identidad, fecha y posición del alimento. La primera edición guarda una referencia nutricional privada en el JSONB existente, que permite recalcular sin acumular redondeos ni consultar el catálogo actualizado. La respuesta no expone esa referencia. Las equivalencias usan la versión de pauta del diario y sus cantidades explícitas se ajustan proporcionalmente. La cantidad esperada evita sobrescribir un cambio concurrente (409); las unidades no se convierten automáticamente. No requiere migraciones nuevas.
+
+La clasificación desde producto recibe `productId`, `expectedPlanVersion`, `expectedDayPlanVersion`, `expectedQuantity`, una `equivalence` explícita (`referenceAmount`, `unit`, `contributions`, `free`, `notes`) y una `quantity` opcional si hay que expresar el consumo en otra unidad. Verifica la propiedad de producto y consumo, valida el contrato estricto en BFF/API y rechaza versiones/cantidades desactualizadas con 409. Devuelve `{account, day}` validados por el contrato compartido. No consulta proveedores ni deduce equivalencias nutricionales.
+
+Esta operación requiere la migración `AddDayProductEquivalences1792785600000`, registrada en la configuración habitual de TypeORM. Agrega `nutrition_daily_logs.product_rules` JSONB con un arreglo vacío para los días existentes. Se guarda una versión nueva de la pauta de cuenta con la referencia del producto y se extiende únicamente el día elegido, conservando su versión de metas y las referencias anteriores. Las referencias diferentes reciben identidades diferentes; no se modifican nutrientes ni otros consumos. Una aplicación explícita de una pauta nueva a hoy reemplaza también estas adiciones del día. Se mantiene `synchronize=false`; el despliegue ejecuta la migración mediante `MACROFIT_MIGRATIONS_RUN=true`.
 
 Compose agrega la base al init de instalaciones nuevas y espera PostgreSQL saludable antes de iniciar MacroFit API, con migraciones activadas. Para volúmenes existentes, `scripts/deploy-oci.sh` crea la base si falta **después del backup**. No se recrea PostgreSQL. El rollback de imágenes conserva las tablas; `down` elimina las tablas y solo se usa en bases de prueba desechables.
 

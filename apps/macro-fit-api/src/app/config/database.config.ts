@@ -2,6 +2,7 @@ import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { nutritionEntities } from '../nutrition/entities/nutrition.entity';
 import { CreateNutritionRecords1792713600000 } from '../../migrations/1792713600000-CreateNutritionRecords';
 import { AddNutritionPlans1792742400000 } from '../../migrations/1792742400000-AddNutritionPlans';
+import { AddDayProductEquivalences1792785600000 } from '../../migrations/1792785600000-AddDayProductEquivalences';
 
 export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
   type: 'postgres',
@@ -23,6 +24,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
   migrations: [
     CreateNutritionRecords1792713600000,
     AddNutritionPlans1792742400000,
+    AddDayProductEquivalences1792785600000,
   ],
   migrationsRun: process.env.MACROFIT_MIGRATIONS_RUN === 'true',
   synchronize: false,

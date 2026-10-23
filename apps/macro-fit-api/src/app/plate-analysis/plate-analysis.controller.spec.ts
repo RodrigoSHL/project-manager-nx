@@ -10,6 +10,9 @@ describe('PlateAnalysis HTTP validation', () => {
   let origin: string;
   let image: Buffer;
   const service = {
+    analyzeMealText: jest
+      .fn()
+      .mockResolvedValue({ dish_name: 'text-provider-result' }),
     analyzePlate: jest.fn().mockResolvedValue({ dish_name: 'provider-result' }),
     readiness: jest.fn().mockReturnValue({ status: 'ready' }),
   };
@@ -35,7 +38,38 @@ describe('PlateAnalysis HTTP validation', () => {
     await app?.close();
     process.env = { ...environment };
   });
-  beforeEach(() => service.analyzePlate.mockClear());
+  beforeEach(() => {
+    service.analyzePlate.mockClear();
+    service.analyzeMealText.mockClear();
+  });
+  const describeMeal = (body: unknown) =>
+    fetch(`${origin}/audit/analyze-meal-text`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  it('accepts a trimmed text description and selected meal without an image', async () => {
+    const response = await describeMeal({
+      text: '  9 g de mayonesa  ',
+      mealType: 'lunch',
+    });
+    expect(response.status).toBe(200);
+    expect(service.analyzeMealText).toHaveBeenCalledWith(
+      '9 g de mayonesa',
+      'lunch'
+    );
+  });
+  it.each([
+    {},
+    { text: '     ' },
+    { text: 'a'.repeat(2001) },
+    { text: 200 },
+    { text: '200 g de arroz', extra: true },
+    { text: '200 g de arroz', mealType: 'invalid' },
+  ])('rejects an invalid text body before calling Gemini: %j', async (body) => {
+    expect((await describeMeal(body)).status).toBe(400);
+    expect(service.analyzeMealText).not.toHaveBeenCalled();
+  });
   function form(bytes: Uint8Array = new Uint8Array(image), mime = 'image/png') {
     const body = new FormData();
     body.append('image', new Blob([bytes], { type: mime }), 'plate');

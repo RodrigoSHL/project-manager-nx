@@ -1,8 +1,49 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { analyzePlateImage } from './plateAnalysisApi';
+import { analyzeMealText, analyzePlateImage } from './plateAnalysisApi';
 
 afterEach(() => vi.unstubAllGlobals());
 const image = () => new Blob(['jpeg'], { type: 'image/jpeg' });
+
+describe('text analysis request', () => {
+  it('sends only the reviewed text and optional meal as JSON through BFF', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: async () => ({ items: [] }) });
+    vi.stubGlobal('fetch', fetch);
+    await analyzeMealText('  200 g de carne  ', 'lunch');
+    const [path, init] = fetch.mock.calls[0];
+    expect(path).toBe('/api/macrofit/analyze-meal-text');
+    expect(JSON.parse(init.body)).toEqual({
+      text: '200 g de carne',
+      mealType: 'lunch',
+    });
+    expect(init.headers).toEqual({ 'content-type': 'application/json' });
+  });
+  it.each(['   ', 'a'.repeat(2001)])(
+    'does not send an invalid description',
+    async (text) => {
+      const fetch = vi.fn();
+      vi.stubGlobal('fetch', fetch);
+      await expect(analyzeMealText(text)).rejects.toThrow('2000');
+      expect(fetch).not.toHaveBeenCalled();
+    }
+  );
+  it('retains a useful error if text analysis receives an HTML gateway timeout', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 504,
+        json: async () => {
+          throw new SyntaxError();
+        },
+      })
+    );
+    await expect(analyzeMealText('200 g de carne')).rejects.toThrow(
+      'tardó demasiado'
+    );
+  });
+});
 
 describe('plate analysis errors', () => {
   it.each([502, 503, 504, 429])(

@@ -19,6 +19,14 @@ export class MacrofitApiClient {
     return this.request('/ready');
   }
 
+  analyzeMealText(body: { text: string; mealType?: string }) {
+    return this.request('/analyze-meal-text', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+
   analyze(
     file: { buffer: Buffer; mimetype: string },
     body: { hints?: string; plateTypeHint?: string }

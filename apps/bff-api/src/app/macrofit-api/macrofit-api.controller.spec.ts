@@ -29,6 +29,52 @@ describe('MacroFit BFF HTTP contract', () => {
   afterAll(async () => {
     await app?.close();
   });
+  const describeMeal = (body: unknown) =>
+    httpFetch(`${origin}/api/macrofit/analyze-meal-text`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  it('forwards a validated description as JSON to the internal API', async () => {
+    upstream.mockResolvedValue(
+      new Response('{"items":["text-result"]}', { status: 200 })
+    );
+    const response = await describeMeal({
+      text: '  9 g de mayonesa  ',
+      mealType: 'lunch',
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ items: ['text-result'] });
+    const [url, init] = upstream.mock.calls[0];
+    expect(url).toMatch(/\/api\/analyze-meal-text$/);
+    expect(init.headers).toEqual({ 'content-type': 'application/json' });
+    expect(JSON.parse(init.body)).toEqual({
+      text: '9 g de mayonesa',
+      mealType: 'lunch',
+    });
+  });
+  it.each([
+    {},
+    { text: '   ' },
+    { text: 'a'.repeat(2001) },
+    { text: 200 },
+    { text: '200 g de arroz', extra: true },
+    { text: '200 g de arroz', mealType: 'invalid' },
+  ])('rejects invalid text before forwarding: %j', async (body) => {
+    expect((await describeMeal(body)).status).toBe(400);
+    expect(upstream).not.toHaveBeenCalled();
+  });
+  it.each([400, 429, 502, 503, 504])(
+    'preserves HTTP %s for text analysis failures',
+    async (status) => {
+      upstream.mockResolvedValue(
+        new Response('{"message":"Error controlado"}', { status })
+      );
+      const response = await describeMeal({ text: '200 g de arroz' });
+      expect(response.status).toBe(status);
+      expect((await response.json()).message).toBe('Error controlado');
+    }
+  );
   const upload = (
     path: string,
     field?: [string, string],
@@ -94,9 +140,11 @@ describe('MacroFit BFF HTTP contract', () => {
   });
   it('returns 504 when the upstream body times out', async () => {
     const upstreamResponse = new Response('{}', { status: 200 });
-    jest.spyOn(upstreamResponse, 'json').mockRejectedValue(
-      Object.assign(new Error('Aborted'), { name: 'AbortError' })
-    );
+    jest
+      .spyOn(upstreamResponse, 'json')
+      .mockRejectedValue(
+        Object.assign(new Error('Aborted'), { name: 'AbortError' })
+      );
     upstream.mockResolvedValue(upstreamResponse);
     expect((await upload('/api/macrofit/analyze-plate')).status).toBe(504);
   });

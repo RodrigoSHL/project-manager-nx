@@ -25,6 +25,7 @@ interface PlateAnalysisResultModalProps {
   onClose: () => void;
   analysis: PlateAnalysisResponse | null;
   imageUrl?: string;
+  descriptionText?: string;
   defaultMealType: MealType;
   onConfirmPlate: (entries: Array<{ food: FoodItem; amountGrams: number }>, mealType: MealType) => void;
 }
@@ -104,6 +105,7 @@ const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: 
   onClose,
   analysis,
   imageUrl,
+  descriptionText,
   defaultMealType,
   onConfirmPlate,
 }) => {
@@ -112,7 +114,7 @@ const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: 
     analysis.items.map((item, idx) => ({
       ...item,
       id: `plate-item-${idx}-${Date.now()}`,
-      adjusted_grams: item.estimated_grams || 100,
+      adjusted_grams: item.estimated_grams ?? 100,
       selected: true,
     }))
   );
@@ -127,7 +129,7 @@ const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: 
     setItems((prev) =>
       prev.map((i) => {
         if (i.id === id) {
-          const nextVal = Math.max(10, Math.round(i.adjusted_grams + delta));
+          const nextVal = Math.max(0.1, Math.round((i.adjusted_grams + delta) * 10) / 10);
           return { ...i, adjusted_grams: nextVal };
         }
         return i;
@@ -138,7 +140,7 @@ const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: 
   const handleDirectGramsChange = (id: string, grams: number) => {
     setItems((prev) =>
       prev.map((i) =>
-        i.id === id ? { ...i, adjusted_grams: Math.max(5, grams || 0) } : i
+        i.id === id ? { ...i, adjusted_grams: Math.max(0.1, grams || 0) } : i
       )
     );
   };
@@ -179,7 +181,7 @@ const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: 
         fiber: Number(((density.fiber_g || 0) * factor).toFixed(1)),
         category: catConfig.group,
         isCustom: true,
-        notes: `Analizado con Gemini Vision (${item.confidence} confianza)`,
+        notes: `Analizado con Gemini ${descriptionText ? 'desde texto' : 'Vision'} (${item.confidence} confianza)`,
       };
 
       return {
@@ -200,7 +202,7 @@ const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: 
       : '🥣 Bowl';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+    <div role="dialog" aria-modal="true" aria-label="Revisar alimentos analizados" className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
       <div className="relative w-full max-w-xl bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-950/80">
@@ -213,7 +215,7 @@ const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: 
                 {analysis.dish_name || 'Desglose del Plato Detectado'}
               </h2>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-[10px] text-slate-400">{plateTypeLabel}</span>
+                <span className="text-[10px] text-slate-400">{descriptionText ? 'Desde tu descripción' : plateTypeLabel}</span>
                 <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-950/60 px-1.5 py-0.2 rounded border border-emerald-500/20">
                   {analysis.items.length} ingredientes detectados
                 </span>
@@ -244,10 +246,23 @@ const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: 
                 Ajuste fino del usuario (1 toque)
               </span>
               <p className="text-xs text-slate-300 leading-snug">
-                Confirma o ajusta los gramos con los botones <span className="text-emerald-400 font-bold">+</span> y <span className="text-emerald-400 font-bold">-</span> para calibrar la profundidad 2D.
+                Revisa los alimentos y ajusta los gramos antes de confirmar el registro.
               </p>
             </div>
           </div>
+
+          {descriptionText && (
+            <div className="rounded-xl border border-slate-700 bg-slate-950/60 p-3">
+              <h3 className="text-xs font-semibold text-slate-300 mb-1">Lo que describiste</h3>
+              <p className="text-xs text-slate-400 whitespace-pre-wrap break-words">{descriptionText}</p>
+            </div>
+          )}
+          {analysis.assumptions && analysis.assumptions.length > 0 && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-3 text-xs text-amber-200">
+              <h3 className="font-semibold mb-1">Suposiciones para revisar</h3>
+              <ul className="list-disc pl-4 space-y-1">{analysis.assumptions.map((assumption, index) => <li key={index}>{assumption}</li>)}</ul>
+            </div>
+          )}
 
           {/* Clinical Tip Banner */}
           {analysis.clinical_tip && (
@@ -313,6 +328,9 @@ const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: 
                             Confianza: {item.confidence}
                           </span>
                         </div>
+                        {item.quantity_source && <p className={`text-[10px] mt-1 ${item.quantity_source === 'estimated' ? 'text-amber-300' : 'text-slate-400'}`}>
+                          {item.quantity_source === 'estimated' ? 'Peso estimado · revisa los gramos' : 'Gramos indicados por ti'}
+                        </p>}
                       </div>
                     </div>
 
@@ -353,9 +371,12 @@ const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: 
                       <div className="flex items-center gap-1">
                         <input
                           type="number"
+                          min="0.1"
+                          step="0.1"
+                          aria-label={`Gramos de ${item.name}`}
                           value={item.adjusted_grams}
                           onChange={(e) =>
-                            handleDirectGramsChange(item.id, parseInt(e.target.value) || 0)
+                            handleDirectGramsChange(item.id, Number(e.target.value) || 0)
                           }
                           className="w-16 text-center font-bold text-xs bg-slate-900 border border-slate-700 rounded-lg py-1 text-white focus:outline-none focus:border-emerald-500"
                         />

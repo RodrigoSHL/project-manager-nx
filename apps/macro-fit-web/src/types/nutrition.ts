@@ -149,6 +149,7 @@ export interface AnalyzedPlateItem {
   confidence: 'alta' | 'media' | 'baja';
   nutritional_density_per_100g: NutrientsPer100g;
   selected: boolean;
+  quantity_source?: 'declared' | 'estimated';
 }
 
 export interface PlateAnalysisResponse {
@@ -161,8 +162,11 @@ export interface PlateAnalysisResponse {
     estimated_grams: number;
     confidence: 'alta' | 'media' | 'baja';
     nutritional_density_per_100g: NutrientsPer100g;
+    quantity_source?: 'declared' | 'estimated';
   }>;
   clinical_tip: string;
+  meal_type?: MealType | 'unspecified';
+  assumptions?: string[];
 }
 
 

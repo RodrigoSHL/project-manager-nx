@@ -8,6 +8,7 @@ import { CustomFoodModal } from './CustomFoodModal';
 import { MealTemplatesModal } from './MealTemplatesModal';
 import { PlateCameraModal } from './PlateCameraModal';
 import { PlateAnalysisResultModal } from './PlateAnalysisResultModal';
+import { MealTextModal } from './MealTextModal';
 import {
   FoodItem,
   MacroGoals,
@@ -16,7 +17,7 @@ import {
   MealType,
   PlateAnalysisResponse,
 } from '../types/nutrition';
-import { Camera, Sparkles, UtensilsCrossed, Zap } from 'lucide-react';
+import { Camera, Mic, Sparkles, UtensilsCrossed, Zap } from 'lucide-react';
 import { MEDS_PAUTA_PORTIONS } from '../utils/calculator';
 
 interface DailyTrackerViewProps {
@@ -78,6 +79,8 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
   const [analysisResult, setAnalysisResult] = useState<PlateAnalysisResponse | null>(null);
   const [analysisImageUrl, setAnalysisImageUrl] = useState<string>('');
   const [analysisTargetMeal, setAnalysisTargetMeal] = useState<MealType>('lunch');
+  const [textEntryMeal, setTextEntryMeal] = useState<MealType | 'auto' | null>(null);
+  const [analysisText, setAnalysisText] = useState('');
 
   // Group meals by mealType
   const breakfastMeals = meals.filter((m) => m.mealType === 'breakfast');
@@ -121,24 +124,34 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-white">Escanear Plato con IA</h3>
+                <h3 className="text-sm font-bold text-white">Registrar comida con IA</h3>
                 <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                  Gemini Vision
+                  Foto · Texto · Voz
                 </span>
               </div>
               <p className="text-xs text-slate-300 mt-0.5 leading-snug">
-                Centra tu plato a 45° con calibración de 25 cm. La IA descompone los ingredientes y tú ajustas los gramos con 1 toque.
+                Sube una foto o cuenta qué comiste. Revisa los ingredientes y ajusta los gramos antes de registrar.
               </p>
             </div>
           </div>
 
-          <button
-            onClick={() => setScanCameraMealType('lunch')}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 transition active:scale-95 shrink-0"
-          >
-            <Camera className="w-4 h-4" />
-            <span>Abrir Cámara / Foto</span>
-          </button>
+          <div className="flex flex-wrap sm:flex-col gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setTextEntryMeal('auto')}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 transition"
+            >
+              <Mic className="w-4 h-4" />
+              <span>Escribir / Dictar comida</span>
+            </button>
+            <button
+              onClick={() => setScanCameraMealType('lunch')}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 transition active:scale-95 shrink-0"
+            >
+              <Camera className="w-4 h-4" />
+              <span>Abrir Cámara / Foto</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -168,6 +181,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           onOpenAddFood={(type) => setSelectedMealType(type)}
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
           onOpenScanPlate={(type) => setScanCameraMealType(type)}
+          onOpenTextMeal={(type) => setTextEntryMeal(type)}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -181,6 +195,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           onOpenAddFood={(type) => setSelectedMealType(type)}
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
           onOpenScanPlate={(type) => setScanCameraMealType(type)}
+          onOpenTextMeal={(type) => setTextEntryMeal(type)}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -194,6 +209,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           onOpenAddFood={(type) => setSelectedMealType(type)}
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
           onOpenScanPlate={(type) => setScanCameraMealType(type)}
+          onOpenTextMeal={(type) => setTextEntryMeal(type)}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -207,6 +223,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           onOpenAddFood={(type) => setSelectedMealType(type)}
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
           onOpenScanPlate={(type) => setScanCameraMealType(type)}
+          onOpenTextMeal={(type) => setTextEntryMeal(type)}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -220,6 +237,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           onOpenAddFood={(type) => setSelectedMealType(type)}
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
           onOpenScanPlate={(type) => setScanCameraMealType(type)}
+          onOpenTextMeal={(type) => setTextEntryMeal(type)}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -234,6 +252,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
             onOpenAddFood={(type) => setSelectedMealType(type)}
             onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
             onOpenScanPlate={(type) => setScanCameraMealType(type)}
+            onOpenTextMeal={(type) => setTextEntryMeal(type)}
             onRemoveEntry={onRemoveMealEntry}
           />
         )}
@@ -271,7 +290,19 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
         onSaveFood={onSaveCustomFood}
       />
 
-      {/* Modal: Camera / Photo Capture with Visual 25cm Overlay Guide */}
+      {/* Text and voice use the same review and confirmation flow as photos. */}
+      {textEntryMeal && (
+        <MealTextModal
+          defaultMealType={textEntryMeal === 'auto' ? undefined : textEntryMeal}
+          onClose={() => setTextEntryMeal(null)}
+          onAnalysisSuccess={(analysis, text, targetMeal) => {
+            setAnalysisResult(analysis);
+            setAnalysisImageUrl('');
+            setAnalysisText(text);
+            setAnalysisTargetMeal(targetMeal);
+          }}
+        />
+      )}
       <PlateCameraModal
         isOpen={scanCameraMealType !== null}
         defaultMealType={scanCameraMealType || 'lunch'}
@@ -279,6 +310,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
         onAnalysisSuccess={(analysis, imageUrl, targetMeal) => {
           setAnalysisResult(analysis);
           setAnalysisImageUrl(imageUrl);
+          setAnalysisText('');
           setAnalysisTargetMeal(targetMeal);
         }}
       />
@@ -288,6 +320,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
         isOpen={analysisResult !== null}
         analysis={analysisResult}
         imageUrl={analysisImageUrl}
+        descriptionText={analysisText}
         defaultMealType={analysisTargetMeal}
         onClose={() => {
           setAnalysisResult(null);

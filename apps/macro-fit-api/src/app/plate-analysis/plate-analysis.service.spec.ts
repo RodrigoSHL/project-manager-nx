@@ -57,6 +57,79 @@ describe('PlateAnalysisService provider contract', () => {
   const analyze = (service: PlateAnalysisService) =>
     service.analyzePlate(Buffer.from('pixels'), 'image/jpeg');
 
+  const textResult = {
+    ...result,
+    meal_type: 'lunch',
+    assumptions: ['Arroz pesado cocido.'],
+    items: [
+      { ...result.items[0], estimated_grams: 9, quantity_source: 'declared' },
+    ],
+  };
+  it('analyzes text without image data and preserves small declared amounts and assumptions', async () => {
+    generate.mockResolvedValue({ text: JSON.stringify(textResult) });
+    const analysis = await new PlateAnalysisService().analyzeMealText(
+      'En el almuerzo comí 9 g de arroz'
+    );
+    expect(analysis).toMatchObject({
+      meal_type: 'lunch',
+      assumptions: textResult.assumptions,
+      items: [{ estimated_grams: 9, quantity_source: 'declared' }],
+      total_estimated_kcal: 12,
+    });
+    const request = generate.mock.calls[0][0];
+    expect(request.contents).toEqual([
+      {
+        text: JSON.stringify({
+          description: 'En el almuerzo comí 9 g de arroz',
+        }),
+      },
+    ]);
+    expect(request.config.responseSchema.required).toContain('assumptions');
+  });
+  it('honors the explicitly selected meal over the model suggestion', async () => {
+    generate.mockResolvedValue({ text: JSON.stringify(textResult) });
+    expect(
+      (
+        await new PlateAnalysisService().analyzeMealText(
+          '9 g de arroz',
+          'dinner'
+        )
+      ).meal_type
+    ).toBe('dinner');
+  });
+  it('rejects a description without foods instead of creating a meal', async () => {
+    generate.mockResolvedValue({
+      text: JSON.stringify({
+        ...textResult,
+        dish_name: 'Sin alimentos',
+        items: [],
+      }),
+    });
+    await expect(
+      new PlateAnalysisService().analyzeMealText('Hola, qué hora es')
+    ).rejects.toMatchObject({ status: 400 });
+  });
+  it('rejects text analyses with missing uncertainty metadata', async () => {
+    generate.mockResolvedValue({ text: JSON.stringify(result) });
+    await expect(
+      new PlateAnalysisService().analyzeMealText('200 g de arroz')
+    ).rejects.toMatchObject({ status: 502 });
+  });
+  it('shares the provider quota across text and photo analyses', async () => {
+    process.env.MACROFIT_REQUESTS_PER_MINUTE = '1';
+    generate.mockResolvedValue({ text: JSON.stringify(textResult) });
+    const service = new PlateAnalysisService();
+    await service.analyzeMealText('200 g de arroz');
+    await expect(analyze(service)).rejects.toMatchObject({ status: 429 });
+    expect(generate).toHaveBeenCalledTimes(1);
+  });
+  it('surfaces a text provider failure without returning a fictional meal', async () => {
+    generate.mockRejectedValue({ status: 429 });
+    await expect(
+      new PlateAnalysisService().analyzeMealText('200 g de arroz')
+    ).rejects.toMatchObject({ status: 503 });
+  });
+
   it('returns 503 when unconfigured, without producing an analysis', async () => {
     delete process.env.GEMINI_API_KEY;
     const service = new PlateAnalysisService();

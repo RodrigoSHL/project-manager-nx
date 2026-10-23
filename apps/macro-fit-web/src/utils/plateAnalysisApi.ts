@@ -1,4 +1,4 @@
-import { PlateAnalysisResponse } from '../types/nutrition';
+import { MealType, PlateAnalysisResponse } from '../types/nutrition';
 
 export interface AnalyzePlateOptions {
   hints?: string;
@@ -26,13 +26,46 @@ export async function analyzePlateImage(
     formData.append('plateTypeHint', options.plateTypeHint);
   }
 
+  return requestAnalysis('/api/macrofit/analyze-plate', { body: formData });
+}
+
+export async function analyzeMealText(
+  text: string,
+  mealType?: MealType,
+  signal?: AbortSignal
+): Promise<PlateAnalysisResponse> {
+  const description = text.trim();
+  if (description.length < 5 || description.length > 2000) {
+    throw new Error('Describe tu comida usando entre 5 y 2000 caracteres.');
+  }
+  return requestAnalysis(
+    '/api/macrofit/analyze-meal-text',
+    {
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        text: description,
+        ...(mealType ? { mealType } : {}),
+      }),
+    },
+    signal
+  );
+}
+
+async function requestAnalysis(
+  path: string,
+  init: RequestInit,
+  signal?: AbortSignal
+): Promise<PlateAnalysisResponse> {
   const controller = new AbortController();
+  const cancel = () => controller.abort();
+  signal?.addEventListener('abort', cancel, { once: true });
+  if (signal?.aborted) controller.abort();
   const timeoutId = setTimeout(() => controller.abort(), 45000);
 
   try {
-    const response = await fetch('/api/macrofit/analyze-plate', {
+    const response = await fetch(path, {
       method: 'POST',
-      body: formData,
+      ...init,
       signal: controller.signal,
     });
 
@@ -63,5 +96,6 @@ export async function analyzePlateImage(
     throw err;
   } finally {
     clearTimeout(timeoutId);
+    signal?.removeEventListener('abort', cancel);
   }
 }

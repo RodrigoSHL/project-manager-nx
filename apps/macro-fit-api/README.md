@@ -1,6 +1,6 @@
 # MacroFit API
 
-API NestJS interna para analizar imágenes con Gemini. No contiene simuladores ni genera respuestas de ejemplo cuando falla el proveedor.
+API NestJS interna para analizar imágenes y descripciones de comidas con Gemini. No contiene simuladores ni genera respuestas de ejemplo cuando falla el proveedor.
 
 ## Contrato
 
@@ -11,8 +11,13 @@ API NestJS interna para analizar imágenes con Gemini. No contiene simuladores n
 - `POST /api/analyze-plate`: recibe multipart con `image`, `hints` opcional (máximo 500 caracteres) y `plateTypeHint` opcional (`plato_extendido`, `plato_hondo`, `bowl`).
 - Imágenes JPEG, PNG o WebP de hasta 5 MiB y 16 millones de píxeles, sin animación. Se decodifican, redimensionan a un máximo de 1280×1280 y normalizan a JPEG sin metadatos antes de enviarlas al proveedor.
 - JSON con imágenes base64 ya no forma parte del contrato. El cliente web siempre utiliza multipart.
+- `POST /api/analyze-meal-text`: recibe JSON `{ "text": "Almorcé 200 g de carne y 50 g de arroz", "mealType": "lunch" }`. `text` se recorta y debe tener entre 5 y 2000 caracteres; `mealType` es opcional (`breakfast`, `colacion_am`, `lunch`, `colacion_pm`, `dinner`, `snacks`). Se rechazan campos adicionales.
 
 El navegador accede mediante BFF: `POST /api/macrofit/analyze-plate`. BFF conserva `/api/analyze-plate` como alias para PWA anteriores. Los endpoints públicos de estado son `/api/macrofit/health` y `/api/macrofit/ready`.
+
+El análisis de texto se publica solo mediante BFF en `POST /api/macrofit/analyze-meal-text`. Reutiliza `GEMINI_MODEL`, las validaciones nutricionales, el límite de concurrencia, la cuota y el plazo total de las imágenes. No requiere otro proveedor ni nuevas variables.
+
+Su respuesta conserva el formato de ingredientes del análisis de imagen y agrega `meal_type` (incluye `unspecified`), `assumptions` y `items[].quantity_source` (`declared` para g/kg explícitos, `estimated` para cantidades vagas, unidades domésticas o piezas). El prompt pide conservar los gramos declarados, señalar las suposiciones de preparación y evitar afirmar que se verificó una etiqueta comercial. Los valores nutricionales son estimaciones del modelo, no una consulta a una base de etiquetas. Si se selecciona un tiempo de comida, esa selección prevalece sobre la inferencia. Si el modelo no identifica alimentos consumidos, la API devuelve 400 y no inventa una comida.
 
 ## Configuración
 

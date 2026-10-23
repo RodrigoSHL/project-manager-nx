@@ -13,7 +13,10 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import sharp from 'sharp';
 import { PlateAnalysisService } from './plate-analysis.service';
-import { AnalyzePlateQueryDto } from './dto/analyze-plate.dto';
+import {
+  AnalyzeMealTextDto,
+  AnalyzePlateQueryDto,
+} from './dto/analyze-plate.dto';
 
 export interface UploadedPlateFile {
   mimetype: string;
@@ -34,6 +37,12 @@ export class PlateAnalysisController {
   @Get('ready')
   ready() {
     return this.plateAnalysisService.readiness();
+  }
+
+  @Post('analyze-meal-text')
+  @HttpCode(HttpStatus.OK)
+  analyzeMealText(@Body() body: AnalyzeMealTextDto) {
+    return this.plateAnalysisService.analyzeMealText(body.text, body.mealType);
   }
 
   @Post('analyze-plate')

@@ -1,4 +1,21 @@
-import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Transform } from 'class-transformer';
+import {
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
+
+export const MEAL_TYPES = [
+  'breakfast',
+  'colacion_am',
+  'lunch',
+  'colacion_pm',
+  'dinner',
+  'snacks',
+] as const;
+export type MealType = (typeof MEAL_TYPES)[number];
 
 export class NutrientsPer100gDto {
   kcal!: number;
@@ -21,6 +38,7 @@ export class AnalyzedFoodItemDto {
   estimated_grams!: number;
   confidence!: 'alta' | 'media' | 'baja';
   nutritional_density_per_100g!: NutrientsPer100gDto;
+  quantity_source?: 'declared' | 'estimated';
 }
 
 export class PlateAnalysisResponseDto {
@@ -29,6 +47,20 @@ export class PlateAnalysisResponseDto {
   total_estimated_kcal!: number;
   items!: AnalyzedFoodItemDto[];
   clinical_tip!: string;
+  meal_type?: MealType | 'unspecified';
+  assumptions?: string[];
+}
+
+export class AnalyzeMealTextDto {
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @MinLength(5)
+  @MaxLength(2000)
+  text!: string;
+
+  @IsOptional()
+  @IsIn(MEAL_TYPES)
+  mealType?: MealType;
 }
 
 export class AnalyzePlateQueryDto {

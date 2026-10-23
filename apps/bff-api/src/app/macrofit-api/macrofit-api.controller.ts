@@ -10,7 +10,14 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Transform } from 'class-transformer';
+import {
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { MacrofitApiClient } from './macrofit-api.client';
 
 class AnalyzePlateBody {
@@ -22,6 +29,25 @@ class AnalyzePlateBody {
   @IsOptional()
   @IsIn(['plato_extendido', 'plato_hondo', 'bowl'])
   plateTypeHint?: string;
+}
+
+class AnalyzeMealTextBody {
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @MinLength(5)
+  @MaxLength(2000)
+  text!: string;
+
+  @IsOptional()
+  @IsIn([
+    'breakfast',
+    'colacion_am',
+    'lunch',
+    'colacion_pm',
+    'dinner',
+    'snacks',
+  ])
+  mealType?: string;
 }
 
 // Public calculator: provider quotas and concurrency limits are enforced by the API.
@@ -37,6 +63,12 @@ export class MacrofitApiController {
   @Get('macrofit/ready')
   ready() {
     return this.macrofit.ready();
+  }
+
+  @Post('macrofit/analyze-meal-text')
+  @HttpCode(200)
+  analyzeMealText(@Body() body: AnalyzeMealTextBody) {
+    return this.macrofit.analyzeMealText(body);
   }
 
   // Preserve the previous URL for already installed PWA clients.

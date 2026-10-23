@@ -1,4 +1,4 @@
-import { Camera, Plus, Trash2, Utensils, Zap } from 'lucide-react';
+import { Camera, Mic, Plus, Trash2, Utensils, Zap } from 'lucide-react';
 import { MealEntry, MealType } from '../types/nutrition';
 
 interface MealSectionProps {
@@ -10,6 +10,7 @@ interface MealSectionProps {
   onOpenAddFood: (mealType: MealType) => void;
   onOpenTemplates?: (mealType: MealType) => void;
   onOpenScanPlate?: (mealType: MealType) => void;
+  onOpenTextMeal?: (mealType: MealType) => void;
   onRemoveEntry: (entryId: string) => void;
 }
 
@@ -22,6 +23,7 @@ export const MealSection: React.FC<MealSectionProps> = ({
   onOpenAddFood,
   onOpenTemplates,
   onOpenScanPlate,
+  onOpenTextMeal,
   onRemoveEntry,
 }) => {
   const mealTotals = entries.reduce(
@@ -46,7 +48,7 @@ export const MealSection: React.FC<MealSectionProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           {entries.length > 0 && (
             <div className="flex items-center gap-2 text-xs">
               <span className="font-extrabold text-white">{mealTotals.calories} kcal</span>
@@ -60,6 +62,13 @@ export const MealSection: React.FC<MealSectionProps> = ({
             </div>
           )}
 
+          {onOpenTextMeal && (
+            <button type="button" onClick={() => onOpenTextMeal(mealType)}
+              aria-label={`Describir comida: ${title}`}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 text-xs font-semibold transition">
+              <Mic className="w-3.5 h-3.5" /><span>Texto / Voz</span>
+            </button>
+          )}
           {onOpenScanPlate && (
             <button
               onClick={() => onOpenScanPlate(mealType)}

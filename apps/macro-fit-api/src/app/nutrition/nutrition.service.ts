@@ -15,9 +15,10 @@ import {
   Settings,
   WaterChange,
   NutritionPlan,
-  NutritionPlanInput,
+  SaveNutritionPlanInput,
   PautaSelection,
   calculatePauta,
+  isNutritionPlanConfigured,
 } from '@project-manager/macrofit-contracts';
 import {
   NutritionDailyLogEntity,
@@ -86,7 +87,7 @@ export class NutritionService {
     });
   }
 
-  savePlan(userId: string, input: NutritionPlanInput) {
+  savePlan(userId: string, input: SaveNutritionPlanInput) {
     return this.transaction(userId, async (manager) => {
       const today = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'America/Santiago',
@@ -98,12 +99,21 @@ export class NutritionService {
         throw new BadRequestException(
           'La pauta debe comenzar hoy o en una fecha futura. El historial se conserva.'
         );
+      if (input.enabled && !isNutritionPlanConfigured(input))
+        throw new BadRequestException(
+          'Carga la referencia o agrega metas y equivalencias antes de activar la pauta.'
+        );
+      if (input.applyToToday && (!input.enabled || input.startsOn !== today))
+        throw new BadRequestException(
+          'Solo puedes aplicar a hoy una pauta activa que comience hoy.'
+        );
+      const { applyToToday, ...definition } = input;
       const previous = await manager.findOne(NutritionPlanEntity, {
         where: { userId },
         order: { version: 'DESC' },
       });
       const plan: NutritionPlan = {
-        ...input,
+        ...definition,
         version: (previous?.version ?? 0) + 1,
         createdAt: new Date().toISOString(),
       };
@@ -113,6 +123,37 @@ export class NutritionService {
         startsOn: plan.startsOn,
         data: plan,
       });
+      if (applyToToday) {
+        await this.ensureDay(manager, userId, today);
+        await manager.update(
+          NutritionDailyLogEntity,
+          { userId, date: today },
+          { planVersion: plan.version }
+        );
+        const entries = await manager.findBy(NutritionMealEntryEntity, {
+          userId,
+          date: today,
+        });
+        for (const row of entries) {
+          const selection = row.data.pautaSelection;
+          const obsolete =
+            selection?.ruleId &&
+            !plan.rules.some((rule) => rule.id === selection.ruleId);
+          // A removed manual rule remains pending; never silently guess a replacement.
+          const nextSelection = obsolete ? { ruleId: null } : selection;
+          await manager.update(
+            NutritionMealEntryEntity,
+            { userId, id: row.id },
+            {
+              data: {
+                ...row.data,
+                ...(obsolete ? { pautaSelection: nextSelection } : {}),
+                pauta: calculatePauta(plan, row.data, nextSelection),
+              },
+            }
+          );
+        }
+      }
       return this.account(manager, userId);
     });
   }

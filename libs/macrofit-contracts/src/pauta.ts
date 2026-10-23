@@ -8,6 +8,16 @@ import {
   PautaGroup,
 } from './nutrition';
 
+export function isNutritionPlanConfigured(plan: {
+  rules?: readonly unknown[];
+  targets?: Partial<Record<PautaGroup, number | null>>;
+}) {
+  return (
+    (plan.rules?.length ?? 0) > 0 &&
+    Object.values(plan.targets ?? {}).some((target) => target != null)
+  );
+}
+
 export const PAUTA_LABELS: Record<PautaGroup, string> = {
   protein: 'Proteínas',
   carbs: 'Carbohidratos',

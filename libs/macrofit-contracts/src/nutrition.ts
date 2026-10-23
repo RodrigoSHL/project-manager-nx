@@ -179,6 +179,9 @@ export interface NutritionPlan extends NutritionPlanInput {
   version: number;
   createdAt: string;
 }
+export interface SaveNutritionPlanInput extends NutritionPlanInput {
+  applyToToday?: boolean;
+}
 export interface PautaSelection {
   /** null explicitly leaves the food pending instead of automatic matching. */
   ruleId: string | null;

@@ -21,7 +21,7 @@ import {
   settingsSchema,
   templateSchema,
   waterSchema,
-  nutritionPlanInputSchema,
+  saveNutritionPlanSchema,
   pautaSelectionSchema,
 } from '@project-manager/macrofit-contracts';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -67,12 +67,7 @@ export class MacrofitRecordsController {
   }
   @Put('plan')
   plan(@Req() req: AuthenticatedRequest, @Body() body: unknown) {
-    return this.send(
-      req,
-      '/plan',
-      'PUT',
-      parse(nutritionPlanInputSchema, body)
-    );
+    return this.send(req, '/plan', 'PUT', parse(saveNutritionPlanSchema, body));
   }
   @Put('days/:date/meals/:id/pauta')
   classify(

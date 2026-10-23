@@ -4,6 +4,7 @@ import {
   NutritionPlan,
   nutritionPlanSchema,
   summarizePauta,
+  saveNutritionPlanSchema,
   MealEntry,
 } from '@project-manager/macrofit-contracts';
 
@@ -95,6 +96,34 @@ const food = (foodName: string, amountGrams: number) => ({
 });
 
 describe('Exchange portions shared calculation', () => {
+  it('keeps existing blank plans readable but prevents activating another unconfigured plan', () => {
+    const blank = {
+      ...plan,
+      rules: [],
+      targets: {
+        protein: null,
+        carbs: null,
+        fats: null,
+        dairy: null,
+        fruits: null,
+        veggies: null,
+        supplements: null,
+      },
+    };
+    expect(nutritionPlanSchema.safeParse(blank).success).toBe(true);
+    const { version, createdAt, ...input } = blank;
+    expect(version).toBe(1);
+    expect(createdAt).toBeTruthy();
+    expect(saveNutritionPlanSchema.safeParse(input).success).toBe(false);
+    expect(
+      saveNutritionPlanSchema.safeParse({ ...input, enabled: false }).success
+    ).toBe(true);
+    const configured = { ...input, rules: plan.rules, targets: plan.targets };
+    expect(
+      saveNutritionPlanSchema.safeParse({ ...configured, applyToToday: true })
+        .success
+    ).toBe(true);
+  });
   it('counts by food reference, preserves precision and sums all groups', () => {
     expect(
       calculatePauta(plan, food('Pollo cocido', 200)).contributions

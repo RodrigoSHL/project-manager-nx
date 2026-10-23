@@ -9,7 +9,10 @@ import {
   Settings,
   NutritionPlanInput,
 } from '@project-manager/macrofit-contracts';
-import { nutritionEntities } from './entities/nutrition.entity';
+import {
+  NutritionPlanEntity,
+  nutritionEntities,
+} from './entities/nutrition.entity';
 import { NutritionService } from './nutrition.service';
 import { NutritionController } from './nutrition.controller';
 import { AddNutritionPlans1792742400000 } from '../../migrations/1792742400000-AddNutritionPlans';
@@ -338,6 +341,115 @@ suite('Nutrition PostgreSQL integration', () => {
     await expect(
       service.savePlan(owner, { ...input, startsOn: '2020-01-01' })
     ).rejects.toThrow('historial');
+  });
+  it('repairs a frozen blank plan for today only after explicit application and preserves the previous day and all nutrients', async () => {
+    const owner = randomUUID();
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Santiago',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+    const old = new Date(today + 'T12:00:00Z');
+    old.setUTCDate(old.getUTCDate() - 1);
+    const yesterday = old.toISOString().slice(0, 10);
+    const blank = {
+      name: 'Old empty plan',
+      startsOn: yesterday,
+      enabled: true,
+      version: 1,
+      createdAt: new Date().toISOString(),
+      targets: {
+        protein: null,
+        carbs: null,
+        fats: null,
+        dairy: null,
+        fruits: null,
+        veggies: null,
+        supplements: null,
+      },
+      waterTargetMl: 2000,
+      waterIsMinimum: false,
+      rules: [],
+    };
+    // Simulate an already persisted plan from the original release. Reads remain backward compatible.
+    await db.manager.insert(NutritionPlanEntity, {
+      userId: owner,
+      version: 1,
+      startsOn: yesterday,
+      data: blank,
+    });
+    const original = meal();
+    const unknown = {
+      ...meal(),
+      foodId: 'unknown',
+      foodName: 'Mayonesa',
+      amountGrams: 9,
+    };
+    await service.addMeals(owner, yesterday, [meal()]);
+    await service.addMeals(owner, today, [original, unknown]);
+    await service.changeWater(owner, today, {
+      operationId: randomUUID(),
+      amountMl: 250,
+    });
+    const beforeToday = await service.getDay(owner, today);
+    const beforeYesterday = await service.getDay(owner, yesterday);
+    const configured: NutritionPlanInput = {
+      ...blank,
+      startsOn: today,
+      targets: { ...blank.targets, protein: 10 },
+      rules: [
+        {
+          id: 'chicken',
+          name: 'Pollo cocido',
+          foodIds: ['own-food'],
+          aliases: [],
+          referenceAmount: 50,
+          unit: 'g',
+          free: false,
+          notes: '',
+          contributions: [{ group: 'protein', portions: 1 }],
+        },
+      ],
+    };
+    await service.savePlan(owner, { ...configured, applyToToday: true });
+    const after = await service.getDay(owner, today);
+    expect(after.nutritionPlan?.version).toBe(2);
+    expect(after.nutritionPlan?.targets.protein).toBe(10);
+    expect(after.waterIntakeMl).toBe(250);
+    expect(after.meals[0].pauta?.contributions).toEqual([
+      { group: 'protein', portions: 4 },
+    ]);
+    expect(after.meals[1].pauta?.status).toBe('pending');
+    const nutrients = (log: typeof after) =>
+      log.meals.map((entry) => {
+        const saved = { ...entry };
+        delete saved.pauta;
+        return saved;
+      });
+    expect(nutrients(after)).toEqual(nutrients(beforeToday));
+    expect(await service.getDay(owner, yesterday)).toEqual(beforeYesterday);
+    expect(
+      (
+        await db.manager.findOneByOrFail(NutritionPlanEntity, {
+          userId: owner,
+          version: 1,
+        })
+      ).data
+    ).toEqual(blank);
+    expect((await service.getAccount(owner)).nutritionPlan).not.toHaveProperty(
+      'applyToToday'
+    );
+    await expect(
+      service.savePlan(owner, {
+        ...configured,
+        startsOn: '2099-01-01',
+        applyToToday: true,
+      })
+    ).rejects.toThrow('comience hoy');
+    await expect(
+      service.savePlan(owner, { ...blank, startsOn: today })
+    ).rejects.toThrow('metas y equivalencias');
   });
   it('rejects malformed plans and snapshot/ownership injection through the HTTP endpoints', async () => {
     const response = await call('/plan', {

@@ -25,7 +25,7 @@ import {
   settingsSchema,
   templateSchema,
   waterSchema,
-  nutritionPlanInputSchema,
+  saveNutritionPlanSchema,
   pautaSelectionSchema,
 } from '@project-manager/macrofit-contracts';
 import { NutritionService } from './nutrition.service';
@@ -67,7 +67,7 @@ export class NutritionController {
   plan(@Headers('x-user-id') userId: string, @Body() body: unknown) {
     return this.service.savePlan(
       userId,
-      parseInput(nutritionPlanInputSchema, body)
+      parseInput(saveNutritionPlanSchema, body)
     );
   }
   @Put('days/:date/meals/:id/pauta')

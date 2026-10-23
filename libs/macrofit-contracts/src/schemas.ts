@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isNutritionPlanConfigured } from './pauta';
 
 const text = (max: number) => z.string().trim().min(1).max(max);
 const number = (max: number) => z.number().finite().min(0).max(max);
@@ -109,6 +110,13 @@ export const nutritionPlanInputSchema = nutritionPlanFieldsSchema.refine(
   uniqueRules,
   'Equivalencias repetidas'
 );
+export const saveNutritionPlanSchema = nutritionPlanFieldsSchema
+  .extend({ applyToToday: z.boolean().optional() })
+  .refine(uniqueRules, 'Equivalencias repetidas')
+  .refine(
+    (plan) => !plan.enabled || isNutritionPlanConfigured(plan),
+    'Carga la referencia o agrega metas y equivalencias antes de activar la pauta.'
+  );
 export const nutritionPlanSchema = nutritionPlanFieldsSchema
   .extend({
     version: z.number().int().positive(),

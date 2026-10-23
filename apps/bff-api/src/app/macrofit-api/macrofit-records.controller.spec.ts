@@ -133,6 +133,60 @@ describe('MacroFit personal records BFF', () => {
     expect(invalid.status).toBe(400);
     expect(upstream).not.toHaveBeenCalled();
   });
+  it('forwards explicit application to today and rejects an activated blank plan', async () => {
+    upstream.mockResolvedValue(new Response('{}', { status: 200 }));
+    const plan = {
+      name: 'Pauta',
+      startsOn: '2026-10-23',
+      enabled: true,
+      targets: {
+        protein: 10,
+        carbs: null,
+        fats: null,
+        dairy: null,
+        fruits: null,
+        veggies: null,
+        supplements: null,
+      },
+      waterTargetMl: 2000,
+      waterIsMinimum: true,
+      rules: [
+        {
+          id: 'chicken',
+          name: 'Pollo cocido',
+          foodIds: [],
+          aliases: [],
+          referenceAmount: 50,
+          unit: 'g',
+          free: false,
+          notes: '',
+          contributions: [{ group: 'protein', portions: 1 }],
+        },
+      ],
+      applyToToday: true,
+    };
+    expect(
+      (
+        await httpFetch(origin + '/api/macrofit/me/plan', {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify(plan),
+        })
+      ).status
+    ).toBe(200);
+    expect(JSON.parse(upstream.mock.calls[0][1].body).applyToToday).toBe(true);
+    upstream.mockClear();
+    expect(
+      (
+        await httpFetch(origin + '/api/macrofit/me/plan', {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify({ ...plan, rules: [] }),
+        })
+      ).status
+    ).toBe(400);
+    expect(upstream).not.toHaveBeenCalled();
+  });
   it('preserves storage errors so the browser cannot report a successful save', async () => {
     upstream.mockResolvedValue(
       new Response('{"message":"Base no disponible"}', { status: 503 })

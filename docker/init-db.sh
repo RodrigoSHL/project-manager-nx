@@ -33,3 +33,7 @@ fi
 if [ -n "$INSPECTION_DB_NAME" ] && [ "$INSPECTION_DB_NAME" != "$POSTGRES_DB" ]; then
   create_db_if_missing "$INSPECTION_DB_NAME"
 fi
+
+if [ -n "$MACROFIT_DB_NAME" ] && [ "$MACROFIT_DB_NAME" != "$POSTGRES_DB" ]; then
+  create_db_if_missing "$MACROFIT_DB_NAME"
+fi

@@ -13,6 +13,7 @@ services:
       TRAVEL_DB_NAME: ${TRAVEL_DB_NAME:-travel_planner_db}
       FILES_DB_NAME: ${FILES_DB_NAME:-files_db}
       INSPECTION_DB_NAME: ${INSPECTION_DB_NAME:-inspection_db}
+      MACROFIT_DB_NAME: ${MACROFIT_DB_NAME:-macrofit_db}
     ports:
       - '${DATABASE_PORT:-5432}:5432'
     volumes:

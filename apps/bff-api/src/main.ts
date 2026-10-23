@@ -3,11 +3,13 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.useBodyParser('json', { limit: '5mb' });
   const allowedOrigins = (process.env.BFF_CORS_ORIGIN || process.env.CORS_ORIGIN || 'http://localhost:4200')
     .split(',')
     .map((origin) => origin.trim())

@@ -19,6 +19,14 @@ export class MacrofitApiClient {
     return this.request('/ready');
   }
 
+  records(userId: string, path: string, method: string, body?: unknown) {
+    return this.request(`/me${path}`, {
+      method,
+      headers: { 'content-type': 'application/json', 'x-user-id': userId },
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    });
+  }
+
   analyzeMealText(body: { text: string; mealType?: string }) {
     return this.request('/analyze-meal-text', {
       method: 'POST',
@@ -81,11 +89,11 @@ export class MacrofitApiClient {
         ['TimeoutError', 'AbortError'].includes(error.name)
       ) {
         throw new GatewayTimeoutException(
-          'El servicio de análisis tardó demasiado en responder.'
+          'El servicio de MacroFit tardó demasiado en responder.'
         );
       }
       throw new ServiceUnavailableException(
-        'El servicio de análisis no está disponible.'
+        'El servicio de MacroFit no está disponible.'
       );
     }
   }

@@ -414,7 +414,7 @@ full). Antes del primer despliegue de esta integración, comprobar que
 `GEMINI_MODEL` remoto sea `gemini-3.5-flash-lite`, o el modelo válido elegido
 explícitamente; los ejemplos antiguos fijaban otro nombre. El script preserva
 `.env.deploy` y no corrige ese valor automáticamente. No imprimir la clave.
-El health confirma el proceso; readiness solo confirma configuración. Para
+El health de MacroFit comprueba el proceso y PostgreSQL; readiness solo confirma configuración de Gemini. Los registros personales se guardan en `macrofit_db` mediante migraciones, sin sincronización automática del esquema. Para
 verificar también Gemini real durante el despliegue, definir
 `MACROFIT_SMOKE_IMAGE=/ruta/foto-comida.jpg`; se realiza una llamada con coste/cuota.
 Después de incorporar el login, el smoke real requiere también

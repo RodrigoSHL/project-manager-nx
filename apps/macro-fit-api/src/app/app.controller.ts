@@ -1,9 +1,13 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { AppService } from './app.service';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(
+    private readonly appService: AppService,
+    private readonly dataSource: DataSource
+  ) {}
 
   @Get()
   getData() {
@@ -11,7 +15,14 @@ export class AppController {
   }
 
   @Get('health')
-  health() {
-    return { status: 'ok' };
+  async health() {
+    try {
+      await this.dataSource.query('SELECT 1');
+      return { status: 'ok', database: 'ok' };
+    } catch {
+      throw new ServiceUnavailableException(
+        'La base de datos de MacroFit no está disponible.'
+      );
+    }
   }
 }

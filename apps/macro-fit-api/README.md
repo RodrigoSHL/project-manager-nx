@@ -59,7 +59,9 @@ npx nx serve bff-api
 npx nx serve macro-fit-web
 ```
 
-Configurar `MACROFIT_API_URL=http://localhost:3007/api` en el entorno del BFF. Vite utiliza localhost:3000 como proxy. La API no necesita base de datos; los registros de la calculadora siguen en localStorage.
+Configurar `MACROFIT_API_URL=http://localhost:3007/api` en el entorno del BFF. Vite utiliza localhost:3000 como proxy. La API necesita PostgreSQL: crea `macrofit_db`, configura las variables `MACROFIT_DB_*` (credenciales con fallback `DATABASE_*`) y `MACROFIT_MIGRATIONS_RUN=true`. Mantén `synchronize=false`.
+
+En desarrollo, estas variables deben existir en el `.env` real de la raíz; actualizar `env.example` no modifica un `.env` existente. Reinicia `nx serve macro-fit-api` después de cambiarlo: las migraciones se ejecutan al iniciar la API, no al levantar solamente PostgreSQL. `docker-compose.yml` declara la base para volúmenes nuevos; un volumen existente conserva sus bases y no vuelve a ejecutar `init-db.sh`.
 
 ```bash
 npx nx run-many -t build,lint,test -p macro-fit-api,macro-fit-web,bff-api --parallel=1
@@ -77,3 +79,41 @@ Esto consume una llamada del proveedor. No forma parte de los sondeos periódico
 El script requiere `MACROFIT_SMOKE_TOKEN` en el entorno con un JWT válido de la plataforma; no imprime el token. El despliegue verifica que los análisis anónimos respondan 401 y solo prueba una foto real cuando se proporcionan tanto `MACROFIT_SMOKE_IMAGE` como `MACROFIT_SMOKE_TOKEN`.
 
 El código de modelo fue contrastado con la [documentación oficial de Gemini](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite).
+
+
+## Registros personales en PostgreSQL
+
+Se mantiene el API `macro-fit-api`, puerto interno 3007 (`MACRO_FIT_API_PORT`), el BFF `MACROFIT_API_URL=http://macro-fit-api:3007/api` y el dominio existente. No se necesitan cambios DNS, Cloudflare ni rutas nuevas de Caddy. Se reutilizan `Dockerfile.api` y `Dockerfile.vite`; ambos ya incluyen `libs`, donde vive `macrofit-contracts` con los tipos y validaciones compartidos.
+
+La configuración usa `TypeOrmModule.forRootAsync`, igual que Inspection API, con variables `MACROFIT_DB_HOST`, `MACROFIT_DB_PORT`, `MACROFIT_DB_USERNAME`, `MACROFIT_DB_PASSWORD`, `MACROFIT_DB_NAME` y `MACROFIT_MIGRATIONS_RUN`. Host, puerto y credenciales admiten el fallback común `DATABASE_*`; la base por defecto es `macrofit_db`. `DATABASE_SSL` conserva la convención existente. `synchronize` siempre es falso.
+
+La migración `CreateNutritionRecords1792713600000` crea seis tablas: perfiles/metas, diarios, comidas, alimentos propios, plantillas y operaciones de hidratación. No inserta filas de ejemplo. El propietario es el UUID externo de User API, sin claves foráneas entre bases. Los documentos nutricionales son JSONB validados y los diarios, propietarios e identificadores tienen claves e índices relacionales. La clave compuesta del diario se referencia desde comidas e hidratación. Un contador generado conserva el orden de una confirmación con varios alimentos.
+
+Cada modificación usa una transacción y un bloqueo por usuario en PostgreSQL, compartido entre réplicas. Los lotes de comidas son atómicos; repetir los mismos identificadores no duplica entradas y reutilizarlos con otro contenido devuelve 409. La hidratación tiene un UUID de operación para evitar incrementos duplicados. El historial sobrevive al reinicio del proceso.
+
+Todas las rutas públicas siguientes requieren JWT y usan el prefijo `/api/macrofit/me`. El BFF reemplaza `x-user-id` por el UUID verificado. El API interno recibe `/api/me` y exige esa identidad, siguiendo el límite de confianza de Travel API: no publicar el puerto interno fuera de la red Docker.
+
+| Método y sufijo | Función |
+|---|---|
+| `GET /` | Perfil/metas (null si no existen), alimentos, combos y estado de importación |
+| `PUT /settings` | Guardar `{profile, goals}` de forma atómica |
+| `GET /days/:date` | Diario `YYYY-MM-DD`, vacío si todavía no existe |
+| `POST /days/:date/meals` | Agregar `{entries: [...]}` en una transacción |
+| `DELETE /days/:date/meals/:id` | Retirar una comida propia |
+| `POST /days/:date/water` | `{operationId, amountMl, reset?}`; incremento o reinicio |
+| `PUT /foods`, `PUT /templates` | Guardar alimentos o combos propios |
+| `DELETE /foods/:id`, `DELETE /templates/:id` | Eliminar un elemento propio |
+| `POST /import` | Importar `{settings?, foods, templates, logs}` una vez sin sobrescribir datos del servidor |
+
+Fechas reales, cantidades finitas, campos anidados, límites y campos desconocidos se validan con Zod. No se aceptan propietarios en los cuerpos. Lecturas personales llevan `Cache-Control: no-store`. El JSON de API/BFF admite hasta 5 MiB para historiales; no cambia el límite independiente de imágenes. `/api/health` ahora comprueba la conexión PostgreSQL y responde 503 si falla.
+
+Compose agrega la base al init de instalaciones nuevas y espera PostgreSQL saludable antes de iniciar MacroFit API, con migraciones activadas. Para volúmenes existentes, `scripts/deploy-oci.sh` crea la base si falta **después del backup**. No se recrea PostgreSQL. El rollback de imágenes conserva las tablas; `down` elimina las tablas y solo se usa en bases de prueba desechables.
+
+La integración con PostgreSQL se ejecuta explícitamente contra una base temporal cuyo nombre empiece con `macrofit_test`:
+
+```bash
+MACROFIT_TEST_DATABASE_URL=postgresql://usuario:clave@localhost:5432/macrofit_test \
+  NX_DAEMON=false NX_NO_CLOUD=true npx nx test macro-fit-api
+```
+
+Esta suite reinicia sus tablas con migraciones, comprueba CRUD, aislamiento, idempotencia, escrituras concurrentes, importación, reconexión y migraciones down/up. No usar una base con datos reales. Sin esa variable, la suite se omite; las pruebas unitarias y HTTP restantes siguen ejecutándose.

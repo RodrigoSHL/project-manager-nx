@@ -568,7 +568,8 @@ REMOTE
 
 ensure_remote_databases() {
   if ! contains_service files-api "${SERVICES[@]}" \
-    && ! contains_service inspection-api "${SERVICES[@]}"; then
+    && ! contains_service inspection-api "${SERVICES[@]}" \
+    && ! contains_service macro-fit-api "${SERVICES[@]}"; then
     return 0
   fi
 
@@ -595,6 +596,9 @@ for SERVICE in "${SERVICES[@]}"; do
       ;;
     inspection-api)
       TARGET_DATABASE=${INSPECTION_DB_NAME:-inspection_db}
+      ;;
+    macro-fit-api)
+      TARGET_DATABASE=${MACROFIT_DB_NAME:-macrofit_db}
       ;;
     *)
       continue
@@ -838,6 +842,7 @@ verify_external() {
   fi
   if contains_service macro-fit-api "${SERVICES[@]}" || contains_service macro-fit-web "${SERVICES[@]}"; then
     expect_http_status MACROFIT_API_HEALTH https://macrofit.atomdev.cl/api/macrofit/health 200
+    expect_http_status MACROFIT_PERSONAL_RECORDS_WITHOUT_JWT https://macrofit.atomdev.cl/api/macrofit/me 401
     expect_http_status MACROFIT_API_READY https://macrofit.atomdev.cl/api/macrofit/ready 200
     local invalid_status
     invalid_status=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' \

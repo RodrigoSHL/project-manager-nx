@@ -1,4 +1,9 @@
 import { MealType, PlateAnalysisResponse } from '../types/nutrition';
+import {
+  authenticatedFetch,
+  getAccessToken,
+  SessionChangedError,
+} from '../features/auth/auth-session';
 
 export interface AnalyzePlateOptions {
   hints?: string;
@@ -63,7 +68,8 @@ async function requestAnalysis(
   const timeoutId = setTimeout(() => controller.abort(), 45000);
 
   try {
-    const response = await fetch(path, {
+    const token = getAccessToken();
+    const response = await authenticatedFetch(path, {
       method: 'POST',
       ...init,
       signal: controller.signal,
@@ -72,6 +78,8 @@ async function requestAnalysis(
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
       const fallbackMessages: Record<number, string> = {
+        401: 'Tu sesión expiró. Inicia sesión nuevamente.',
+        403: 'Tu cuenta no tiene permiso para realizar este análisis.',
         429: 'Hay demasiados análisis en curso. Intenta nuevamente en un minuto.',
         502: 'El servicio de análisis devolvió una respuesta inválida. Intenta nuevamente.',
         503: 'Gemini no está disponible temporalmente. Intenta nuevamente en unos momentos.',
@@ -86,7 +94,9 @@ async function requestAnalysis(
       );
     }
 
-    return await response.json();
+    const result = await response.json();
+    if (token !== getAccessToken()) throw new SessionChangedError();
+    return result;
   } catch (err: unknown) {
     if (err instanceof Error && err.name === 'AbortError') {
       throw new Error(

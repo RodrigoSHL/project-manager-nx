@@ -1,5 +1,12 @@
 import { Test } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import {
+  INestApplication,
+  ValidationPipe,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { sign } from 'jsonwebtoken';
+import { AuthModule } from '../auth/auth.module';
+import { UserApiClient } from '../user-api/user-api.client';
 import { MacrofitApiModule } from './macrofit-api.module';
 
 describe('MacroFit BFF HTTP contract', () => {
@@ -7,10 +14,34 @@ describe('MacroFit BFF HTTP contract', () => {
   let origin: string;
   let upstream: jest.SpyInstance;
   const httpFetch = globalThis.fetch;
+  const token = sign(
+    {
+      sub: 'macrofit-test-user',
+      email: 'test@example.invalid',
+      name: 'Test',
+      roles: ['user'],
+    },
+    process.env.JWT_SECRET || 'dev-secret-change-me',
+    { expiresIn: '5m' }
+  );
   beforeAll(async () => {
     const module = await Test.createTestingModule({
-      imports: [MacrofitApiModule],
-    }).compile();
+      imports: [AuthModule, MacrofitApiModule],
+    })
+      .overrideProvider(UserApiClient)
+      .useValue({
+        validateCredentials: async (email: string, password: string) => {
+          if (email !== 'login@example.invalid' || password !== 'test-only')
+            throw new UnauthorizedException();
+          return {
+            id: 'login-user',
+            email,
+            name: 'Login Test',
+            roles: ['user'],
+          };
+        },
+      })
+      .compile();
     app = module.createNestApplication();
     app.useGlobalPipes(
       new ValidationPipe({
@@ -32,9 +63,79 @@ describe('MacroFit BFF HTTP contract', () => {
   const describeMeal = (body: unknown) =>
     httpFetch(`${origin}/api/macrofit/analyze-meal-text`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify(body),
     });
+  it('uses the common login JWT for profile and MacroFit analysis', async () => {
+    const login = await httpFetch(`${origin}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        email: 'login@example.invalid',
+        password: 'test-only',
+      }),
+    });
+    expect(login.status).toBe(200);
+    const session = await login.json();
+    const profile = await httpFetch(`${origin}/api/auth/profile`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    expect(profile.status).toBe(200);
+    expect((await profile.json()).userId).toBe('login-user');
+    upstream.mockResolvedValue(
+      new Response('{"items":["authenticated-result"]}', { status: 200 })
+    );
+    const analysis = await httpFetch(
+      `${origin}/api/macrofit/analyze-meal-text`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: '{"text":"200 g de arroz"}',
+      }
+    );
+    expect(analysis.status).toBe(200);
+  });
+  it('rejects incorrect platform credentials', async () => {
+    const response = await httpFetch(`${origin}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{"email":"login@example.invalid","password":"wrong"}',
+    });
+    expect(response.status).toBe(401);
+    expect(upstream).not.toHaveBeenCalled();
+  });
+  it.each([
+    '/api/macrofit/analyze-meal-text',
+    '/api/macrofit/analyze-plate',
+    '/api/analyze-plate',
+  ])(
+    'rejects missing, invalid and expired sessions at %s before calling the provider',
+    async (path) => {
+      const expired = sign(
+        { sub: 'test', roles: ['user'] },
+        process.env.JWT_SECRET || 'dev-secret-change-me',
+        { expiresIn: -1 }
+      );
+      for (const credential of [null, 'invalid', expired]) {
+        const response = await httpFetch(`${origin}${path}`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            ...(credential ? { Authorization: `Bearer ${credential}` } : {}),
+          },
+          body: JSON.stringify({ text: '200 g de arroz' }),
+        });
+        expect(response.status).toBe(401);
+      }
+      expect(upstream).not.toHaveBeenCalled();
+    }
+  );
   it('forwards a validated description as JSON to the internal API', async () => {
     upstream.mockResolvedValue(
       new Response('{"items":["text-result"]}', { status: 200 })
@@ -88,7 +189,11 @@ describe('MacroFit BFF HTTP contract', () => {
       'plate.jpg'
     );
     if (field) body.append(...field);
-    return httpFetch(`${origin}${path}`, { method: 'POST', body });
+    return httpFetch(`${origin}${path}`, {
+      method: 'POST',
+      body,
+      headers: { Authorization: `Bearer ${token}` },
+    });
   };
   it.each(['/api/macrofit/analyze-plate', '/api/analyze-plate'])(
     'forwards multipart through %s, including legacy PWA clients',

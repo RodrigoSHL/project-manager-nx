@@ -2,6 +2,8 @@ import { readFile } from 'node:fs/promises';
 
 // Explicit functional smoke: submits one real photo and may incur provider usage.
 const [origin, imagePath] = process.argv.slice(2);
+const accessToken = process.env.MACROFIT_SMOKE_TOKEN;
+if (!accessToken) throw new Error('Set MACROFIT_SMOKE_TOKEN to a valid platform session before submitting a real photo.');
 if (!origin || !imagePath)
   throw new Error(
     'Usage: node scripts/smoke-macrofit.mjs <origin> <food-image>'
@@ -20,6 +22,7 @@ const response = await fetch(
   `${origin.replace(/\/$/, '')}/api/macrofit/analyze-plate`,
   {
     method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
     body: form,
     signal: AbortSignal.timeout(45000),
   }

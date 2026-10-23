@@ -1,7 +1,23 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { analyzeMealText, analyzePlateImage } from './plateAnalysisApi';
 
-afterEach(() => vi.unstubAllGlobals());
+beforeEach(() =>
+  localStorage.setItem(
+    'access_token',
+    'test.' +
+      btoa(
+        JSON.stringify({
+          sub: 'test',
+          exp: Math.floor(Date.now() / 1000) + 3600,
+        })
+      ) +
+      '.test'
+  )
+);
+afterEach(() => {
+  vi.unstubAllGlobals();
+  localStorage.clear();
+});
 const image = () => new Blob(['jpeg'], { type: 'image/jpeg' });
 
 describe('text analysis request', () => {
@@ -17,7 +33,10 @@ describe('text analysis request', () => {
       text: '200 g de carne',
       mealType: 'lunch',
     });
-    expect(init.headers).toEqual({ 'content-type': 'application/json' });
+    expect(new Headers(init.headers).get('content-type')).toBe(
+      'application/json'
+    );
+    expect(new Headers(init.headers).get('Authorization')).toMatch(/^Bearer /);
   });
   it.each(['   ', 'a'.repeat(2001)])(
     'does not send an invalid description',

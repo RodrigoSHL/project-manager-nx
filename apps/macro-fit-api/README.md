@@ -15,6 +15,8 @@ API NestJS interna para analizar imágenes y descripciones de comidas con Gemini
 
 El navegador accede mediante BFF: `POST /api/macrofit/analyze-plate`. BFF conserva `/api/analyze-plate` como alias para PWA anteriores. Los endpoints públicos de estado son `/api/macrofit/health` y `/api/macrofit/ready`.
 
+Los análisis de imagen, su alias anterior y el análisis de texto requieren `Authorization: Bearer <JWT>` en el BFF, usando la sesión común de `/api/auth/login`. Una sesión ausente, inválida o vencida devuelve 401 antes de cargar la imagen o contactar al proveedor. Health y readiness permanecen públicos. Esta API no valida credenciales ni se publica directamente; el límite de autenticación está en el BFF.
+
 El análisis de texto se publica solo mediante BFF en `POST /api/macrofit/analyze-meal-text`. Reutiliza `GEMINI_MODEL`, las validaciones nutricionales, el límite de concurrencia, la cuota y el plazo total de las imágenes. No requiere otro proveedor ni nuevas variables.
 
 Su respuesta conserva el formato de ingredientes del análisis de imagen y agrega `meal_type` (incluye `unspecified`), `assumptions` y `items[].quantity_source` (`declared` para g/kg explícitos, `estimated` para cantidades vagas, unidades domésticas o piezas). El prompt pide conservar los gramos declarados, señalar las suposiciones de preparación y evitar afirmar que se verificó una etiqueta comercial. Los valores nutricionales son estimaciones del modelo, no una consulta a una base de etiquetas. Si se selecciona un tiempo de comida, esa selección prevalece sobre la inferencia. Si el modelo no identifica alimentos consumidos, la API devuelve 400 y no inventa una comida.
@@ -32,12 +34,13 @@ Su respuesta conserva el formato de ingredientes del análisis de imagen y agreg
 
 Un fallo HTTP temporal del proveedor admite un único reintento. Ambos intentos comparten el plazo total y cada llamada consume el límite por minuto. No se reintentan credenciales inválidas ni cuotas del proveedor agotadas.
 
-Los límites son globales por proceso, en memoria: se reinician al recrear el contenedor y no son una cuota por usuario ni un presupuesto mensual. La calculadora sigue siendo pública. Si se escala a varias réplicas, se requiere un límite compartido o una cuota del proveedor para controlar el total.
+Los límites son globales por proceso, en memoria: se reinician al recrear el contenedor y no son una cuota por usuario ni un presupuesto mensual. Los análisis requieren sesión, pero comparten estos límites entre las cuentas. Si se escala a varias réplicas, se requiere un límite compartido o una cuota del proveedor para controlar el total.
 
 Los errores no incluyen payloads, claves o mensajes internos de Gemini:
 
 | HTTP | Significado |
 |---|---|
+| 401 | Sesión ausente, inválida o vencida, rechazada por el BFF |
 | 400 / 415 / 413 | Metadatos/imagen inválidos, formato no admitido o tamaño excesivo |
 | 429 | Límite de llamadas o concurrencia de esta API |
 | 502 | Fallo del proveedor o respuesta vacía/inválida |
@@ -71,5 +74,6 @@ node scripts/smoke-macrofit.mjs http://localhost:3000 /ruta/foto.jpg
 ```
 
 Esto consume una llamada del proveedor. No forma parte de los sondeos periódicos.
+El script requiere `MACROFIT_SMOKE_TOKEN` en el entorno con un JWT válido de la plataforma; no imprime el token. El despliegue verifica que los análisis anónimos respondan 401 y solo prueba una foto real cuando se proporcionan tanto `MACROFIT_SMOKE_IMAGE` como `MACROFIT_SMOKE_TOKEN`.
 
 El código de modelo fue contrastado con la [documentación oficial de Gemini](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite).

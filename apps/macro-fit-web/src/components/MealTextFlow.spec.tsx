@@ -8,9 +8,19 @@ import {
   within,
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import App from '../app/app';
+import { MacroFitWorkspace } from '../app/app';
+import { accountKey } from '../features/auth/account-storage';
+import { getTodayDateString } from '../hooks/useMacroStore';
 import { MealTextModal } from './MealTextModal';
 import { PlateAnalysisResponse } from '../types/nutrition';
+
+const user = {
+  userId: 'text-test',
+  name: 'Test',
+  email: 'test@example.invalid',
+  roles: ['user'],
+};
+const App = () => <MacroFitWorkspace user={user} onLogout={() => undefined} />;
 
 const analysis: PlateAnalysisResponse = {
   dish_name: 'Almuerzo descrito',
@@ -89,6 +99,17 @@ class MockRecognition {
 
 beforeEach(() => {
   localStorage.clear();
+  localStorage.setItem(
+    'access_token',
+    'test.' +
+      btoa(
+        JSON.stringify({
+          sub: user.userId,
+          exp: Math.floor(Date.now() / 1000) + 3600,
+        })
+      ) +
+      '.test'
+  );
   vi.stubGlobal('isSecureContext', true);
   vi.stubGlobal('SpeechRecognition', undefined);
   vi.stubGlobal('webkitSpeechRecognition', undefined);
@@ -106,10 +127,8 @@ describe('description to daily log', () => {
       .mockResolvedValue({ ok: true, json: async () => analysis });
     vi.stubGlobal('fetch', fetch);
     render(<App />);
-    const key = Object.keys(localStorage).find((value) =>
-      value.startsWith('macrofit_log_')
-    )!;
-    const previousMeals = JSON.parse(localStorage.getItem(key)!).meals;
+    const key = accountKey(user.userId, `macrofit_log_${getTodayDateString()}`);
+    const previousMeals: unknown[] = [];
     fireEvent.click(
       screen.getByRole('button', { name: 'Escribir / Dictar comida' })
     );
@@ -139,7 +158,7 @@ describe('description to daily log', () => {
         ) as HTMLInputElement
       ).value
     ).toBe('9');
-    expect(JSON.parse(localStorage.getItem(key)!).meals).toEqual(previousMeals);
+    expect(localStorage.getItem(key)).toBeNull();
     fireEvent.change(
       within(review).getByLabelText('Gramos de Mayonesa Kraft'),
       { target: { value: '2.5' } }
@@ -161,13 +180,11 @@ describe('description to daily log', () => {
   });
 
   it('keeps the draft editable after provider failure and sends the explicitly selected meal', async () => {
-    const fetch = vi
-      .fn()
-      .mockResolvedValue({
-        ok: false,
-        status: 503,
-        json: async () => ({ message: 'Gemini temporalmente no disponible' }),
-      });
+    const fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => ({ message: 'Gemini temporalmente no disponible' }),
+    });
     vi.stubGlobal('fetch', fetch);
     const success = vi.fn();
     render(

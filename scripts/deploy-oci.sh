@@ -834,6 +834,7 @@ verify_external() {
   fi
   if contains_service macro-fit-web "${SERVICES[@]}"; then
     expect_http_status MACROFIT_ROOT https://macrofit.atomdev.cl/ 200
+    expect_http_status MACROFIT_LOGIN https://macrofit.atomdev.cl/login 200
   fi
   if contains_service macro-fit-api "${SERVICES[@]}" || contains_service macro-fit-web "${SERVICES[@]}"; then
     expect_http_status MACROFIT_API_HEALTH https://macrofit.atomdev.cl/api/macrofit/health 200
@@ -842,12 +843,17 @@ verify_external() {
     invalid_status=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' \
       -F 'image=invalid;filename=invalid.txt;type=text/plain' \
       https://macrofit.atomdev.cl/api/macrofit/analyze-plate)
-    [[ "$invalid_status" == 415 ]] || die "MacroFit aceptó un archivo no permitido (HTTP $invalid_status)"
-    printf 'MACROFIT_INVALID_IMAGE_REJECTED=415\n'
-    if [[ -n "${MACROFIT_SMOKE_IMAGE:-}" ]]; then
+    [[ "$invalid_status" == 401 ]] || die "MacroFit no protegió el análisis anónimo (HTTP $invalid_status)"
+    printf 'MACROFIT_ANONYMOUS_IMAGE_REJECTED=401\n'
+    invalid_status=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' \
+      -H 'Content-Type: application/json' -d '{"text":"200 g de arroz"}' \
+      https://macrofit.atomdev.cl/api/macrofit/analyze-meal-text)
+    [[ "$invalid_status" == 401 ]] || die "MacroFit no protegió el análisis de texto anónimo (HTTP $invalid_status)"
+    printf 'MACROFIT_ANONYMOUS_TEXT_REJECTED=401\n'
+    if [[ -n "${MACROFIT_SMOKE_IMAGE:-}" && -n "${MACROFIT_SMOKE_TOKEN:-}" ]]; then
       node "$ROOT_DIR/scripts/smoke-macrofit.mjs" https://macrofit.atomdev.cl "$MACROFIT_SMOKE_IMAGE"
     else
-      warn "Gemini solo fue verificado a nivel de configuración. Para probar el proveedor real define MACROFIT_SMOKE_IMAGE con una foto de comida (consume una llamada)."
+      warn "Gemini solo fue verificado a nivel de configuración. Para probar el proveedor real define MACROFIT_SMOKE_IMAGE y MACROFIT_SMOKE_TOKEN con una sesión válida (consume una llamada)."
     fi
   fi
   expect_http_status JIRA_ROOT https://jira.atomdev.cl/ 200

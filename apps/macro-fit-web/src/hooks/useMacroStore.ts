@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createAccountStorage } from '../features/auth/account-storage';
 import {
   DailyLog,
   FoodGroup,
@@ -31,278 +32,12 @@ export function getTodayDateString(): string {
   return `${year}-${month}-${day}`;
 }
 
-/**
- * Ejemplo inicial precargado exactamente según la TABLA 2 de la pauta MEDS
- */
-const INITIAL_MEDS_MEALS: MealEntry[] = [
-  // Comida 1: Desayuno (1 Carb, 2 Prot, ½ Grasa, 1 Lácteo)
-  {
-    id: 'seed-des-1',
-    mealType: 'breakfast',
-    foodId: 'meds-avena',
-    foodName: 'Avena en Hojuelas (½ taza)',
-    amountGrams: 40,
-    calories: 145,
-    protein: 5.5,
-    carbs: 27,
-    fat: 2.8,
-    portionGroup: 'carbs',
-    portionsCount: 1,
-    timestamp: '08:00',
-  },
-  {
-    id: 'seed-des-2',
-    mealType: 'breakfast',
-    foodId: 'meds-scoop-proteina',
-    foodName: 'Proteína Whey en Polvo (1 scoop)',
-    amountGrams: 30,
-    calories: 120,
-    protein: 24,
-    carbs: 2,
-    fat: 1.5,
-    portionGroup: 'protein',
-    portionsCount: 2,
-    timestamp: '08:05',
-  },
-  {
-    id: 'seed-des-3',
-    mealType: 'breakfast',
-    foodId: 'meds-palta-hass',
-    foodName: 'Palta Hass (1.5 cucharadas)',
-    amountGrams: 45,
-    calories: 78,
-    protein: 0.9,
-    carbs: 2,
-    fat: 7.5,
-    portionGroup: 'fats',
-    portionsCount: 0.5,
-    timestamp: '08:05',
-  },
-  {
-    id: 'seed-des-4',
-    mealType: 'breakfast',
-    foodId: 'meds-yogurt-descremado',
-    foodName: 'Yogurt Descremado 0% (1 unidad)',
-    amountGrams: 125,
-    calories: 75,
-    protein: 6.5,
-    carbs: 10,
-    fat: 0.2,
-    portionGroup: 'dairy',
-    portionsCount: 1,
-    timestamp: '08:10',
-  },
-
-  // Colación AM: 1 Fruta + 1 Lácteo
-  {
-    id: 'seed-colam-1',
-    mealType: 'colacion_am',
-    foodId: 'meds-manzana',
-    foodName: 'Manzana con piel (1 unidad entera)',
-    amountGrams: 100,
-    calories: 55,
-    protein: 0.3,
-    carbs: 14,
-    fat: 0.2,
-    portionGroup: 'fruits',
-    portionsCount: 1,
-    timestamp: '11:00',
-  },
-  {
-    id: 'seed-colam-2',
-    mealType: 'colacion_am',
-    foodId: 'meds-leche-descremada',
-    foodName: 'Leche Descremada (1 taza)',
-    amountGrams: 200,
-    calories: 82,
-    protein: 7,
-    carbs: 10,
-    fat: 1,
-    portionGroup: 'dairy',
-    portionsCount: 1,
-    timestamp: '11:05',
-  },
-
-  // Comida 2: Almuerzo (Verduras libre + ½ Grasa + 4 Prot + 1 Carb + ½ Grasa + 1 Fruta)
-  {
-    id: 'seed-alm-1',
-    mealType: 'lunch',
-    foodId: 'meds-ensalada-verde',
-    foodName: 'Vegetales variados (Ensalada verde libre)',
-    amountGrams: 100,
-    calories: 18,
-    protein: 1.5,
-    carbs: 2.5,
-    fat: 0.2,
-    portionGroup: 'veggies',
-    portionsCount: 1,
-    timestamp: '13:30',
-  },
-  {
-    id: 'seed-alm-2',
-    mealType: 'lunch',
-    foodId: 'meds-pechuga-pollo',
-    foodName: 'Pechuga de Pollo a la plancha (200g cocido)',
-    amountGrams: 200,
-    calories: 260,
-    protein: 44,
-    carbs: 2,
-    fat: 7.2,
-    portionGroup: 'protein',
-    portionsCount: 4,
-    timestamp: '13:35',
-  },
-  {
-    id: 'seed-alm-3',
-    mealType: 'lunch',
-    foodId: 'meds-arroz-cocido',
-    foodName: 'Arroz Blanco Cocido (¾ taza)',
-    amountGrams: 110,
-    calories: 143,
-    protein: 3,
-    carbs: 31,
-    fat: 0.3,
-    portionGroup: 'carbs',
-    portionsCount: 1,
-    timestamp: '13:35',
-  },
-  {
-    id: 'seed-alm-4',
-    mealType: 'lunch',
-    foodId: 'meds-aceite-oliva',
-    foodName: 'Aceite de Oliva Extra Virgen (4 cditas para ensalada)',
-    amountGrams: 20,
-    calories: 178,
-    protein: 0,
-    carbs: 0,
-    fat: 20,
-    portionGroup: 'fats',
-    portionsCount: 1,
-    timestamp: '13:35',
-  },
-  {
-    id: 'seed-alm-5',
-    mealType: 'lunch',
-    foodId: 'meds-naranja',
-    foodName: 'Naranja entera a elección (1 unidad)',
-    amountGrams: 100,
-    calories: 50,
-    protein: 0.9,
-    carbs: 12,
-    fat: 0.2,
-    portionGroup: 'fruits',
-    portionsCount: 1,
-    timestamp: '14:00',
-  },
-
-  // Colación PM: 1 Fruta + 1 Carbohidrato + 1 Lácteo
-  {
-    id: 'seed-colpm-1',
-    mealType: 'colacion_pm',
-    foodId: 'meds-platano',
-    foodName: 'Plátano (½ unidad)',
-    amountGrams: 60,
-    calories: 58,
-    protein: 0.7,
-    carbs: 15,
-    fat: 0.2,
-    portionGroup: 'fruits',
-    portionsCount: 1,
-    timestamp: '17:30',
-  },
-  {
-    id: 'seed-colpm-2',
-    mealType: 'colacion_pm',
-    foodId: 'meds-avena',
-    foodName: 'Avena en Hojuelas (½ taza)',
-    amountGrams: 40,
-    calories: 145,
-    protein: 5.5,
-    carbs: 27,
-    fat: 2.8,
-    portionGroup: 'carbs',
-    portionsCount: 1,
-    timestamp: '17:30',
-  },
-  {
-    id: 'seed-colpm-3',
-    mealType: 'colacion_pm',
-    foodId: 'meds-yogurt-proteico',
-    foodName: 'Yogurt Proteico (1 unidad)',
-    amountGrams: 150,
-    calories: 85,
-    protein: 12,
-    carbs: 7,
-    fat: 0.5,
-    portionGroup: 'dairy',
-    portionsCount: 1,
-    timestamp: '17:35',
-  },
-
-  // Comida 3: Cena (Verduras libre + ½ Grasa + 4 Prot + 1 Carb)
-  {
-    id: 'seed-cena-1',
-    mealType: 'dinner',
-    foodId: 'meds-ensalada-verde',
-    foodName: 'Vegetales variados (Ensalada libre)',
-    amountGrams: 100,
-    calories: 18,
-    protein: 1.5,
-    carbs: 2.5,
-    fat: 0.2,
-    portionGroup: 'veggies',
-    portionsCount: 1,
-    timestamp: '20:30',
-  },
-  {
-    id: 'seed-cena-2',
-    mealType: 'dinner',
-    foodId: 'meds-carne-vacuno-magra',
-    foodName: 'Vacuno Magro (Posta/Lomo cocido 200g)',
-    amountGrams: 200,
-    calories: 260,
-    protein: 44,
-    carbs: 0,
-    fat: 8,
-    portionGroup: 'protein',
-    portionsCount: 4,
-    timestamp: '20:35',
-  },
-  {
-    id: 'seed-cena-3',
-    mealType: 'dinner',
-    foodId: 'meds-fideos-cocidos',
-    foodName: 'Fideos Cocidos (¾ taza)',
-    amountGrams: 110,
-    calories: 142,
-    protein: 4.8,
-    carbs: 28.5,
-    fat: 0.8,
-    portionGroup: 'carbs',
-    portionsCount: 1,
-    timestamp: '20:35',
-  },
-  {
-    id: 'seed-cena-4',
-    mealType: 'dinner',
-    foodId: 'meds-aceite-oliva',
-    foodName: 'Aceite de Oliva Extra Virgen (2 cditas para aliñar)',
-    amountGrams: 10,
-    calories: 89,
-    protein: 0,
-    carbs: 0,
-    fat: 10,
-    portionGroup: 'fats',
-    portionsCount: 0.5,
-    timestamp: '20:35',
-  },
-];
-
-export function useMacroStore() {
+export function useMacroStore(userId: string) {
+  const [storage] = useState(() => createAccountStorage(userId));
   // 1. Perfil y metas (Por defecto: Pauta Clínica MEDS)
   const [profile, setProfile] = useState<UserProfile>(() => {
     try {
-      const saved = localStorage.getItem('macrofit_profile');
+      const saved = storage.getItem('macrofit_profile');
       return saved ? JSON.parse(saved) : DEFAULT_PROFILE;
     } catch {
       return DEFAULT_PROFILE;
@@ -311,11 +46,14 @@ export function useMacroStore() {
 
   const [goals, setGoals] = useState<MacroGoals>(() => {
     try {
-      const saved = localStorage.getItem('macrofit_goals');
+      const saved = storage.getItem('macrofit_goals');
       if (saved) {
         const parsed = JSON.parse(saved);
         // Garantizar que si no tiene pautaPortions, cargue las de MEDS
-        return { ...parsed, pautaPortions: parsed.pautaPortions || MEDS_PAUTA_PORTIONS };
+        return {
+          ...parsed,
+          pautaPortions: parsed.pautaPortions || MEDS_PAUTA_PORTIONS,
+        };
       }
       return MEDS_PAUTA_GOALS;
     } catch {
@@ -326,7 +64,7 @@ export function useMacroStore() {
   // 2. Alimentos personalizados
   const [customFoods, setCustomFoods] = useState<FoodItem[]>(() => {
     try {
-      const saved = localStorage.getItem('macrofit_custom_foods');
+      const saved = storage.getItem('macrofit_custom_foods');
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -334,28 +72,19 @@ export function useMacroStore() {
   });
 
   // 3. Fecha activa y registro diario
-  const [selectedDate, setSelectedDate] = useState<string>(getTodayDateString());
+  const [selectedDate, setSelectedDate] = useState<string>(
+    getTodayDateString()
+  );
 
   const [dailyLog, setDailyLog] = useState<DailyLog>(() => {
     try {
       const key = `macrofit_log_${getTodayDateString()}`;
-      const saved = localStorage.getItem(key);
+      const saved = storage.getItem(key);
       if (saved) return JSON.parse(saved);
 
-      // Pre-cargar la pauta MEDS como ejemplo activo del día
-      const initialSeed: DailyLog = {
-        date: getTodayDateString(),
-        meals: INITIAL_MEDS_MEALS,
-        waterIntakeMl: 2100,
-      };
-      localStorage.setItem(key, JSON.stringify(initialSeed));
-      return initialSeed;
+      return { date: getTodayDateString(), meals: [], waterIntakeMl: 0 };
     } catch {
-      return {
-        date: getTodayDateString(),
-        meals: INITIAL_MEDS_MEALS,
-        waterIntakeMl: 2100,
-      };
+      return { date: getTodayDateString(), meals: [], waterIntakeMl: 0 };
     }
   });
 
@@ -363,7 +92,7 @@ export function useMacroStore() {
   useEffect(() => {
     try {
       const key = `macrofit_log_${selectedDate}`;
-      const saved = localStorage.getItem(key);
+      const saved = storage.getItem(key);
       if (saved) {
         setDailyLog(JSON.parse(saved));
       } else {
@@ -376,23 +105,26 @@ export function useMacroStore() {
     } catch (e) {
       console.error('Error cargando diario:', e);
     }
-  }, [selectedDate]);
+  }, [selectedDate, storage]);
 
   const persistDailyLog = (updated: DailyLog) => {
     setDailyLog(updated);
     try {
-      localStorage.setItem(`macrofit_log_${updated.date}`, JSON.stringify(updated));
+      storage.setItem(`macrofit_log_${updated.date}`, JSON.stringify(updated));
     } catch (e) {
       console.error('Error persistiendo diario:', e);
     }
   };
 
-  const saveProfileAndGoals = (newProfile: UserProfile, newGoals: MacroGoals) => {
+  const saveProfileAndGoals = (
+    newProfile: UserProfile,
+    newGoals: MacroGoals
+  ) => {
     setProfile(newProfile);
     setGoals(newGoals);
     try {
-      localStorage.setItem('macrofit_profile', JSON.stringify(newProfile));
-      localStorage.setItem('macrofit_goals', JSON.stringify(newGoals));
+      storage.setItem('macrofit_profile', JSON.stringify(newProfile));
+      storage.setItem('macrofit_goals', JSON.stringify(newGoals));
     } catch (e) {
       console.error('Error guardando perfil/metas:', e);
     }
@@ -405,7 +137,9 @@ export function useMacroStore() {
   ) => {
     const ratio = amountGrams / food.servingSizeGrams;
     const now = new Date();
-    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(
+      now.getMinutes()
+    ).padStart(2, '0')}`;
 
     // Calcular porciones equivalentes de la pauta si las tiene
     let portionGroup: FoodGroup | undefined;
@@ -417,7 +151,8 @@ export function useMacroStore() {
     }
 
     const newEntry: MealEntry = {
-      id: 'meal-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      id:
+        'meal-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
       mealType,
       foodId: food.id,
       foodName: food.name,
@@ -437,7 +172,10 @@ export function useMacroStore() {
         meals: [...prev.meals, newEntry],
       };
       try {
-        localStorage.setItem(`macrofit_log_${updated.date}`, JSON.stringify(updated));
+        storage.setItem(
+          `macrofit_log_${updated.date}`,
+          JSON.stringify(updated)
+        );
       } catch (e) {
         console.error('Error persistiendo diario:', e);
       }
@@ -449,33 +187,41 @@ export function useMacroStore() {
     items: Array<{ mealType: MealType; food: FoodItem; amountGrams: number }>
   ) => {
     const now = new Date();
-    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(
+      now.getMinutes()
+    ).padStart(2, '0')}`;
 
-    const newEntries: MealEntry[] = items.map(({ mealType, food, amountGrams }, idx) => {
-      const ratio = amountGrams / food.servingSizeGrams;
-      let portionGroup: FoodGroup | undefined;
-      let portionsCount: number | undefined;
+    const newEntries: MealEntry[] = items.map(
+      ({ mealType, food, amountGrams }, idx) => {
+        const ratio = amountGrams / food.servingSizeGrams;
+        let portionGroup: FoodGroup | undefined;
+        let portionsCount: number | undefined;
 
-      if (food.portionEquiv) {
-        portionGroup = food.portionEquiv.group;
-        portionsCount = Number((food.portionEquiv.portions * ratio).toFixed(1));
+        if (food.portionEquiv) {
+          portionGroup = food.portionEquiv.group;
+          portionsCount = Number(
+            (food.portionEquiv.portions * ratio).toFixed(1)
+          );
+        }
+
+        return {
+          id: `meal-${Date.now()}-${idx}-${Math.random()
+            .toString(36)
+            .substring(2, 6)}`,
+          mealType,
+          foodId: food.id,
+          foodName: food.name,
+          amountGrams,
+          calories: Math.round(food.calories * ratio),
+          protein: Number((food.protein * ratio).toFixed(1)),
+          carbs: Number((food.carbs * ratio).toFixed(1)),
+          fat: Number((food.fat * ratio).toFixed(1)),
+          portionGroup,
+          portionsCount,
+          timestamp: timeStr,
+        };
       }
-
-      return {
-        id: `meal-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
-        mealType,
-        foodId: food.id,
-        foodName: food.name,
-        amountGrams,
-        calories: Math.round(food.calories * ratio),
-        protein: Number((food.protein * ratio).toFixed(1)),
-        carbs: Number((food.carbs * ratio).toFixed(1)),
-        fat: Number((food.fat * ratio).toFixed(1)),
-        portionGroup,
-        portionsCount,
-        timestamp: timeStr,
-      };
-    });
+    );
 
     setDailyLog((prev) => {
       const updated: DailyLog = {
@@ -483,7 +229,10 @@ export function useMacroStore() {
         meals: [...prev.meals, ...newEntries],
       };
       try {
-        localStorage.setItem(`macrofit_log_${updated.date}`, JSON.stringify(updated));
+        storage.setItem(
+          `macrofit_log_${updated.date}`,
+          JSON.stringify(updated)
+        );
       } catch (e) {
         console.error('Error persistiendo diario:', e);
       }
@@ -498,7 +247,10 @@ export function useMacroStore() {
         meals: prev.meals.filter((m) => m.id !== entryId),
       };
       try {
-        localStorage.setItem(`macrofit_log_${updated.date}`, JSON.stringify(updated));
+        storage.setItem(
+          `macrofit_log_${updated.date}`,
+          JSON.stringify(updated)
+        );
       } catch (e) {
         console.error('Error persistiendo diario:', e);
       }
@@ -532,7 +284,7 @@ export function useMacroStore() {
     const nextList = [...customFoods, newFood];
     setCustomFoods(nextList);
     try {
-      localStorage.setItem('macrofit_custom_foods', JSON.stringify(nextList));
+      storage.setItem('macrofit_custom_foods', JSON.stringify(nextList));
     } catch (e) {
       console.error('Error guardando alimento:', e);
     }
@@ -542,7 +294,7 @@ export function useMacroStore() {
   // 4. Plantillas de Comidas / Combos precargados
   const [customTemplates, setCustomTemplates] = useState<MealTemplate[]>(() => {
     try {
-      const saved = localStorage.getItem('macrofit_custom_templates');
+      const saved = storage.getItem('macrofit_custom_templates');
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -550,13 +302,21 @@ export function useMacroStore() {
   });
 
   const allFoods: FoodItem[] = [...customFoods, ...COMMON_FOODS];
-  const allTemplates: MealTemplate[] = [...customTemplates, ...DEFAULT_MEAL_TEMPLATES];
+  const allTemplates: MealTemplate[] = [
+    ...customTemplates,
+    ...DEFAULT_MEAL_TEMPLATES,
+  ];
 
   // Aplicar un combo/plantilla completa en un tiempo de comida
-  const applyMealTemplate = (template: MealTemplate, targetMealType?: MealType) => {
+  const applyMealTemplate = (
+    template: MealTemplate,
+    targetMealType?: MealType
+  ) => {
     const mealType = targetMealType || template.mealType;
     const now = new Date();
-    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(
+      now.getMinutes()
+    ).padStart(2, '0')}`;
 
     const newEntries: MealEntry[] = [];
 
@@ -574,7 +334,11 @@ export function useMacroStore() {
       }
 
       newEntries.push({
-        id: 'meal-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+        id:
+          'meal-' +
+          Date.now() +
+          '-' +
+          Math.random().toString(36).substring(2, 6),
         mealType,
         foodId: food.id,
         foodName: food.name,
@@ -608,7 +372,8 @@ export function useMacroStore() {
       name,
       description,
       mealType,
-      icon: mealType === 'breakfast' ? '🥣' : mealType === 'lunch' ? '🍱' : '🌙',
+      icon:
+        mealType === 'breakfast' ? '🥣' : mealType === 'lunch' ? '🍱' : '🌙',
       items: entries.map((e) => ({
         foodId: e.foodId,
         amountGrams: e.amountGrams,
@@ -619,7 +384,10 @@ export function useMacroStore() {
     const nextTemplates = [newTemplate, ...customTemplates];
     setCustomTemplates(nextTemplates);
     try {
-      localStorage.setItem('macrofit_custom_templates', JSON.stringify(nextTemplates));
+      storage.setItem(
+        'macrofit_custom_templates',
+        JSON.stringify(nextTemplates)
+      );
     } catch (e) {
       console.error('Error guardando plantilla:', e);
     }
@@ -644,7 +412,8 @@ export function useMacroStore() {
         else if (item.portionGroup === 'carbs') acc.carbs += item.portionsCount;
         else if (item.portionGroup === 'fats') acc.fats += item.portionsCount;
         else if (item.portionGroup === 'dairy') acc.dairy += item.portionsCount;
-        else if (item.portionGroup === 'fruits') acc.fruits += item.portionsCount;
+        else if (item.portionGroup === 'fruits')
+          acc.fruits += item.portionsCount;
       }
       return acc;
     },

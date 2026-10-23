@@ -8,7 +8,9 @@ import {
   UnsupportedMediaTypeException,
   UploadedFile,
   UseInterceptors,
+  UseGuards,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Transform } from 'class-transformer';
 import {
@@ -50,7 +52,7 @@ class AnalyzeMealTextBody {
   mealType?: string;
 }
 
-// Public calculator: provider quotas and concurrency limits are enforced by the API.
+// The BFF authenticates analyses; provider quotas remain enforced by the internal API.
 @Controller('api')
 export class MacrofitApiController {
   constructor(private readonly macrofit: MacrofitApiClient) {}
@@ -66,6 +68,7 @@ export class MacrofitApiController {
   }
 
   @Post('macrofit/analyze-meal-text')
+  @UseGuards(JwtAuthGuard)
   @HttpCode(200)
   analyzeMealText(@Body() body: AnalyzeMealTextBody) {
     return this.macrofit.analyzeMealText(body);
@@ -73,6 +76,7 @@ export class MacrofitApiController {
 
   // Preserve the previous URL for already installed PWA clients.
   @Post(['macrofit/analyze-plate', 'analyze-plate'])
+  @UseGuards(JwtAuthGuard)
   @HttpCode(200)
   @UseInterceptors(
     FileInterceptor('image', {

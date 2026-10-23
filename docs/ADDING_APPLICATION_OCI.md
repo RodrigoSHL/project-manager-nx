@@ -417,8 +417,10 @@ explícitamente; los ejemplos antiguos fijaban otro nombre. El script preserva
 El health confirma el proceso; readiness solo confirma configuración. Para
 verificar también Gemini real durante el despliegue, definir
 `MACROFIT_SMOKE_IMAGE=/ruta/foto-comida.jpg`; se realiza una llamada con coste/cuota.
-Si se omite, el script lo informa expresamente y comprueba además que se
-rechace una carga de texto.
+Después de incorporar el login, el smoke real requiere también
+`MACROFIT_SMOKE_TOKEN` con un JWT vigente de la plataforma. Si se omiten estas
+variables, el script lo informa y comprueba que los análisis de imagen y texto
+sin sesión respondan 401. No guardar el token en documentación ni logs.
 
 User API ahora ejecuta una migración inicial y fuerza `synchronize=false` en
 producción. En bases existentes reconoce el esquema anterior y conserva las

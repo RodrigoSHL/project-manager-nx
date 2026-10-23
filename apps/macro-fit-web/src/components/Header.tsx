@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, Sparkles, Smartphone, CheckCircle2, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { Download, Sparkles, Smartphone, CheckCircle2, ChevronLeft, ChevronRight, Calendar, LogOut } from 'lucide-react';
 import { getTodayDateString } from '../hooks/useMacroStore';
 
 interface HeaderProps {
@@ -10,6 +10,8 @@ interface HeaderProps {
   canInstall: boolean;
   isStandalone: boolean;
   onOpenInstall: () => void;
+  userName: string;
+  onLogout: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -20,6 +22,8 @@ export const Header: React.FC<HeaderProps> = ({
   canInstall,
   isStandalone,
   onOpenInstall,
+  userName,
+  onLogout,
 }) => {
   const todayStr = getTodayDateString();
   const isToday = selectedDate === todayStr;
@@ -155,6 +159,10 @@ export const Header: React.FC<HeaderProps> = ({
               Calculadora TDEE
             </button>
           </div>
+
+          <button type="button" onClick={onLogout} title={`Cerrar sesión de ${userName}`} aria-label="Cerrar sesión" className="shrink-0 rounded-lg border border-slate-700 p-2 text-slate-300 hover:text-white hover:bg-slate-800">
+            <LogOut className="w-4 h-4" />
+          </button>
 
           {/* Desktop Install Button */}
           <div className="hidden sm:flex items-center gap-2">

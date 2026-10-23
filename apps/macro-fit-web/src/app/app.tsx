@@ -7,9 +7,86 @@ import { CalculatorView } from '../components/CalculatorView';
 import { useMacroStore } from '../hooks/useMacroStore';
 import { usePwaInstall } from '../hooks/usePwaInstall';
 import { BookOpen, Calculator, Download, CheckCircle2 } from 'lucide-react';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { AuthProvider, useAuth } from '../features/auth/auth-context';
+import { CurrentUser } from '../features/auth/auth-session';
+import {
+  canImportLegacy,
+  importLegacyData,
+} from '../features/auth/account-storage';
+import { LoginPage } from '../pages/LoginPage';
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'tracker' | 'calculator'>('tracker');
+  return (
+    <AuthProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="*" element={<RequireSession />} />
+      </Routes>
+    </AuthProvider>
+  );
+}
+
+function RequireSession() {
+  const auth = useAuth();
+  const location = useLocation();
+  if (auth.status === 'checking')
+    return (
+      <div
+        role="status"
+        className="min-h-dvh grid place-items-center text-slate-300"
+      >
+        Validando sesión…
+      </div>
+    );
+  if (auth.status === 'unavailable')
+    return (
+      <main className="min-h-dvh grid place-items-center p-6">
+        <div role="alert" className="max-w-sm space-y-4 text-center">
+          <p>{auth.error}</p>
+          <button
+            onClick={auth.retry}
+            className="rounded-xl bg-emerald-400 p-3 text-slate-950 font-semibold"
+          >
+            Reintentar conexión
+          </button>
+          <button
+            onClick={auth.logout}
+            className="block w-full text-sm text-slate-400"
+          >
+            Volver al login
+          </button>
+        </div>
+      </main>
+    );
+  if (!auth.user || auth.status !== 'authenticated')
+    return (
+      <Navigate
+        replace
+        to={`/login?redirect=${encodeURIComponent(
+          location.pathname + location.search + location.hash
+        )}`}
+      />
+    );
+  return (
+    <MacroFitWorkspace
+      key={auth.token}
+      user={auth.user}
+      onLogout={auth.logout}
+    />
+  );
+}
+
+export function MacroFitWorkspace({
+  user,
+  onLogout,
+}: {
+  user: CurrentUser;
+  onLogout: () => void;
+}) {
+  const [activeTab, setActiveTab] = useState<'tracker' | 'calculator'>(
+    'tracker'
+  );
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
 
   const {
@@ -31,7 +108,11 @@ export function App() {
     addCustomFood,
     applyMealTemplate,
     saveMealAsTemplate,
-  } = useMacroStore();
+  } = useMacroStore(user.userId);
+
+  const [legacyAvailable] = useState(() => canImportLegacy(user.userId));
+  const [showImport, setShowImport] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
 
   const {
     canInstall,
@@ -65,10 +146,62 @@ export function App() {
         canInstall={canInstall}
         isStandalone={isStandalone}
         onOpenInstall={handleOpenInstall}
+        userName={user.name}
+        onLogout={onLogout}
       />
 
       {/* Main Container */}
       <main className="flex-1 w-full max-w-5xl mx-auto px-4 py-6">
+        {legacyAvailable && (
+          <section className="mb-5 rounded-xl border border-slate-700 bg-slate-900 p-4 text-sm text-slate-300">
+            <p>
+              Hay registros locales de la versión anterior, que todavía no
+              tienen una cuenta asignada.
+            </p>
+            {!showImport ? (
+              <button
+                onClick={() => setShowImport(true)}
+                className="mt-2 font-semibold text-emerald-300"
+              >
+                Revisar importación de mis datos anteriores
+              </button>
+            ) : (
+              <div className="mt-3 space-y-3">
+                <p>
+                  Confirma que esos registros son tuyos para asociarlos a{' '}
+                  {user.email}. Los originales se conservan; los datos que ya
+                  existan en esta cuenta no se reemplazan.
+                </p>
+                {importError && (
+                  <p role="alert" className="text-rose-300">
+                    {importError}
+                  </p>
+                )}
+                <button
+                  onClick={() => {
+                    try {
+                      importLegacyData(user.userId);
+                      window.location.reload();
+                    } catch {
+                      setImportError(
+                        'No se pudieron importar los registros. Los originales se conservan.'
+                      );
+                    }
+                  }}
+                  className="rounded-lg bg-emerald-400 px-3 py-2 font-semibold text-slate-950"
+                >
+                  Son mis datos, importar a esta cuenta
+                </button>
+                <button
+                  onClick={() => setShowImport(false)}
+                  className="ml-3 text-slate-400"
+                >
+                  Ahora no
+                </button>
+              </div>
+            )}
+          </section>
+        )}
         {activeTab === 'tracker' ? (
           <DailyTrackerView
             goals={goals}
@@ -117,7 +250,9 @@ export function App() {
         <button
           onClick={() => setActiveTab('tracker')}
           className={`flex flex-col items-center gap-1 text-[11px] font-semibold transition ${
-            activeTab === 'tracker' ? 'text-emerald-400' : 'text-slate-400 hover:text-slate-200'
+            activeTab === 'tracker'
+              ? 'text-emerald-400'
+              : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           <BookOpen className="w-5 h-5" />
@@ -127,7 +262,9 @@ export function App() {
         <button
           onClick={() => setActiveTab('calculator')}
           className={`flex flex-col items-center gap-1 text-[11px] font-semibold transition ${
-            activeTab === 'calculator' ? 'text-emerald-400' : 'text-slate-400 hover:text-slate-200'
+            activeTab === 'calculator'
+              ? 'text-emerald-400'
+              : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           <Calculator className="w-5 h-5" />

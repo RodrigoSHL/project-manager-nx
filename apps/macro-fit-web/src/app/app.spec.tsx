@@ -89,7 +89,7 @@ describe('MacroFit database workspace', () => {
     vi.stubGlobal('fetch', records.fetch);
     render(<App />);
     await screen.findByText('Registrar comida con IA');
-    fireEvent.click(screen.getAllByRole('button', { name: 'Combos' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: /^Combos:/ })[0]);
     fireEvent.click(screen.getByText('Guardar actual como combo'));
     fireEvent.change(
       screen.getByPlaceholderText(

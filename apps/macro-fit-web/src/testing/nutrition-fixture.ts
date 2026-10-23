@@ -109,6 +109,74 @@ export function nutritionFixture(initial: NutritionAccount = testAccount) {
             : {}),
         }))
       );
+    const quantityEdit = /^\/meals\/([^/]+)\/quantity$/.exec(suffix);
+    if (quantityEdit && init.method === 'PUT') {
+      const item = log.meals.find((entry) => entry.id === quantityEdit[1]);
+      if (!item)
+        return {
+          ok: false,
+          status: 404,
+          json: async () => ({ message: 'Alimento no encontrado.' }),
+        };
+      const previousAmount = item.quantity?.amount ?? item.amountGrams;
+      const ratio = body.quantity.amount / previousAmount;
+      item.amountGrams = body.quantity.amount;
+      item.quantity = body.quantity;
+      item.calories = Math.round(item.calories * ratio);
+      for (const nutrient of ['protein', 'carbs', 'fat'] as const)
+        item[nutrient] = Number((item[nutrient] * ratio).toFixed(1));
+      if (item.pautaSelection?.quantity)
+        item.pautaSelection.quantity.amount *= ratio;
+      if (item.portionsCount != null) item.portionsCount *= ratio;
+      if (log.nutritionPlan)
+        item.pauta = calculatePauta(
+          log.nutritionPlan,
+          item,
+          item.pautaSelection
+        );
+    }
+    const productClassification =
+      /^\/meals\/([^/]+)\/product-equivalence$/.exec(suffix);
+    if (productClassification && log.nutritionPlan && account.nutritionPlan) {
+      const product = account.customFoods.find(
+        (food) => food.id === body.productId
+      );
+      const entry = log.meals.find(
+        (item) => item.id === productClassification[1]
+      );
+      if (!product || !entry)
+        throw new Error('Missing product or meal in fixture');
+      const rule = {
+        id: 'product-' + product.id,
+        name: product.name,
+        foodIds: [product.id],
+        aliases: [],
+        ...body.equivalence,
+      };
+      account.nutritionPlan = {
+        ...account.nutritionPlan,
+        version: account.nutritionPlan.version + 1,
+        rules: [
+          ...account.nutritionPlan.rules.filter((item) => item.id !== rule.id),
+          rule,
+        ],
+      };
+      log.nutritionPlan.rules = [
+        ...log.nutritionPlan.rules.filter((item) => item.id !== rule.id),
+        rule,
+      ];
+      entry.pautaSelection = {
+        ruleId: rule.id,
+        ...(body.quantity ? { quantity: body.quantity } : {}),
+      };
+      entry.pauta = calculatePauta(
+        log.nutritionPlan,
+        entry,
+        entry.pautaSelection
+      );
+      days.set(date, log);
+      return response({ account, day: log });
+    }
     const classification = /^\/meals\/([^/]+)\/pauta$/.exec(suffix);
     if (classification && log.nutritionPlan) {
       const entry = log.meals.find((item) => item.id === classification[1]);

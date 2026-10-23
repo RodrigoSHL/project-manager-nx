@@ -3,7 +3,11 @@ import {
   getAccessToken,
   SessionChangedError,
 } from '../features/auth/auth-session';
-import { dailyLogSchema, nutritionAccountSchema } from '../types/nutrition';
+import {
+  dailyLogSchema,
+  nutritionAccountSchema,
+  productEquivalenceResultSchema,
+} from '../types/nutrition';
 
 export async function nutritionRequest<T>(
   path: string,
@@ -32,7 +36,11 @@ export async function nutritionRequest<T>(
         : 'No se pudo guardar el registro.'
     );
   const parsed = (
-    path.startsWith('/days/') ? dailyLogSchema : nutritionAccountSchema
+    path.endsWith('/product-equivalence')
+      ? productEquivalenceResultSchema
+      : path.startsWith('/days/')
+      ? dailyLogSchema
+      : nutritionAccountSchema
   ).safeParse(data);
   if (!parsed.success)
     throw new Error('El servidor no entregó registros válidos.');

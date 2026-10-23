@@ -135,6 +135,11 @@ export function ProductsView({
           Tu catálogo personal de productos habituales, guardado en tu cuenta.
           Después podrás elegirlos al agregar alimentos al diario.
         </p>
+        <p className="mt-2 text-sm text-slate-400">
+          La ficha guarda sus calorías y macros. Para sumar porciones, busca el
+          producto desde «Asignar equivalencia» en tu diario y define su
+          referencia de pauta una vez.
+        </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <button

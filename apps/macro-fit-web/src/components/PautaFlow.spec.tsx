@@ -176,7 +176,9 @@ it('counts both exchange groups for manual legumes and native units for milk and
     ['Leche', 'Leche Descremada', 'ml', undefined],
     ['Whey', 'Proteína Whey (1 Scoop)', 'scoop', 2],
   ] as const) {
-    fireEvent.click(screen.getAllByRole('button', { name: 'Agregar' })[0]);
+    fireEvent.click(
+      screen.getAllByRole('button', { name: /^Agregar alimento:/ })[0]
+    );
     fireEvent.change(
       screen.getByPlaceholderText('Buscar pollo, arroz, avena, huevo...'),
       { target: { value: search } }
@@ -265,15 +267,24 @@ it('reviews an existing pending entry and persists an explicit equivalence witho
   vi.stubGlobal('fetch', records.fetch);
   render(<App />);
   await screen.findByText('Avance de mi pauta');
+  fireEvent.click(screen.getByRole('button', { name: 'Expandir Almuerzo' }));
   fireEvent.click(
-    screen.getByRole('button', { name: 'Clasificar: Carne preparada' })
+    screen.getByRole('button', {
+      name: 'Asignar equivalencia de Carne preparada',
+    })
   );
   const dialog = screen.getByRole('dialog', {
     name: 'Clasificar alimento en mi pauta',
   });
-  fireEvent.change(within(dialog).getByRole('combobox'), {
-    target: { value: 'meds-carne-vacuno-magra' },
-  });
+  fireEvent.change(
+    within(dialog).getByLabelText('Buscar producto o equivalencia'),
+    { target: { value: 'vacuno' } }
+  );
+  fireEvent.click(
+    within(dialog).getByRole('button', {
+      name: /Elegir equivalencia:.*Vacuno/i,
+    })
+  );
   expect(within(dialog).getByText('4 Proteínas')).toBeTruthy();
   fireEvent.click(
     within(dialog).getByRole('button', { name: 'Guardar equivalencia' })

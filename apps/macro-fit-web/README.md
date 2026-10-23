@@ -38,3 +38,19 @@ Fuentes: [modelo Gemini](https://ai.google.dev/gemini-api/docs/models/gemini-3.5
 `nx build macro-fit-web` ejecuta primero `typecheck`. La generación del service worker está habilitada en producción y deshabilitada en desarrollo/tests. Los archivos `dev-dist` se excluyen de lint y del contexto Docker.
 
 Los errores del análisis se muestran al usuario y no agregan alimentos al registro. La selección de platos, las imágenes admitidas, los límites y la configuración están descritos en [MacroFit API](../macro-fit-api/README.md).
+
+## Navegación y diario
+
+El workspace usa un sidebar con Diario, Mis productos, Mi pauta, Calculadora, Mi perfil y Configuración. La barra superior muestra la identidad de la cuenta y el logout; el selector de fecha pertenece al diario. En móvil el menú es un panel lateral con cierre por fondo/Escape, foco contenido y restauración del foco al cerrar. La instalación PWA se ofrece desde el sidebar o Configuración.
+
+Mi perfil consulta la cuenta y los datos nutricionales existentes; su edición de datos/metas abre la calculadora y mantiene el guardado actual en el servidor. Configuración agrupa los accesos reales a los módulos, sin agregar preferencias locales ni cambiar la autenticación.
+
+Los tiempos de comida comienzan plegados, conservan el conteo de alimentos y kcal y se expanden de forma independiente. Al añadir alimentos a una sección existente se abre para revisar el registro. Cada cabecera conserva acciones de texto/voz, cámara, combos y agregar como iconos, con nombres accesibles y títulos explicativos. El estado de navegación y expansión solo vive en memoria.
+
+Los accesos generales de IA también son iconos de micrófono y cámara. Cada alimento registrado ofrece un lápiz para editar su cantidad en la unidad original. Guardar actualiza el mismo registro y recalcula calorías, macros y porciones de pauta desde su información nutricional histórica; no depende de cambios posteriores del catálogo. Si otra sesión cambió la cantidad, se solicita actualizar el diario antes de reintentar.
+
+Las tarjetas del diario distinguen cantidad consumida, energía y nutrientes de ese consumo, con etiquetas completas y un resumen por tiempo de comida. El aporte a la pauta se muestra por separado en porciones; los botones «Asignar equivalencia» y «Cambiar equivalencia» abren el formulario existente. Los accesos principales de IA usan botones sólidos verde/violeta, conservando iconos sin texto y nombres accesibles.
+
+El clasificador del diario permite buscar en **Mis productos** (nombre, marca o código) y en **Equivalencias de mi pauta** (nombre, alias o grupo), sin distinguir mayúsculas o tildes. Muestra los nutrientes por cantidad de referencia, permite copiar una equivalencia o definir sus porciones/grupos explícitamente y deja visible el aporte de la cantidad consumida antes de guardar. Un producto importado no obtiene porciones automáticamente a partir de sus macros. «Libre según mi pauta» es una decisión explícita del usuario, no una clasificación automática de condimentos.
+
+«Guardar equivalencia y clasificar» actualiza la pauta reutilizable y el consumo en una transacción mediante el BFF. Conserva los nutrientes del consumo y las metas/versiones de los demás días. Las referencias agregadas al día se guardan en PostgreSQL y se recuperan al volver a abrirlo. Una referencia modificada recibe otra identidad para preservar consumos ya clasificados. En móvil el clasificador ocupa la pantalla y lleva al detalle al elegir un alimento; mantiene foco, cierre por Escape y bloqueo del fondo.

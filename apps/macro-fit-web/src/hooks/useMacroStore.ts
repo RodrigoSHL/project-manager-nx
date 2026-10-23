@@ -11,6 +11,9 @@ import {
   PautaSelection,
   summarizePauta,
   UserProfile,
+  UpdateMealQuantity,
+  ProductEquivalenceInput,
+  ProductEquivalenceResult,
 } from '../types/nutrition';
 import { COMMON_FOODS } from '../data/common-foods';
 import { DEFAULT_MEAL_TEMPLATES } from '../data/meal-templates';
@@ -165,6 +168,18 @@ export function useMacroStore(userId: string) {
       setAccount(value);
       setRevision((revision) => revision + 1);
     });
+  const classifyProduct = (id: string, input: ProductEquivalenceInput) => {
+    const date = selectedDate;
+    return mutate<ProductEquivalenceResult>(
+      `/days/${date}/meals/${encodeURIComponent(id)}/product-equivalence`,
+      'PUT',
+      input,
+      (result) => {
+        setAccount(result.account);
+        if (activeDate.current === date) setDailyLog(result.day);
+      }
+    );
+  };
   const changeDay = (suffix: string, method: string, body?: unknown) => {
     const date = selectedDate;
     return mutate<DailyLog>(`/days/${date}${suffix}`, method, body, (log) => {
@@ -188,6 +203,8 @@ export function useMacroStore(userId: string) {
     changeDay(`/meals/${encodeURIComponent(id)}/pauta`, 'PUT', selection);
   const removeMealEntry = (id: string) =>
     changeDay(`/meals/${encodeURIComponent(id)}`, 'DELETE');
+  const updateMealQuantity = (id: string, input: UpdateMealQuantity) =>
+    changeDay(`/meals/${encodeURIComponent(id)}/quantity`, 'PUT', input);
   const addWater = (amountMl: number) =>
     changeDay('/water', 'POST', { operationId: crypto.randomUUID(), amountMl });
   const resetWater = () =>
@@ -338,6 +355,7 @@ export function useMacroStore(userId: string) {
     portionSummary,
     saveNutritionPlan,
     classifyMeal,
+    classifyProduct,
     loading,
     saving,
     error,
@@ -347,6 +365,7 @@ export function useMacroStore(userId: string) {
     addMealEntry,
     addMultipleMealEntries,
     removeMealEntry,
+    updateMealQuantity,
     addWater,
     resetWater,
     addCustomFood,

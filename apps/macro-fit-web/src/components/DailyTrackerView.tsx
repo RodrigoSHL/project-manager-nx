@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { MacroProgressRings } from './MacroProgressRings';
 import { PautaSummaryCard } from './PautaSummaryCard';
 import { MealSection } from './MealSection';
@@ -8,11 +8,13 @@ import { CustomFoodModal } from './CustomFoodModal';
 import { MealTemplatesModal } from './MealTemplatesModal';
 import { PlateCameraModal } from './PlateCameraModal';
 import { PlateAnalysisResultModal } from './PlateAnalysisResultModal';
-import { PautaFoodFields } from './PautaFoodFields';
-import { useSaveAction } from '../hooks/useSaveAction';
+import { ClassifyMealModal } from './ClassifyMealModal';
+import { EditMealQuantityModal } from './EditMealQuantityModal';
 import { MealTextModal } from './MealTextModal';
 import {
   FoodItem,
+  UpdateMealQuantity,
+  ProductEquivalenceInput,
   MacroGoals,
   MealEntry,
   MealTemplate,
@@ -21,8 +23,6 @@ import {
   NutritionPlan,
   PautaSelection,
   summarizePauta,
-  findPautaRule,
-  QUANTITY_LABELS,
   isNutritionPlanConfigured,
 } from '../types/nutrition';
 import { Camera, Mic, Sparkles, UtensilsCrossed } from 'lucide-react';
@@ -40,6 +40,13 @@ interface DailyTrackerViewProps {
   portionSummary?: ReturnType<typeof summarizePauta> | null;
   onClassifyMeal?: (id: string, selection: PautaSelection) => Promise<boolean>;
   onOpenPlan?: () => void;
+  catalogPlan?: NutritionPlan | null;
+  products?: FoodItem[];
+  onOpenProducts?: () => void;
+  onClassifyProduct?: (
+    id: string,
+    input: ProductEquivalenceInput
+  ) => Promise<boolean>;
   waterIntakeMl: number;
   allFoods: FoodItem[];
   allTemplates: MealTemplate[];
@@ -52,6 +59,10 @@ interface DailyTrackerViewProps {
     items: Array<{ mealType: MealType; food: FoodItem; amountGrams: number }>
   ) => Promise<boolean>;
   onRemoveMealEntry: (entryId: string) => Promise<boolean>;
+  onUpdateMealQuantity?: (
+    entryId: string,
+    input: UpdateMealQuantity
+  ) => Promise<boolean>;
   onAddWater: (amountMl: number) => Promise<boolean>;
   onResetWater: () => Promise<boolean>;
   onSaveCustomFood: (
@@ -78,12 +89,17 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
   portionSummary,
   onClassifyMeal,
   onOpenPlan,
+  catalogPlan,
+  products = [],
+  onOpenProducts,
+  onClassifyProduct,
   waterIntakeMl,
   allFoods,
   allTemplates,
   onAddMealEntry,
   onAddMultipleMealEntries,
   onRemoveMealEntry,
+  onUpdateMealQuantity,
   onAddWater,
   onResetWater,
   onSaveCustomFood,
@@ -91,17 +107,17 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
   onSaveCurrentAsTemplate,
   onOpenCalculator,
 }) => {
+  const [editingEntry, setEditingEntry] = useState<MealEntry | null>(null);
+  const closeQuantityEditor = useCallback(() => setEditingEntry(null), []);
+  const openQuantityEditor = onUpdateMealQuantity
+    ? (id: string) =>
+        setEditingEntry(meals.find((meal) => meal.id === id) ?? null)
+    : undefined;
   const readyPlan = nutritionPlan && isNutritionPlanConfigured(nutritionPlan);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
-  const [reviewSelection, setReviewSelection] = useState<
-    PautaSelection | undefined
-  >();
-  const { save: saveReview, saveError: reviewError } = useSaveAction();
   const reviewing = meals.find((meal) => meal.id === reviewingId);
-  const openReview = (id: string) => {
-    setReviewingId(id);
-    setReviewSelection(meals.find((meal) => meal.id === id)?.pautaSelection);
-  };
+  const closeReview = useCallback(() => setReviewingId(null), []);
+  const openReview = (id: string) => setReviewingId(id);
   const [selectedMealType, setSelectedMealType] = useState<MealType | null>(
     null
   );
@@ -136,7 +152,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
     : [];
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-16 animate-in fade-in duration-300">
+    <div className="space-y-6 mx-auto pb-8 animate-in fade-in duration-300">
       {nutritionPlan && portionSummary ? (
         <>
           <PautaSummaryCard
@@ -188,50 +204,48 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
         onResetWater={onResetWater}
       />
 
-      {/* 4. Barra de Acción Rápida: Escaneo de Plato con IA (Gemini Vision) */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-indigo-950/50 border border-emerald-500/30 p-4 shadow-lg shadow-emerald-950/20">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 p-[1.5px] shrink-0 shadow-md shadow-emerald-500/20">
-              <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-                <Camera className="w-5 h-5 text-emerald-400" />
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-white">
-                  Registrar comida con IA
-                </h3>
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                  Foto · Texto · Voz
-                </span>
-              </div>
-              <p className="text-xs text-slate-300 mt-0.5 leading-snug">
-                Sube una foto o cuenta qué comiste. Revisa los ingredientes y
-                ajusta los gramos antes de registrar.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap sm:flex-col gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => setTextEntryMeal('auto')}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 transition"
-            >
-              <Mic className="w-4 h-4" />
-              <span>Escribir / Dictar comida</span>
-            </button>
-            <button
-              onClick={() => setScanCameraMealType('lunch')}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 transition active:scale-95 shrink-0"
-            >
-              <Camera className="w-4 h-4" />
-              <span>Abrir Cámara / Foto</span>
-            </button>
-          </div>
+      <section
+        aria-labelledby="quick-analysis-title"
+        className="flex flex-wrap items-center justify-between gap-5 rounded-2xl border border-emerald-400/25 bg-gradient-to-br from-emerald-500/10 via-slate-900 to-indigo-500/10 p-5 sm:p-6"
+      >
+        <div className="min-w-0">
+          <h3
+            id="quick-analysis-title"
+            className="flex items-center gap-2 text-base font-semibold text-slate-100"
+          >
+            <Sparkles className="size-5 text-emerald-300" aria-hidden="true" />
+            Registrar comida con IA
+          </h3>
+          <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">
+            Usa una foto o describe tu comida con texto o voz. Tú revisas las
+            cantidades antes de guardar.
+          </p>
         </div>
-      </div>
+        <div
+          role="group"
+          aria-label="Registrar comida con inteligencia artificial"
+          className="flex shrink-0 items-center gap-3"
+        >
+          <button
+            type="button"
+            onClick={() => setTextEntryMeal('auto')}
+            aria-label="Escribir / Dictar comida"
+            title="Escribir o dictar comida"
+            className="grid size-14 place-items-center rounded-2xl border border-emerald-300/50 bg-gradient-to-br from-emerald-400 to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/15 transition hover:-translate-y-0.5 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 sm:size-16"
+          >
+            <Mic className="size-6" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setScanCameraMealType('lunch')}
+            aria-label="Abrir Cámara / Foto"
+            title="Analizar una foto de comida"
+            className="grid size-14 place-items-center rounded-2xl border border-indigo-300/50 bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-lg shadow-indigo-500/20 transition hover:-translate-y-0.5 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 sm:size-16"
+          >
+            <Camera className="size-6" aria-hidden="true" />
+          </button>
+        </div>
+      </section>
 
       {/* 5. Secciones de Comidas (Estructura de 5 tiempos recomendada en pauta) */}
       <div className="space-y-3.5">
@@ -252,7 +266,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
         {/* Comida 1: Desayuno */}
         <MealSection
           mealType="breakfast"
-          title="Comida 1: Desayuno"
+          title="Desayuno"
           subtitle="Registra tus alimentos y cantidades"
           icon="🌅"
           entries={breakfastMeals}
@@ -261,6 +275,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           onOpenScanPlate={(type) => setScanCameraMealType(type)}
           onOpenTextMeal={(type) => setTextEntryMeal(type)}
           onReviewPauta={readyPlan ? openReview : undefined}
+          onEditQuantity={openQuantityEditor}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -276,13 +291,14 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           onOpenScanPlate={(type) => setScanCameraMealType(type)}
           onOpenTextMeal={(type) => setTextEntryMeal(type)}
           onReviewPauta={readyPlan ? openReview : undefined}
+          onEditQuantity={openQuantityEditor}
           onRemoveEntry={onRemoveMealEntry}
         />
 
         {/* Comida 2: Almuerzo */}
         <MealSection
           mealType="lunch"
-          title="Comida 2: Almuerzo"
+          title="Almuerzo"
           subtitle="Registra tus alimentos y cantidades"
           icon="☀️"
           entries={lunchMeals}
@@ -291,6 +307,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           onOpenScanPlate={(type) => setScanCameraMealType(type)}
           onOpenTextMeal={(type) => setTextEntryMeal(type)}
           onReviewPauta={readyPlan ? openReview : undefined}
+          onEditQuantity={openQuantityEditor}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -306,13 +323,14 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           onOpenScanPlate={(type) => setScanCameraMealType(type)}
           onOpenTextMeal={(type) => setTextEntryMeal(type)}
           onReviewPauta={readyPlan ? openReview : undefined}
+          onEditQuantity={openQuantityEditor}
           onRemoveEntry={onRemoveMealEntry}
         />
 
         {/* Comida 3: Cena */}
         <MealSection
           mealType="dinner"
-          title="Comida 3: Cena"
+          title="Cena"
           subtitle="Registra tus alimentos y cantidades"
           icon="🌙"
           entries={dinnerMeals}
@@ -321,6 +339,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           onOpenScanPlate={(type) => setScanCameraMealType(type)}
           onOpenTextMeal={(type) => setTextEntryMeal(type)}
           onReviewPauta={readyPlan ? openReview : undefined}
+          onEditQuantity={openQuantityEditor}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -337,74 +356,39 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
             onOpenScanPlate={(type) => setScanCameraMealType(type)}
             onOpenTextMeal={(type) => setTextEntryMeal(type)}
             onReviewPauta={readyPlan ? openReview : undefined}
+            onEditQuantity={openQuantityEditor}
             onRemoveEntry={onRemoveMealEntry}
           />
         )}
       </div>
 
+      {editingEntry && onUpdateMealQuantity && (
+        <EditMealQuantityModal
+          entry={editingEntry}
+          onSave={onUpdateMealQuantity}
+          onClose={closeQuantityEditor}
+        />
+      )}
+
       {reviewing && nutritionPlan && onClassifyMeal && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Clasificar alimento en mi pauta"
-          className="fixed inset-0 z-50 grid place-items-center bg-black/80 p-4"
-        >
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 p-5">
-            <h3 className="font-bold">
-              Revisar porciones: {reviewing.foodName}
-            </h3>
-            <p className="mt-1 text-xs text-slate-400">
-              {reviewing.quantity?.amount ?? reviewing.amountGrams}{' '}
-              {QUANTITY_LABELS[reviewing.quantity?.unit ?? 'g']} · pauta del
-              diario, versión {nutritionPlan.version}. Los nutrientes no
-              cambian.
-            </p>
-            <PautaFoodFields
-              plan={nutritionPlan}
-              foodId={reviewing.foodId}
-              foodName={reviewing.foodName}
-              amountGrams={reviewing.amountGrams}
-              quantity={reviewing.quantity}
-              selection={reviewSelection}
-              onChange={setReviewSelection}
-            />
-            {reviewError && (
-              <p role="alert" className="mt-3 text-xs text-rose-300">
-                {reviewError}
-              </p>
-            )}
-            <div className="mt-4 flex gap-4">
-              <button
-                onClick={() =>
-                  void saveReview(
-                    () =>
-                      onClassifyMeal(
-                        reviewing.id,
-                        reviewSelection ?? {
-                          ruleId:
-                            findPautaRule(
-                              nutritionPlan,
-                              reviewing.foodId,
-                              reviewing.foodName
-                            )?.id ?? null,
-                        }
-                      ),
-                    () => setReviewingId(null)
-                  )
+        <ClassifyMealModal
+          key={reviewing.id}
+          entry={reviewing}
+          plan={nutritionPlan}
+          catalogPlan={catalogPlan ?? nutritionPlan}
+          products={products}
+          onSave={onClassifyMeal}
+          onSaveProduct={onClassifyProduct}
+          onClose={closeReview}
+          onOpenProducts={
+            onOpenProducts
+              ? () => {
+                  closeReview();
+                  onOpenProducts();
                 }
-                className="rounded-lg bg-emerald-400 px-3 py-2 text-sm font-bold text-slate-950"
-              >
-                Guardar equivalencia
-              </button>
-              <button
-                onClick={() => setReviewingId(null)}
-                className="text-sm text-slate-400"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
+              : undefined
+          }
+        />
       )}
 
       {/* Modal: Select & Scale Single Food */}

@@ -1,224 +1,89 @@
-import React from 'react';
+import { ChevronRight, LogOut, Menu, UserRound } from 'lucide-react';
+import { CurrentUser } from '../features/auth/auth-session';
 import {
-  Download,
-  Sparkles,
-  Smartphone,
-  CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  Calendar,
-  LogOut,
-} from 'lucide-react';
-import { getTodayDateString } from '../hooks/useMacroStore';
+  WORKSPACE_NAVIGATION,
+  WorkspaceSection,
+  userInitials,
+} from './workspace-navigation';
 
-interface HeaderProps {
-  activeTab: 'tracker' | 'calculator' | 'plan' | 'products';
-  setActiveTab: (tab: 'tracker' | 'calculator' | 'plan' | 'products') => void;
-  selectedDate: string;
-  setSelectedDate: (date: string) => void;
-  canInstall: boolean;
-  isStandalone: boolean;
-  onOpenInstall: () => void;
-  userName: string;
-  onLogout: () => void;
-}
-
-export const Header: React.FC<HeaderProps> = ({
-  activeTab,
-  setActiveTab,
-  selectedDate,
-  setSelectedDate,
-  canInstall,
-  isStandalone,
-  onOpenInstall,
-  userName,
+export function Header({
+  section,
+  user,
+  sidebarOpen,
+  onOpenSidebar,
+  onOpenProfile,
   onLogout,
-}) => {
-  const todayStr = getTodayDateString();
-  const isToday = selectedDate === todayStr;
-
-  const handlePrevDay = () => {
-    const d = new Date(selectedDate + 'T12:00:00');
-    d.setDate(d.getDate() - 1);
-    const yr = d.getFullYear();
-    const mo = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    setSelectedDate(`${yr}-${mo}-${day}`);
-  };
-
-  const handleNextDay = () => {
-    const d = new Date(selectedDate + 'T12:00:00');
-    d.setDate(d.getDate() + 1);
-    const yr = d.getFullYear();
-    const mo = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    setSelectedDate(`${yr}-${mo}-${day}`);
-  };
-
-  const formattedDate = new Intl.DateTimeFormat('es-CL', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  }).format(new Date(selectedDate + 'T12:00:00'));
-
+}: {
+  section: WorkspaceSection;
+  user: CurrentUser;
+  sidebarOpen: boolean;
+  onOpenSidebar: () => void;
+  onOpenProfile: () => void;
+  onLogout: () => void;
+}) {
+  const label = WORKSPACE_NAVIGATION.flatMap((group) => group.items).find(
+    (item) => item.id === section
+  )?.label;
   return (
-    <header className="sticky top-0 z-30 w-full border-b border-slate-800/80 bg-[#090d16]/85 backdrop-blur-md">
-      <div className="max-w-5xl mx-auto px-4 py-3 flex flex-col lg:flex-row flex-wrap items-center justify-between gap-3">
-        {/* Brand & Logo */}
-        <div className="flex items-center justify-between w-full sm:w-auto">
-          <div className="flex items-center gap-2.5">
-            <div className="relative w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-400 to-indigo-500 p-[1.5px] shadow-lg shadow-emerald-500/20">
-              <div className="w-full h-full bg-[#090d16] rounded-[10px] flex items-center justify-center">
-                <span className="font-extrabold text-base bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
-                  M
-                </span>
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h1 className="font-extrabold text-lg tracking-tight text-white leading-none">
-                  Macro<span className="text-emerald-400">Fit</span>
-                </h1>
-                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  PWA
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400 leading-none mt-1">
-                Calculadora & Contador Diario
-              </p>
-            </div>
-          </div>
-
-          {/* Mobile Install button (visible on mobile next to brand) */}
-          <div className="sm:hidden flex items-center gap-1.5">
-            {canInstall && (
-              <button
-                onClick={onOpenInstall}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs transition shadow-sm"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Instalar</span>
-              </button>
-            )}
-            {isStandalone && (
-              <span className="flex items-center gap-1 text-[11px] text-emerald-400 font-medium bg-emerald-950/60 border border-emerald-500/30 px-2 py-1 rounded-md">
-                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                App
-              </span>
-            )}
-          </div>
+    <header className="sticky top-0 z-30 flex h-20 items-center justify-between gap-3 border-b border-slate-800/70 bg-[#090d16]/95 px-4 backdrop-blur-xl sm:px-7">
+      <div className="flex min-w-0 items-center gap-3">
+        <button
+          type="button"
+          aria-label="Abrir menú de navegación"
+          aria-controls="workspace-sidebar"
+          aria-expanded={sidebarOpen}
+          onClick={onOpenSidebar}
+          className="grid size-11 shrink-0 place-items-center rounded-xl border border-slate-800 text-slate-300 hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-emerald-400 lg:hidden"
+        >
+          <Menu className="size-5" />
+        </button>
+        <div className="flex min-w-0 items-center gap-2 text-sm">
+          <span className="hidden text-slate-500 sm:inline">Mi espacio</span>
+          <ChevronRight
+            className="hidden size-3.5 text-slate-600 sm:block"
+            aria-hidden="true"
+          />
+          <p className="truncate font-semibold text-slate-200">{label}</p>
         </div>
-
-        {/* Date Selector (Only in Tracker Tab) */}
-        {activeTab === 'tracker' && (
-          <div className="flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 rounded-xl px-2 py-1 shadow-inner">
-            <button
-              onClick={handlePrevDay}
-              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-              title="Día anterior"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <div className="flex items-center gap-1.5 px-2">
-              <Calendar className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-xs font-semibold capitalize text-slate-200">
-                {isToday ? `Hoy (${formattedDate})` : formattedDate}
-              </span>
-            </div>
-            <button
-              onClick={handleNextDay}
-              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-              title="Día siguiente"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-            {!isToday && (
-              <button
-                onClick={() => setSelectedDate(todayStr)}
-                className="text-[11px] font-medium text-emerald-400 hover:underline px-1 ml-1"
-              >
-                Hoy
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Navigation Tabs & Actions */}
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-          <div className="flex min-w-0 overflow-x-auto bg-slate-900/90 p-1 rounded-xl border border-slate-800/80 [&>button]:shrink-0">
-            <button
-              onClick={() => setActiveTab('tracker')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
-                activeTab === 'tracker'
-                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
-              }`}
-            >
-              Diario
-            </button>
-            <button
-              onClick={() => setActiveTab('calculator')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
-                activeTab === 'calculator'
-                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              Calculadora
-            </button>
-            <button
-              onClick={() => setActiveTab('plan')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
-                activeTab === 'plan'
-                  ? 'bg-emerald-500 text-slate-950'
-                  : 'text-slate-300 hover:bg-slate-800'
-              }`}
-            >
-              Mi pauta
-            </button>
-            <button
-              onClick={() => setActiveTab('products')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
-                activeTab === 'products'
-                  ? 'bg-emerald-500 text-slate-950'
-                  : 'text-slate-300 hover:bg-slate-800'
-              }`}
-            >
-              Mis productos
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={onLogout}
-            title={`Cerrar sesión de ${userName}`}
-            aria-label="Cerrar sesión"
-            className="shrink-0 rounded-lg border border-slate-700 p-2 text-slate-300 hover:text-white hover:bg-slate-800"
+      </div>
+      <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+        <button
+          type="button"
+          onClick={onOpenProfile}
+          aria-label={`Ver perfil de ${user.name}`}
+          title="Ver mi perfil"
+          className="flex min-w-0 items-center gap-3 rounded-xl p-1.5 text-left transition hover:bg-slate-800/60 focus-visible:ring-2 focus-visible:ring-emerald-400"
+        >
+          <span
+            className="grid size-10 shrink-0 place-items-center rounded-full border border-emerald-400/25 bg-emerald-400/10 text-sm font-bold text-emerald-300"
+            aria-hidden="true"
           >
-            <LogOut className="w-4 h-4" />
-          </button>
-
-          {/* Desktop Install Button */}
-          <div className="hidden sm:flex items-center gap-2">
-            {canInstall && (
-              <button
-                onClick={onOpenInstall}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 transition active:scale-95"
-              >
-                <Smartphone className="w-3.5 h-3.5" />
-                <span>Instalar App</span>
-              </button>
-            )}
-            {isStandalone && (
-              <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-semibold bg-emerald-950/40 border border-emerald-500/30 px-2.5 py-1.5 rounded-xl">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Modo App PWA</span>
-              </div>
-            )}
-          </div>
-        </div>
+            {userInitials(user.name)}
+          </span>
+          <span className="block max-w-24 min-w-0 sm:max-w-44">
+            <span className="block truncate text-sm font-semibold text-slate-100">
+              {user.name}
+            </span>
+            <span className="mt-0.5 hidden truncate text-[11px] sm:block text-slate-500">
+              {user.email}
+            </span>
+          </span>
+          <UserRound
+            className="hidden size-4 text-slate-500 md:block"
+            aria-hidden="true"
+          />
+        </button>
+        <span className="h-7 w-px bg-slate-800" aria-hidden="true" />
+        <button
+          type="button"
+          onClick={onLogout}
+          aria-label="Cerrar sesión"
+          title={`Cerrar sesión de ${user.name}`}
+          className="grid size-11 shrink-0 place-items-center rounded-xl text-slate-400 hover:bg-rose-400/10 hover:text-rose-300 focus-visible:ring-2 focus-visible:ring-rose-400"
+        >
+          <LogOut className="size-[18px]" aria-hidden="true" />
+        </button>
       </div>
     </header>
   );
-};
+}

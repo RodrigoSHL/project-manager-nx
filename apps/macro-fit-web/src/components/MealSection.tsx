@@ -1,11 +1,7 @@
-import { Camera, Mic, Plus, Trash2, Utensils, Zap } from 'lucide-react';
-import {
-  PAUTA_LABELS,
-  QUANTITY_LABELS,
-  formatPortions,
-  MealEntry,
-  MealType,
-} from '../types/nutrition';
+import { useEffect, useId, useRef, useState } from 'react';
+import { Camera, ChevronDown, Mic, Plus, Utensils, Zap } from 'lucide-react';
+import { MealEntry, MealType } from '../types/nutrition';
+import { MealEntryCard } from './MealEntryCard';
 
 interface MealSectionProps {
   mealType: MealType;
@@ -19,6 +15,7 @@ interface MealSectionProps {
   onOpenTextMeal?: (mealType: MealType) => void;
   onReviewPauta?: (entryId: string) => void;
   onRemoveEntry: (entryId: string) => void;
+  onEditQuantity?: (entryId: string) => void;
 }
 
 export const MealSection: React.FC<MealSectionProps> = ({
@@ -33,7 +30,16 @@ export const MealSection: React.FC<MealSectionProps> = ({
   onOpenTextMeal,
   onReviewPauta,
   onRemoveEntry,
+  onEditQuantity,
 }) => {
+  const [expanded, setExpanded] = useState(false);
+  const panelId = useId();
+  const headingId = useId();
+  const previousCount = useRef(entries.length);
+  useEffect(() => {
+    if (entries.length > previousCount.current) setExpanded(true);
+    previousCount.current = entries.length;
+  }, [entries.length]);
   const mealTotals = entries.reduce(
     (acc, item) => ({
       calories: acc.calories + item.calories,
@@ -45,186 +51,171 @@ export const MealSection: React.FC<MealSectionProps> = ({
   );
 
   return (
-    <div className="rounded-2xl bg-slate-900/80 border border-slate-800/80 overflow-hidden shadow-sm transition hover:border-slate-700/80">
-      {/* Meal Header */}
-      <div className="p-3.5 sm:p-4 bg-slate-950/40 border-b border-slate-800/60 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5">
-          <span className="text-xl select-none">{icon}</span>
-          <div>
-            <h3 className="text-sm font-bold text-white leading-tight">
-              {title}
-            </h3>
-            <p className="text-[11px] text-slate-400">{subtitle}</p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {entries.length > 0 && (
-            <div className="flex items-center gap-2 text-xs">
-              <span className="font-extrabold text-white">
-                {mealTotals.calories} kcal
+    <section
+      aria-labelledby={headingId}
+      className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-900/70 shadow-sm transition hover:border-slate-700"
+    >
+      <div className="flex flex-wrap items-center gap-3 p-3 sm:p-4">
+        <h3 id={headingId} className="min-w-0 flex-1 basis-32">
+          <button
+            type="button"
+            onClick={() => setExpanded((value) => !value)}
+            aria-expanded={expanded}
+            aria-controls={panelId}
+            aria-label={`${expanded ? 'Contraer' : 'Expandir'} ${title}`}
+            className="flex min-h-11 w-full items-center gap-2 sm:gap-3 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+          >
+            <span
+              className="grid size-9 sm:size-11 shrink-0 place-items-center rounded-xl bg-slate-950/70 text-lg sm:text-xl"
+              aria-hidden="true"
+            >
+              {icon}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-xs sm:text-sm font-bold text-slate-100">
+                {title}
               </span>
-              <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-slate-400 font-mono">
-                <span className="text-emerald-400 font-medium">
-                  P:{mealTotals.protein.toFixed(0)}g
-                </span>
-                <span>•</span>
-                <span className="text-amber-400 font-medium">
-                  C:{mealTotals.carbs.toFixed(0)}g
-                </span>
-                <span>•</span>
-                <span className="text-rose-400 font-medium">
-                  G:{mealTotals.fat.toFixed(0)}g
-                </span>
-              </div>
-            </div>
-          )}
-
+              <span className="mt-1 block text-[11px] font-normal text-slate-500">
+                {entries.length
+                  ? `${entries.length} ${
+                      entries.length === 1 ? 'alimento' : 'alimentos'
+                    } · ${mealTotals.calories} kcal`
+                  : 'Sin registros todavía'}
+              </span>
+            </span>
+            <ChevronDown
+              className={`size-4 shrink-0 text-slate-500 transition-transform ${
+                expanded ? 'rotate-180' : ''
+              }`}
+              aria-hidden="true"
+            />
+          </button>
+        </h3>
+        <div
+          className="flex items-center gap-1.5"
+          role="group"
+          aria-label={`Acciones de ${title}`}
+        >
           {onOpenTextMeal && (
             <button
               type="button"
               onClick={() => onOpenTextMeal(mealType)}
               aria-label={`Describir comida: ${title}`}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 text-xs font-semibold transition"
+              title="Texto o voz"
+              className="grid size-10 place-items-center rounded-xl border border-teal-400/40 bg-teal-400/15 text-teal-200 transition hover:bg-teal-400/25 focus-visible:ring-2 focus-visible:ring-teal-300"
             >
-              <Mic className="w-3.5 h-3.5" />
-              <span>Texto / Voz</span>
+              <Mic className="size-4" aria-hidden="true" />
             </button>
           )}
           {onOpenScanPlate && (
             <button
+              type="button"
               onClick={() => onOpenScanPlate(mealType)}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 text-xs font-semibold transition active:scale-95"
-              title="Escanear plato con IA (Gemini Vision)"
+              aria-label={`Escanear plato: ${title}`}
+              title="Escanear plato"
+              className="grid size-10 place-items-center rounded-xl border border-indigo-400/40 bg-indigo-400/15 text-indigo-200 transition hover:bg-indigo-400/25 focus-visible:ring-2 focus-visible:ring-indigo-300"
             >
-              <Camera className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Escanear</span>
+              <Camera className="size-4" aria-hidden="true" />
             </button>
           )}
-
           {onOpenTemplates && (
             <button
+              type="button"
               onClick={() => onOpenTemplates(mealType)}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-semibold transition active:scale-95"
-              title="Cargar combo precargado (arroz + proteína, porridge, etc.)"
+              aria-label={`Combos: ${title}`}
+              title="Combos"
+              className="grid size-10 place-items-center rounded-xl border border-amber-500/20 bg-amber-500/5 text-amber-300 transition hover:bg-amber-500/15 focus-visible:ring-2 focus-visible:ring-amber-300"
             >
-              <Zap className="w-3.5 h-3.5" />
-              <span>Combos</span>
+              <Zap className="size-4" aria-hidden="true" />
             </button>
           )}
-
           <button
+            type="button"
             onClick={() => onOpenAddFood(mealType)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition active:scale-95"
+            aria-label={`Agregar alimento: ${title}`}
+            title="Agregar alimento"
+            className="grid size-10 place-items-center rounded-xl border border-emerald-500/25 bg-emerald-500/10 text-emerald-300 transition hover:bg-emerald-500/20 focus-visible:ring-2 focus-visible:ring-emerald-300"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Agregar</span>
+            <Plus className="size-4" aria-hidden="true" />
           </button>
         </div>
       </div>
-
-      {/* Entries List */}
-      <div className="p-3 space-y-2">
+      <div
+        id={panelId}
+        hidden={!expanded}
+        className="space-y-2 border-t border-slate-800/70 p-3 sm:p-4"
+      >
+        <p className="sr-only">{subtitle}</p>
+        {entries.length > 0 && (
+          <div className="mb-4 rounded-xl border border-slate-700/50 bg-slate-800/30 p-3 sm:p-4">
+            <p className="mb-3 text-xs font-semibold text-slate-300">
+              Total consumido en {title.toLowerCase()}
+            </p>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+              {[
+                {
+                  label: 'Energía',
+                  value: mealTotals.calories,
+                  unit: 'kcal',
+                  color: 'text-slate-100',
+                },
+                {
+                  label: 'Proteínas',
+                  value: mealTotals.protein,
+                  unit: 'g',
+                  color: 'text-emerald-300',
+                },
+                {
+                  label: 'Carbohidratos',
+                  value: mealTotals.carbs,
+                  unit: 'g',
+                  color: 'text-amber-300',
+                },
+                {
+                  label: 'Grasas',
+                  value: mealTotals.fat,
+                  unit: 'g',
+                  color: 'text-rose-300',
+                },
+              ].map(({ label, value, unit, color }) => (
+                <div key={label}>
+                  <dt className="text-xs text-slate-400">{label}</dt>
+                  <dd
+                    className={`mt-1 text-lg font-semibold tabular-nums ${color}`}
+                  >
+                    {new Intl.NumberFormat('es-CL', {
+                      maximumFractionDigits: 1,
+                    }).format(value)}{' '}
+                    <span className="text-xs font-normal">{unit}</span>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        )}
         {entries.length === 0 ? (
           <div className="py-4 text-center">
-            <Utensils className="w-6 h-6 text-slate-700 mx-auto mb-1.5" />
+            <Utensils
+              className="mx-auto mb-2 size-6 text-slate-700"
+              aria-hidden="true"
+            />
             <p className="text-xs text-slate-500">
-              No hay alimentos registrados en {title.toLowerCase()}
+              Aún no registras alimentos en {title.toLowerCase()}. Usa las
+              acciones de arriba para agregar tu comida.
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
-              <button
-                onClick={() => onOpenAddFood(mealType)}
-                className="text-xs text-emerald-400 hover:underline font-semibold"
-              >
-                + Agregar alimento
-              </button>
-              {onOpenScanPlate && (
-                <>
-                  <span className="text-slate-600">•</span>
-                  <button
-                    onClick={() => onOpenScanPlate(mealType)}
-                    className="text-xs text-indigo-400 hover:underline font-semibold flex items-center gap-1"
-                  >
-                    <Camera className="w-3 h-3" />
-                    <span>Escanear con IA</span>
-                  </button>
-                </>
-              )}
-              {onOpenTemplates && (
-                <>
-                  <span className="text-slate-600">•</span>
-                  <button
-                    onClick={() => onOpenTemplates(mealType)}
-                    className="text-xs text-amber-400 hover:underline font-semibold flex items-center gap-1"
-                  >
-                    <Zap className="w-3 h-3" />
-                    <span>Cargar combo habitual</span>
-                  </button>
-                </>
-              )}
-            </div>
           </div>
         ) : (
           entries.map((entry) => (
-            <div
+            <MealEntryCard
               key={entry.id}
-              className="group flex items-center justify-between p-2.5 rounded-xl bg-slate-950/30 hover:bg-slate-800/40 border border-slate-800/40 transition"
-            >
-              <div className="flex-1 min-w-0 pr-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-slate-200 truncate">
-                    {entry.foodName}
-                  </span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-medium flex-shrink-0">
-                    {entry.quantity?.amount ?? entry.amountGrams}{' '}
-                    {QUANTITY_LABELS[entry.quantity?.unit ?? 'g']}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5 font-mono">
-                  <span className="text-emerald-400">P: {entry.protein}g</span>
-                  <span className="text-slate-600">|</span>
-                  <span className="text-amber-400">C: {entry.carbs}g</span>
-                  <span className="text-slate-600">|</span>
-                  <span className="text-rose-400">G: {entry.fat}g</span>
-                </div>
-                {onReviewPauta && (
-                  <button
-                    onClick={() => onReviewPauta(entry.id)}
-                    className="mt-1 text-left text-[11px] text-emerald-300"
-                  >
-                    {entry.pauta?.status === 'matched'
-                      ? entry.pauta.contributions
-                          .map(
-                            (item) =>
-                              `${formatPortions(item.portions)} ${
-                                PAUTA_LABELS[item.group]
-                              }`
-                          )
-                          .join(' + ')
-                      : entry.pauta?.status === 'free'
-                      ? 'Libre según pauta'
-                      : 'Pendiente de clasificar'}{' '}
-                    · Revisar
-                  </button>
-                )}
-              </div>
-
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold text-white">
-                  {entry.calories} kcal
-                </span>
-                <button
-                  onClick={() => onRemoveEntry(entry.id)}
-                  className="p-1 rounded text-slate-600 hover:text-rose-400 transition"
-                  title="Eliminar alimento"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
+              entry={entry}
+              onEditQuantity={onEditQuantity}
+              onReviewPauta={onReviewPauta}
+              onRemoveEntry={onRemoveEntry}
+            />
           ))
         )}
       </div>
-    </div>
+    </section>
   );
 };

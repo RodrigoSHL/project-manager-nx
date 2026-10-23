@@ -67,11 +67,14 @@ export async function uploadTicketAttachment(
   return response.json() as Promise<ApiTicketAttachment>
 }
 
-export async function downloadTicketAttachment(id: string, filename: string): Promise<void> {
-  const response = await authenticatedFetch(`${FILES_URL}/${encodeURIComponent(id)}/content`)
+export async function getTicketAttachmentContent(id: string, signal?: AbortSignal): Promise<Blob> {
+  const response = await authenticatedFetch(`${FILES_URL}/${encodeURIComponent(id)}/content`, { signal })
   if (!response.ok) throw new Error(await errorMessage(response, 'No se pudo descargar el archivo.'))
+  return response.blob()
+}
 
-  const url = URL.createObjectURL(await response.blob())
+export async function downloadTicketAttachment(id: string, filename: string): Promise<void> {
+  const url = URL.createObjectURL(await getTicketAttachmentContent(id))
   const anchor = document.createElement('a')
   anchor.href = url
   anchor.download = filename

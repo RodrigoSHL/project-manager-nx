@@ -2,6 +2,7 @@ import { authenticatedFetch } from '@/lib/api'
 import {
   MAX_TICKET_ATTACHMENT_SIZE,
   deleteTicketAttachment,
+  getTicketAttachmentContent,
   listTicketAttachments,
   uploadTicketAttachment,
 } from './ticketAttachmentService'
@@ -72,5 +73,18 @@ describe('jira-web ticket attachment service', () => {
     mockedFetch.mockResolvedValue(response(undefined, 204))
     await expect(deleteTicketAttachment(attachment.id)).resolves.toBeUndefined()
     expect(mockedFetch).toHaveBeenCalledWith(`/api/storage/files/${attachment.id}`, { method: 'DELETE' })
+  })
+
+  it('fetches preview content through the authenticated endpoint with cancellation', async () => {
+    const blob = new Blob(['image'], { type: 'image/png' })
+    const signal = new AbortController().signal
+    mockedFetch.mockResolvedValue({ ...response(null), blob: jest.fn().mockResolvedValue(blob) })
+    await expect(getTicketAttachmentContent('file/id', signal)).resolves.toBe(blob)
+    expect(mockedFetch).toHaveBeenCalledWith('/api/storage/files/file%2Fid/content', { signal })
+  })
+
+  it('does not expose an error response as preview content', async () => {
+    mockedFetch.mockResolvedValue(response({ message: 'Acceso denegado' }, 403))
+    await expect(getTicketAttachmentContent('file-1')).rejects.toThrow('Acceso denegado')
   })
 })

@@ -20,6 +20,7 @@ import { ListFilesQueryDto } from './dto/list-files-query.dto';
 import { UploadFileDto } from './dto/upload-file.dto';
 import { StoredFile } from './entities/stored-file.entity';
 import { FilesService, UploadedFile as IncomingFile } from './files.service';
+import { normalizeFilename } from './normalize-filename';
 
 const maxFileSize = Number(
   process.env.FILES_MAX_FILE_SIZE_BYTES || 10 * 1024 * 1024
@@ -58,7 +59,7 @@ export class FilesController {
     const { file, data } = await this.filesService.download(id);
 
     response.type(file.mimeType);
-    response.attachment(file.originalName);
+    response.attachment(normalizeFilename(file.originalName));
     response.setHeader('Content-Length', String(file.size));
     response.send(data);
   }
@@ -80,7 +81,7 @@ export class FilesController {
       application: file.application,
       ownerType: file.ownerType,
       ownerId: file.ownerId,
-      originalName: file.originalName,
+      originalName: normalizeFilename(file.originalName),
       mimeType: file.mimeType,
       size: file.size,
       checksumSha256: file.checksumSha256,

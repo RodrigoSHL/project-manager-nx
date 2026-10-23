@@ -33,6 +33,7 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Textarea } from '@/components/ui/textarea'
 import { CommentMentionEditor } from '@/components/comment-mention-editor'
+import { TicketAttachmentViewer } from '@/components/ticket-attachment-viewer'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -198,12 +199,17 @@ export function TicketDetail({
   const [attachmentsLoading, setAttachmentsLoading] = React.useState(false)
   const [attachmentAction, setAttachmentAction] = React.useState<string | null>(null)
   const [attachmentError, setAttachmentError] = React.useState<string | null>(null)
+  const [previewAttachment, setPreviewAttachment] = React.useState<ApiTicketAttachment | null>(null)
   const attachmentInputRef = React.useRef<HTMLInputElement>(null)
   const contentRef = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => {
     contentRef.current?.scrollTo({ top: 0 })
   }, [ticket?.id])
+
+  React.useEffect(() => {
+    setPreviewAttachment(null)
+  }, [open, ticket?.id])
 
   React.useEffect(() => {
     if (!ticket) return
@@ -1055,22 +1061,29 @@ export function TicketDetail({
                     const busy = attachmentAction === attachment.id
                     return (
                       <div key={attachment.id} className="flex items-center gap-3 rounded-lg border p-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
-                          <AttachmentIcon className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium" title={attachment.originalName}>
-                            {attachment.originalName}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatFileSize(attachment.size)} · {formatDate(attachment.createdAt)}
-                          </p>
-                        </div>
+                        <button
+                          type="button"
+                          className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          onClick={() => setPreviewAttachment(attachment)}
+                          aria-label={`Ver ${attachment.originalName}`}
+                        >
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
+                            <AttachmentIcon className="h-4 w-4 text-muted-foreground" />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-medium" title={attachment.originalName}>
+                              {attachment.originalName}
+                            </span>
+                            <span className="block text-xs text-muted-foreground">
+                              {formatFileSize(attachment.size)} · {formatDate(attachment.createdAt)}
+                            </span>
+                          </span>
+                        </button>
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          className="h-8 w-8 shrink-0"
                           disabled={Boolean(attachmentAction)}
                           onClick={() => void downloadAttachment(attachment)}
                         >
@@ -1081,7 +1094,7 @@ export function TicketDetail({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
                           disabled={Boolean(attachmentAction)}
                           onClick={() => void removeAttachment(attachment)}
                         >
@@ -1290,6 +1303,10 @@ export function TicketDetail({
         </div>
       </SheetContent>
     </Sheet>
+
+    {open && previewAttachment && (
+      <TicketAttachmentViewer key={previewAttachment.id} attachment={previewAttachment} onClose={() => setPreviewAttachment(null)} />
+    )}
 
     <Dialog open={storyTypeDialogOpen} onOpenChange={setStoryTypeDialogOpen}>
       <DialogContent>

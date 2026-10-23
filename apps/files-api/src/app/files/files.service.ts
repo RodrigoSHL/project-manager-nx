@@ -11,6 +11,7 @@ import { UploadFileDto } from './dto/upload-file.dto';
 import { StoredFile } from './entities/stored-file.entity';
 import { StorageObjectNotFoundError } from './storage/storage-provider';
 import { StorageProviderRegistry } from './storage/storage-provider.registry';
+import { normalizeFilename } from './normalize-filename';
 
 export interface UploadedFile {
   buffer: Buffer;
@@ -36,7 +37,7 @@ export class FilesService {
       application: dto.application,
       ownerType: dto.ownerType || null,
       ownerId: dto.ownerId || null,
-      originalName: file.originalname,
+      originalName: normalizeFilename(file.originalname),
       mimeType: file.mimetype || 'application/octet-stream',
       size: file.size,
       checksumSha256: createHash('sha256').update(file.buffer).digest('hex'),

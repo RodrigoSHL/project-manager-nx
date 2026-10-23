@@ -77,6 +77,14 @@ describe('FilesService', () => {
     expect(storage.put).not.toHaveBeenCalled();
   });
 
+  it('stores the original Unicode name after both multipart hops', async () => {
+    const name = 'Screenshot 2026-10-22 at 11.55.42\u202fPM.png';
+    const once = Buffer.from(name, 'utf8').toString('latin1');
+    const originalname = Buffer.from(once, 'utf8').toString('latin1');
+    const result = await service.create({ ...incomingFile, originalname }, { application: 'jira-web' });
+    expect(result.originalName).toBe(name);
+  });
+
   it('reads content from the provider recorded in metadata', async () => {
     repository.findOne.mockResolvedValue({
       id: 'file-id',

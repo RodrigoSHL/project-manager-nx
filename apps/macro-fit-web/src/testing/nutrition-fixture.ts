@@ -45,11 +45,26 @@ export function nutritionFixture(initial: NutritionAccount = testAccount) {
       return response(account);
     }
     if (path === '/plan') {
+      const { applyToToday, ...definition } = body;
       account.nutritionPlan = {
-        ...body,
+        ...definition,
         version: (account.nutritionPlan?.version ?? 0) + 1,
         createdAt: new Date().toISOString(),
       };
+      const savedPlan = account.nutritionPlan;
+      if (applyToToday && savedPlan) {
+        const log: DailyLog = days.get(definition.startsOn) ?? {
+          date: definition.startsOn,
+          meals: [],
+          waterIntakeMl: 0,
+        };
+        log.nutritionPlan = structuredClone(savedPlan);
+        log.meals = log.meals.map((entry) => ({
+          ...entry,
+          pauta: calculatePauta(savedPlan, entry, entry.pautaSelection),
+        }));
+        days.set(log.date, log);
+      }
       return response(account);
     }
     if (path === '/templates') {

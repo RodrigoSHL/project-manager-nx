@@ -3,6 +3,9 @@ import {
   NutritionPlan,
   NutritionPlanInput,
   nutritionPlanInputSchema,
+  saveNutritionPlanSchema,
+  SaveNutritionPlanInput,
+  isNutritionPlanConfigured,
   PAUTA_GROUPS,
   PAUTA_LABELS,
   PautaRule,
@@ -25,7 +28,7 @@ export function NutritionPlanView({
 }: {
   plan: NutritionPlan | null;
   foods: FoodItem[];
-  onSave: (input: NutritionPlanInput) => Promise<boolean>;
+  onSave: (input: SaveNutritionPlanInput) => Promise<boolean>;
   onGoToTracker: () => void;
 }) {
   const today = getTodayDateString();
@@ -57,6 +60,9 @@ export function NutritionPlanView({
           waterIsMinimum: false,
           rules: [],
         }
+  );
+  const [applyToToday, setApplyToToday] = useState(
+    !plan || !isNutritionPlanConfigured(plan)
   );
   const [editing, setEditing] = useState<PautaRule | null>(null);
   const [search, setSearch] = useState('');
@@ -104,10 +110,16 @@ export function NutritionPlanView({
             );
             return;
           }
-          const parsed = nutritionPlanInputSchema.safeParse(draft);
+          const parsed = saveNutritionPlanSchema.safeParse({
+            ...draft,
+            applyToToday:
+              draft.enabled && draft.startsOn === today && applyToToday,
+          });
           if (!parsed.success) {
             setValidationError(
-              'Revisa las metas y equivalencias: las cantidades deben ser válidas y no puede haber grupos repetidos.'
+              !isNutritionPlanConfigured(draft)
+                ? 'Todavía faltan metas o equivalencias. Pulsa Cargar referencia o completa ambos apartados antes de activar la pauta.'
+                : 'Revisa las metas y equivalencias: las cantidades deben ser válidas y no puede haber grupos repetidos.'
             );
             return;
           }
@@ -153,10 +165,26 @@ export function NutritionPlanView({
             Activar seguimiento de porciones
           </label>
           <p className="text-xs text-slate-400">
-            Los diarios que ya registraron alimentos con una pauta conservan esa
-            versión. Los cambios se aplican a días que todavía no tienen una
-            pauta fijada.
+            Los días anteriores conservan su pauta. Puedes actualizar también
+            las porciones de hoy marcando la opción siguiente.
           </p>
+          {draft.enabled && draft.startsOn === today && (
+            <label className="block rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-3 text-sm">
+              <span className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  aria-label="Aplicar también al diario de hoy"
+                  checked={applyToToday}
+                  onChange={(event) => setApplyToToday(event.target.checked)}
+                />
+                Aplicar también al diario de hoy
+              </span>
+              <span className="mt-1 block text-xs text-slate-400">
+                Recalcula las porciones de hoy. Conserva tus alimentos,
+                cantidades, calorías, nutrientes y agua.
+              </span>
+            </label>
+          )}
           <button
             type="button"
             onClick={() => {

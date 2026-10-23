@@ -50,6 +50,14 @@ fija esa versión para el diario. Cambios posteriores, incluso recalcular metas
 de macronutrientes, conservan dicha referencia y los aportes guardados.
 Guardar solo agua no fija una versión.
 
+El guardado admite `applyToToday: true` como opción explícita: vincula el diario
+de hoy con la versión nueva y recalcula únicamente sus aportes de pauta en la
+misma transacción. No cambia nutrientes, alimentos, cantidades, agua ni días
+anteriores. Si se eliminó una equivalencia elegida manualmente, el alimento queda
+pendiente. La opción se ofrece marcada al completar una pauta inicial o vacía.
+No se permite activar una pauta sin metas y equivalencias; las versiones vacías
+anteriores siguen siendo legibles para poder completarlas desde la interfaz.
+
 Los registros sin snapshot quedan pendientes cuando el día tiene una pauta
 activa y pueden revisarse desde el diario sin cambiar sus nutrientes.
 Los días anteriores al inicio de la pauta no reciben una pauta retroactivamente.

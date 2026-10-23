@@ -7,7 +7,7 @@ import {
   MealTemplate,
   MealType,
   NutritionAccount,
-  NutritionPlanInput,
+  SaveNutritionPlanInput,
   PautaSelection,
   summarizePauta,
   UserProfile,
@@ -160,7 +160,7 @@ export function useMacroStore(userId: string) {
       { profile, goals },
       setAccount
     );
-  const saveNutritionPlan = (input: NutritionPlanInput) =>
+  const saveNutritionPlan = (input: SaveNutritionPlanInput) =>
     mutate<NutritionAccount>('/plan', 'PUT', input, (value) => {
       setAccount(value);
       setRevision((revision) => revision + 1);

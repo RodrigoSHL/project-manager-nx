@@ -90,6 +90,82 @@ it('saves a configurable plan separately from calculated macros and shows it for
   expect(localStorage.length).toBe(0);
 });
 
+it('guides repair of a previously empty plan and explicitly updates today without losing food or nutrients', async () => {
+  const blank = {
+    ...plan(),
+    rules: [],
+    targets: {
+      protein: null,
+      carbs: null,
+      fats: null,
+      dairy: null,
+      fruits: null,
+      veggies: null,
+      supplements: null,
+    },
+  };
+  const records = nutritionFixture({ ...testAccount, nutritionPlan: blank });
+  const today = getTodayDateString();
+  records.days.set(today, {
+    date: today,
+    nutritionPlan: blank,
+    waterIntakeMl: 250,
+    meals: [
+      {
+        id: 'existing',
+        mealType: 'lunch',
+        foodId: 'ai-chicken',
+        foodName: 'Pechuga de pollo cocida',
+        amountGrams: 200,
+        calories: 300,
+        protein: 50,
+        carbs: 0,
+        fat: 12,
+        timestamp: '13:00',
+      },
+    ],
+  });
+  vi.stubGlobal('fetch', records.fetch);
+  render(<App />);
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Completar pauta' })
+  );
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Guardar pauta en mi cuenta' })
+  );
+  expect(screen.getByRole('alert').textContent).toContain(
+    'Todavía faltan metas o equivalencias'
+  );
+  expect(
+    records.fetch.mock.calls.filter(([path]) => path.endsWith('/plan'))
+  ).toHaveLength(0);
+  fireEvent.click(
+    screen.getByRole('button', { name: /Cargar referencia de la pauta/ })
+  );
+  expect(
+    (
+      screen.getByRole('checkbox', {
+        name: 'Aplicar también al diario de hoy',
+      }) as HTMLInputElement
+    ).checked
+  ).toBe(true);
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Guardar pauta en mi cuenta' })
+  );
+  await screen.findByText('4 / 10');
+  expect(records.days.get(today)?.waterIntakeMl).toBe(250);
+  expect(records.days.get(today)?.meals[0]).toMatchObject({
+    id: 'existing',
+    calories: 300,
+    protein: 50,
+    pauta: {
+      planVersion: 2,
+      contributions: [{ group: 'protein', portions: 4 }],
+    },
+  });
+  expect(records.account().nutritionPlan).not.toHaveProperty('applyToToday');
+});
+
 it('counts both exchange groups for manual legumes and native units for milk and scoops', async () => {
   const records = nutritionFixture({ ...testAccount, nutritionPlan: plan() });
   vi.stubGlobal('fetch', records.fetch);

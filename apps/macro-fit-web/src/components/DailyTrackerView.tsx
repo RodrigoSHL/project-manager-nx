@@ -23,6 +23,7 @@ import {
   summarizePauta,
   findPautaRule,
   QUANTITY_LABELS,
+  isNutritionPlanConfigured,
 } from '../types/nutrition';
 import { Camera, Mic, Sparkles, UtensilsCrossed } from 'lucide-react';
 
@@ -90,6 +91,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
   onSaveCurrentAsTemplate,
   onOpenCalculator,
 }) => {
+  const readyPlan = nutritionPlan && isNutritionPlanConfigured(nutritionPlan);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [reviewSelection, setReviewSelection] = useState<
     PautaSelection | undefined
@@ -142,7 +144,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
             summary={portionSummary}
             onConfigure={() => onOpenPlan?.()}
           />
-          {portionSummary.pending > 0 && (
+          {readyPlan && portionSummary.pending > 0 && (
             <div className="flex flex-wrap gap-2">
               {meals
                 .filter(
@@ -258,7 +260,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
           onOpenScanPlate={(type) => setScanCameraMealType(type)}
           onOpenTextMeal={(type) => setTextEntryMeal(type)}
-          onReviewPauta={nutritionPlan ? openReview : undefined}
+          onReviewPauta={readyPlan ? openReview : undefined}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -273,7 +275,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
           onOpenScanPlate={(type) => setScanCameraMealType(type)}
           onOpenTextMeal={(type) => setTextEntryMeal(type)}
-          onReviewPauta={nutritionPlan ? openReview : undefined}
+          onReviewPauta={readyPlan ? openReview : undefined}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -288,7 +290,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
           onOpenScanPlate={(type) => setScanCameraMealType(type)}
           onOpenTextMeal={(type) => setTextEntryMeal(type)}
-          onReviewPauta={nutritionPlan ? openReview : undefined}
+          onReviewPauta={readyPlan ? openReview : undefined}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -303,7 +305,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
           onOpenScanPlate={(type) => setScanCameraMealType(type)}
           onOpenTextMeal={(type) => setTextEntryMeal(type)}
-          onReviewPauta={nutritionPlan ? openReview : undefined}
+          onReviewPauta={readyPlan ? openReview : undefined}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -318,7 +320,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
           onOpenScanPlate={(type) => setScanCameraMealType(type)}
           onOpenTextMeal={(type) => setTextEntryMeal(type)}
-          onReviewPauta={nutritionPlan ? openReview : undefined}
+          onReviewPauta={readyPlan ? openReview : undefined}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -334,7 +336,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
             onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
             onOpenScanPlate={(type) => setScanCameraMealType(type)}
             onOpenTextMeal={(type) => setTextEntryMeal(type)}
-            onReviewPauta={nutritionPlan ? openReview : undefined}
+            onReviewPauta={readyPlan ? openReview : undefined}
             onRemoveEntry={onRemoveMealEntry}
           />
         )}

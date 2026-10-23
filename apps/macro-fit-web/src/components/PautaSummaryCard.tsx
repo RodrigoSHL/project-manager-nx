@@ -4,6 +4,7 @@ import {
   PAUTA_LABELS,
   formatPortions,
   summarizePauta,
+  isNutritionPlanConfigured,
 } from '../types/nutrition';
 
 export function PautaSummaryCard({
@@ -15,6 +16,23 @@ export function PautaSummaryCard({
   summary: ReturnType<typeof summarizePauta>;
   onConfigure: () => void;
 }) {
+  if (!isNutritionPlanConfigured(plan))
+    return (
+      <section className="space-y-3 rounded-2xl border border-amber-500/40 bg-slate-900 p-4">
+        <h2 className="font-bold">Completa tu pauta</h2>
+        <p className="text-sm text-slate-300">
+          La pauta guardada todavía no tiene metas o equivalencias. Carga la
+          referencia o configúrala para ver tu avance. Tus comidas y nutrientes
+          están conservados.
+        </p>
+        <button
+          onClick={onConfigure}
+          className="rounded-xl bg-emerald-400 px-4 py-2 text-sm font-bold text-slate-950"
+        >
+          Completar pauta
+        </button>
+      </section>
+    );
   return (
     <section className="space-y-4 rounded-2xl border border-emerald-500/30 bg-slate-900 p-4">
       <div className="flex items-start justify-between gap-3">

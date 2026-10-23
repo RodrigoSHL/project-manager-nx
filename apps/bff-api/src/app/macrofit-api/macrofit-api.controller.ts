@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   Post,
+  Query,
   UnsupportedMediaTypeException,
   UploadedFile,
   UseInterceptors,
@@ -52,6 +53,28 @@ class AnalyzeMealTextBody {
   mealType?: string;
 }
 
+const imageUploadOptions = {
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+    files: 1,
+    fields: 2,
+    fieldSize: 2048,
+    parts: 4,
+  },
+  fileFilter: (
+    _req: unknown,
+    file: { mimetype: string },
+    callback: (error: Error | null, accept: boolean) => void
+  ) => {
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) {
+      callback(
+        new UnsupportedMediaTypeException('Usa una imagen JPEG, PNG o WebP.'),
+        false
+      );
+    } else callback(null, true);
+  },
+};
+
 // The BFF authenticates analyses; provider quotas remain enforced by the internal API.
 @Controller('api')
 export class MacrofitApiController {
@@ -67,6 +90,18 @@ export class MacrofitApiController {
     return this.macrofit.ready();
   }
 
+  @Get('macrofit/products/search')
+  @UseGuards(JwtAuthGuard)
+  searchProducts(@Query('q') query: unknown) {
+    if (
+      typeof query !== 'string' ||
+      query.trim().length < 2 ||
+      query.trim().length > 100
+    )
+      throw new BadRequestException('Busca usando entre 2 y 100 caracteres.');
+    return this.macrofit.searchProducts(query.trim());
+  }
+
   @Post('macrofit/analyze-meal-text')
   @UseGuards(JwtAuthGuard)
   @HttpCode(200)
@@ -78,29 +113,7 @@ export class MacrofitApiController {
   @Post(['macrofit/analyze-plate', 'analyze-plate'])
   @UseGuards(JwtAuthGuard)
   @HttpCode(200)
-  @UseInterceptors(
-    FileInterceptor('image', {
-      limits: {
-        fileSize: 5 * 1024 * 1024,
-        files: 1,
-        fields: 2,
-        fieldSize: 2048,
-        parts: 4,
-      },
-      fileFilter: (_req, file, callback) => {
-        if (
-          !['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)
-        ) {
-          callback(
-            new UnsupportedMediaTypeException(
-              'Usa una imagen JPEG, PNG o WebP.'
-            ),
-            false
-          );
-        } else callback(null, true);
-      },
-    })
-  )
+  @UseInterceptors(FileInterceptor('image', imageUploadOptions))
   analyze(
     @UploadedFile() file: { buffer: Buffer; mimetype: string } | undefined,
     @Body() body: AnalyzePlateBody
@@ -111,5 +124,19 @@ export class MacrofitApiController {
       );
     }
     return this.macrofit.analyze(file, body);
+  }
+
+  @Post('macrofit/analyze-product-label')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(200)
+  @UseInterceptors(FileInterceptor('image', imageUploadOptions))
+  analyzeProductLabel(
+    @UploadedFile() file: { buffer: Buffer; mimetype: string } | undefined
+  ) {
+    if (!file?.buffer?.length)
+      throw new BadRequestException(
+        'Envía una foto de la tabla nutricional en el campo "image".'
+      );
+    return this.macrofit.analyzeProductLabel(file);
   }
 }

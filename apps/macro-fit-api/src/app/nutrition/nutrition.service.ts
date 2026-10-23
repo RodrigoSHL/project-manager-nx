@@ -376,6 +376,20 @@ export class NutritionService {
   }
   saveFood(userId: string, food: FoodItem) {
     return this.transaction(userId, async (manager) => {
+      if (food.barcode) {
+        const duplicate = await manager
+          .createQueryBuilder(NutritionFoodEntity, 'food')
+          .where('food.userId = :userId', { userId })
+          .andWhere('food.id <> :id', { id: food.id })
+          .andWhere("food.data ->> 'barcode' = :barcode", {
+            barcode: food.barcode,
+          })
+          .getExists();
+        if (duplicate)
+          throw new ConflictException(
+            'Ya tienes un producto con ese código de barras. Edita el producto existente.'
+          );
+      }
       await manager.save(NutritionFoodEntity, {
         userId,
         id: food.id,

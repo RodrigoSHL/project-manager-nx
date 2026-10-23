@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { isNutritionPlanConfigured } from './pauta';
+import { barcodeSchema, productSourceSchema } from './products';
 
 const text = (max: number) => z.string().trim().min(1).max(max);
 const number = (max: number) => z.number().finite().min(0).max(max);
@@ -187,6 +188,8 @@ export const foodSchema = z
     id: identifierSchema,
     name: text(200),
     brand: text(150).optional(),
+    barcode: barcodeSchema.optional(),
+    productSource: productSourceSchema.optional(),
     servingUnit: text(150),
     servingSizeGrams: positive(20000),
     quantityUnit: unit.optional(),

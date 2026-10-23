@@ -65,6 +65,64 @@ describe('PlateAnalysisService provider contract', () => {
       { ...result.items[0], estimated_grams: 9, quantity_source: 'declared' },
     ],
   };
+  const label = {
+    name: 'Mayonesa',
+    brand: null,
+    barcode: null,
+    referenceAmount: 15,
+    referenceUnit: 'g',
+    calories: 102,
+    protein: 0.1,
+    carbs: null,
+    fat: 11.3,
+    fiber: null,
+    warnings: ['Carbohidratos ilegibles.'],
+  };
+  it('transcribes label data without inventing missing nutrients or recomputing printed calories', async () => {
+    generate.mockResolvedValue({ text: JSON.stringify(label) });
+    expect(
+      await new PlateAnalysisService().analyzeProductLabel(
+        Buffer.from('pixels'),
+        'image/jpeg'
+      )
+    ).toEqual({ ...label, source: { kind: 'label' } });
+    expect(generate.mock.calls[0][0].config.systemInstruction).toContain(
+      'No estimes nutrientes'
+    );
+    expect(generate.mock.calls[0][0].config.responseSchema.required).toContain(
+      'referenceUnit'
+    );
+  });
+  it('shares the same provider budget between labels and meals', async () => {
+    process.env.MACROFIT_REQUESTS_PER_MINUTE = '1';
+    generate.mockResolvedValue({ text: JSON.stringify(label) });
+    const service = new PlateAnalysisService();
+    await service.analyzeProductLabel(Buffer.from('pixels'), 'image/jpeg');
+    await expect(
+      service.analyzeMealText('200 g de arroz')
+    ).rejects.toMatchObject({ status: 429 });
+  });
+  it('rejects unreadable labels and invalid label output', async () => {
+    const service = new PlateAnalysisService();
+    generate.mockResolvedValueOnce({
+      text: JSON.stringify({
+        ...label,
+        calories: null,
+        protein: null,
+        carbs: null,
+        fat: null,
+      }),
+    });
+    await expect(
+      service.analyzeProductLabel(Buffer.from('pixels'), 'image/jpeg')
+    ).rejects.toMatchObject({ status: 400 });
+    generate.mockResolvedValueOnce({
+      text: JSON.stringify({ ...label, referenceUnit: 'unknown' }),
+    });
+    await expect(
+      service.analyzeProductLabel(Buffer.from('pixels'), 'image/jpeg')
+    ).rejects.toMatchObject({ status: 502 });
+  });
   it('analyzes text without image data and preserves small declared amounts and assumptions', async () => {
     generate.mockResolvedValue({ text: JSON.stringify(textResult) });
     const analysis = await new PlateAnalysisService().analyzeMealText(

@@ -1,5 +1,7 @@
 # MacroFit API
 
+El catálogo personal, la búsqueda externa y la lectura de tablas nutricionales se describen en [Productos de MacroFit](../../docs/MACROFIT_PRODUCTS.md).
+
 API NestJS interna para analizar imágenes y descripciones de comidas con Gemini. No contiene simuladores ni genera respuestas de ejemplo cuando falla el proveedor.
 
 ## Contrato

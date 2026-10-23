@@ -218,6 +218,70 @@ suite('Nutrition PostgreSQL integration', () => {
     });
     expect((await service.getDay(a, date)).waterIntakeMl).toBe(0);
   });
+  it('persists imported product metadata, scopes barcodes per account and preserves historical snapshots on edit/delete', async () => {
+    const owner = randomUUID();
+    const other = randomUUID();
+    const product: FoodItem = {
+      ...food,
+      id: 'personal-product',
+      name: 'Yogur especial',
+      barcode: '7801234567890',
+      brand: 'Mi marca',
+      calories: 72,
+      productSource: {
+        kind: 'open_food_facts',
+        url: 'https://world.openfoodfacts.org/product/7801234567890',
+      },
+    };
+    const response = await call('/foods', {
+      method: 'PUT',
+      headers: { 'x-user-id': owner },
+      body: JSON.stringify(product),
+    });
+    expect(response.status).toBe(200);
+    expect((await response.json()).customFoods[0]).toMatchObject(product);
+    await service.saveTemplate(owner, {
+      id: 'product-combo',
+      name: 'Mi combo',
+      description: '',
+      mealType: 'lunch',
+      icon: '🥛',
+      items: [{ foodId: product.id, amountGrams: 100, food: product }],
+    });
+    const registration = {
+      ...meal(),
+      foodId: product.id,
+      foodName: product.name,
+      calories: 72,
+    };
+    await service.addMeals(owner, date, [registration]);
+    await service.saveFood(owner, {
+      ...product,
+      name: 'Nueva versión',
+      calories: 81,
+    });
+    expect((await service.getAccount(owner)).customFoods[0].calories).toBe(81);
+    await expect(
+      service.saveFood(owner, { ...product, id: 'duplicate' })
+    ).rejects.toMatchObject({ status: 409 });
+    await service.saveFood(other, product);
+    await expect(
+      service.removeCatalogItem(other, 'foods', 'not-owned')
+    ).rejects.toMatchObject({ status: 404 });
+    await service.removeCatalogItem(owner, 'foods', product.id);
+    expect((await service.getAccount(owner)).customFoods).toEqual([]);
+    expect((await service.getDay(owner, date)).meals[0]).toMatchObject({
+      foodName: 'Yogur especial',
+      calories: 72,
+    });
+    expect(
+      (await service.getAccount(owner)).customTemplates[0].items[0].food
+        ?.calories
+    ).toBe(72);
+    expect((await service.getAccount(other)).customFoods[0].barcode).toBe(
+      product.barcode
+    );
+  });
   it('imports once transactionally without overwriting server records', async () => {
     const legacy = {
       settings: { ...settings, profile: { ...settings.profile, name: 'Old' } },

@@ -19,6 +19,23 @@ export class MacrofitApiClient {
     return this.request('/ready');
   }
 
+  searchProducts(query: string) {
+    return this.request(`/products/search?q=${encodeURIComponent(query)}`);
+  }
+
+  analyzeProductLabel(file: { buffer: Buffer; mimetype: string }) {
+    const form = new FormData();
+    form.append(
+      'image',
+      new Blob([new Uint8Array(file.buffer)], { type: file.mimetype }),
+      'label'
+    );
+    return this.request('/analyze-product-label', {
+      method: 'POST',
+      body: form,
+    });
+  }
+
   records(userId: string, path: string, method: string, body?: unknown) {
     return this.request(`/me${path}`, {
       method,

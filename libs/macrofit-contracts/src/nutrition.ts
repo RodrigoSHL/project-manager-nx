@@ -77,6 +77,8 @@ export interface FoodItem {
   id: string;
   name: string;
   brand?: string;
+  barcode?: string;
+  productSource?: import('./products').ProductSource;
   servingUnit: string; // ej: "50g (1 trozo 6x6 cm)", "1 scoop (30g)"
   servingSizeGrams: number; // Legacy base quantity; quantityUnit defaults to grams.
   /** When present, the legacy base above is expressed in this unit, not grams. */

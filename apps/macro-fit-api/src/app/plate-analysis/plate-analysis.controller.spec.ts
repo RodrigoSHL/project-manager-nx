@@ -10,6 +10,7 @@ describe('PlateAnalysis HTTP validation', () => {
   let origin: string;
   let image: Buffer;
   const service = {
+    analyzeProductLabel: jest.fn().mockResolvedValue({ name: 'Etiqueta' }),
     analyzeMealText: jest
       .fn()
       .mockResolvedValue({ dish_name: 'text-provider-result' }),
@@ -39,6 +40,7 @@ describe('PlateAnalysis HTTP validation', () => {
     process.env = { ...environment };
   });
   beforeEach(() => {
+    service.analyzeProductLabel.mockClear();
     service.analyzePlate.mockClear();
     service.analyzeMealText.mockClear();
   });
@@ -77,6 +79,27 @@ describe('PlateAnalysis HTTP validation', () => {
   }
   const send = (body: FormData) =>
     fetch(`${origin}/audit/analyze-plate`, { method: 'POST', body });
+  it('routes label photos through full image validation to the dedicated transcriber', async () => {
+    const response = await fetch(`${origin}/audit/analyze-product-label`, {
+      method: 'POST',
+      body: form(),
+    });
+    expect(response.status).toBe(200);
+    const [pixels, mime] = service.analyzeProductLabel.mock.calls[0];
+    expect(mime).toBe('image/jpeg');
+    expect((await sharp(pixels).metadata()).format).toBe('jpeg');
+    expect(service.analyzePlate).not.toHaveBeenCalled();
+    service.analyzeProductLabel.mockClear();
+    expect(
+      (
+        await fetch(`${origin}/audit/analyze-product-label`, {
+          method: 'POST',
+          body: form(new Uint8Array([1, 2, 3])),
+        })
+      ).status
+    ).toBe(400);
+    expect(service.analyzeProductLabel).not.toHaveBeenCalled();
+  });
   it('fully decodes valid images and forwards normalized JPEG pixels', async () => {
     const body = form();
     body.append('hints', 'sin sal');

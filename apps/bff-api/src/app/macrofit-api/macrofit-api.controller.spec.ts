@@ -113,6 +113,7 @@ describe('MacroFit BFF HTTP contract', () => {
   it.each([
     '/api/macrofit/analyze-meal-text',
     '/api/macrofit/analyze-plate',
+    '/api/macrofit/analyze-product-label',
     '/api/analyze-plate',
   ])(
     'rejects missing, invalid and expired sessions at %s before calling the provider',
@@ -195,6 +196,51 @@ describe('MacroFit BFF HTTP contract', () => {
       headers: { Authorization: `Bearer ${token}` },
     });
   };
+  it('protects catalog searches with JWT and validates the query before forwarding', async () => {
+    expect(
+      (await httpFetch(`${origin}/api/macrofit/products/search?q=yogur`)).status
+    ).toBe(401);
+    expect(
+      (
+        await httpFetch(`${origin}/api/macrofit/products/search?q=x`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      ).status
+    ).toBe(400);
+    expect(upstream).not.toHaveBeenCalled();
+    upstream.mockResolvedValue(new Response('{"products":[]}'));
+    const result = await httpFetch(
+      `${origin}/api/macrofit/products/search?q=Kraft%20%26%20mayo`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    expect(result.status).toBe(200);
+    expect(upstream.mock.calls[0][0]).toMatch(
+      /\/api\/products\/search\?q=Kraft%20%26%20mayo$/
+    );
+  });
+  it('forwards a label only to the label transcriber and preserves its real errors', async () => {
+    upstream.mockResolvedValueOnce(new Response('{"name":"Etiqueta"}'));
+    expect((await upload('/api/macrofit/analyze-product-label')).status).toBe(
+      200
+    );
+    expect(upstream.mock.calls[0][0]).toMatch(/\/api\/analyze-product-label$/);
+    expect(upstream.mock.calls[0][1].body.get('image').type).toBe('image/jpeg');
+    expect(
+      (
+        await upload(
+          '/api/macrofit/analyze-product-label',
+          undefined,
+          'text/plain'
+        )
+      ).status
+    ).toBe(415);
+    upstream.mockResolvedValueOnce(
+      new Response('{"message":"Etiqueta ilegible"}', { status: 400 })
+    );
+    const response = await upload('/api/macrofit/analyze-product-label');
+    expect(response.status).toBe(400);
+    expect((await response.json()).message).toBe('Etiqueta ilegible');
+  });
   it.each(['/api/macrofit/analyze-plate', '/api/analyze-plate'])(
     'forwards multipart through %s, including legacy PWA clients',
     async (path) => {

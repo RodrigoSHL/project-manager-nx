@@ -5,6 +5,8 @@ import { PlateAnalysisModule } from './plate-analysis/plate-analysis.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { getDatabaseConfig } from './config/database.config';
 import { NutritionModule } from './nutrition/nutrition.module';
+import { ProductsController } from './products/products.controller';
+import { ProductsService } from './products/products.service';
 
 @Module({
   imports: [
@@ -12,7 +14,7 @@ import { NutritionModule } from './nutrition/nutrition.module';
     NutritionModule,
     PlateAnalysisModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [AppController, ProductsController],
+  providers: [AppService, ProductsService],
 })
 export class AppModule {}

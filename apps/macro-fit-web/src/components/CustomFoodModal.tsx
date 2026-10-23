@@ -1,3 +1,4 @@
+import { useSaveAction } from '../hooks/useSaveAction';
 import React, { useState } from 'react';
 import { X, Plus, Sparkles } from 'lucide-react';
 import { FoodItem } from '../types/nutrition';
@@ -5,7 +6,7 @@ import { FoodItem } from '../types/nutrition';
 interface CustomFoodModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSaveFood: (food: Omit<FoodItem, 'id' | 'isCustom'>) => void;
+  onSaveFood: (food: Omit<FoodItem, 'id' | 'isCustom'>) => Promise<boolean>;
 }
 
 export const CustomFoodModal: React.FC<CustomFoodModalProps> = ({
@@ -13,6 +14,7 @@ export const CustomFoodModal: React.FC<CustomFoodModalProps> = ({
   onClose,
   onSaveFood,
 }) => {
+  const { save, saveError } = useSaveAction();
   const [name, setName] = useState('');
   const [servingSizeGrams, setServingSizeGrams] = useState<number>(100);
   const [protein, setProtein] = useState<number>(0);
@@ -29,27 +31,36 @@ export const CustomFoodModal: React.FC<CustomFoodModalProps> = ({
     e.preventDefault();
     if (!name.trim()) return;
 
-    onSaveFood({
-      name: name.trim(),
-      servingUnit: `${servingSizeGrams}g`,
-      servingSizeGrams,
-      calories: calculatedCalories,
-      protein: Number(protein),
-      carbs: Number(carbs),
-      fat: Number(fat),
-      category,
-    });
-
-    onClose();
-    setName('');
-    setProtein(0);
-    setCarbs(0);
-    setFat(0);
+    void save(
+      () =>
+        onSaveFood({
+          name: name.trim(),
+          servingUnit: `${servingSizeGrams}g`,
+          servingSizeGrams,
+          calories: calculatedCalories,
+          protein: Number(protein),
+          carbs: Number(carbs),
+          fat: Number(fat),
+          category,
+        }),
+      () => {
+        onClose();
+        setName('');
+        setProtein(0);
+        setCarbs(0);
+        setFat(0);
+      }
+    );
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/95 shadow-2xl p-5 text-slate-100">
+        {saveError && (
+          <p role="alert" className="p-3 text-sm text-rose-300">
+            {saveError}
+          </p>
+        )}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
@@ -62,8 +73,12 @@ export const CustomFoodModal: React.FC<CustomFoodModalProps> = ({
             <Sparkles className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-white">Nuevo Alimento Personalizado</h3>
-            <p className="text-xs text-slate-400">Se guardará permanentemente en tu catálogo offline</p>
+            <h3 className="text-base font-bold text-white">
+              Nuevo Alimento Personalizado
+            </h3>
+            <p className="text-xs text-slate-400">
+              Se guardará en el catálogo de tu cuenta
+            </p>
           </div>
         </div>
 
@@ -92,7 +107,9 @@ export const CustomFoodModal: React.FC<CustomFoodModalProps> = ({
                 min="1"
                 required
                 value={servingSizeGrams}
-                onChange={(e) => setServingSizeGrams(Math.max(1, Number(e.target.value) || 0))}
+                onChange={(e) =>
+                  setServingSizeGrams(Math.max(1, Number(e.target.value) || 0))
+                }
                 className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
               />
             </div>
@@ -103,7 +120,9 @@ export const CustomFoodModal: React.FC<CustomFoodModalProps> = ({
               </label>
               <select
                 value={category}
-                onChange={(e) => setCategory(e.target.value as FoodItem['category'])}
+                onChange={(e) =>
+                  setCategory(e.target.value as FoodItem['category'])
+                }
                 className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-emerald-500"
               >
                 <option value="protein">Proteína</option>
@@ -132,7 +151,9 @@ export const CustomFoodModal: React.FC<CustomFoodModalProps> = ({
                   step="0.1"
                   min="0"
                   value={protein}
-                  onChange={(e) => setProtein(Math.max(0, Number(e.target.value) || 0))}
+                  onChange={(e) =>
+                    setProtein(Math.max(0, Number(e.target.value) || 0))
+                  }
                   className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none"
                 />
               </div>
@@ -146,7 +167,9 @@ export const CustomFoodModal: React.FC<CustomFoodModalProps> = ({
                   step="0.1"
                   min="0"
                   value={carbs}
-                  onChange={(e) => setCarbs(Math.max(0, Number(e.target.value) || 0))}
+                  onChange={(e) =>
+                    setCarbs(Math.max(0, Number(e.target.value) || 0))
+                  }
                   className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white font-mono focus:border-amber-500 focus:outline-none"
                 />
               </div>
@@ -160,7 +183,9 @@ export const CustomFoodModal: React.FC<CustomFoodModalProps> = ({
                   step="0.1"
                   min="0"
                   value={fat}
-                  onChange={(e) => setFat(Math.max(0, Number(e.target.value) || 0))}
+                  onChange={(e) =>
+                    setFat(Math.max(0, Number(e.target.value) || 0))
+                  }
                   className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white font-mono focus:border-rose-500 focus:outline-none"
                 />
               </div>

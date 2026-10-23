@@ -4,16 +4,14 @@ import { PwaInstallBanner } from '../components/PwaInstallBanner';
 import { PwaInstallModal } from '../components/PwaInstallModal';
 import { DailyTrackerView } from '../components/DailyTrackerView';
 import { CalculatorView } from '../components/CalculatorView';
+import { ProfileSetup } from '../components/ProfileSetup';
 import { useMacroStore } from '../hooks/useMacroStore';
 import { usePwaInstall } from '../hooks/usePwaInstall';
 import { BookOpen, Calculator, Download, CheckCircle2 } from 'lucide-react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from '../features/auth/auth-context';
 import { CurrentUser } from '../features/auth/auth-session';
-import {
-  canImportLegacy,
-  importLegacyData,
-} from '../features/auth/account-storage';
+import { canImportLegacy } from '../features/auth/account-storage';
 import { LoginPage } from '../pages/LoginPage';
 
 export function App() {
@@ -108,11 +106,16 @@ export function MacroFitWorkspace({
     addCustomFood,
     applyMealTemplate,
     saveMealAsTemplate,
+    loading,
+    saving,
+    error,
+    reload,
+    legacyImported,
+    importLegacy,
   } = useMacroStore(user.userId);
 
   const [legacyAvailable] = useState(() => canImportLegacy(user.userId));
   const [showImport, setShowImport] = useState(false);
-  const [importError, setImportError] = useState<string | null>(null);
 
   const {
     canInstall,
@@ -142,7 +145,9 @@ export function MacroFitWorkspace({
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         selectedDate={selectedDate}
-        setSelectedDate={setSelectedDate}
+        setSelectedDate={(date) => {
+          if (!saving) setSelectedDate(date);
+        }}
         canInstall={canInstall}
         isStandalone={isStandalone}
         onOpenInstall={handleOpenInstall}
@@ -152,84 +157,103 @@ export function MacroFitWorkspace({
 
       {/* Main Container */}
       <main className="flex-1 w-full max-w-5xl mx-auto px-4 py-6">
-        {legacyAvailable && (
-          <section className="mb-5 rounded-xl border border-slate-700 bg-slate-900 p-4 text-sm text-slate-300">
-            <p>
-              Hay registros locales de la versión anterior, que todavía no
-              tienen una cuenta asignada.
-            </p>
-            {!showImport ? (
-              <button
-                onClick={() => setShowImport(true)}
-                className="mt-2 font-semibold text-emerald-300"
-              >
-                Revisar importación de mis datos anteriores
-              </button>
-            ) : (
-              <div className="mt-3 space-y-3">
-                <p>
-                  Confirma que esos registros son tuyos para asociarlos a{' '}
-                  {user.email}. Los originales se conservan; los datos que ya
-                  existan en esta cuenta no se reemplazan.
-                </p>
-                {importError && (
-                  <p role="alert" className="text-rose-300">
-                    {importError}
-                  </p>
-                )}
-                <button
-                  onClick={() => {
-                    try {
-                      importLegacyData(user.userId);
-                      window.location.reload();
-                    } catch {
-                      setImportError(
-                        'No se pudieron importar los registros. Los originales se conservan.'
-                      );
-                    }
-                  }}
-                  className="rounded-lg bg-emerald-400 px-3 py-2 font-semibold text-slate-950"
-                >
-                  Son mis datos, importar a esta cuenta
-                </button>
-                <button
-                  onClick={() => setShowImport(false)}
-                  className="ml-3 text-slate-400"
-                >
-                  Ahora no
-                </button>
-              </div>
-            )}
-          </section>
+        {error && (
+          <div
+            role="alert"
+            className="mb-4 rounded-xl border border-rose-500/40 bg-rose-950/30 p-4 text-sm text-rose-200"
+          >
+            <p>{error}</p>
+            <button
+              onClick={reload}
+              disabled={saving}
+              className="mt-2 font-bold underline"
+            >
+              Actualizar registros
+            </button>
+          </div>
         )}
-        {activeTab === 'tracker' ? (
-          <DailyTrackerView
-            goals={goals}
-            meals={dailyLog.meals}
-            consumedTotals={consumedTotals}
-            consumedPortions={consumedPortions}
-            waterIntakeMl={dailyLog.waterIntakeMl || 0}
-            allFoods={allFoods}
-            allTemplates={allTemplates}
-            onAddMealEntry={addMealEntry}
-            onAddMultipleMealEntries={addMultipleMealEntries}
-            onRemoveMealEntry={removeMealEntry}
-            onAddWater={addWater}
-            onResetWater={resetWater}
-            onSaveCustomFood={addCustomFood}
-            onApplyTemplate={applyMealTemplate}
-            onSaveCurrentAsTemplate={saveMealAsTemplate}
-            onOpenCalculator={() => setActiveTab('calculator')}
-          />
-        ) : (
-          <CalculatorView
-            initialProfile={profile}
-            initialPreset={goals.distributionPreset}
-            onApplyPlan={(newProfile, newGoals) => {
-              saveProfileAndGoals(newProfile, newGoals);
-            }}
-            onGoToTracker={() => setActiveTab('tracker')}
-          />
+        {saving && (
+          <p role="status" className="mb-3 text-sm text-emerald-300">
+            Guardando en tu cuenta…
+          </p>
+        )}
+        {loading && !error ? (
+          <p role="status">Cargando tus registros…</p>
+        ) : !dailyLog ? null : (
+          <fieldset disabled={saving} className="min-w-0">
+            {legacyAvailable && !legacyImported && (
+              <section className="mb-5 rounded-xl border border-slate-700 bg-slate-900 p-4 text-sm text-slate-300">
+                <p>
+                  Hay registros locales de la versión anterior disponibles para
+                  importar.
+                </p>
+                {!showImport ? (
+                  <button
+                    onClick={() => setShowImport(true)}
+                    className="mt-2 font-semibold text-emerald-300"
+                  >
+                    Revisar importación de mis datos anteriores
+                  </button>
+                ) : (
+                  <div className="mt-3 space-y-3">
+                    <p>
+                      Confirma que esos registros son tuyos para asociarlos a{' '}
+                      {user.email}. Se guardarán en tu cuenta. La copia local
+                      anterior se conserva como respaldo y deja de utilizarse
+                      para el diario. Los días y las metas que ya existan en el
+                      servidor no se reemplazan.
+                    </p>
+                    <p>
+                      El perfil predeterminado y las comidas de ejemplo no se
+                      importan. En los días que tenían ejemplos, el agua se
+                      reinicia a cero porque antes también venía precargada.
+                    </p>
+                    <button
+                      onClick={importLegacy}
+                      className="rounded-lg bg-emerald-400 px-3 py-2 font-semibold text-slate-950"
+                    >
+                      Son mis datos, importar a esta cuenta
+                    </button>
+                    <button
+                      onClick={() => setShowImport(false)}
+                      className="ml-3 text-slate-400"
+                    >
+                      Ahora no
+                    </button>
+                  </div>
+                )}
+              </section>
+            )}
+            {!profile || !goals ? (
+              <ProfileSetup userName={user.name} onSave={saveProfileAndGoals} />
+            ) : activeTab === 'tracker' ? (
+              <DailyTrackerView
+                goals={goals}
+                meals={dailyLog.meals}
+                consumedTotals={consumedTotals}
+                consumedPortions={consumedPortions}
+                waterIntakeMl={dailyLog.waterIntakeMl || 0}
+                allFoods={allFoods}
+                allTemplates={allTemplates}
+                onAddMealEntry={addMealEntry}
+                onAddMultipleMealEntries={addMultipleMealEntries}
+                onRemoveMealEntry={removeMealEntry}
+                onAddWater={addWater}
+                onResetWater={resetWater}
+                onSaveCustomFood={addCustomFood}
+                onApplyTemplate={applyMealTemplate}
+                onSaveCurrentAsTemplate={saveMealAsTemplate}
+                onOpenCalculator={() => setActiveTab('calculator')}
+              />
+            ) : (
+              <CalculatorView
+                initialProfile={profile}
+                initialPreset={goals.distributionPreset}
+                onApplyPlan={saveProfileAndGoals}
+                onGoToTracker={() => setActiveTab('tracker')}
+              />
+            )}
+          </fieldset>
         )}
       </main>
 

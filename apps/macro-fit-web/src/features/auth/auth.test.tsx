@@ -14,14 +14,7 @@ import {
   getAccessToken,
   setAccessToken,
 } from './auth-session';
-import {
-  accountKey,
-  canImportLegacy,
-  createAccountStorage,
-  importLegacyData,
-} from './account-storage';
-import { useMacroStore, getTodayDateString } from '../../hooks/useMacroStore';
-import { renderHook } from '@testing-library/react';
+import { withRecords } from '../../testing/nutrition-fixture';
 import { analyzeMealText } from '../../utils/plateAnalysisApi';
 
 const userA = {
@@ -74,6 +67,7 @@ function credentials() {
 }
 beforeEach(() => {
   localStorage.clear();
+  sessionStorage.clear();
 });
 afterEach(() => {
   cleanup();
@@ -85,7 +79,7 @@ afterEach(() => {
 describe('platform login', () => {
   it('redirects anonymous visitors without exposing diary data', async () => {
     const fetch = vi.fn();
-    vi.stubGlobal('fetch', fetch);
+    vi.stubGlobal('fetch', withRecords(fetch));
     mount('/?view=tracker#today');
     await screen.findByRole('heading', { name: 'Inicia sesión' });
     expect(screen.getByTestId('location').textContent).toContain(
@@ -99,7 +93,7 @@ describe('platform login', () => {
       .fn()
       .mockResolvedValueOnce(response({ access_token: token(), user: userA }))
       .mockResolvedValueOnce(response(userA));
-    vi.stubGlobal('fetch', fetch);
+    vi.stubGlobal('fetch', withRecords(fetch));
     mount('/login?redirect=https%3A%2F%2Fevil.example%2F');
     await screen.findByRole('button', { name: 'Iniciar sesión' });
     credentials();
@@ -121,33 +115,24 @@ describe('platform login', () => {
     expect(getAccessToken()).toBeNull();
     expect(screen.queryByText('Registrar comida con IA')).toBeNull();
   });
-  it('restores a session using the server profile and closes it without deleting account records', async () => {
-    localStorage.setItem('access_token', token());
-    const logKey = accountKey(
-      userA.userId,
-      `macrofit_log_${getTodayDateString()}`
+  it('restores a tab session and logs out without a local personal data copy', async () => {
+    sessionStorage.setItem('macrofit_access_token', token());
+    vi.stubGlobal(
+      'fetch',
+      withRecords(vi.fn().mockResolvedValue(response(userA)))
     );
-    localStorage.setItem(
-      logKey,
-      JSON.stringify({
-        date: getTodayDateString(),
-        meals: [],
-        waterIntakeMl: 500,
-      })
-    );
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(userA)));
     mount();
     await screen.findByText('Registrar comida con IA');
     fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
     await screen.findByRole('heading', { name: 'Inicia sesión' });
     expect(getAccessToken()).toBeNull();
-    expect(JSON.parse(localStorage.getItem(logKey)!).waterIntakeMl).toBe(500);
+    expect(localStorage.length).toBe(0);
   });
   it.each(['expired', 'invalid', 'server-rejected'])(
     'rejects a %s session',
     async (kind) => {
-      localStorage.setItem(
-        'access_token',
+      sessionStorage.setItem(
+        'macrofit_access_token',
         kind === 'expired'
           ? token(userA.userId, 1)
           : kind === 'invalid'
@@ -155,7 +140,7 @@ describe('platform login', () => {
           : token()
       );
       const fetch = vi.fn().mockResolvedValue(response({}, 401));
-      vi.stubGlobal('fetch', fetch);
+      vi.stubGlobal('fetch', withRecords(fetch));
       mount();
       await screen.findByRole('heading', { name: 'Inicia sesión' });
       expect(getAccessToken()).toBeNull();
@@ -163,12 +148,12 @@ describe('platform login', () => {
     }
   );
   it('keeps the token but hides data while profile validation is unavailable, then retries', async () => {
-    localStorage.setItem('access_token', token());
+    sessionStorage.setItem('macrofit_access_token', token());
     const fetch = vi
       .fn()
       .mockRejectedValueOnce(new TypeError('network'))
       .mockResolvedValueOnce(response(userA));
-    vi.stubGlobal('fetch', fetch);
+    vi.stubGlobal('fetch', withRecords(fetch));
     mount();
     await screen.findByRole('button', { name: 'Reintentar conexión' });
     expect(getAccessToken()).toBe(token());
@@ -178,8 +163,8 @@ describe('platform login', () => {
     );
     await screen.findByText('Registrar comida con IA');
   });
-  it('ignores an old profile response after a cross-tab account change', async () => {
-    localStorage.setItem('access_token', token());
+  it('ignores an old profile response after a session change', async () => {
+    sessionStorage.setItem('macrofit_access_token', token());
     let resolveA!: (value: unknown) => void;
     const fetch = vi
       .fn()
@@ -190,13 +175,13 @@ describe('platform login', () => {
           })
       )
       .mockResolvedValueOnce(response(userB));
-    vi.stubGlobal('fetch', fetch);
+    vi.stubGlobal('fetch', withRecords(fetch));
     mount();
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
     act(() => {
-      localStorage.setItem('access_token', token(userB.userId));
+      sessionStorage.setItem('macrofit_access_token', token(userB.userId));
       window.dispatchEvent(
-        new StorageEvent('storage', { key: 'access_token' })
+        new StorageEvent('storage', { key: 'macrofit_access_token' })
       );
     });
     await screen.findByRole('button', { name: 'Cerrar sesión' });
@@ -210,8 +195,14 @@ describe('platform login', () => {
   it('closes an authenticated view when the JWT expires without waiting for an API call', async () => {
     vi.useFakeTimers();
     const expires = Math.floor(Date.now() / 1000) + 60;
-    localStorage.setItem('access_token', token(userA.userId, expires));
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(userA)));
+    sessionStorage.setItem(
+      'macrofit_access_token',
+      token(userA.userId, expires)
+    );
+    vi.stubGlobal(
+      'fetch',
+      withRecords(vi.fn().mockResolvedValue(response(userA)))
+    );
     await act(async () => {
       mount();
     });
@@ -226,7 +217,7 @@ describe('platform login', () => {
 
 describe('authenticated analyses', () => {
   it('discards a response body that arrives after switching accounts', async () => {
-    localStorage.setItem('access_token', token());
+    sessionStorage.setItem('macrofit_access_token', token());
     let finish!: (body: unknown) => void;
     let reading!: () => void;
     const bodyStarted = new Promise<void>((resolve) => {
@@ -254,9 +245,9 @@ describe('authenticated analyses', () => {
     expect(getAccessToken()).toBe(token(userB.userId));
   });
   it('adds a Bearer token and preserves the session on 403', async () => {
-    localStorage.setItem('access_token', token());
+    sessionStorage.setItem('macrofit_access_token', token());
     const fetch = vi.fn().mockResolvedValue(response({}, 403));
-    vi.stubGlobal('fetch', fetch);
+    vi.stubGlobal('fetch', withRecords(fetch));
     expect(
       (await authenticatedFetch('/api/macrofit/analyze-meal-text')).status
     ).toBe(403);
@@ -266,7 +257,7 @@ describe('authenticated analyses', () => {
     expect(getAccessToken()).toBe(token());
   });
   it('clears the session on 401', async () => {
-    localStorage.setItem('access_token', token());
+    sessionStorage.setItem('macrofit_access_token', token());
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({}, 401)));
     expect(
       (await authenticatedFetch('/api/macrofit/analyze-meal-text')).status
@@ -275,14 +266,14 @@ describe('authenticated analyses', () => {
   });
   it('does not send an anonymous provider request', async () => {
     const fetch = vi.fn();
-    vi.stubGlobal('fetch', fetch);
+    vi.stubGlobal('fetch', withRecords(fetch));
     await expect(
       authenticatedFetch('/api/macrofit/analyze-meal-text')
     ).rejects.toThrow('sesión expiró');
     expect(fetch).not.toHaveBeenCalled();
   });
   it('discards an old request without clearing a newer session', async () => {
-    localStorage.setItem('access_token', token());
+    sessionStorage.setItem('macrofit_access_token', token());
     let done!: (value: unknown) => void;
     vi.stubGlobal(
       'fetch',
@@ -299,78 +290,5 @@ describe('authenticated analyses', () => {
     done(response({}, 401));
     await assertion;
     expect(getAccessToken()).toBe(token(userB.userId));
-  });
-});
-
-describe('account storage', () => {
-  it('separates logs, profile, foods and templates for two accounts', () => {
-    const a = createAccountStorage(userA.userId);
-    const b = createAccountStorage(userB.userId);
-    for (const name of [
-      'macrofit_profile',
-      'macrofit_goals',
-      'macrofit_custom_foods',
-      'macrofit_custom_templates',
-      'macrofit_log_2026-10-23',
-    ]) {
-      a.setItem(name, 'A');
-      expect(b.getItem(name)).toBeNull();
-      b.setItem(name, 'B');
-      expect(a.getItem(name)).toBe('A');
-    }
-  });
-  it('starts a new diary empty and persists hydration under the current user', () => {
-    localStorage.setItem(
-      'macrofit_log_' + getTodayDateString(),
-      JSON.stringify({ meals: [{ foodName: 'Legacy private meal' }] })
-    );
-    const { result } = renderHook(() => useMacroStore(userA.userId));
-    expect(result.current.dailyLog.meals).toEqual([]);
-    act(() => result.current.addWater(250));
-    expect(
-      JSON.parse(
-        localStorage.getItem(
-          accountKey(userA.userId, 'macrofit_log_' + getTodayDateString())
-        )!
-      ).waterIntakeMl
-    ).toBe(250);
-  });
-  it('blocks writes from a storage instance belonging to an earlier session', () => {
-    localStorage.setItem('access_token', token());
-    const storage = createAccountStorage(userA.userId);
-    localStorage.setItem('access_token', token(userB.userId));
-    expect(() => storage.setItem('macrofit_profile', 'stale')).toThrow(
-      'sesión cambió'
-    );
-    expect(
-      localStorage.getItem(accountKey(userA.userId, 'macrofit_profile'))
-    ).toBeNull();
-  });
-  it('imports legacy data only once, retains originals and preserves destination values', () => {
-    localStorage.setItem(
-      'macrofit_profile',
-      JSON.stringify({ name: 'Legacy' })
-    );
-    localStorage.setItem('macrofit_custom_foods', '[]');
-    localStorage.setItem(
-      accountKey(userA.userId, 'macrofit_profile'),
-      JSON.stringify({ name: 'Current' })
-    );
-    expect(canImportLegacy(userA.userId)).toBe(true);
-    importLegacyData(userA.userId);
-    expect(canImportLegacy(userB.userId)).toBe(false);
-    importLegacyData(userB.userId);
-    expect(
-      JSON.parse(
-        localStorage.getItem(accountKey(userA.userId, 'macrofit_profile'))!
-      ).name
-    ).toBe('Current');
-    expect(
-      localStorage.getItem(accountKey(userA.userId, 'macrofit_custom_foods'))
-    ).toBe('[]');
-    expect(
-      localStorage.getItem(accountKey(userB.userId, 'macrofit_custom_foods'))
-    ).toBeNull();
-    expect(localStorage.getItem('macrofit_profile')).toBe('{"name":"Legacy"}');
   });
 });

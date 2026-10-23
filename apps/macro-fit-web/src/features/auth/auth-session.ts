@@ -5,11 +5,11 @@ export interface CurrentUser {
   roles: string[];
 }
 
-export const TOKEN_KEY = 'access_token';
+export const TOKEN_KEY = 'macrofit_access_token';
 export const SESSION_CHANGED = 'macrofit:session-changed';
 
 export function getAccessToken() {
-  return localStorage.getItem(TOKEN_KEY);
+  return sessionStorage.getItem(TOKEN_KEY);
 }
 
 export function tokenExpiresAt(token: string): number | null {
@@ -27,8 +27,8 @@ export function tokenExpiresAt(token: string): number | null {
 }
 
 export function setAccessToken(token: string | null) {
-  if (token) localStorage.setItem(TOKEN_KEY, token);
-  else localStorage.removeItem(TOKEN_KEY);
+  if (token) sessionStorage.setItem(TOKEN_KEY, token);
+  else sessionStorage.removeItem(TOKEN_KEY);
   window.dispatchEvent(new Event(SESSION_CHANGED));
 }
 

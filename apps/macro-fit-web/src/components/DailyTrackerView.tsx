@@ -18,7 +18,6 @@ import {
   PlateAnalysisResponse,
 } from '../types/nutrition';
 import { Camera, Mic, Sparkles, UtensilsCrossed, Zap } from 'lucide-react';
-import { MEDS_PAUTA_PORTIONS } from '../utils/calculator';
 
 interface DailyTrackerViewProps {
   goals: MacroGoals;
@@ -39,16 +38,30 @@ interface DailyTrackerViewProps {
   waterIntakeMl: number;
   allFoods: FoodItem[];
   allTemplates: MealTemplate[];
-  onAddMealEntry: (mealType: MealType, food: FoodItem, amountGrams: number) => void;
+  onAddMealEntry: (
+    mealType: MealType,
+    food: FoodItem,
+    amountGrams: number
+  ) => Promise<boolean>;
   onAddMultipleMealEntries?: (
     items: Array<{ mealType: MealType; food: FoodItem; amountGrams: number }>
-  ) => void;
-  onRemoveMealEntry: (entryId: string) => void;
-  onAddWater: (amountMl: number) => void;
-  onResetWater: () => void;
-  onSaveCustomFood: (food: Omit<FoodItem, 'id' | 'isCustom'>) => void;
-  onApplyTemplate: (template: MealTemplate, mealType?: MealType) => void;
-  onSaveCurrentAsTemplate?: (name: string, description: string, mealType: MealType, entries: MealEntry[]) => void;
+  ) => Promise<boolean>;
+  onRemoveMealEntry: (entryId: string) => Promise<boolean>;
+  onAddWater: (amountMl: number) => Promise<boolean>;
+  onResetWater: () => Promise<boolean>;
+  onSaveCustomFood: (
+    food: Omit<FoodItem, 'id' | 'isCustom'>
+  ) => Promise<boolean>;
+  onApplyTemplate: (
+    template: MealTemplate,
+    mealType?: MealType
+  ) => Promise<boolean>;
+  onSaveCurrentAsTemplate?: (
+    name: string,
+    description: string,
+    mealType: MealType,
+    entries: MealEntry[]
+  ) => Promise<boolean>;
   onOpenCalculator: () => void;
 }
 
@@ -70,16 +83,25 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
   onSaveCurrentAsTemplate,
   onOpenCalculator,
 }) => {
-  const [selectedMealType, setSelectedMealType] = useState<MealType | null>(null);
-  const [selectedTemplateMealType, setSelectedTemplateMealType] = useState<MealType | null>(null);
+  const [selectedMealType, setSelectedMealType] = useState<MealType | null>(
+    null
+  );
+  const [selectedTemplateMealType, setSelectedTemplateMealType] =
+    useState<MealType | null>(null);
   const [isCustomFoodModalOpen, setIsCustomFoodModalOpen] = useState(false);
 
   // Gemini Vision Plate Analysis State
-  const [scanCameraMealType, setScanCameraMealType] = useState<MealType | null>(null);
-  const [analysisResult, setAnalysisResult] = useState<PlateAnalysisResponse | null>(null);
+  const [scanCameraMealType, setScanCameraMealType] = useState<MealType | null>(
+    null
+  );
+  const [analysisResult, setAnalysisResult] =
+    useState<PlateAnalysisResponse | null>(null);
   const [analysisImageUrl, setAnalysisImageUrl] = useState<string>('');
-  const [analysisTargetMeal, setAnalysisTargetMeal] = useState<MealType>('lunch');
-  const [textEntryMeal, setTextEntryMeal] = useState<MealType | 'auto' | null>(null);
+  const [analysisTargetMeal, setAnalysisTargetMeal] =
+    useState<MealType>('lunch');
+  const [textEntryMeal, setTextEntryMeal] = useState<MealType | 'auto' | null>(
+    null
+  );
   const [analysisText, setAnalysisText] = useState('');
 
   // Group meals by mealType
@@ -97,10 +119,12 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-16 animate-in fade-in duration-300">
       {/* 1. Tarjeta de Cumplimiento de Pauta MEDS (Porciones intercambiables) */}
-      <PautaSummaryCard
-        targets={goals.pautaPortions || MEDS_PAUTA_PORTIONS}
-        consumed={consumedPortions}
-      />
+      {goals.distributionPreset === 'meds_pauta' && goals.pautaPortions && (
+        <PautaSummaryCard
+          targets={goals.pautaPortions}
+          consumed={consumedPortions}
+        />
+      )}
 
       {/* 2. Anillo Central de Calorías y Barras de Macronutrientes (Gramos) */}
       <MacroProgressRings goals={goals} consumed={consumedTotals} />
@@ -108,7 +132,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
       {/* 3. Tarjeta de Hidratación (> 2 Litros según pauta) */}
       <WaterTrackerCard
         currentMl={waterIntakeMl}
-        targetMl={goals.waterTargetMl || 2500}
+        targetMl={goals.waterTargetMl}
         onAddWater={onAddWater}
         onResetWater={onResetWater}
       />
@@ -124,13 +148,16 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-white">Registrar comida con IA</h3>
+                <h3 className="text-sm font-bold text-white">
+                  Registrar comida con IA
+                </h3>
                 <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                   Foto · Texto · Voz
                 </span>
               </div>
               <p className="text-xs text-slate-300 mt-0.5 leading-snug">
-                Sube una foto o cuenta qué comiste. Revisa los ingredientes y ajusta los gramos antes de registrar.
+                Sube una foto o cuenta qué comiste. Revisa los ingredientes y
+                ajusta los gramos antes de registrar.
               </p>
             </div>
           </div>
@@ -175,7 +202,11 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
         <MealSection
           mealType="breakfast"
           title="Comida 1: Desayuno"
-          subtitle="Pauta: 1 Carb + 2 Prot + ½ Grasa + 1 Lácteo"
+          subtitle={
+            goals.distributionPreset === 'meds_pauta'
+              ? 'Pauta: 1 Carb + 2 Prot + ½ Grasa + 1 Lácteo'
+              : 'Registra tus alimentos y cantidades'
+          }
           icon="🌅"
           entries={breakfastMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
@@ -189,7 +220,11 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
         <MealSection
           mealType="colacion_am"
           title="Colación Mañana"
-          subtitle="Pauta: 1 Fruta entera + 1 Lácteo"
+          subtitle={
+            goals.distributionPreset === 'meds_pauta'
+              ? 'Pauta: 1 Fruta entera + 1 Lácteo'
+              : 'Registra tus alimentos y cantidades'
+          }
           icon="🍏"
           entries={colacionAmMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
@@ -203,7 +238,11 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
         <MealSection
           mealType="lunch"
           title="Comida 2: Almuerzo"
-          subtitle="Pauta: Verduras libre + 4 Prot (200g) + 1 Carb + 1 Grasa + 1 Fruta"
+          subtitle={
+            goals.distributionPreset === 'meds_pauta'
+              ? 'Pauta: Verduras libre + 4 Prot (200g) + 1 Carb + 1 Grasa + 1 Fruta'
+              : 'Registra tus alimentos y cantidades'
+          }
           icon="☀️"
           entries={lunchMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
@@ -217,7 +256,11 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
         <MealSection
           mealType="colacion_pm"
           title="Colación Tarde"
-          subtitle="Pauta: 1 Fruta + 1 Carbohidrato + 1 Lácteo"
+          subtitle={
+            goals.distributionPreset === 'meds_pauta'
+              ? 'Pauta: 1 Fruta + 1 Carbohidrato + 1 Lácteo'
+              : 'Registra tus alimentos y cantidades'
+          }
           icon="🥪"
           entries={colacionPmMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
@@ -231,7 +274,11 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
         <MealSection
           mealType="dinner"
           title="Comida 3: Cena"
-          subtitle="Pauta: Verduras libre + 4 Prot (200g) + 1 Carb + ½ Grasa"
+          subtitle={
+            goals.distributionPreset === 'meds_pauta'
+              ? 'Pauta: Verduras libre + 4 Prot (200g) + 1 Carb + ½ Grasa'
+              : 'Registra tus alimentos y cantidades'
+          }
           icon="🌙"
           entries={dinnerMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
@@ -326,18 +373,27 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           setAnalysisResult(null);
           setAnalysisImageUrl('');
         }}
-        onConfirmPlate={(entries, mealType) => {
-          if (onAddMultipleMealEntries) {
-            onAddMultipleMealEntries(
-              entries.map(({ food, amountGrams }) => ({ mealType, food, amountGrams }))
-            );
-          } else {
-            entries.forEach(({ food, amountGrams }) => {
-              onAddMealEntry(mealType, food, amountGrams);
-            });
+        onConfirmPlate={async (entries, mealType) => {
+          const saved = onAddMultipleMealEntries
+            ? await onAddMultipleMealEntries(
+                entries.map(({ food, amountGrams }) => ({
+                  mealType,
+                  food,
+                  amountGrams,
+                }))
+              )
+            : (
+                await Promise.all(
+                  entries.map(({ food, amountGrams }) =>
+                    onAddMealEntry(mealType, food, amountGrams)
+                  )
+                )
+              ).every(Boolean);
+          if (saved) {
+            setAnalysisResult(null);
+            setAnalysisImageUrl('');
           }
-          setAnalysisResult(null);
-          setAnalysisImageUrl('');
+          return saved;
         }}
       />
     </div>

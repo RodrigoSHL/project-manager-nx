@@ -1,3 +1,4 @@
+import { useSaveAction } from '../hooks/useSaveAction';
 import React, { useState } from 'react';
 import {
   X,
@@ -27,12 +28,21 @@ interface PlateAnalysisResultModalProps {
   imageUrl?: string;
   descriptionText?: string;
   defaultMealType: MealType;
-  onConfirmPlate: (entries: Array<{ food: FoodItem; amountGrams: number }>, mealType: MealType) => void;
+  onConfirmPlate: (
+    entries: Array<{ food: FoodItem; amountGrams: number }>,
+    mealType: MealType
+  ) => Promise<boolean>;
 }
 
 const CATEGORY_MAP: Record<
   FoodCategory,
-  { label: string; bg: string; text: string; border: string; group: FoodItem['category'] }
+  {
+    label: string;
+    bg: string;
+    text: string;
+    border: string;
+    group: FoodItem['category'];
+  }
 > = {
   proteina: {
     label: 'Proteína',
@@ -94,13 +104,17 @@ const MEAL_NAMES: Record<MealType, string> = {
   snacks: '🍎 Snacks / Libre',
 };
 
-export const PlateAnalysisResultModal: React.FC<PlateAnalysisResultModalProps> = (props) => {
+export const PlateAnalysisResultModal: React.FC<
+  PlateAnalysisResultModalProps
+> = (props) => {
   if (!props.isOpen || !props.analysis) return null;
   // Mount fresh state for each analysis; keep hooks unconditional in the editor.
   return <PlateAnalysisEditor {...props} analysis={props.analysis} />;
 };
 
-const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: PlateAnalysisResponse }> = ({
+const PlateAnalysisEditor: React.FC<
+  PlateAnalysisResultModalProps & { analysis: PlateAnalysisResponse }
+> = ({
   isOpen,
   onClose,
   analysis,
@@ -109,6 +123,7 @@ const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: 
   defaultMealType,
   onConfirmPlate,
 }) => {
+  const { save, saveError } = useSaveAction();
   const [targetMeal, setTargetMeal] = useState<MealType>(defaultMealType);
   const [items, setItems] = useState<AnalyzedPlateItem[]>(() =>
     analysis.items.map((item, idx) => ({
@@ -129,7 +144,10 @@ const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: 
     setItems((prev) =>
       prev.map((i) => {
         if (i.id === id) {
-          const nextVal = Math.max(0.1, Math.round((i.adjusted_grams + delta) * 10) / 10);
+          const nextVal = Math.max(
+            0.1,
+            Math.round((i.adjusted_grams + delta) * 10) / 10
+          );
           return { ...i, adjusted_grams: nextVal };
         }
         return i;
@@ -181,7 +199,9 @@ const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: 
         fiber: Number(((density.fiber_g || 0) * factor).toFixed(1)),
         category: catConfig.group,
         isCustom: true,
-        notes: `Analizado con Gemini ${descriptionText ? 'desde texto' : 'Vision'} (${item.confidence} confianza)`,
+        notes: `Analizado con Gemini ${
+          descriptionText ? 'desde texto' : 'Vision'
+        } (${item.confidence} confianza)`,
       };
 
       return {
@@ -190,8 +210,7 @@ const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: 
       };
     });
 
-    onConfirmPlate(confirmedList, targetMeal);
-    onClose();
+    void save(() => onConfirmPlate(confirmedList, targetMeal), onClose);
   };
 
   const plateTypeLabel =
@@ -202,8 +221,18 @@ const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: 
       : '🥣 Bowl';
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Revisar alimentos analizados" className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Revisar alimentos analizados"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
+    >
       <div className="relative w-full max-w-xl bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
+        {saveError && (
+          <p role="alert" className="p-3 text-sm text-rose-300">
+            {saveError}
+          </p>
+        )}
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-950/80">
           <div className="flex items-center gap-2">
@@ -215,7 +244,9 @@ const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: 
                 {analysis.dish_name || 'Desglose del Plato Detectado'}
               </h2>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-[10px] text-slate-400">{descriptionText ? 'Desde tu descripción' : plateTypeLabel}</span>
+                <span className="text-[10px] text-slate-400">
+                  {descriptionText ? 'Desde tu descripción' : plateTypeLabel}
+                </span>
                 <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-950/60 px-1.5 py-0.2 rounded border border-emerald-500/20">
                   {analysis.items.length} ingredientes detectados
                 </span>
@@ -246,21 +277,30 @@ const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: 
                 Ajuste fino del usuario (1 toque)
               </span>
               <p className="text-xs text-slate-300 leading-snug">
-                Revisa los alimentos y ajusta los gramos antes de confirmar el registro.
+                Revisa los alimentos y ajusta los gramos antes de confirmar el
+                registro.
               </p>
             </div>
           </div>
 
           {descriptionText && (
             <div className="rounded-xl border border-slate-700 bg-slate-950/60 p-3">
-              <h3 className="text-xs font-semibold text-slate-300 mb-1">Lo que describiste</h3>
-              <p className="text-xs text-slate-400 whitespace-pre-wrap break-words">{descriptionText}</p>
+              <h3 className="text-xs font-semibold text-slate-300 mb-1">
+                Lo que describiste
+              </h3>
+              <p className="text-xs text-slate-400 whitespace-pre-wrap break-words">
+                {descriptionText}
+              </p>
             </div>
           )}
           {analysis.assumptions && analysis.assumptions.length > 0 && (
             <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-3 text-xs text-amber-200">
               <h3 className="font-semibold mb-1">Suposiciones para revisar</h3>
-              <ul className="list-disc pl-4 space-y-1">{analysis.assumptions.map((assumption, index) => <li key={index}>{assumption}</li>)}</ul>
+              <ul className="list-disc pl-4 space-y-1">
+                {analysis.assumptions.map((assumption, index) => (
+                  <li key={index}>{assumption}</li>
+                ))}
+              </ul>
             </div>
           )}
 
@@ -269,8 +309,12 @@ const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: 
             <div className="flex items-start gap-2.5 p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/30 text-indigo-200">
               <Lightbulb className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
               <div className="text-xs">
-                <span className="font-bold text-indigo-300 block mb-0.5">Tip Clínico Nutricional:</span>
-                <p className="text-slate-300 leading-relaxed">{analysis.clinical_tip}</p>
+                <span className="font-bold text-indigo-300 block mb-0.5">
+                  Tip Clínico Nutricional:
+                </span>
+                <p className="text-slate-300 leading-relaxed">
+                  {analysis.clinical_tip}
+                </p>
               </div>
             </div>
           )}
@@ -278,12 +322,15 @@ const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: 
           {/* Food Items List with 1-Tap Gram Adjustment */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between text-xs text-slate-400 px-1">
-              <span className="font-semibold text-slate-300">Ingredientes y Porciones</span>
+              <span className="font-semibold text-slate-300">
+                Ingredientes y Porciones
+              </span>
               <span>Gramos & Macros</span>
             </div>
 
             {items.map((item) => {
-              const catConfig = CATEGORY_MAP[item.category] || CATEGORY_MAP.proteina;
+              const catConfig =
+                CATEGORY_MAP[item.category] || CATEGORY_MAP.proteina;
               const factor = item.adjusted_grams / 100;
               const density = item.nutritional_density_per_100g;
               const itemKcal = Math.round((density.kcal || 0) * factor);
@@ -328,9 +375,19 @@ const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: 
                             Confianza: {item.confidence}
                           </span>
                         </div>
-                        {item.quantity_source && <p className={`text-[10px] mt-1 ${item.quantity_source === 'estimated' ? 'text-amber-300' : 'text-slate-400'}`}>
-                          {item.quantity_source === 'estimated' ? 'Peso estimado · revisa los gramos' : 'Gramos indicados por ti'}
-                        </p>}
+                        {item.quantity_source && (
+                          <p
+                            className={`text-[10px] mt-1 ${
+                              item.quantity_source === 'estimated'
+                                ? 'text-amber-300'
+                                : 'text-slate-400'
+                            }`}
+                          >
+                            {item.quantity_source === 'estimated'
+                              ? 'Peso estimado · revisa los gramos'
+                              : 'Gramos indicados por ti'}
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -376,11 +433,16 @@ const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: 
                           aria-label={`Gramos de ${item.name}`}
                           value={item.adjusted_grams}
                           onChange={(e) =>
-                            handleDirectGramsChange(item.id, Number(e.target.value) || 0)
+                            handleDirectGramsChange(
+                              item.id,
+                              Number(e.target.value) || 0
+                            )
                           }
                           className="w-16 text-center font-bold text-xs bg-slate-900 border border-slate-700 rounded-lg py-1 text-white focus:outline-none focus:border-emerald-500"
                         />
-                        <span className="text-xs text-slate-400 font-semibold">g</span>
+                        <span className="text-xs text-slate-400 font-semibold">
+                          g
+                        </span>
                       </div>
 
                       <div className="flex items-center gap-1">
@@ -414,7 +476,9 @@ const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: 
           {/* Dynamic Macro Totals Bar */}
           <div className="grid grid-cols-4 gap-2 text-center bg-slate-900/90 border border-slate-800 rounded-xl p-2.5">
             <div>
-              <span className="text-[10px] text-slate-400 block">Total Kcal</span>
+              <span className="text-[10px] text-slate-400 block">
+                Total Kcal
+              </span>
               <span className="text-sm font-extrabold text-emerald-400">
                 {totals.calories}
               </span>
@@ -426,7 +490,9 @@ const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: 
               </span>
             </div>
             <div>
-              <span className="text-[10px] text-amber-400 block">Carbohidratos</span>
+              <span className="text-[10px] text-amber-400 block">
+                Carbohidratos
+              </span>
               <span className="text-xs font-bold text-white">
                 {totals.carbs.toFixed(1)}g
               </span>
@@ -465,7 +531,8 @@ const PlateAnalysisEditor: React.FC<PlateAnalysisResultModalProps & { analysis: 
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>
-                Confirmar y Registrar en {MEAL_NAMES[targetMeal].split(' ')[1] || 'Comida'}
+                Confirmar y Registrar en{' '}
+                {MEAL_NAMES[targetMeal].split(' ')[1] || 'Comida'}
               </span>
             </button>
           </div>

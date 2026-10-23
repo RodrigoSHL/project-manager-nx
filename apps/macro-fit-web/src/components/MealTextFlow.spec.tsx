@@ -9,7 +9,7 @@ import {
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MacroFitWorkspace } from '../app/app';
-import { accountKey } from '../features/auth/account-storage';
+import { nutritionFixture } from '../testing/nutrition-fixture';
 import { getTodayDateString } from '../hooks/useMacroStore';
 import { MealTextModal } from './MealTextModal';
 import { PlateAnalysisResponse } from '../types/nutrition';
@@ -99,8 +99,9 @@ class MockRecognition {
 
 beforeEach(() => {
   localStorage.clear();
-  localStorage.setItem(
-    'access_token',
+  sessionStorage.clear();
+  sessionStorage.setItem(
+    'macrofit_access_token',
     'test.' +
       btoa(
         JSON.stringify({
@@ -125,9 +126,11 @@ describe('description to daily log', () => {
     const fetch = vi
       .fn()
       .mockResolvedValue({ ok: true, json: async () => analysis });
-    vi.stubGlobal('fetch', fetch);
+    const records = nutritionFixture();
+    vi.stubGlobal('fetch', (path: string, init: RequestInit) => path.startsWith('/api/macrofit/me') ? records.fetch(path, init) : fetch(path, init));
     render(<App />);
-    const key = accountKey(user.userId, `macrofit_log_${getTodayDateString()}`);
+    await screen.findByText('Registrar comida con IA');
+    const date = getTodayDateString();
     const previousMeals: unknown[] = [];
     fireEvent.click(
       screen.getByRole('button', { name: 'Escribir / Dictar comida' })
@@ -158,7 +161,7 @@ describe('description to daily log', () => {
         ) as HTMLInputElement
       ).value
     ).toBe('9');
-    expect(localStorage.getItem(key)).toBeNull();
+    expect(records.days.get(date)?.meals).toEqual([]);
     fireEvent.change(
       within(review).getByLabelText('Gramos de Mayonesa Kraft'),
       { target: { value: '2.5' } }
@@ -166,9 +169,8 @@ describe('description to daily log', () => {
     fireEvent.click(
       within(review).getByRole('button', { name: /Confirmar y Registrar/ })
     );
-    const saved = JSON.parse(localStorage.getItem(key)!).meals.slice(
-      previousMeals.length
-    );
+    await waitFor(() => expect(records.days.get(date)?.meals).toHaveLength(5));
+    const saved = records.days.get(date)!.meals.slice(previousMeals.length);
     expect(saved).toHaveLength(5);
     expect(
       saved.every((meal: { mealType: string }) => meal.mealType === 'lunch')

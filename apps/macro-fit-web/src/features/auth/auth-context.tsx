@@ -54,7 +54,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setRevision((value) => value + 1);
     };
     const storage = (event: StorageEvent) => {
-      if (event.key === TOKEN_KEY || event.key === null) sync();
+      if (
+        (!event.storageArea || event.storageArea === sessionStorage) &&
+        (event.key === TOKEN_KEY || event.key === null)
+      )
+        sync();
     };
     window.addEventListener(SESSION_CHANGED, sync);
     window.addEventListener('storage', storage);

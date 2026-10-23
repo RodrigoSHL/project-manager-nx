@@ -1,6 +1,6 @@
 # MacroFit Web
 
-Frontend Vite/React con instalación PWA y almacenamiento local. Se construye con `Dockerfile.vite` y se sirve como SPA desde Nginx en el puerto interno 80. No necesita Node en runtime, variables `NEXT_PUBLIC_*` ni PostgreSQL.
+Frontend Vite/React con instalación PWA y registros personales en PostgreSQL a través de la API. Se construye con `Dockerfile.vite` y se sirve como SPA desde Nginx en el puerto interno 80. El frontend no conecta directamente con PostgreSQL y no necesita Node en runtime ni variables `NEXT_PUBLIC_*`.
 
 Las llamadas de análisis usan `/api/macrofit/analyze-plate` en el mismo origen. En desarrollo, Vite las envía al BFF en localhost:3000; en producción, Caddy las envía a `bff-api:3000`. El BFF llama al API interno en el puerto 3007.
 
@@ -8,15 +8,18 @@ Las llamadas de análisis usan `/api/macrofit/analyze-plate` en el mismo origen.
 
 `/login` reutiliza las cuentas existentes de la plataforma: `POST /api/auth/login` valida credenciales mediante BFF y User API y devuelve el JWT; `GET /api/auth/profile` valida la sesión antes de montar el diario. El diseño sigue el panel de presentación y formulario de ProjectHub, FlowBoard y GridAssets, con los colores de MacroFit.
 
-El token usa la clave `access_token` de localStorage, como las aplicaciones existentes, y se adjunta como `Authorization: Bearer` a los análisis. Cada origen conserva su propia sesión; compartir usuarios no implica SSO entre subdominios. No se almacenan contraseñas. Una futura migración común a cookies HttpOnly permitiría reducir la exposición del token ante XSS.
-
+El JWT se guarda en `sessionStorage` bajo `macrofit_access_token` y se adjunta como `Authorization: Bearer` a los registros y análisis. La sesión es propia de la pestaña y no se conserva al finalizarla. Las versiones anteriores usaban localStorage; al actualizar hay que iniciar sesión otra vez. No se almacenan contraseñas ni se reutiliza el token persistente anterior. Como en los otros frontends, no hay SSO entre subdominios ni revocación nueva de JWT en el servidor.
 Una sesión ausente, inválida o vencida lleva al login. Se restaura consultando el perfil del servidor, nunca confiando únicamente en el JWT decodificado. Un 401 cierra la sesión; un 403 conserva la sesión y muestra el error. Si no se puede validar el perfil por un fallo de red, los registros permanecen ocultos y se ofrece reintentar, conservando el token. Los redirects pasan por la librería común `security-navigation` y solo admiten destinos del mismo origen.
 
-Perfil, metas, alimentos, combos y diarios se guardan bajo `macrofit:<userId>:<clave>`. Cambiar de cuenta remonta el espacio de trabajo, libera los modales y el micrófono, descarta respuestas pendientes y evita escrituras de la sesión anterior. Cerrar sesión conserva los datos para la próxima entrada de esa cuenta. Los datos siguen siendo locales a ese navegador, sin sincronización entre dispositivos ni cifrado del almacenamiento. Un login no sustituye la protección del dispositivo compartido.
+Perfil, metas, alimentos propios, combos y diarios se guardan por `user_id` en `macrofit_db`. Todas las llamadas pasan por `/api/macrofit/me` y el BFF deriva el usuario desde el JWT verificado, nunca del body ni de una cabecera proporcionada por el navegador. Los administradores tampoco pueden acceder a registros personales ajenos. Cambiar de cuenta desmonta el espacio de trabajo y descarta las respuestas pendientes.
 
-Las cuentas nuevas empiezan con un diario vacío, sin registrar automáticamente las comidas de ejemplo. Los registros anteriores sin cuenta no se muestran ni asignan automáticamente: un aviso permite confirmar que son propios e importarlos una sola vez. Se conservan los originales y no se reemplazan claves ya existentes en la cuenta de destino.
+Una cuenta nueva muestra un formulario con campos biométricos vacíos. No se crea un perfil ficticio, no se precargan consumos ni se asigna automáticamente la pauta MEDS. Las metas se calculan y guardan cuando el usuario completa sus datos; la pauta por porciones es un preset opcional. El catálogo común y los combos de referencia son datos estáticos de consulta, no consumos registrados. Los combos guardados incluyen una copia de la información nutricional para reutilizar incluso alimentos provenientes de un análisis.
 
-MacroFit es un seguimiento personal: cualquier identidad autenticada de la plataforma puede usarlo, sin roles nuevos, tenants, permisos de administrador sobre diarios ajenos ni migraciones de base de datos. La API nutricional permanece interna y sin persistencia; el BFF protege los tres endpoints públicos de análisis, incluido el alias antiguo de imágenes. Health y readiness siguen sin autenticación.
+La pantalla espera la confirmación del servidor antes de actualizar consumos o mostrar éxito. Si falla una escritura, se conserva el formulario y se exige actualizar los registros antes de reintentar: una desconexión no permite saber si el servidor alcanzó a guardar. Los cambios de día y sesión descartan respuestas antiguas. Los registros requieren conexión; el service worker solo conserva recursos estáticos, no respuestas de `/api`.
+
+La única lectura de localStorage sirve para importar versiones anteriores, tanto claves globales como claves de la cuenta actual. El usuario debe confirmar la propiedad. La importación es transaccional, se marca una vez por usuario en PostgreSQL y preserva perfiles, alimentos y días que ya existan en el servidor. Excluye el perfil predeterminado original y las entradas `seed-*`; si un día contenía ejemplos, su hidratación se inicia en cero porque antes venía precargada con 2100 ml. El aviso explica este ajuste. Los originales anteriores se conservan como respaldo, también después de importar, para no perder versiones de datos que ya existan en el servidor. No se vuelven a usar para el diario ni se escriben registros personales nuevos en localStorage.
+
+MacroFit es un seguimiento personal sin tenants nuevos. Health y readiness siguen públicos; health comprueba PostgreSQL y readiness comprueba la configuración del proveedor. El backend ejecuta una migración real y usa `synchronize=false`. Ver el contrato de persistencia en [MacroFit API](../macro-fit-api/README.md).
 
 ## Registrar por texto o voz
 

@@ -1,3 +1,4 @@
+import { useSaveAction } from '../hooks/useSaveAction';
 import React, { useState, useMemo } from 'react';
 import { X, Search, PlusCircle, Check, Sparkles } from 'lucide-react';
 import { FoodItem, MealType } from '../types/nutrition';
@@ -7,7 +8,11 @@ interface FoodSelectorModalProps {
   mealType: MealType | null;
   foods: FoodItem[];
   onClose: () => void;
-  onAddFood: (mealType: MealType, food: FoodItem, amountGrams: number) => void;
+  onAddFood: (
+    mealType: MealType,
+    food: FoodItem,
+    amountGrams: number
+  ) => Promise<boolean>;
   onOpenCreateCustom: () => void;
 }
 
@@ -19,6 +24,7 @@ export const FoodSelectorModal: React.FC<FoodSelectorModalProps> = ({
   onAddFood,
   onOpenCreateCustom,
 }) => {
+  const { save, saveError } = useSaveAction();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
@@ -27,10 +33,14 @@ export const FoodSelectorModal: React.FC<FoodSelectorModalProps> = ({
   // Filter foods
   const filteredFoods = useMemo(() => {
     return foods.filter((food) => {
-      const matchesSearch = food.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = food.name
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
       const matchesCategory =
         selectedCategory === 'all' ||
-        (selectedCategory === 'custom' ? food.isCustom : food.category === selectedCategory);
+        (selectedCategory === 'custom'
+          ? food.isCustom
+          : food.category === selectedCategory);
       return matchesSearch && matchesCategory;
     });
   }, [foods, searchTerm, selectedCategory]);
@@ -53,28 +63,50 @@ export const FoodSelectorModal: React.FC<FoodSelectorModalProps> = ({
 
   const handleConfirmAdd = () => {
     if (!selectedFood || portionGrams <= 0) return;
-    onAddFood(mealType, selectedFood, portionGrams);
-    onClose();
-    setSelectedFood(null);
+    void save(
+      () => onAddFood(mealType, selectedFood, portionGrams),
+      () => {
+        onClose();
+        setSelectedFood(null);
+      }
+    );
   };
 
   // Preview macros based on current portionGrams
-  const previewRatio = selectedFood ? portionGrams / selectedFood.servingSizeGrams : 1;
-  const previewCalories = selectedFood ? Math.round(selectedFood.calories * previewRatio) : 0;
-  const previewProtein = selectedFood ? (selectedFood.protein * previewRatio).toFixed(1) : '0';
-  const previewCarbs = selectedFood ? (selectedFood.carbs * previewRatio).toFixed(1) : '0';
-  const previewFat = selectedFood ? (selectedFood.fat * previewRatio).toFixed(1) : '0';
+  const previewRatio = selectedFood
+    ? portionGrams / selectedFood.servingSizeGrams
+    : 1;
+  const previewCalories = selectedFood
+    ? Math.round(selectedFood.calories * previewRatio)
+    : 0;
+  const previewProtein = selectedFood
+    ? (selectedFood.protein * previewRatio).toFixed(1)
+    : '0';
+  const previewCarbs = selectedFood
+    ? (selectedFood.carbs * previewRatio).toFixed(1)
+    : '0';
+  const previewFat = selectedFood
+    ? (selectedFood.fat * previewRatio).toFixed(1)
+    : '0';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900/95 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden text-slate-100">
+        {saveError && (
+          <p role="alert" className="p-3 text-sm text-rose-300">
+            {saveError}
+          </p>
+        )}
         {/* Header */}
         <div className="p-4 border-b border-slate-800 flex items-center justify-between">
           <div>
             <h3 className="text-base font-bold text-white">
-              Agregar a <span className="text-emerald-400">{mealLabels[mealType]}</span>
+              Agregar a{' '}
+              <span className="text-emerald-400">{mealLabels[mealType]}</span>
             </h3>
-            <p className="text-xs text-slate-400">Selecciona un alimento de la base o ajusta la porción</p>
+            <p className="text-xs text-slate-400">
+              Selecciona un alimento de la base o ajusta la porción
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -151,7 +183,9 @@ export const FoodSelectorModal: React.FC<FoodSelectorModalProps> = ({
                 >
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-white">{food.name}</span>
+                      <span className="text-xs font-bold text-white">
+                        {food.name}
+                      </span>
                       {food.medsRecommended && (
                         <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold">
                           MEDS
@@ -172,7 +206,9 @@ export const FoodSelectorModal: React.FC<FoodSelectorModalProps> = ({
                       Base {food.servingUnit} • {food.calories} kcal
                     </div>
                     <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-1 font-mono">
-                      <span className="text-emerald-400">P: {food.protein}g</span>
+                      <span className="text-emerald-400">
+                        P: {food.protein}g
+                      </span>
                       <span>•</span>
                       <span className="text-amber-400">C: {food.carbs}g</span>
                       <span>•</span>
@@ -186,7 +222,9 @@ export const FoodSelectorModal: React.FC<FoodSelectorModalProps> = ({
                         <Check className="w-4 h-4 stroke-[3]" />
                       </div>
                     ) : (
-                      <span className="text-xs text-slate-500 font-semibold">Elegir</span>
+                      <span className="text-xs text-slate-500 font-semibold">
+                        Elegir
+                      </span>
                     )}
                   </div>
                 </div>
@@ -199,7 +237,9 @@ export const FoodSelectorModal: React.FC<FoodSelectorModalProps> = ({
         {selectedFood ? (
           <div className="p-4 border-t border-slate-800 bg-slate-950/90 space-y-3">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-slate-200">Ajustar gramos a consumir:</span>
+              <span className="font-semibold text-slate-200">
+                Ajustar gramos a consumir:
+              </span>
               <div className="flex items-center gap-1.5">
                 {[50, 100, 150, 200].map((grams) => (
                   <button
@@ -224,15 +264,21 @@ export const FoodSelectorModal: React.FC<FoodSelectorModalProps> = ({
                   min="1"
                   max="2000"
                   value={portionGrams}
-                  onChange={(e) => setPortionGrams(Math.max(1, Number(e.target.value) || 0))}
+                  onChange={(e) =>
+                    setPortionGrams(Math.max(1, Number(e.target.value) || 0))
+                  }
                   className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm font-bold text-white focus:outline-none focus:border-emerald-500 font-mono"
                 />
-                <span className="absolute right-3 top-2.5 text-xs text-slate-500">gramos</span>
+                <span className="absolute right-3 top-2.5 text-xs text-slate-500">
+                  gramos
+                </span>
               </div>
 
               {/* Dynamic Preview Pill */}
               <div className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-right">
-                <div className="text-sm font-extrabold text-white leading-none">{previewCalories} kcal</div>
+                <div className="text-sm font-extrabold text-white leading-none">
+                  {previewCalories} kcal
+                </div>
                 <div className="text-[10px] text-slate-400 font-mono mt-1">
                   P:{previewProtein}g • C:{previewCarbs}g • G:{previewFat}g
                 </div>
@@ -243,12 +289,15 @@ export const FoodSelectorModal: React.FC<FoodSelectorModalProps> = ({
               onClick={handleConfirmAdd}
               className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs transition shadow-md shadow-emerald-500/20 active:scale-[0.98]"
             >
-              Registrar {portionGrams}g ({previewCalories} kcal) en {mealLabels[mealType]}
+              Registrar {portionGrams}g ({previewCalories} kcal) en{' '}
+              {mealLabels[mealType]}
             </button>
           </div>
         ) : (
           <div className="p-3 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between text-xs">
-            <span className="text-slate-400">¿No encuentras lo que buscas?</span>
+            <span className="text-slate-400">
+              ¿No encuentras lo que buscas?
+            </span>
             <button
               onClick={onOpenCreateCustom}
               className="flex items-center gap-1.5 text-emerald-400 font-semibold hover:underline"

@@ -1,6 +1,20 @@
+import { useSaveAction } from '../hooks/useSaveAction';
 import React, { useState } from 'react';
-import { X, Sparkles, Zap, Plus, Check, Utensils, BookmarkPlus } from 'lucide-react';
-import { FoodItem, MealEntry, MealTemplate, MealType } from '../types/nutrition';
+import {
+  X,
+  Sparkles,
+  Zap,
+  Plus,
+  Check,
+  Utensils,
+  BookmarkPlus,
+} from 'lucide-react';
+import {
+  FoodItem,
+  MealEntry,
+  MealTemplate,
+  MealType,
+} from '../types/nutrition';
 
 interface MealTemplatesModalProps {
   isOpen: boolean;
@@ -9,8 +23,16 @@ interface MealTemplatesModalProps {
   allFoods: FoodItem[];
   currentMealEntries?: MealEntry[];
   onClose: () => void;
-  onApplyTemplate: (template: MealTemplate, mealType?: MealType) => void;
-  onSaveCurrentAsTemplate?: (name: string, description: string, mealType: MealType, entries: MealEntry[]) => void;
+  onApplyTemplate: (
+    template: MealTemplate,
+    mealType?: MealType
+  ) => Promise<boolean>;
+  onSaveCurrentAsTemplate?: (
+    name: string,
+    description: string,
+    mealType: MealType,
+    entries: MealEntry[]
+  ) => Promise<boolean>;
 }
 
 export const MealTemplatesModal: React.FC<MealTemplatesModalProps> = ({
@@ -23,7 +45,10 @@ export const MealTemplatesModal: React.FC<MealTemplatesModalProps> = ({
   onApplyTemplate,
   onSaveCurrentAsTemplate,
 }) => {
-  const [selectedMealFilter, setSelectedMealFilter] = useState<string>(mealType || 'all');
+  const { save, saveError } = useSaveAction();
+  const [selectedMealFilter, setSelectedMealFilter] = useState<string>(
+    mealType || 'all'
+  );
   const [isCreating, setIsCreating] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
   const [newTemplateDesc, setNewTemplateDesc] = useState('');
@@ -48,7 +73,7 @@ export const MealTemplatesModal: React.FC<MealTemplatesModalProps> = ({
   const getTemplateTotals = (tpl: MealTemplate) => {
     return tpl.items.reduce(
       (acc, item) => {
-        const food = allFoods.find((f) => f.id === item.foodId);
+        const food = item.food ?? allFoods.find((f) => f.id === item.foodId);
         if (!food) return acc;
         const ratio = item.amountGrams / food.servingSizeGrams;
         return {
@@ -63,22 +88,36 @@ export const MealTemplatesModal: React.FC<MealTemplatesModalProps> = ({
   };
 
   const handleApply = (tpl: MealTemplate) => {
-    onApplyTemplate(tpl, mealType);
-    onClose();
+    void save(() => onApplyTemplate(tpl, mealType), onClose);
   };
 
   const handleSaveCurrent = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTemplateName.trim() || !onSaveCurrentAsTemplate) return;
-    onSaveCurrentAsTemplate(newTemplateName.trim(), newTemplateDesc.trim(), mealType, currentMealEntries);
-    setIsCreating(false);
-    setNewTemplateName('');
-    setNewTemplateDesc('');
+    void save(
+      () =>
+        onSaveCurrentAsTemplate(
+          newTemplateName.trim(),
+          newTemplateDesc.trim(),
+          mealType,
+          currentMealEntries
+        ),
+      () => {
+        setIsCreating(false);
+        setNewTemplateName('');
+        setNewTemplateDesc('');
+      }
+    );
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900/95 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden text-slate-100">
+        {saveError && (
+          <p role="alert" className="p-3 text-sm text-rose-300">
+            {saveError}
+          </p>
+        )}
         {/* Header */}
         <div className="p-4 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -90,7 +129,11 @@ export const MealTemplatesModal: React.FC<MealTemplatesModalProps> = ({
                 Combos y Comidas Habituales
               </h3>
               <p className="text-xs text-slate-400">
-                Carga tu desayuno o almuerzo típico en <span className="text-emerald-400 font-semibold">{mealLabels[mealType]}</span> con 1 clic
+                Carga tu desayuno o almuerzo típico en{' '}
+                <span className="text-emerald-400 font-semibold">
+                  {mealLabels[mealType]}
+                </span>{' '}
+                con 1 clic
               </p>
             </div>
           </div>
@@ -127,22 +170,27 @@ export const MealTemplatesModal: React.FC<MealTemplatesModalProps> = ({
             </button>
           </div>
 
-          {currentMealEntries.length > 0 && onSaveCurrentAsTemplate && !isCreating && (
-            <button
-              onClick={() => setIsCreating(true)}
-              className="flex items-center gap-1 text-[11px] font-semibold text-amber-400 hover:underline whitespace-nowrap"
-            >
-              <BookmarkPlus className="w-3.5 h-3.5" />
-              <span>Guardar actual como combo</span>
-            </button>
-          )}
+          {currentMealEntries.length > 0 &&
+            onSaveCurrentAsTemplate &&
+            !isCreating && (
+              <button
+                onClick={() => setIsCreating(true)}
+                className="flex items-center gap-1 text-[11px] font-semibold text-amber-400 hover:underline whitespace-nowrap"
+              >
+                <BookmarkPlus className="w-3.5 h-3.5" />
+                <span>Guardar actual como combo</span>
+              </button>
+            )}
         </div>
 
         {/* Modal body */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {/* Create custom template form */}
           {isCreating && (
-            <form onSubmit={handleSaveCurrent} className="p-3.5 rounded-xl bg-slate-950 border border-amber-500/40 space-y-2.5 mb-3">
+            <form
+              onSubmit={handleSaveCurrent}
+              className="p-3.5 rounded-xl bg-slate-950 border border-amber-500/40 space-y-2.5 mb-3"
+            >
               <div className="flex items-center justify-between text-xs font-bold text-amber-400">
                 <span>Guardar alimentos actuales como nuevo combo</span>
                 <button
@@ -208,13 +256,19 @@ export const MealTemplatesModal: React.FC<MealTemplatesModalProps> = ({
                           <h4 className="text-xs font-bold text-white group-hover:text-emerald-400 transition">
                             {tpl.name}
                           </h4>
-                          <span className="text-[10px] text-slate-400">{tpl.description}</span>
+                          <span className="text-[10px] text-slate-400">
+                            {tpl.description}
+                          </span>
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <span className="text-xs font-black text-white">{totals.calories} kcal</span>
+                        <span className="text-xs font-black text-white">
+                          {totals.calories} kcal
+                        </span>
                         <div className="text-[10px] text-slate-400 font-mono">
-                          P:{totals.protein.toFixed(0)}g • C:{totals.carbs.toFixed(0)}g • G:{totals.fat.toFixed(0)}g
+                          P:{totals.protein.toFixed(0)}g • C:
+                          {totals.carbs.toFixed(0)}g • G:{totals.fat.toFixed(0)}
+                          g
                         </div>
                       </div>
                     </div>
@@ -222,7 +276,9 @@ export const MealTemplatesModal: React.FC<MealTemplatesModalProps> = ({
                     {/* Items pills */}
                     <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2 border-t border-slate-900">
                       {tpl.items.map((item) => {
-                        const food = allFoods.find((f) => f.id === item.foodId);
+                        const food =
+                          item.food ??
+                          allFoods.find((f) => f.id === item.foodId);
                         if (!food) return null;
                         return (
                           <span
@@ -230,7 +286,9 @@ export const MealTemplatesModal: React.FC<MealTemplatesModalProps> = ({
                             className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-slate-300"
                           >
                             <span>{food.name}</span>
-                            <span className="font-bold text-emerald-400 font-mono">({item.amountGrams}g)</span>
+                            <span className="font-bold text-emerald-400 font-mono">
+                              ({item.amountGrams}g)
+                            </span>
                           </span>
                         );
                       })}

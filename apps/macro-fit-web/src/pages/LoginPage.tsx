@@ -158,7 +158,7 @@ export function LoginPage() {
             </button>
           </form>
           <p className="mt-6 text-center text-xs leading-relaxed text-slate-400">
-            Tus registros se guardan en este navegador, separados por cuenta.
+            Tus registros se guardan en tu cuenta y puedes consultarlos desde otros dispositivos.
           </p>
         </section>
       </div>

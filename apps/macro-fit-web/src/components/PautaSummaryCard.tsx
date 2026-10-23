@@ -98,9 +98,9 @@ export const PautaSummaryCard: React.FC<PautaSummaryCardProps> = ({ targets, con
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-extrabold text-white">Cumplimiento Pauta Clínica MEDS</h3>
+              <h3 className="text-sm font-extrabold text-white">Seguimiento de porciones</h3>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                Nutricionista F. Fluxá
+                Metas seleccionadas
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
@@ -233,7 +233,7 @@ export const PautaSummaryCard: React.FC<PautaSummaryCardProps> = ({ targets, con
             </div>
           </div>
 
-          {/* Tips de la Nutricionista Fernanda Fluxá */}
+          {/* Referencias de la pauta seleccionada */}
           <div className="p-3.5 rounded-xl bg-emerald-950/30 border border-emerald-500/20 space-y-2">
             <div className="flex items-center gap-2">
               <Lightbulb className="w-4 h-4 text-emerald-400" />

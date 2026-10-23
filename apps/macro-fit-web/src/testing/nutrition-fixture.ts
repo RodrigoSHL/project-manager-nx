@@ -1,0 +1,75 @@
+import { vi } from 'vitest';
+import { DailyLog, NutritionAccount } from '../types/nutrition';
+
+export const testAccount: NutritionAccount = {
+  profile: {
+    name: 'Persona de prueba',
+    age: 32,
+    gender: 'female',
+    weightKg: 65,
+    heightCm: 167,
+    activityLevel: 'moderate',
+    goal: 'maintenance',
+  },
+  goals: {
+    calories: 2100,
+    proteinGrams: 140,
+    carbsGrams: 220,
+    fatGrams: 75,
+    waterTargetMl: 2500,
+    distributionPreset: 'balanced',
+  },
+  customFoods: [],
+  customTemplates: [],
+  legacyImported: false,
+};
+export function testToken(sub = 'test-user') {
+  return `test.${btoa(
+    JSON.stringify({ sub, exp: Math.floor(Date.now() / 1000) + 3600 })
+  )}.signature`;
+}
+export function nutritionFixture(initial: NutritionAccount = testAccount) {
+  let account = structuredClone(initial);
+  const days = new Map<string, DailyLog>();
+  const response = (body: unknown) => ({
+    ok: true,
+    status: 200,
+    json: async () => structuredClone(body),
+  });
+  const fetch = vi.fn(async (url: string, init: RequestInit = {}) => {
+    const body = init.body ? JSON.parse(init.body as string) : null;
+    const path = url.replace('/api/macrofit/me', '');
+    if (path === '') return response(account);
+    if (path === '/settings') {
+      account = { ...account, ...body };
+      return response(account);
+    }
+    if (path === '/templates') {
+      account.customTemplates.push(body);
+      return response(account);
+    }
+    if (path === '/foods') {
+      account.customFoods.push(body);
+      return response(account);
+    }
+    const match = /^\/days\/(\d{4}-\d{2}-\d{2})(.*)$/.exec(path);
+    if (!match) throw new Error(`Unexpected fixture path: ${url}`);
+    const [, date, suffix] = match;
+    const log = days.get(date) ?? { date, meals: [], waterIntakeMl: 0 };
+    if (suffix === '/meals') log.meals.push(...body.entries);
+    if (suffix === '/water')
+      log.waterIntakeMl = body.reset ? 0 : log.waterIntakeMl + body.amountMl;
+    days.set(date, log);
+    return response(log);
+  });
+  return { fetch, days, account: () => account };
+}
+export function withRecords(
+  other: (path: string, init?: RequestInit) => unknown
+) {
+  const records = nutritionFixture();
+  return (path: string, init?: RequestInit) =>
+    path.startsWith('/api/macrofit/me')
+      ? records.fetch(path, init)
+      : other(path, init);
+}

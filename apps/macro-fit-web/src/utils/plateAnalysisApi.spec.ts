@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { analyzeMealText, analyzePlateImage } from './plateAnalysisApi';
 
 beforeEach(() =>
-  localStorage.setItem(
-    'access_token',
+  sessionStorage.setItem(
+    'macrofit_access_token',
     'test.' +
       btoa(
         JSON.stringify({
@@ -16,7 +16,7 @@ beforeEach(() =>
 );
 afterEach(() => {
   vi.unstubAllGlobals();
-  localStorage.clear();
+  sessionStorage.clear();
 });
 const image = () => new Blob(['jpeg'], { type: 'image/jpeg' });
 

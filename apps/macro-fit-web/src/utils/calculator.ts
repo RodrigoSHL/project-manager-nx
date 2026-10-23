@@ -184,7 +184,7 @@ export function calculateRecommendedWater(weightKg: number, activityLevel: Activ
 
 export function generateNutritionPlan(
   profile: UserProfile,
-  preset: MacroDistributionPreset = 'meds_pauta'
+  preset: MacroDistributionPreset = 'balanced'
 ): { bmr: number; tdee: number; goals: MacroGoals } {
   const bmr = calculateBmr(profile.gender, profile.weightKg, profile.heightCm, profile.age);
   const tdee = calculateTdee(bmr, profile.activityLevel);
@@ -214,7 +214,6 @@ export function generateNutritionPlan(
       fatGrams: macros.fatGrams,
       waterTargetMl,
       distributionPreset: preset,
-      pautaPortions: MEDS_PAUTA_PORTIONS,
     },
   };
 }

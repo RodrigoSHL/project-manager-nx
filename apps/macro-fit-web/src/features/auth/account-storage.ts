@@ -1,55 +1,84 @@
-import { getAccessToken, SessionChangedError } from './auth-session';
+import {
+  ImportData,
+  importSchema,
+  UserProfile,
+  DailyLog,
+} from '@project-manager/macrofit-contracts';
 
+// Compatibility reader only. Active personal records are never written to browser storage.
 export function accountKey(userId: string, key: string) {
   return `macrofit:${encodeURIComponent(userId)}:${key}`;
 }
-
-export function createAccountStorage(userId: string) {
-  const token = getAccessToken();
-  const assertSession = () => {
-    if (getAccessToken() !== token) throw new SessionChangedError();
-  };
-  return {
-    getItem(key: string) {
-      assertSession();
-      return localStorage.getItem(accountKey(userId, key));
-    },
-    setItem(key: string, value: string) {
-      assertSession();
-      localStorage.setItem(accountKey(userId, key), value);
-    },
-  };
-}
-
-const LEGACY_OWNER = 'macrofit_legacy_owner';
-function legacyKeys() {
-  return Object.keys(localStorage).filter(
-    (key) =>
-      [
-        'macrofit_profile',
-        'macrofit_goals',
-        'macrofit_custom_foods',
-        'macrofit_custom_templates',
-      ].includes(key) || /^macrofit_log_\d{4}-\d{2}-\d{2}$/.test(key)
-  );
+function localRecords(userId: string) {
+  const prefix = `macrofit:${encodeURIComponent(userId)}:`;
+  const owner = localStorage.getItem('macrofit_legacy_owner');
+  return Object.keys(localStorage)
+    .flatMap((key) => {
+      const name = key.startsWith(prefix)
+        ? key.slice(prefix.length)
+        : !owner || owner === userId
+        ? key
+        : '';
+      return /^(macrofit_(profile|goals|custom_foods|custom_templates)|macrofit_log_\d{4}-\d{2}-\d{2})$/.test(
+        name
+      )
+        ? [{ key, name, value: localStorage.getItem(key)! }]
+        : [];
+    })
+    .sort(
+      (a, b) =>
+        Number(a.key.startsWith(prefix)) - Number(b.key.startsWith(prefix))
+    );
 }
 export function canImportLegacy(userId: string) {
-  return !localStorage.getItem(LEGACY_OWNER) && legacyKeys().length > 0;
+  try {
+    return localRecords(userId).length > 0;
+  } catch {
+    return false;
+  }
 }
-export function importLegacyData(userId: string) {
-  if (!canImportLegacy(userId)) return;
-  const storage = createAccountStorage(userId);
-  const values = legacyKeys().map((key) => {
-    const value = localStorage.getItem(key)!;
-    const parsed: unknown = JSON.parse(value);
-    if (!parsed || typeof parsed !== 'object')
-      throw new Error(
-        'Los datos anteriores no tienen un formato válido. Se conserva el original.'
-      );
-    return { key, value };
+export function readLegacyData(userId: string): {
+  data: ImportData;
+  originals: Map<string, string>;
+} {
+  const originals = new Map<string, string>();
+  const records = new Map<string, unknown>();
+  for (const record of localRecords(userId)) {
+    originals.set(record.key, record.value);
+    records.set(record.name, JSON.parse(record.value));
+  }
+  const profile = records.get('macrofit_profile') as
+    | Partial<UserProfile>
+    | undefined;
+  const goals = records.get('macrofit_goals');
+  const demoProfile =
+    profile?.name === 'Paciente MEDS' &&
+    profile.age === 28 &&
+    profile.gender === 'male' &&
+    profile.weightKg === 75 &&
+    profile.heightCm === 175 &&
+    profile.activityLevel === 'moderate' &&
+    profile.goal === 'meds_pauta';
+  const data = importSchema.parse({
+    // The previous default profile was fictional and must never become a real profile.
+    ...(profile && goals && !demoProfile
+      ? { settings: { profile, goals } }
+      : {}),
+    foods: records.get('macrofit_custom_foods') ?? [],
+    templates: records.get('macrofit_custom_templates') ?? [],
+    logs: [...records]
+      .filter(([key]) => key.startsWith('macrofit_log_'))
+      .map(([, value]) => {
+        const log = value as DailyLog;
+        const hasExamples = log.meals.some((meal) =>
+          meal.id.startsWith('seed-')
+        );
+        return {
+          ...log,
+          meals: log.meals.filter((meal) => !meal.id.startsWith('seed-')),
+          waterIntakeMl: hasExamples ? 0 : log.waterIntakeMl,
+        };
+      }),
   });
-  // Preserve the originals and never replace data already entered in this account.
-  for (const { key, value } of values)
-    if (!storage.getItem(key)) storage.setItem(key, value);
-  localStorage.setItem(LEGACY_OWNER, userId);
+  return { data, originals };
 }

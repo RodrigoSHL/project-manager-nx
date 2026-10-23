@@ -6,7 +6,7 @@ import {
   PlusSquare,
   CheckCircle2,
   Zap,
-  WifiOff,
+  Database,
   Layers,
   ArrowRight,
 } from 'lucide-react';
@@ -70,11 +70,11 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({
 
           <div className="flex items-start gap-2.5">
             <div className="p-1 rounded-md bg-cyan-500/10 text-cyan-400 mt-0.5">
-              <WifiOff className="w-4 h-4" />
+              <Database className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-xs font-semibold text-slate-200">Funciona 100% Offline</p>
-              <p className="text-[11px] text-slate-400">Registra tus comidas en el gimnasio o en el avión sin consumir datos.</p>
+              <p className="text-xs font-semibold text-slate-200">Registros en tu cuenta</p>
+              <p className="text-[11px] text-slate-400">Consulta y guarda tus comidas con conexión, también desde otros dispositivos.</p>
             </div>
           </div>
 
@@ -154,7 +154,7 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({
               <ArrowRight className="w-4 h-4 text-slate-950" />
             </button>
             <p className="text-center text-[11px] text-slate-400">
-              Se creará un acceso directo nativo en tu dispositivo con icono y caché offline.
+              Se creará un acceso directo en tu dispositivo. Para consultar y guardar tus registros necesitas conexión.
             </p>
           </div>
         )}

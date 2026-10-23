@@ -1,5 +1,11 @@
 import { Camera, Mic, Plus, Trash2, Utensils, Zap } from 'lucide-react';
-import { MealEntry, MealType } from '../types/nutrition';
+import {
+  PAUTA_LABELS,
+  QUANTITY_LABELS,
+  formatPortions,
+  MealEntry,
+  MealType,
+} from '../types/nutrition';
 
 interface MealSectionProps {
   mealType: MealType;
@@ -11,6 +17,7 @@ interface MealSectionProps {
   onOpenTemplates?: (mealType: MealType) => void;
   onOpenScanPlate?: (mealType: MealType) => void;
   onOpenTextMeal?: (mealType: MealType) => void;
+  onReviewPauta?: (entryId: string) => void;
   onRemoveEntry: (entryId: string) => void;
 }
 
@@ -24,6 +31,7 @@ export const MealSection: React.FC<MealSectionProps> = ({
   onOpenTemplates,
   onOpenScanPlate,
   onOpenTextMeal,
+  onReviewPauta,
   onRemoveEntry,
 }) => {
   const mealTotals = entries.reduce(
@@ -43,7 +51,9 @@ export const MealSection: React.FC<MealSectionProps> = ({
         <div className="flex items-center gap-2.5">
           <span className="text-xl select-none">{icon}</span>
           <div>
-            <h3 className="text-sm font-bold text-white leading-tight">{title}</h3>
+            <h3 className="text-sm font-bold text-white leading-tight">
+              {title}
+            </h3>
             <p className="text-[11px] text-slate-400">{subtitle}</p>
           </div>
         </div>
@@ -51,22 +61,34 @@ export const MealSection: React.FC<MealSectionProps> = ({
         <div className="flex flex-wrap items-center gap-2">
           {entries.length > 0 && (
             <div className="flex items-center gap-2 text-xs">
-              <span className="font-extrabold text-white">{mealTotals.calories} kcal</span>
+              <span className="font-extrabold text-white">
+                {mealTotals.calories} kcal
+              </span>
               <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-slate-400 font-mono">
-                <span className="text-emerald-400 font-medium">P:{mealTotals.protein.toFixed(0)}g</span>
+                <span className="text-emerald-400 font-medium">
+                  P:{mealTotals.protein.toFixed(0)}g
+                </span>
                 <span>•</span>
-                <span className="text-amber-400 font-medium">C:{mealTotals.carbs.toFixed(0)}g</span>
+                <span className="text-amber-400 font-medium">
+                  C:{mealTotals.carbs.toFixed(0)}g
+                </span>
                 <span>•</span>
-                <span className="text-rose-400 font-medium">G:{mealTotals.fat.toFixed(0)}g</span>
+                <span className="text-rose-400 font-medium">
+                  G:{mealTotals.fat.toFixed(0)}g
+                </span>
               </div>
             </div>
           )}
 
           {onOpenTextMeal && (
-            <button type="button" onClick={() => onOpenTextMeal(mealType)}
+            <button
+              type="button"
+              onClick={() => onOpenTextMeal(mealType)}
               aria-label={`Describir comida: ${title}`}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 text-xs font-semibold transition">
-              <Mic className="w-3.5 h-3.5" /><span>Texto / Voz</span>
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 text-xs font-semibold transition"
+            >
+              <Mic className="w-3.5 h-3.5" />
+              <span>Texto / Voz</span>
             </button>
           )}
           {onOpenScanPlate && (
@@ -106,7 +128,9 @@ export const MealSection: React.FC<MealSectionProps> = ({
         {entries.length === 0 ? (
           <div className="py-4 text-center">
             <Utensils className="w-6 h-6 text-slate-700 mx-auto mb-1.5" />
-            <p className="text-xs text-slate-500">No hay alimentos registrados en {title.toLowerCase()}</p>
+            <p className="text-xs text-slate-500">
+              No hay alimentos registrados en {title.toLowerCase()}
+            </p>
             <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
               <button
                 onClick={() => onOpenAddFood(mealType)}
@@ -148,9 +172,12 @@ export const MealSection: React.FC<MealSectionProps> = ({
             >
               <div className="flex-1 min-w-0 pr-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-slate-200 truncate">{entry.foodName}</span>
+                  <span className="text-xs font-semibold text-slate-200 truncate">
+                    {entry.foodName}
+                  </span>
                   <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-medium flex-shrink-0">
-                    {entry.amountGrams}g
+                    {entry.quantity?.amount ?? entry.amountGrams}{' '}
+                    {QUANTITY_LABELS[entry.quantity?.unit ?? 'g']}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5 font-mono">
@@ -160,10 +187,32 @@ export const MealSection: React.FC<MealSectionProps> = ({
                   <span className="text-slate-600">|</span>
                   <span className="text-rose-400">G: {entry.fat}g</span>
                 </div>
+                {onReviewPauta && (
+                  <button
+                    onClick={() => onReviewPauta(entry.id)}
+                    className="mt-1 text-left text-[11px] text-emerald-300"
+                  >
+                    {entry.pauta?.status === 'matched'
+                      ? entry.pauta.contributions
+                          .map(
+                            (item) =>
+                              `${formatPortions(item.portions)} ${
+                                PAUTA_LABELS[item.group]
+                              }`
+                          )
+                          .join(' + ')
+                      : entry.pauta?.status === 'free'
+                      ? 'Libre según pauta'
+                      : 'Pendiente de clasificar'}{' '}
+                    · Revisar
+                  </button>
+                )}
               </div>
 
               <div className="flex items-center gap-3">
-                <span className="text-xs font-bold text-white">{entry.calories} kcal</span>
+                <span className="text-xs font-bold text-white">
+                  {entry.calories} kcal
+                </span>
                 <button
                   onClick={() => onRemoveEntry(entry.id)}
                   className="p-1 rounded text-slate-600 hover:text-rose-400 transition"

@@ -8,6 +8,8 @@ import { CustomFoodModal } from './CustomFoodModal';
 import { MealTemplatesModal } from './MealTemplatesModal';
 import { PlateCameraModal } from './PlateCameraModal';
 import { PlateAnalysisResultModal } from './PlateAnalysisResultModal';
+import { PautaFoodFields } from './PautaFoodFields';
+import { useSaveAction } from '../hooks/useSaveAction';
 import { MealTextModal } from './MealTextModal';
 import {
   FoodItem,
@@ -16,8 +18,13 @@ import {
   MealTemplate,
   MealType,
   PlateAnalysisResponse,
+  NutritionPlan,
+  PautaSelection,
+  summarizePauta,
+  findPautaRule,
+  QUANTITY_LABELS,
 } from '../types/nutrition';
-import { Camera, Mic, Sparkles, UtensilsCrossed, Zap } from 'lucide-react';
+import { Camera, Mic, Sparkles, UtensilsCrossed } from 'lucide-react';
 
 interface DailyTrackerViewProps {
   goals: MacroGoals;
@@ -28,13 +35,10 @@ interface DailyTrackerViewProps {
     carbs: number;
     fat: number;
   };
-  consumedPortions: {
-    protein: number;
-    carbs: number;
-    fats: number;
-    dairy: number;
-    fruits: number;
-  };
+  nutritionPlan?: NutritionPlan | null;
+  portionSummary?: ReturnType<typeof summarizePauta> | null;
+  onClassifyMeal?: (id: string, selection: PautaSelection) => Promise<boolean>;
+  onOpenPlan?: () => void;
   waterIntakeMl: number;
   allFoods: FoodItem[];
   allTemplates: MealTemplate[];
@@ -69,7 +73,10 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
   goals,
   meals,
   consumedTotals,
-  consumedPortions,
+  nutritionPlan,
+  portionSummary,
+  onClassifyMeal,
+  onOpenPlan,
   waterIntakeMl,
   allFoods,
   allTemplates,
@@ -83,6 +90,16 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
   onSaveCurrentAsTemplate,
   onOpenCalculator,
 }) => {
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [reviewSelection, setReviewSelection] = useState<
+    PautaSelection | undefined
+  >();
+  const { save: saveReview, saveError: reviewError } = useSaveAction();
+  const reviewing = meals.find((meal) => meal.id === reviewingId);
+  const openReview = (id: string) => {
+    setReviewingId(id);
+    setReviewSelection(meals.find((meal) => meal.id === id)?.pautaSelection);
+  };
   const [selectedMealType, setSelectedMealType] = useState<MealType | null>(
     null
   );
@@ -118,12 +135,43 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-16 animate-in fade-in duration-300">
-      {/* 1. Tarjeta de Cumplimiento de Pauta MEDS (Porciones intercambiables) */}
-      {goals.distributionPreset === 'meds_pauta' && goals.pautaPortions && (
-        <PautaSummaryCard
-          targets={goals.pautaPortions}
-          consumed={consumedPortions}
-        />
+      {nutritionPlan && portionSummary ? (
+        <>
+          <PautaSummaryCard
+            plan={nutritionPlan}
+            summary={portionSummary}
+            onConfigure={() => onOpenPlan?.()}
+          />
+          {portionSummary.pending > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {meals
+                .filter(
+                  (meal) =>
+                    !meal.pauta ||
+                    meal.pauta.status === 'pending' ||
+                    meal.pauta.planVersion !== nutritionPlan.version
+                )
+                .map((meal) => (
+                  <button
+                    key={meal.id}
+                    onClick={() => openReview(meal.id)}
+                    className="rounded-lg border border-amber-500/30 px-3 py-2 text-xs text-amber-200"
+                  >
+                    Clasificar: {meal.foodName}
+                  </button>
+                ))}
+            </div>
+          )}
+        </>
+      ) : (
+        onOpenPlan && (
+          <button
+            onClick={onOpenPlan}
+            className="w-full rounded-xl border border-emerald-500/30 bg-slate-900 p-4 text-left text-sm text-emerald-300"
+          >
+            Configurar mi pauta de porciones
+          </button>
+        )
       )}
 
       {/* 2. Anillo Central de Calorías y Barras de Macronutrientes (Gramos) */}
@@ -132,7 +180,8 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
       {/* 3. Tarjeta de Hidratación (> 2 Litros según pauta) */}
       <WaterTrackerCard
         currentMl={waterIntakeMl}
-        targetMl={goals.waterTargetMl}
+        targetMl={nutritionPlan?.waterTargetMl ?? goals.waterTargetMl}
+        isMinimum={nutritionPlan?.waterIsMinimum}
         onAddWater={onAddWater}
         onResetWater={onResetWater}
       />
@@ -202,17 +251,14 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
         <MealSection
           mealType="breakfast"
           title="Comida 1: Desayuno"
-          subtitle={
-            goals.distributionPreset === 'meds_pauta'
-              ? 'Pauta: 1 Carb + 2 Prot + ½ Grasa + 1 Lácteo'
-              : 'Registra tus alimentos y cantidades'
-          }
+          subtitle="Registra tus alimentos y cantidades"
           icon="🌅"
           entries={breakfastMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
           onOpenScanPlate={(type) => setScanCameraMealType(type)}
           onOpenTextMeal={(type) => setTextEntryMeal(type)}
+          onReviewPauta={nutritionPlan ? openReview : undefined}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -220,17 +266,14 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
         <MealSection
           mealType="colacion_am"
           title="Colación Mañana"
-          subtitle={
-            goals.distributionPreset === 'meds_pauta'
-              ? 'Pauta: 1 Fruta entera + 1 Lácteo'
-              : 'Registra tus alimentos y cantidades'
-          }
+          subtitle="Registra tus alimentos y cantidades"
           icon="🍏"
           entries={colacionAmMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
           onOpenScanPlate={(type) => setScanCameraMealType(type)}
           onOpenTextMeal={(type) => setTextEntryMeal(type)}
+          onReviewPauta={nutritionPlan ? openReview : undefined}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -238,17 +281,14 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
         <MealSection
           mealType="lunch"
           title="Comida 2: Almuerzo"
-          subtitle={
-            goals.distributionPreset === 'meds_pauta'
-              ? 'Pauta: Verduras libre + 4 Prot (200g) + 1 Carb + 1 Grasa + 1 Fruta'
-              : 'Registra tus alimentos y cantidades'
-          }
+          subtitle="Registra tus alimentos y cantidades"
           icon="☀️"
           entries={lunchMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
           onOpenScanPlate={(type) => setScanCameraMealType(type)}
           onOpenTextMeal={(type) => setTextEntryMeal(type)}
+          onReviewPauta={nutritionPlan ? openReview : undefined}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -256,17 +296,14 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
         <MealSection
           mealType="colacion_pm"
           title="Colación Tarde"
-          subtitle={
-            goals.distributionPreset === 'meds_pauta'
-              ? 'Pauta: 1 Fruta + 1 Carbohidrato + 1 Lácteo'
-              : 'Registra tus alimentos y cantidades'
-          }
+          subtitle="Registra tus alimentos y cantidades"
           icon="🥪"
           entries={colacionPmMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
           onOpenScanPlate={(type) => setScanCameraMealType(type)}
           onOpenTextMeal={(type) => setTextEntryMeal(type)}
+          onReviewPauta={nutritionPlan ? openReview : undefined}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -274,17 +311,14 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
         <MealSection
           mealType="dinner"
           title="Comida 3: Cena"
-          subtitle={
-            goals.distributionPreset === 'meds_pauta'
-              ? 'Pauta: Verduras libre + 4 Prot (200g) + 1 Carb + ½ Grasa'
-              : 'Registra tus alimentos y cantidades'
-          }
+          subtitle="Registra tus alimentos y cantidades"
           icon="🌙"
           entries={dinnerMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
           onOpenScanPlate={(type) => setScanCameraMealType(type)}
           onOpenTextMeal={(type) => setTextEntryMeal(type)}
+          onReviewPauta={nutritionPlan ? openReview : undefined}
           onRemoveEntry={onRemoveMealEntry}
         />
 
@@ -300,16 +334,83 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
             onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
             onOpenScanPlate={(type) => setScanCameraMealType(type)}
             onOpenTextMeal={(type) => setTextEntryMeal(type)}
+            onReviewPauta={nutritionPlan ? openReview : undefined}
             onRemoveEntry={onRemoveMealEntry}
           />
         )}
       </div>
+
+      {reviewing && nutritionPlan && onClassifyMeal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Clasificar alimento en mi pauta"
+          className="fixed inset-0 z-50 grid place-items-center bg-black/80 p-4"
+        >
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 p-5">
+            <h3 className="font-bold">
+              Revisar porciones: {reviewing.foodName}
+            </h3>
+            <p className="mt-1 text-xs text-slate-400">
+              {reviewing.quantity?.amount ?? reviewing.amountGrams}{' '}
+              {QUANTITY_LABELS[reviewing.quantity?.unit ?? 'g']} · pauta del
+              diario, versión {nutritionPlan.version}. Los nutrientes no
+              cambian.
+            </p>
+            <PautaFoodFields
+              plan={nutritionPlan}
+              foodId={reviewing.foodId}
+              foodName={reviewing.foodName}
+              amountGrams={reviewing.amountGrams}
+              quantity={reviewing.quantity}
+              selection={reviewSelection}
+              onChange={setReviewSelection}
+            />
+            {reviewError && (
+              <p role="alert" className="mt-3 text-xs text-rose-300">
+                {reviewError}
+              </p>
+            )}
+            <div className="mt-4 flex gap-4">
+              <button
+                onClick={() =>
+                  void saveReview(
+                    () =>
+                      onClassifyMeal(
+                        reviewing.id,
+                        reviewSelection ?? {
+                          ruleId:
+                            findPautaRule(
+                              nutritionPlan,
+                              reviewing.foodId,
+                              reviewing.foodName
+                            )?.id ?? null,
+                        }
+                      ),
+                    () => setReviewingId(null)
+                  )
+                }
+                className="rounded-lg bg-emerald-400 px-3 py-2 text-sm font-bold text-slate-950"
+              >
+                Guardar equivalencia
+              </button>
+              <button
+                onClick={() => setReviewingId(null)}
+                className="text-sm text-slate-400"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal: Select & Scale Single Food */}
       <FoodSelectorModal
         isOpen={selectedMealType !== null}
         mealType={selectedMealType}
         foods={allFoods}
+        nutritionPlan={nutritionPlan}
         onClose={() => setSelectedMealType(null)}
         onAddFood={onAddMealEntry}
         onOpenCreateCustom={() => {
@@ -366,6 +467,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
       <PlateAnalysisResultModal
         isOpen={analysisResult !== null}
         analysis={analysisResult}
+        nutritionPlan={nutritionPlan}
         imageUrl={analysisImageUrl}
         descriptionText={analysisText}
         defaultMealType={analysisTargetMeal}

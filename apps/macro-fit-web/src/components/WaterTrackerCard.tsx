@@ -4,6 +4,7 @@ import { Droplet, Plus, RotateCcw } from 'lucide-react';
 interface WaterTrackerCardProps {
   currentMl: number;
   targetMl: number;
+  isMinimum?: boolean;
   onAddWater: (ml: number) => void;
   onResetWater: () => void;
 }
@@ -11,10 +12,14 @@ interface WaterTrackerCardProps {
 export const WaterTrackerCard: React.FC<WaterTrackerCardProps> = ({
   currentMl,
   targetMl,
+  isMinimum = false,
   onAddWater,
   onResetWater,
 }) => {
-  const percent = Math.min(100, Math.round((currentMl / (targetMl || 2500)) * 100));
+  const percent = Math.min(
+    100,
+    Math.round((currentMl / (targetMl || 2500)) * 100)
+  );
   const remainingMl = Math.max(0, targetMl - currentMl);
 
   return (
@@ -25,13 +30,20 @@ export const WaterTrackerCard: React.FC<WaterTrackerCardProps> = ({
             <Droplet className="w-4 h-4 fill-cyan-400/30" />
           </div>
           <div>
-            <h4 className="text-xs font-bold text-slate-200">Hidratación Diaria</h4>
-            <span className="text-[11px] text-slate-400">Meta recomendada: {targetMl} ml</span>
+            <h4 className="text-xs font-bold text-slate-200">
+              Hidratación Diaria
+            </h4>
+            <span className="text-[11px] text-slate-400">
+              Meta seleccionada: {isMinimum ? '> ' : ''}
+              {targetMl} ml
+            </span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs font-extrabold text-cyan-400">{percent}%</span>
+          <span className="text-xs font-extrabold text-cyan-400">
+            {percent}%
+          </span>
           {currentMl > 0 && (
             <button
               onClick={onResetWater}
@@ -46,10 +58,15 @@ export const WaterTrackerCard: React.FC<WaterTrackerCardProps> = ({
 
       <div className="flex items-baseline justify-between mb-2">
         <div className="text-xl font-extrabold text-white">
-          {(currentMl / 1000).toFixed(2)} <span className="text-xs text-slate-400 font-normal">Litros</span>
+          {(currentMl / 1000).toFixed(2)}{' '}
+          <span className="text-xs text-slate-400 font-normal">Litros</span>
         </div>
         <div className="text-xs text-slate-400 font-medium">
-          {remainingMl > 0 ? `Faltan ${(remainingMl / 1000).toFixed(2)} L` : '¡Meta de agua completada! 💧'}
+          {remainingMl > 0
+            ? `Faltan ${(remainingMl / 1000).toFixed(2)} L`
+            : isMinimum && currentMl === targetMl
+            ? 'La pauta indica superar esta cantidad'
+            : '¡Meta de agua completada! 💧'}
         </div>
       </div>
 

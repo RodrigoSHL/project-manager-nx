@@ -1,12 +1,20 @@
 import { useSaveAction } from '../hooks/useSaveAction';
 import React, { useState, useMemo } from 'react';
 import { X, Search, PlusCircle, Check, Sparkles } from 'lucide-react';
-import { FoodItem, MealType } from '../types/nutrition';
+import { PautaFoodFields } from './PautaFoodFields';
+import {
+  FoodItem,
+  MealType,
+  NutritionPlan,
+  PautaSelection,
+  QUANTITY_LABELS,
+} from '../types/nutrition';
 
 interface FoodSelectorModalProps {
   isOpen: boolean;
   mealType: MealType | null;
   foods: FoodItem[];
+  nutritionPlan?: NutritionPlan | null;
   onClose: () => void;
   onAddFood: (
     mealType: MealType,
@@ -20,11 +28,15 @@ export const FoodSelectorModal: React.FC<FoodSelectorModalProps> = ({
   isOpen,
   mealType,
   foods,
+  nutritionPlan,
   onClose,
   onAddFood,
   onOpenCreateCustom,
 }) => {
   const { save, saveError } = useSaveAction();
+  const [pautaSelection, setPautaSelection] = useState<
+    PautaSelection | undefined
+  >();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
@@ -58,13 +70,15 @@ export const FoodSelectorModal: React.FC<FoodSelectorModalProps> = ({
 
   const handleSelectFood = (food: FoodItem) => {
     setSelectedFood(food);
+    setPautaSelection(undefined);
     setPortionGrams(food.servingSizeGrams || 100);
   };
 
   const handleConfirmAdd = () => {
     if (!selectedFood || portionGrams <= 0) return;
     void save(
-      () => onAddFood(mealType, selectedFood, portionGrams),
+      () =>
+        onAddFood(mealType, { ...selectedFood, pautaSelection }, portionGrams),
       () => {
         onClose();
         setSelectedFood(null);
@@ -73,6 +87,7 @@ export const FoodSelectorModal: React.FC<FoodSelectorModalProps> = ({
   };
 
   // Preview macros based on current portionGrams
+  const quantityUnit = selectedFood?.quantityUnit ?? 'g';
   const previewRatio = selectedFood
     ? portionGrams / selectedFood.servingSizeGrams
     : 1;
@@ -238,10 +253,15 @@ export const FoodSelectorModal: React.FC<FoodSelectorModalProps> = ({
           <div className="p-4 border-t border-slate-800 bg-slate-950/90 space-y-3">
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-slate-200">
-                Ajustar gramos a consumir:
+                Ajustar cantidad a consumir:
               </span>
               <div className="flex items-center gap-1.5">
-                {[50, 100, 150, 200].map((grams) => (
+                {(quantityUnit === 'g'
+                  ? [50, 100, 150, 200]
+                  : quantityUnit === 'ml'
+                  ? [50, 100, 200, 250]
+                  : [0.5, 1, 2, 3]
+                ).map((grams) => (
                   <button
                     key={grams}
                     onClick={() => setPortionGrams(grams)}
@@ -251,7 +271,7 @@ export const FoodSelectorModal: React.FC<FoodSelectorModalProps> = ({
                         : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                     }`}
                   >
-                    {grams}g
+                    {grams} {QUANTITY_LABELS[quantityUnit]}
                   </button>
                 ))}
               </div>
@@ -261,16 +281,16 @@ export const FoodSelectorModal: React.FC<FoodSelectorModalProps> = ({
               <div className="relative flex-1">
                 <input
                   type="number"
-                  min="1"
-                  max="2000"
+                  aria-label="Cantidad a consumir"
+                  min="0.01"
+                  step="any"
+                  max="20000"
                   value={portionGrams}
-                  onChange={(e) =>
-                    setPortionGrams(Math.max(1, Number(e.target.value) || 0))
-                  }
+                  onChange={(e) => setPortionGrams(Number(e.target.value))}
                   className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-sm font-bold text-white focus:outline-none focus:border-emerald-500 font-mono"
                 />
                 <span className="absolute right-3 top-2.5 text-xs text-slate-500">
-                  gramos
+                  {QUANTITY_LABELS[quantityUnit]}
                 </span>
               </div>
 
@@ -285,12 +305,24 @@ export const FoodSelectorModal: React.FC<FoodSelectorModalProps> = ({
               </div>
             </div>
 
+            {nutritionPlan && (
+              <PautaFoodFields
+                plan={nutritionPlan}
+                foodId={selectedFood.id}
+                foodName={selectedFood.name}
+                amountGrams={portionGrams}
+                quantity={{ amount: portionGrams, unit: quantityUnit }}
+                selection={pautaSelection}
+                onChange={setPautaSelection}
+              />
+            )}
+
             <button
               onClick={handleConfirmAdd}
               className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs transition shadow-md shadow-emerald-500/20 active:scale-[0.98]"
             >
-              Registrar {portionGrams}g ({previewCalories} kcal) en{' '}
-              {mealLabels[mealType]}
+              Registrar {portionGrams} {QUANTITY_LABELS[quantityUnit]} (
+              {previewCalories} kcal) en {mealLabels[mealType]}
             </button>
           </div>
         ) : (

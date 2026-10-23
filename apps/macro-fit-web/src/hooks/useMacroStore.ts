@@ -7,10 +7,14 @@ import {
   MealTemplate,
   MealType,
   NutritionAccount,
+  NutritionPlanInput,
+  PautaSelection,
+  summarizePauta,
   UserProfile,
 } from '../types/nutrition';
 import { COMMON_FOODS } from '../data/common-foods';
 import { DEFAULT_MEAL_TEMPLATES } from '../data/meal-templates';
+import { resolveTemplateFood } from '../utils/mealTemplates';
 import { nutritionRequest } from '../utils/nutritionApi';
 import {
   getAccessToken,
@@ -39,18 +43,12 @@ function entry(
     foodId: food.id,
     foodName: food.name,
     amountGrams,
+    quantity: { amount: amountGrams, unit: food.quantityUnit ?? 'g' },
     calories: Math.round(food.calories * ratio),
     protein: Number((food.protein * ratio).toFixed(1)),
     carbs: Number((food.carbs * ratio).toFixed(1)),
     fat: Number((food.fat * ratio).toFixed(1)),
-    ...(food.portionEquiv
-      ? {
-          portionGroup: food.portionEquiv.group,
-          portionsCount: Number(
-            (food.portionEquiv.portions * ratio).toFixed(1)
-          ),
-        }
-      : {}),
+    ...(food.pautaSelection ? { pautaSelection: food.pautaSelection } : {}),
     timestamp: `${String(now.getHours()).padStart(2, '0')}:${String(
       now.getMinutes()
     ).padStart(2, '0')}`,
@@ -162,6 +160,11 @@ export function useMacroStore(userId: string) {
       { profile, goals },
       setAccount
     );
+  const saveNutritionPlan = (input: NutritionPlanInput) =>
+    mutate<NutritionAccount>('/plan', 'PUT', input, (value) => {
+      setAccount(value);
+      setRevision((revision) => revision + 1);
+    });
   const changeDay = (suffix: string, method: string, body?: unknown) => {
     const date = selectedDate;
     return mutate<DailyLog>(`/days/${date}${suffix}`, method, body, (log) => {
@@ -181,6 +184,8 @@ export function useMacroStore(userId: string) {
     food: FoodItem,
     amountGrams: number
   ) => addMultipleMealEntries([{ mealType, food, amountGrams }]);
+  const classifyMeal = (id: string, selection: PautaSelection) =>
+    changeDay(`/meals/${encodeURIComponent(id)}/pauta`, 'PUT', selection);
   const removeMealEntry = (id: string) =>
     changeDay(`/meals/${encodeURIComponent(id)}`, 'DELETE');
   const addWater = (amountMl: number) =>
@@ -209,10 +214,12 @@ export function useMacroStore(userId: string) {
   ) => {
     const items = template.items.map((item) => ({
       ...item,
-      food: item.food ?? allFoods.find((food) => food.id === item.foodId),
+      food: resolveTemplateFood(item, allFoods),
     }));
     if (items.some((item) => !item.food)) {
-      setError('Este combo contiene un alimento que ya no está disponible.');
+      setError(
+        'Este combo necesita revisión: falta un alimento o sus unidades cambiaron. Vuelve a guardarlo desde el diario.'
+      );
       return false;
     }
     return addMultipleMealEntries(
@@ -239,17 +246,22 @@ export function useMacroStore(userId: string) {
       isCustom: true,
       items: entries.map((item) => ({
         foodId: item.foodId,
+        quantityUnit: item.quantity?.unit,
         amountGrams: item.amountGrams,
         food: {
           id: item.foodId,
           name: item.foodName,
           servingUnit: `${item.amountGrams}g`,
           servingSizeGrams: item.amountGrams,
+          quantityUnit: item.quantity?.unit,
           calories: item.calories,
           protein: item.protein,
           carbs: item.carbs,
           fat: item.fat,
           category: 'custom',
+          ...(item.pautaSelection
+            ? { pautaSelection: item.pautaSelection }
+            : {}),
           ...(item.portionGroup && item.portionsCount != null
             ? {
                 portionEquiv: {
@@ -292,18 +304,10 @@ export function useMacroStore(userId: string) {
     }),
     { calories: 0, protein: 0, carbs: 0, fat: 0 }
   );
-  const consumedPortions = {
-    protein: 0,
-    carbs: 0,
-    fats: 0,
-    dairy: 0,
-    fruits: 0,
-  };
-  for (const item of dailyLog?.meals ?? []) {
-    if (item.portionGroup && item.portionGroup in consumedPortions)
-      consumedPortions[item.portionGroup as keyof typeof consumedPortions] +=
-        item.portionsCount ?? 0;
-  }
+  const dayPlan = dailyLog?.nutritionPlan ?? null;
+  const portionSummary = dayPlan
+    ? summarizePauta(dailyLog?.meals ?? [], dayPlan)
+    : null;
   return {
     profile: account?.profile ?? null,
     goals: account?.goals ?? null,
@@ -315,7 +319,11 @@ export function useMacroStore(userId: string) {
     setSelectedDate,
     dailyLog: dailyLog?.date === selectedDate ? dailyLog : null,
     consumedTotals,
-    consumedPortions,
+    nutritionPlan: account?.nutritionPlan ?? null,
+    dayPlan,
+    portionSummary,
+    saveNutritionPlan,
+    classifyMeal,
     loading,
     saving,
     error,

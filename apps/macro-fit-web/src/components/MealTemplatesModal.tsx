@@ -1,14 +1,8 @@
+import { resolveTemplateFood } from '../utils/mealTemplates';
+import { QUANTITY_LABELS } from '../types/nutrition';
 import { useSaveAction } from '../hooks/useSaveAction';
 import React, { useState } from 'react';
-import {
-  X,
-  Sparkles,
-  Zap,
-  Plus,
-  Check,
-  Utensils,
-  BookmarkPlus,
-} from 'lucide-react';
+import { X, Zap, Plus, BookmarkPlus } from 'lucide-react';
 import {
   FoodItem,
   MealEntry,
@@ -73,7 +67,7 @@ export const MealTemplatesModal: React.FC<MealTemplatesModalProps> = ({
   const getTemplateTotals = (tpl: MealTemplate) => {
     return tpl.items.reduce(
       (acc, item) => {
-        const food = item.food ?? allFoods.find((f) => f.id === item.foodId);
+        const food = resolveTemplateFood(item, allFoods);
         if (!food) return acc;
         const ratio = item.amountGrams / food.servingSizeGrams;
         return {
@@ -242,6 +236,9 @@ export const MealTemplatesModal: React.FC<MealTemplatesModalProps> = ({
           ) : (
             filteredTemplates.map((tpl) => {
               const totals = getTemplateTotals(tpl);
+              const incomplete = tpl.items.some(
+                (item) => !resolveTemplateFood(item, allFoods)
+              );
 
               return (
                 <div
@@ -262,23 +259,29 @@ export const MealTemplatesModal: React.FC<MealTemplatesModalProps> = ({
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <span className="text-xs font-black text-white">
-                          {totals.calories} kcal
-                        </span>
-                        <div className="text-[10px] text-slate-400 font-mono">
-                          P:{totals.protein.toFixed(0)}g • C:
-                          {totals.carbs.toFixed(0)}g • G:{totals.fat.toFixed(0)}
-                          g
-                        </div>
+                        {incomplete ? (
+                          <span className="text-xs text-amber-300">
+                            Requiere revisar unidades
+                          </span>
+                        ) : (
+                          <>
+                            <span className="text-xs font-black text-white">
+                              {totals.calories} kcal
+                            </span>
+                            <div className="text-[10px] text-slate-400 font-mono">
+                              P:{totals.protein.toFixed(0)}g • C:
+                              {totals.carbs.toFixed(0)}g • G:
+                              {totals.fat.toFixed(0)}g
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
 
                     {/* Items pills */}
                     <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2 border-t border-slate-900">
                       {tpl.items.map((item) => {
-                        const food =
-                          item.food ??
-                          allFoods.find((f) => f.id === item.foodId);
+                        const food = resolveTemplateFood(item, allFoods);
                         if (!food) return null;
                         return (
                           <span
@@ -287,7 +290,8 @@ export const MealTemplatesModal: React.FC<MealTemplatesModalProps> = ({
                           >
                             <span>{food.name}</span>
                             <span className="font-bold text-emerald-400 font-mono">
-                              ({item.amountGrams}g)
+                              ({item.amountGrams}{' '}
+                              {QUANTITY_LABELS[food.quantityUnit ?? 'g']})
                             </span>
                           </span>
                         );
@@ -296,6 +300,7 @@ export const MealTemplatesModal: React.FC<MealTemplatesModalProps> = ({
                   </div>
 
                   <button
+                    disabled={incomplete}
                     onClick={() => handleApply(tpl)}
                     className="w-full py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-[0.98]"
                   >

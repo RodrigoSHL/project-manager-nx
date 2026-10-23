@@ -17,7 +17,8 @@ export const COMMON_FOODS: FoodItem[] = [
     category: 'protein',
     medsRecommended: true,
     portionEquiv: { group: 'protein', portions: 1 },
-    notes: 'Pauta MEDS: 50g cocido = 1 porción (para 4 porciones en almuerzo = 200g)',
+    notes:
+      'Pauta MEDS: 50g cocido = 1 porción (para 4 porciones en almuerzo = 200g)',
   },
   {
     id: 'meds-carne-vacuno-magra',
@@ -31,7 +32,8 @@ export const COMMON_FOODS: FoodItem[] = [
     category: 'protein',
     medsRecommended: true,
     portionEquiv: { group: 'protein', portions: 1 },
-    notes: 'Pauta MEDS: 50g cocido = 1 porción (para 4 porciones en cena = 200g)',
+    notes:
+      'Pauta MEDS: 50g cocido = 1 porción (para 4 porciones en cena = 200g)',
   },
   {
     id: 'meds-carne-molida-magra',
@@ -150,7 +152,8 @@ export const COMMON_FOODS: FoodItem[] = [
     name: 'Proteína Whey en Polvo (Suero)',
     brand: 'Suplemento',
     servingUnit: '1 scoop (30g)',
-    servingSizeGrams: 30,
+    servingSizeGrams: 1,
+    quantityUnit: 'scoop',
     calories: 120,
     protein: 24,
     carbs: 2,
@@ -165,7 +168,8 @@ export const COMMON_FOODS: FoodItem[] = [
     name: 'Barra de Proteína Twenty',
     brand: 'Twenty',
     servingUnit: '1 barra (60g)',
-    servingSizeGrams: 60,
+    servingSizeGrams: 1,
+    quantityUnit: 'unit',
     calories: 195,
     protein: 21,
     carbs: 18,
@@ -189,22 +193,30 @@ export const COMMON_FOODS: FoodItem[] = [
     category: 'snacks',
     medsRecommended: true,
     portionEquiv: { group: 'protein', portions: 2 },
-    notes: 'Your Goal: 20g proteína (~2 porciones de proteína en pauta MEDS) • 159 kcal • 3g carbos y 6g fibra',
+    notes:
+      'Your Goal: 20g proteína (~2 porciones de proteína en pauta MEDS) • 159 kcal • 3g carbos y 6g fibra',
   },
   {
     id: 'meds-barra-wild-protein',
     name: 'Barra Wild Protein',
     brand: 'Wild Foods',
     servingUnit: '1 barra (45g)',
-    servingSizeGrams: 45,
+    servingSizeGrams: 1,
+    quantityUnit: 'unit',
     calories: 165,
     protein: 15,
     carbs: 15,
     fat: 4.5,
     category: 'snacks',
     medsRecommended: true,
-    portionEquiv: { group: 'protein', portions: 1, secondaryGroup: 'carbs', secondaryPortions: 0.5 },
-    notes: 'Pauta MEDS: 1 barra Wild Protein = 1 porción proteína + ½ carbohidrato',
+    portionEquiv: {
+      group: 'protein',
+      portions: 1,
+      secondaryGroup: 'carbs',
+      secondaryPortions: 0.5,
+    },
+    notes:
+      'Pauta MEDS: 1 barra Wild Protein = 1 porción proteína + ½ carbohidrato',
   },
   {
     id: 'meds-legumbres-cocidas',
@@ -218,7 +230,12 @@ export const COMMON_FOODS: FoodItem[] = [
     fiber: 8,
     category: 'protein',
     medsRecommended: true,
-    portionEquiv: { group: 'protein', portions: 1, secondaryGroup: 'carbs', secondaryPortions: 0.5 },
+    portionEquiv: {
+      group: 'protein',
+      portions: 1,
+      secondaryGroup: 'carbs',
+      secondaryPortions: 0.5,
+    },
     notes: 'Pauta MEDS: 140g cocido = 1 porción proteína + ½ carbohidrato',
   },
 
@@ -230,7 +247,8 @@ export const COMMON_FOODS: FoodItem[] = [
     id: 'meds-yogurt-proteico',
     name: 'Yogurt Proteico (0% azúcar añadida)',
     servingUnit: '1 unidad (150g)',
-    servingSizeGrams: 150,
+    servingSizeGrams: 1,
+    quantityUnit: 'unit',
     calories: 85,
     protein: 12,
     carbs: 7,
@@ -256,6 +274,7 @@ export const COMMON_FOODS: FoodItem[] = [
   },
   {
     id: 'meds-leche-descremada',
+    quantityUnit: 'ml',
     name: 'Leche Descremada / Semidescremada',
     servingUnit: '200 ml (1 taza)',
     servingSizeGrams: 200,
@@ -506,6 +525,7 @@ export const COMMON_FOODS: FoodItem[] = [
   // ==========================================
   {
     id: 'meds-aceite-oliva',
+    quantityUnit: 'ml',
     name: 'Aceite de Oliva Extra Virgen',
     servingUnit: '20 ml (4 cucharaditas)',
     servingSizeGrams: 20,
@@ -532,10 +552,12 @@ export const COMMON_FOODS: FoodItem[] = [
     category: 'fats',
     medsRecommended: true,
     portionEquiv: { group: 'fats', portions: 0.25 },
-    notes: 'Cacao Arriba Ecuador: 60% cacao sin azúcar. 10g = 60 kcal, 4.2g grasa, 0.3g azúcares',
+    notes:
+      'Cacao Arriba Ecuador: 60% cacao sin azúcar. 10g = 60 kcal, 4.2g grasa, 0.3g azúcares',
   },
   {
     id: 'meds-cafe-negro',
+    quantityUnit: 'ml',
     name: 'Café de Grano / Café Negro',
     servingUnit: '1 taza (200 ml)',
     servingSizeGrams: 200,
@@ -560,7 +582,8 @@ export const COMMON_FOODS: FoodItem[] = [
     category: 'fats',
     medsRecommended: true,
     portionEquiv: { group: 'fats', portions: 1 },
-    notes: 'Pauta MEDS: 90g (3 cdas) = 1 porción. 1.5 cdas (45g) en desayuno = ½ porción',
+    notes:
+      'Pauta MEDS: 90g (3 cdas) = 1 porción. 1.5 cdas (45g) en desayuno = ½ porción',
   },
   {
     id: 'meds-mantequilla-mani',

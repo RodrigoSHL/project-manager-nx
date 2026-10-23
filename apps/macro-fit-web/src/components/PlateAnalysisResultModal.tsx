@@ -1,3 +1,4 @@
+import { PautaFoodFields } from './PautaFoodFields';
 import { useSaveAction } from '../hooks/useSaveAction';
 import React, { useState } from 'react';
 import {
@@ -6,19 +7,18 @@ import {
   Check,
   Plus,
   Minus,
-  Utensils,
   Lightbulb,
   CheckCircle2,
-  Sliders,
   ChevronDown,
 } from 'lucide-react';
 import {
   AnalyzedPlateItem,
   FoodCategory,
   FoodItem,
-  MealEntry,
   MealType,
   PlateAnalysisResponse,
+  NutritionPlan,
+  PautaSelection,
 } from '../types/nutrition';
 
 interface PlateAnalysisResultModalProps {
@@ -26,6 +26,7 @@ interface PlateAnalysisResultModalProps {
   onClose: () => void;
   analysis: PlateAnalysisResponse | null;
   imageUrl?: string;
+  nutritionPlan?: NutritionPlan | null;
   descriptionText?: string;
   defaultMealType: MealType;
   onConfirmPlate: (
@@ -115,15 +116,18 @@ export const PlateAnalysisResultModal: React.FC<
 const PlateAnalysisEditor: React.FC<
   PlateAnalysisResultModalProps & { analysis: PlateAnalysisResponse }
 > = ({
-  isOpen,
   onClose,
   analysis,
   imageUrl,
   descriptionText,
   defaultMealType,
   onConfirmPlate,
+  nutritionPlan,
 }) => {
   const { save, saveError } = useSaveAction();
+  const [pautaSelections, setPautaSelections] = useState<
+    Record<string, PautaSelection | undefined>
+  >({});
   const [targetMeal, setTargetMeal] = useState<MealType>(defaultMealType);
   const [items, setItems] = useState<AnalyzedPlateItem[]>(() =>
     analysis.items.map((item, idx) => ({
@@ -199,6 +203,9 @@ const PlateAnalysisEditor: React.FC<
         fiber: Number(((density.fiber_g || 0) * factor).toFixed(1)),
         category: catConfig.group,
         isCustom: true,
+        ...(pautaSelections[item.id]
+          ? { pautaSelection: pautaSelections[item.id] }
+          : {}),
         notes: `Analizado con Gemini ${
           descriptionText ? 'desde texto' : 'Vision'
         } (${item.confidence} confianza)`,
@@ -464,6 +471,21 @@ const PlateAnalysisEditor: React.FC<
                         </button>
                       </div>
                     </div>
+                  )}
+                  {item.selected && nutritionPlan && (
+                    <PautaFoodFields
+                      plan={nutritionPlan}
+                      foodId={item.id}
+                      foodName={item.name}
+                      amountGrams={item.adjusted_grams}
+                      selection={pautaSelections[item.id]}
+                      onChange={(selection) =>
+                        setPautaSelections((previous) => ({
+                          ...previous,
+                          [item.id]: selection,
+                        }))
+                      }
+                    />
                   )}
                 </div>
               );

@@ -3,6 +3,7 @@ import { Header } from '../components/Header';
 import { PwaInstallBanner } from '../components/PwaInstallBanner';
 import { PwaInstallModal } from '../components/PwaInstallModal';
 import { DailyTrackerView } from '../components/DailyTrackerView';
+import { NutritionPlanView } from '../components/NutritionPlanView';
 import { CalculatorView } from '../components/CalculatorView';
 import { ProfileSetup } from '../components/ProfileSetup';
 import { useMacroStore } from '../hooks/useMacroStore';
@@ -82,7 +83,7 @@ export function MacroFitWorkspace({
   user: CurrentUser;
   onLogout: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<'tracker' | 'calculator'>(
+  const [activeTab, setActiveTab] = useState<'tracker' | 'calculator' | 'plan'>(
     'tracker'
   );
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
@@ -96,7 +97,11 @@ export function MacroFitWorkspace({
     setSelectedDate,
     dailyLog,
     consumedTotals,
-    consumedPortions,
+    nutritionPlan,
+    dayPlan,
+    portionSummary,
+    saveNutritionPlan,
+    classifyMeal,
     saveProfileAndGoals,
     addMealEntry,
     addMultipleMealEntries,
@@ -119,7 +124,6 @@ export function MacroFitWorkspace({
 
   const {
     canInstall,
-    isInstalled,
     isStandalone,
     isIos,
     showIosGuide,
@@ -226,12 +230,23 @@ export function MacroFitWorkspace({
             )}
             {!profile || !goals ? (
               <ProfileSetup userName={user.name} onSave={saveProfileAndGoals} />
+            ) : activeTab === 'plan' ? (
+              <NutritionPlanView
+                key={nutritionPlan?.version ?? 'new'}
+                plan={nutritionPlan}
+                foods={allFoods}
+                onSave={saveNutritionPlan}
+                onGoToTracker={() => setActiveTab('tracker')}
+              />
             ) : activeTab === 'tracker' ? (
               <DailyTrackerView
                 goals={goals}
                 meals={dailyLog.meals}
                 consumedTotals={consumedTotals}
-                consumedPortions={consumedPortions}
+                nutritionPlan={dayPlan}
+                portionSummary={portionSummary}
+                onClassifyMeal={classifyMeal}
+                onOpenPlan={() => setActiveTab('plan')}
                 waterIntakeMl={dailyLog.waterIntakeMl || 0}
                 allFoods={allFoods}
                 allTemplates={allTemplates}
@@ -293,6 +308,16 @@ export function MacroFitWorkspace({
         >
           <Calculator className="w-5 h-5" />
           <span>Calculadora</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('plan')}
+          className={`flex flex-col items-center gap-1 text-[11px] font-semibold ${
+            activeTab === 'plan' ? 'text-emerald-400' : 'text-slate-400'
+          }`}
+        >
+          <CheckCircle2 className="w-5 h-5" />
+          <span>Mi pauta</span>
         </button>
 
         {canInstall && (

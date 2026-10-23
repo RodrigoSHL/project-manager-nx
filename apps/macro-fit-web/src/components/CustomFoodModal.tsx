@@ -1,7 +1,7 @@
 import { useSaveAction } from '../hooks/useSaveAction';
 import React, { useState } from 'react';
 import { X, Plus, Sparkles } from 'lucide-react';
-import { FoodItem } from '../types/nutrition';
+import { FoodItem, QuantityUnit, QUANTITY_LABELS } from '../types/nutrition';
 
 interface CustomFoodModalProps {
   isOpen: boolean;
@@ -15,6 +15,7 @@ export const CustomFoodModal: React.FC<CustomFoodModalProps> = ({
   onSaveFood,
 }) => {
   const { save, saveError } = useSaveAction();
+  const [quantityUnit, setQuantityUnit] = useState<QuantityUnit>('g');
   const [name, setName] = useState('');
   const [servingSizeGrams, setServingSizeGrams] = useState<number>(100);
   const [protein, setProtein] = useState<number>(0);
@@ -35,7 +36,8 @@ export const CustomFoodModal: React.FC<CustomFoodModalProps> = ({
       () =>
         onSaveFood({
           name: name.trim(),
-          servingUnit: `${servingSizeGrams}g`,
+          servingUnit: `${servingSizeGrams} ${QUANTITY_LABELS[quantityUnit]}`,
+          quantityUnit,
           servingSizeGrams,
           calories: calculatedCalories,
           protein: Number(protein),
@@ -100,16 +102,15 @@ export const CustomFoodModal: React.FC<CustomFoodModalProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Porción Base (g)
+                Cantidad base
               </label>
               <input
                 type="number"
-                min="1"
+                min="0.01"
+                step="any"
                 required
                 value={servingSizeGrams}
-                onChange={(e) =>
-                  setServingSizeGrams(Math.max(1, Number(e.target.value) || 0))
-                }
+                onChange={(e) => setServingSizeGrams(Number(e.target.value))}
                 className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
               />
             </div>
@@ -135,10 +136,26 @@ export const CustomFoodModal: React.FC<CustomFoodModalProps> = ({
             </div>
           </div>
 
+          <label className="block text-xs text-slate-300">
+            Unidad de la cantidad base
+            <select
+              className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2"
+              value={quantityUnit}
+              onChange={(e) => setQuantityUnit(e.target.value as QuantityUnit)}
+            >
+              {Object.entries(QUANTITY_LABELS).map(([unit, label]) => (
+                <option key={unit} value={unit}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+
           {/* Macros per serving */}
           <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2.5">
             <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wider block">
-              Macronutrientes por porción ({servingSizeGrams}g):
+              Macronutrientes por porción ({servingSizeGrams}{' '}
+              {QUANTITY_LABELS[quantityUnit]}):
             </span>
 
             <div className="grid grid-cols-3 gap-2">

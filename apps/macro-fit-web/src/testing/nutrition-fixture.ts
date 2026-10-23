@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import { DailyLog, NutritionAccount } from '../types/nutrition';
+import { DailyLog, NutritionAccount, calculatePauta } from '../types/nutrition';
 
 export const testAccount: NutritionAccount = {
   profile: {
@@ -44,6 +44,14 @@ export function nutritionFixture(initial: NutritionAccount = testAccount) {
       account = { ...account, ...body };
       return response(account);
     }
+    if (path === '/plan') {
+      account.nutritionPlan = {
+        ...body,
+        version: (account.nutritionPlan?.version ?? 0) + 1,
+        createdAt: new Date().toISOString(),
+      };
+      return response(account);
+    }
     if (path === '/templates') {
       account.customTemplates.push(body);
       return response(account);
@@ -56,7 +64,35 @@ export function nutritionFixture(initial: NutritionAccount = testAccount) {
     if (!match) throw new Error(`Unexpected fixture path: ${url}`);
     const [, date, suffix] = match;
     const log = days.get(date) ?? { date, meals: [], waterIntakeMl: 0 };
-    if (suffix === '/meals') log.meals.push(...body.entries);
+    if (
+      !log.nutritionPlan &&
+      account.nutritionPlan?.enabled &&
+      account.nutritionPlan.startsOn <= date
+    )
+      log.nutritionPlan = structuredClone(account.nutritionPlan);
+    if (suffix === '/meals')
+      log.meals.push(
+        ...body.entries.map((entry: DailyLog['meals'][number]) => ({
+          ...entry,
+          ...(log.nutritionPlan
+            ? {
+                pauta: calculatePauta(
+                  log.nutritionPlan,
+                  entry,
+                  entry.pautaSelection
+                ),
+              }
+            : {}),
+        }))
+      );
+    const classification = /^\/meals\/([^/]+)\/pauta$/.exec(suffix);
+    if (classification && log.nutritionPlan) {
+      const entry = log.meals.find((item) => item.id === classification[1]);
+      if (entry) {
+        entry.pautaSelection = body;
+        entry.pauta = calculatePauta(log.nutritionPlan, entry, body);
+      }
+    }
     if (suffix === '/water')
       log.waterIntakeMl = body.reset ? 0 : log.waterIntakeMl + body.amountMl;
     days.set(date, log);

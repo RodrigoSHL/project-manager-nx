@@ -1,10 +1,19 @@
 import React from 'react';
-import { Download, Sparkles, Smartphone, CheckCircle2, ChevronLeft, ChevronRight, Calendar, LogOut } from 'lucide-react';
+import {
+  Download,
+  Sparkles,
+  Smartphone,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
+  LogOut,
+} from 'lucide-react';
 import { getTodayDateString } from '../hooks/useMacroStore';
 
 interface HeaderProps {
-  activeTab: 'tracker' | 'calculator';
-  setActiveTab: (tab: 'tracker' | 'calculator') => void;
+  activeTab: 'tracker' | 'calculator' | 'plan';
+  setActiveTab: (tab: 'tracker' | 'calculator' | 'plan') => void;
   selectedDate: string;
   setSelectedDate: (date: string) => void;
   canInstall: boolean;
@@ -145,7 +154,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
               }`}
             >
-              Diario de Macros
+              Diario
             </button>
             <button
               onClick={() => setActiveTab('calculator')}
@@ -156,11 +165,27 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              Calculadora TDEE
+              Calculadora
+            </button>
+            <button
+              onClick={() => setActiveTab('plan')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
+                activeTab === 'plan'
+                  ? 'bg-emerald-500 text-slate-950'
+                  : 'text-slate-300 hover:bg-slate-800'
+              }`}
+            >
+              Mi pauta
             </button>
           </div>
 
-          <button type="button" onClick={onLogout} title={`Cerrar sesión de ${userName}`} aria-label="Cerrar sesión" className="shrink-0 rounded-lg border border-slate-700 p-2 text-slate-300 hover:text-white hover:bg-slate-800">
+          <button
+            type="button"
+            onClick={onLogout}
+            title={`Cerrar sesión de ${userName}`}
+            aria-label="Cerrar sesión"
+            className="shrink-0 rounded-lg border border-slate-700 p-2 text-slate-300 hover:text-white hover:bg-slate-800"
+          >
             <LogOut className="w-4 h-4" />
           </button>
 

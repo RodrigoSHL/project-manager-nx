@@ -1,4 +1,8 @@
-import { normalizeProduct, ProductsService } from './products.service';
+import {
+  normalizeProduct,
+  normalizeSearchProduct,
+  ProductsService,
+} from './products.service';
 
 const product = {
   code: '7801234567890',
@@ -73,6 +77,63 @@ describe('Personal product imports', () => {
       })
     ).toMatchObject({ protein: null, fat: null, carbs: null });
   });
+  it('includes identifying preview fields and supports the search index brand arrays', () => {
+    const row = normalizeSearchProduct({
+      ...product,
+      brands: ['Lavazza', 'Otra marca'],
+      generic_name_es: 'Café en grano tostado',
+      quantity: '1 kg',
+      categories: 'Alimentos, Bebidas, Café, Café en grano',
+      image_front_small_url:
+        'https://images.openfoodfacts.org/images/products/780/123/456/7890/front_es.3.200.jpg',
+    });
+    expect(row).toMatchObject({
+      brand: 'Lavazza, Otra marca',
+      preview: {
+        description: 'Café en grano tostado',
+        quantity: '1 kg',
+        categories: ['Bebidas', 'Café', 'Café en grano'],
+        imageUrl:
+          'https://images.openfoodfacts.org/images/products/780/123/456/7890/front_es.3.200.jpg',
+      },
+      carbs: 0,
+    });
+  });
+  it('does not invent missing preview fields or accept arbitrary image origins', () => {
+    const row = normalizeSearchProduct({
+      code: product.code,
+      product_name_en: 'Lavazza',
+      brands: [null, 3, 'Lavazza'],
+      image_front_small_url:
+        'https://images.openfoodfacts.org.evil.test/image.jpg',
+      image_small_url: 'javascript:alert(1)',
+    });
+    expect(row).toMatchObject({
+      name: 'Lavazza',
+      brand: 'Lavazza',
+      calories: null,
+      protein: null,
+      carbs: null,
+      fat: null,
+      referenceUnit: null,
+      preview: {
+        description: null,
+        quantity: null,
+        categories: [],
+        imageUrl: null,
+      },
+    });
+    expect(
+      normalizeSearchProduct({
+        ...product,
+        image_front_small_url: 'https://evil.test/photo.jpg',
+        image_small_url:
+          'https://images.openfoodfacts.org/images/products/7801234567890/front.1.200.jpg',
+      })?.preview?.imageUrl
+    ).toBe(
+      'https://images.openfoodfacts.org/images/products/7801234567890/front.1.200.jpg'
+    );
+  });
   it('requests a bounded name search with attribution and reuses its cache', async () => {
     upstream.mockResolvedValue(
       new Response(JSON.stringify({ hits: [product] }))
@@ -84,6 +145,9 @@ describe('Personal product imports', () => {
     expect(url.origin).toBe('https://search.openfoodfacts.org');
     expect(url.searchParams.get('q')).toBe('Mayonesa Kraft');
     expect(url.searchParams.get('page_size')).toBe('12');
+    expect(url.searchParams.get('fields')).toContain('nutriments');
+    expect(url.searchParams.get('fields')).toContain('image_front_small_url');
+    expect(url.searchParams.get('fields')).toContain('quantity');
     expect(init.headers['User-Agent']).toContain('MacroFit');
     expect(init.redirect).toBe('error');
     expect(await service.search('mayonesa & kraft')).toEqual(result);

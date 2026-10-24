@@ -8,11 +8,13 @@ import {
 } from '@nestjs/common';
 import {
   ProductDraft,
+  ProductSearchItem,
   productDraftSchema,
+  productPreviewSchema,
 } from '@project-manager/macrofit-contracts';
 
 const fields =
-  'code,product_name,product_name_es,brands,nutriments,product_quantity_unit,serving_quantity_unit';
+  'code,product_name,product_name_es,product_name_en,generic_name,generic_name_es,brands,quantity,categories,nutriments,product_quantity_unit,serving_quantity_unit,image_front_small_url,image_small_url';
 const cleanText = (value: unknown, max: number) =>
   typeof value === 'string' ? value.trim().slice(0, max) || null : null;
 
@@ -41,8 +43,19 @@ export function normalizeProduct(value: unknown): ProductDraft | null {
       ? (units[0] as 'g' | 'ml')
       : null;
   const draft: ProductDraft = {
-    name: cleanText(p.product_name_es, 200) ?? cleanText(p.product_name, 200),
-    brand: cleanText(p.brands, 150),
+    name:
+      cleanText(p.product_name_es, 200) ??
+      cleanText(p.product_name, 200) ??
+      cleanText(p.product_name_en, 200),
+    brand: cleanText(
+      Array.isArray(p.brands)
+        ? p.brands
+            .filter((brand) => typeof brand === 'string')
+            .slice(0, 10)
+            .join(', ')
+        : p.brands,
+      150
+    ),
     barcode: code,
     referenceAmount: 100,
     referenceUnit: unit,
@@ -74,15 +87,45 @@ export function normalizeProduct(value: unknown): ProductDraft | null {
   return productDraftSchema.parse(draft);
 }
 
+export function normalizeSearchProduct(
+  value: unknown
+): ProductSearchItem | null {
+  const draft = normalizeProduct(value);
+  if (!draft) return null;
+  const p = value as Record<string, unknown>;
+  const imageUrl =
+    [p.image_front_small_url, p.image_small_url].find(
+      (url) =>
+        productPreviewSchema.shape.imageUrl.safeParse(url).success &&
+        typeof url === 'string'
+    ) ?? null;
+  const categories =
+    cleanText(p.categories, 1000)
+      ?.split(',')
+      .map((category) => category.trim().slice(0, 100))
+      .filter(Boolean)
+      .slice(-3) ?? [];
+  return {
+    ...draft,
+    preview: productPreviewSchema.parse({
+      description:
+        cleanText(p.generic_name_es, 300) ?? cleanText(p.generic_name, 300),
+      quantity: cleanText(p.quantity, 100),
+      categories,
+      imageUrl,
+    }),
+  };
+}
+
 @Injectable()
 export class ProductsService {
   private readonly cache = new Map<
     string,
-    { expires: number; value: { products: ProductDraft[] } }
+    { expires: number; value: { products: ProductSearchItem[] } }
   >();
   private readonly pending = new Map<
     string,
-    Promise<{ products: ProductDraft[] }>
+    Promise<{ products: ProductSearchItem[] }>
   >();
   private window = Date.now();
   private searches = 0;
@@ -134,12 +177,9 @@ export class ProductsService {
         ? 'https://world.openfoodfacts.org'
         : 'https://search.openfoodfacts.org'
     );
-    // Search indexes may be stale. Search only identifies candidates; the UI
-    // obtains the current product-by-code record before presenting nutrients.
-    url.searchParams.set(
-      'fields',
-      barcode ? fields : 'code,product_name,product_name_es'
-    );
+    // One bounded request supplies comparison previews. The UI still fetches
+    // the current record by barcode before importing; index data can be stale.
+    url.searchParams.set('fields', fields);
     if (!barcode) {
       for (const [name, value] of Object.entries({
         q: terms,
@@ -166,7 +206,7 @@ export class ProductsService {
   private async fetchProducts(
     url: URL,
     barcode: boolean
-  ): Promise<{ products: ProductDraft[] }> {
+  ): Promise<{ products: ProductSearchItem[] }> {
     try {
       const response = await fetch(url, {
         headers: {
@@ -234,8 +274,8 @@ export class ProductsService {
         : (data.hits as unknown[]).slice(0, 12);
       return {
         products: rows
-          .map(normalizeProduct)
-          .filter((p): p is ProductDraft => p !== null),
+          .map(normalizeSearchProduct)
+          .filter((p): p is ProductSearchItem => p !== null),
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;

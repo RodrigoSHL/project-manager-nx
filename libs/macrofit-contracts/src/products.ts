@@ -30,10 +30,29 @@ export const productDraftSchema = z
     source: productSourceSchema,
   })
   .strict();
+// Search metadata is a preview, not part of a saved food or label transcription.
+export const productPreviewSchema = z
+  .object({
+    description: z.string().trim().max(300).nullable(),
+    quantity: z.string().trim().max(100).nullable(),
+    categories: z.array(z.string().trim().min(1).max(100)).max(3),
+    imageUrl: z
+      .string()
+      .max(500)
+      .regex(
+        /^https:\/\/images\.openfoodfacts\.org\/images\/products\/[a-zA-Z0-9_./-]+\.(?:jpg|jpeg|png|webp)$/
+      )
+      .nullable(),
+  })
+  .strict();
+export const productSearchItemSchema = productDraftSchema.extend({
+  preview: productPreviewSchema.optional(),
+});
 export const productSearchSchema = z
   .object({
-    products: z.array(productDraftSchema).max(12),
+    products: z.array(productSearchItemSchema).max(12),
   })
   .strict();
 export type ProductDraft = z.infer<typeof productDraftSchema>;
 export type ProductSource = z.infer<typeof productSourceSchema>;
+export type ProductSearchItem = z.infer<typeof productSearchItemSchema>;

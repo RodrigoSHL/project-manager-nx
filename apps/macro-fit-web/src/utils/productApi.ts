@@ -1,5 +1,6 @@
 import {
   ProductDraft,
+  ProductSearchItem,
   productDraftSchema,
   productSearchSchema,
 } from '../types/nutrition';
@@ -39,7 +40,7 @@ async function request(path: string, init: RequestInit, signal: AbortSignal) {
 export async function searchProducts(
   query: string,
   signal: AbortSignal
-): Promise<ProductDraft[]> {
+): Promise<ProductSearchItem[]> {
   const data = await request(
     `products/search?q=${encodeURIComponent(query.trim())}`,
     { cache: 'no-store' },

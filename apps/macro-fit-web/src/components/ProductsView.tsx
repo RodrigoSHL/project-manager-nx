@@ -3,6 +3,7 @@ import { Camera, PackagePlus, Search } from 'lucide-react';
 import {
   FoodItem,
   ProductDraft,
+  ProductSearchItem,
   NutritionPlan,
   SaveProductEquivalence,
   PAUTA_LABELS,
@@ -16,6 +17,7 @@ import {
 } from './ProductEquivalenceModal';
 import { searchProducts } from '../utils/productApi';
 import { emptyProduct, ProductEditor, productToDraft } from './ProductEditor';
+import { ProductSearchResult } from './ProductSearchResult';
 
 export function ProductsView({
   foods,
@@ -51,7 +53,7 @@ export function ProductsView({
   }
   const [filter, setFilter] = useState('');
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<ProductDraft[] | null>(null);
+  const [results, setResults] = useState<ProductSearchItem[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [reviewing, setReviewing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -96,7 +98,7 @@ export function ProductsView({
       }
     }
   }
-  async function review(product: ProductDraft) {
+  async function review(product: ProductSearchItem) {
     if (!product.barcode || reviewing || searching) return;
     const existing = foods.find((food) => food.barcode === product.barcode);
     if (existing) {
@@ -108,24 +110,42 @@ export function ProductsView({
     const timeout = setTimeout(() => controller.abort(), 18000);
     setReviewing(product.barcode);
     setError(null);
+    // An index preview must never become the import fallback when the current
+    // record fails. Keep identity, but ask for the label's actual nutrients.
+    const { preview: _preview, ...identity } = product;
+    const fallback: ProductSearchItem = {
+      ...identity,
+      referenceUnit: null,
+      calories: null,
+      protein: null,
+      carbs: null,
+      fat: null,
+      fiber: null,
+    };
     try {
       const current = await searchProducts(product.barcode, controller.signal);
       if (!controller.signal.aborted) {
-        const found = current.find((item) => item.barcode === product.barcode);
+        const currentProduct = current.find(
+          (item) => item.barcode === product.barcode
+        );
+        const { preview: _currentPreview, ...found } =
+          currentProduct ?? fallback;
         setEditor({
-          draft: found ?? {
-            ...product,
-            warnings: [
-              'No se encontró una ficha vigente. Completa los valores con tu etiqueta antes de guardar.',
-            ],
-          },
+          draft: currentProduct
+            ? found
+            : {
+                ...fallback,
+                warnings: [
+                  'No se encontró una ficha vigente. Completa los valores con tu etiqueta antes de guardar.',
+                ],
+              },
         });
       }
     } catch (failure) {
       if (active.current === controller)
         setEditor({
           draft: {
-            ...product,
+            ...fallback,
             warnings: [
               failure instanceof Error
                 ? failure.message
@@ -249,7 +269,16 @@ export function ProductsView({
           >
             Open Food Facts
           </a>{' '}
-          · ODbL / DBCL.
+          · ODbL / DBCL. Imágenes:{' '}
+          <a
+            href="https://creativecommons.org/licenses/by-sa/3.0/"
+            target="_blank"
+            rel="noreferrer"
+            className="underline underline-offset-2"
+          >
+            CC BY-SA
+          </a>
+          .
         </p>
         {searching && (
           <p role="status" className="mt-3 text-sm text-slate-400">
@@ -263,42 +292,33 @@ export function ProductsView({
           </p>
         )}
         {!!results?.length && (
-          <ul className="mt-4 space-y-3">
-            {results.map((product) => {
-              const existing = foods.find(
-                (food) => food.barcode === product.barcode
-              );
-              return (
-                <li
-                  key={product.barcode}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-700 p-3"
-                >
-                  <div>
-                    <p className="font-semibold">
-                      {product.name || 'Producto sin nombre'}
-                    </p>
-                    <p className="text-sm text-slate-400">
-                      {product.brand} · {product.barcode}
-                    </p>
-                    <p className="text-xs text-slate-400">
-                      Los valores de la ficha se cargarán al revisar.
-                    </p>
-                  </div>
-                  <button
-                    disabled={!!reviewing || searching}
-                    onClick={() => void review(product)}
-                    className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-emerald-300"
-                  >
-                    {reviewing === product.barcode
-                      ? 'Cargando ficha…'
-                      : existing
-                      ? 'Editar mi producto'
-                      : 'Revisar e importar'}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          <>
+            <p role="status" className="mt-4 text-sm text-slate-400">
+              {results.length} resultados · Compara el envase y los datos
+              disponibles antes de importar.
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Vista previa del catálogo. Al revisar se consulta la ficha
+              vigente; los datos ausentes se completan desde la etiqueta.
+            </p>
+            <ul className="mt-3 space-y-3">
+              {results.map((product) => {
+                const existing = foods.find(
+                  (food) => food.barcode === product.barcode
+                );
+                return (
+                  <ProductSearchResult
+                    key={product.barcode}
+                    product={product}
+                    existing={!!existing}
+                    busy={!!reviewing || searching}
+                    reviewing={reviewing === product.barcode}
+                    onReview={() => void review(product)}
+                  />
+                );
+              })}
+            </ul>
+          </>
         )}
       </section>
       {error && (

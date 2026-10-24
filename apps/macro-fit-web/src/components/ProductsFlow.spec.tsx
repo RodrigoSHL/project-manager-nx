@@ -109,10 +109,29 @@ describe('Personal product workflows', () => {
   });
   it('searches only on submit and imports only after review, retaining volume and zero', async () => {
     const records = nutritionFixture();
-    const search = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ products: [imported] }),
-    });
+    const search = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          products: [
+            {
+              ...imported,
+              calories: 1,
+              preview: {
+                description: 'Yogur bebible',
+                quantity: '1 L',
+                categories: ['Lácteos'],
+                imageUrl: null,
+              },
+            },
+          ],
+        }),
+      })
+      .mockResolvedValue({
+        ok: true,
+        json: async () => ({ products: [imported] }),
+      });
     vi.stubGlobal('fetch', (path: string, init: RequestInit) =>
       path.startsWith('/api/macrofit/me')
         ? records.fetch(path, init)
@@ -124,10 +143,18 @@ describe('Personal product workflows', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Buscar en Open Food Facts' })
     );
+    await screen.findByText('Envase: 1 L');
+    expect(search).toHaveBeenCalledTimes(1);
+    expect(records.account().customFoods).toHaveLength(0);
     fireEvent.click(
       await screen.findByRole('button', { name: 'Revisar e importar' })
     );
     await screen.findByRole('dialog');
+    expect(search).toHaveBeenCalledTimes(2);
+    expect(search.mock.calls[1][0]).toContain('q=7801234567890');
+    expect(
+      (screen.getByLabelText('Energía (kcal)') as HTMLInputElement).value
+    ).toBe('72');
     expect(records.account().customFoods).toHaveLength(0);
     expect(
       (screen.getByLabelText('Carbohidratos (g)') as HTMLInputElement).value
@@ -144,6 +171,55 @@ describe('Personal product workflows', () => {
       productSource: imported.source,
     });
   });
+  it.each(['unavailable', 'missing'])(
+    'does not import stale preview nutrients if the current record is %s',
+    async (failure) => {
+      const records = nutritionFixture();
+      const search = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ products: [imported] }),
+        })
+        .mockResolvedValue(
+          failure === 'unavailable'
+            ? {
+                ok: false,
+                status: 503,
+                json: async () => ({ message: 'Ficha no disponible' }),
+              }
+            : { ok: true, json: async () => ({ products: [] }) }
+        );
+      vi.stubGlobal('fetch', (path: string, init: RequestInit) =>
+        path.startsWith('/api/macrofit/me')
+          ? records.fetch(path, init)
+          : search(path, init)
+      );
+      await openProducts();
+      set('Nombre o código de barras', 'Yogur especial');
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Buscar en Open Food Facts' })
+      );
+      fireEvent.click(
+        await screen.findByRole('button', { name: 'Revisar e importar' })
+      );
+      await screen.findByRole('dialog');
+      expect(
+        (screen.getByLabelText('Energía (kcal)') as HTMLInputElement).value
+      ).toBe('');
+      expect(
+        (screen.getByLabelText('Carbohidratos (g)') as HTMLInputElement).value
+      ).toBe('');
+      expect(
+        (screen.getByLabelText('Energía (kcal)') as HTMLInputElement).validity
+          .valueMissing
+      ).toBe(true);
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Guardar producto en mi cuenta' })
+      );
+      expect(records.account().customFoods).toHaveLength(0);
+    }
+  );
   it('provides manual entry when the external catalog fails', async () => {
     const records = nutritionFixture();
     vi.stubGlobal('fetch', (path: string, init: RequestInit) =>

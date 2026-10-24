@@ -150,7 +150,7 @@ export const PAUTA_GROUPS = [
   'supplements',
 ] as const;
 export type PautaGroup = (typeof PAUTA_GROUPS)[number];
-export type QuantityUnit = 'g' | 'ml' | 'unit' | 'scoop';
+export type QuantityUnit = 'g' | 'ml' | 'unit' | 'scoop' | 'cup';
 export interface PortionContribution {
   group: PautaGroup;
   portions: number;

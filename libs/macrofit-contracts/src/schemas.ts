@@ -43,7 +43,7 @@ const pautaGroup = z.enum([
   'veggies',
   'supplements',
 ]);
-const unit = z.enum(['g', 'ml', 'unit', 'scoop']);
+const unit = z.enum(['g', 'ml', 'unit', 'scoop', 'cup']);
 const contributionsSchema = z
   .array(z.object({ group: pautaGroup, portions: positive(1000) }).strict())
   .max(7)

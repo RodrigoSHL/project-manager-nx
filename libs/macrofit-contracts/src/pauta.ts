@@ -32,6 +32,7 @@ export const QUANTITY_LABELS = {
   ml: 'ml',
   unit: 'unidades',
   scoop: 'scoops',
+  cup: 'tazas',
 };
 const normalize = (value: string) =>
   value

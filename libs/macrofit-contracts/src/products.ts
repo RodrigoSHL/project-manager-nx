@@ -20,7 +20,7 @@ export const productDraftSchema = z
     brand: z.string().trim().max(150).nullable(),
     barcode: barcodeSchema.nullable(),
     referenceAmount: z.number().finite().positive().max(20000).nullable(),
-    referenceUnit: z.enum(['g', 'ml', 'unit', 'scoop']).nullable(),
+    referenceUnit: z.enum(['g', 'ml', 'unit', 'scoop', 'cup']).nullable(),
     calories: z.number().finite().min(0).max(100000).nullable(),
     protein: z.number().finite().min(0).max(20000).nullable(),
     carbs: z.number().finite().min(0).max(20000).nullable(),

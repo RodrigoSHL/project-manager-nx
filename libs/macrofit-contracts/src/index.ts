@@ -3,3 +3,4 @@ export * from './schemas';
 export * from './pauta';
 export * from './products';
 export * from './equivalence-suggestions';
+export * from './nutrition-plan-templates';

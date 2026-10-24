@@ -4,6 +4,7 @@ import { sign } from 'jsonwebtoken';
 import { AuthModule } from '../auth/auth.module';
 import { UserApiClient } from '../user-api/user-api.client';
 import { MacrofitApiModule } from './macrofit-api.module';
+import { createPautaTemplate } from '@project-manager/macrofit-contracts';
 
 describe('MacroFit personal records BFF', () => {
   let app: INestApplication;
@@ -374,6 +375,32 @@ describe('MacroFit personal records BFF', () => {
       ).status
     ).toBe(400);
     expect(upstream).not.toHaveBeenCalled();
+  });
+  it('forwards the complete exchange template and explicit cup classification through the authenticated BFF', async () => {
+    upstream.mockImplementation(
+      async () => new Response('{}', { status: 200 })
+    );
+    const input = createPautaTemplate('2026-10-24');
+    const saved = await httpFetch(origin + '/api/macrofit/me/plan', {
+      method: 'PUT',
+      headers: { ...headers, 'x-user-id': 'forged' },
+      body: JSON.stringify(input),
+    });
+    expect(saved.status).toBe(200);
+    expect(upstream.mock.calls[0][1].headers['x-user-id']).toBe(userId);
+    expect(JSON.parse(upstream.mock.calls[0][1].body)).toEqual(input);
+    expect(JSON.parse(upstream.mock.calls[0][1].body).rules).toHaveLength(133);
+    upstream.mockClear();
+    const selection = {
+      ruleId: 'meds-arandanos',
+      quantity: { amount: 0.5, unit: 'cup' },
+    };
+    const classified = await httpFetch(
+      origin + '/api/macrofit/me/days/2026-10-24/meals/berries/pauta',
+      { method: 'PUT', headers, body: JSON.stringify(selection) }
+    );
+    expect(classified.status).toBe(200);
+    expect(JSON.parse(upstream.mock.calls[0][1].body)).toEqual(selection);
   });
   it('preserves storage errors so the browser cannot report a successful save', async () => {
     upstream.mockResolvedValue(

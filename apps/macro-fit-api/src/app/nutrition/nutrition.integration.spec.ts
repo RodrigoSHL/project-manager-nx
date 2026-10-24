@@ -12,6 +12,7 @@ import {
   equivalenceSuggestionsSchema,
   productEquivalenceResultSchema,
   ProductEquivalenceInput,
+  createPautaTemplate,
 } from '@project-manager/macrofit-contracts';
 import {
   NutritionMealEntryEntity,
@@ -1292,6 +1293,76 @@ suite('Nutrition PostgreSQL integration', () => {
       ).status
     ).toBe(404);
     expect((await service.getAccount(owner)).nutritionPlan?.version).toBe(2);
+  });
+  it('persists the complete reusable template, accepts cup quantities and keeps account copies and frozen days independent', async () => {
+    const owner = randomUUID(),
+      other = randomUUID();
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Santiago',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+    const input = createPautaTemplate(today);
+    const saved = await call('/plan', {
+      method: 'PUT',
+      headers: { 'x-user-id': owner },
+      body: JSON.stringify(input),
+    });
+    expect(saved.status).toBe(200);
+    const account = await saved.json();
+    expect(account.nutritionPlan.rules).toHaveLength(133);
+    expect(account.customFoods).toEqual([]);
+    expect(account.goals).toBeNull();
+    expect((await service.getAccount(other)).nutritionPlan).toBeNull();
+    const berries = {
+      ...meal(),
+      foodId: 'berries',
+      foodName: 'Arándanos',
+      amountGrams: 125,
+      quantity: { amount: 125, unit: 'g' as const },
+    };
+    const added = await call(`/days/${today}/meals`, {
+      method: 'POST',
+      headers: { 'x-user-id': owner },
+      body: JSON.stringify({ entries: [berries] }),
+    });
+    expect(added.status).toBe(201);
+    expect((await added.json()).meals[0].pauta.status).toBe('pending');
+    const classified = await call(`/days/${today}/meals/${berries.id}/pauta`, {
+      method: 'PUT',
+      headers: { 'x-user-id': owner },
+      body: JSON.stringify({
+        ruleId: 'meds-arandanos',
+        quantity: { amount: 0.5, unit: 'cup' },
+      }),
+    });
+    expect(classified.status).toBe(200);
+    const day = dailyLogSchema.parse(await classified.json());
+    expect(day.meals[0]).toMatchObject({
+      amountGrams: 125,
+      calories: berries.calories,
+      protein: berries.protein,
+      pauta: {
+        status: 'matched',
+        contributions: [{ group: 'fruits', portions: 0.5 }],
+      },
+    });
+    const secondCopy = createPautaTemplate(today);
+    secondCopy.targets.protein = 8;
+    await service.savePlan(other, secondCopy);
+    await service.savePlan(owner, {
+      ...input,
+      targets: { ...input.targets, protein: 12 },
+    });
+    expect(
+      (await service.getAccount(other)).nutritionPlan?.targets.protein
+    ).toBe(8);
+    expect(
+      (await service.getAccount(owner)).nutritionPlan?.targets.protein
+    ).toBe(12);
+    expect(await service.getDay(owner, today)).toEqual(day);
+    expect(createPautaTemplate(today).targets.protein).toBe(10);
   });
   it('survives a new database connection and runs migration down/up cleanly', async () => {
     await db.destroy();

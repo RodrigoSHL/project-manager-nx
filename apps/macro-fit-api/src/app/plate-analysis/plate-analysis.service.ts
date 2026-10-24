@@ -215,7 +215,7 @@ Todos los nutrientes deben corresponder a ESA MISMA columna. No mezcles porción
 calories es energía en kcal; si solo aparecen kJ, deja calories=null. Nutrientes en gramos, convierte mg a g si está explícito.
 Valores ausentes, borrosos, con signos < o >, o ambiguos deben ser null, nunca cero. Cero solo si está impreso.
 referenceAmount y referenceUnit indican a qué cantidad corresponden los nutrientes. Si no se puede leer, null y advertencia.
-No conviertas ml a g. Una porción solo puede ser unit o scoop si esa unidad está explícita.
+No conviertas ml o tazas a g. Una porción solo puede ser unit, scoop o cup (taza) si esa unidad está explícita.
 name, brand y barcode solo si son legibles; barcode de 8 a 14 dígitos, de lo contrario null.
 No identifiques ingredientes ni porciones clínicas. warnings explica campos ilegibles y ambigüedades en español.
 Si no hay una tabla nutricional legible, deja todos los nutrientes null y explica el problema.`,
@@ -320,7 +320,7 @@ No afirmes que un nutricionista aprobó algo ni des consejo clínico.`,
               referenceAmount: { type: Type.NUMBER, nullable: true },
               referenceUnit: {
                 type: Type.STRING,
-                enum: ['g', 'ml', 'unit', 'scoop'],
+                enum: ['g', 'ml', 'unit', 'scoop', 'cup'],
                 nullable: true,
               },
               ...Object.fromEntries(

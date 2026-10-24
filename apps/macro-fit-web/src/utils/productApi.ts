@@ -42,7 +42,7 @@ export async function searchProducts(
   signal: AbortSignal
 ): Promise<ProductSearchItem[]> {
   const data = await request(
-    `products/search?q=${encodeURIComponent(query.trim())}`,
+    `products/search?q=${encodeURIComponent(query.trim())}&view=preview`,
     { cache: 'no-store' },
     signal
   );

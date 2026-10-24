@@ -78,6 +78,33 @@ export function nutritionFixture(initial: NutritionAccount = testAccount) {
       ];
       return response(account);
     }
+    if (
+      path.startsWith('/foods/') &&
+      path.endsWith('/equivalence') &&
+      init.method === 'PUT'
+    ) {
+      const id = decodeURIComponent(path.split('/')[2]);
+      const product = account.customFoods.find((food) => food.id === id);
+      if (
+        !product ||
+        !account.nutritionPlan ||
+        account.nutritionPlan.version !== body.expectedPlanVersion
+      )
+        throw new Error('Invalid product equivalence fixture request');
+      const rule = {
+        id: 'saved-product-' + id,
+        name: product.name,
+        foodIds: [id],
+        aliases: [],
+        ...body.equivalence,
+      };
+      account.nutritionPlan = {
+        ...account.nutritionPlan,
+        version: account.nutritionPlan.version + 1,
+        rules: [...account.nutritionPlan.rules, rule],
+      };
+      return response(account);
+    }
     if (path.startsWith('/foods/') && init.method === 'DELETE') {
       account.customFoods = account.customFoods.filter(
         (food) => food.id !== decodeURIComponent(path.slice('/foods/'.length))

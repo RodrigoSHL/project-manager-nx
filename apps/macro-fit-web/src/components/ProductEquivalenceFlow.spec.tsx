@@ -83,6 +83,7 @@ it('creates a personal product, finds it from a pending meal, defines its exchan
     screen.getByRole('button', { name: 'Guardar producto en mi cuenta' })
   );
   await waitFor(() => expect(records.account().customFoods).toHaveLength(1));
+  fireEvent.click(await screen.findByRole('button', { name: 'Más tarde' }));
   fireEvent.click(screen.getByRole('button', { name: 'Diario' }));
   fireEvent.click(screen.getByRole('button', { name: 'Clasificar: Mostaza' }));
   const modal = screen.getByRole('dialog', {

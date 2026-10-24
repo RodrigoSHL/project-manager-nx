@@ -4,6 +4,7 @@ import {
   SessionChangedError,
 } from '../features/auth/auth-session';
 import {
+  equivalenceSuggestionsSchema,
   dailyLogSchema,
   nutritionAccountSchema,
   productEquivalenceResultSchema,
@@ -36,7 +37,9 @@ export async function nutritionRequest<T>(
         : 'No se pudo guardar el registro.'
     );
   const parsed = (
-    path.endsWith('/product-equivalence')
+    path.endsWith('/equivalence-suggestions')
+      ? equivalenceSuggestionsSchema
+      : path.endsWith('/product-equivalence')
       ? productEquivalenceResultSchema
       : path.startsWith('/days/')
       ? dailyLogSchema

@@ -33,3 +33,36 @@ Se reutiliza `GEMINI_MODEL` y la misma instancia del servicio de análisis, con 
 Las opciones de tomar foto y elegir una imagen existente usan controles distintos. Solo el control de cámara incluye `capture="environment"`; el de galería omite `capture`. Ambos permanecen disponibles en las etiquetas; en el análisis de platos la galería funciona aunque no se conceda acceso a la cámara directa. La cámara se detiene al cerrar el modal o seleccionar una imagen, incluso si el permiso termina de resolverse después del cierre.
 
 La compatibilidad del selector nativo debe comprobarse en el dispositivo. Referencia: [HTML capture](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/capture).
+
+## Equivalencias desde Mis productos
+
+El guardado de una ficha nutricional abre un segundo paso cuando existe una pauta
+activa: **Equivalencia del producto**. La ficha ya está guardada, y esta segunda
+pantalla permite completar su referencia, copiar una regla mediante buscador,
+consultar **Sugerir equivalencia** o comparar candidatos con IA. Aplicar una
+propuesta solo rellena el formulario; el guardado requiere confirmación. El
+catálogo muestra la referencia o **Equivalencia pendiente** y permite volver a
+abrir este paso desde cada producto. **Más tarde** conserva la ficha sin imponer
+porciones.
+
+Sin pauta activa, se guarda el producto con sus macros y se muestra un acceso
+para configurar la pauta. No se inventa una tabla de intercambios ni se consulta
+al proveedor sin referencias con las que comparar. Una vez creada/activada la
+pauta, se puede volver al mismo producto y completar su equivalencia con la ayuda
+disponible. Las sugerencias conservan las mismas restricciones del clasificador
+del diario; los gramos de nutrientes no determinan porciones clínicas.
+
+- `POST /api/macrofit/me/foods/:id/equivalence-suggestions`: consulta referencias
+  del catálogo personal sin necesitar un consumo. Valida propietario y versión;
+  no escribe datos y usa `Cache-Control: no-store`.
+- `PUT /api/macrofit/me/foods/:id/equivalence`: guarda la referencia confirmada en
+  una nueva versión de la pauta de la cuenta, con control de versión y
+  propietario. Preserva metas, fecha de inicio, ficha del producto y diarios ya
+  fijados; no agrega ni reclasifica consumos históricos.
+
+Los próximos registros que usen el identificador de ese producto pueden resolver
+la equivalencia automáticamente según su pauta efectiva. Para un alimento ya
+pendiente en un diario con versión anterior, se selecciona el producto desde su
+clasificador y se confirma la referencia para ese consumo. Las unidades deben
+coincidir o declararse explícitamente al clasificar; no se infieren conversiones.
+No agrega migraciones ni configuración de infraestructura.

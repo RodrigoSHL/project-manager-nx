@@ -1,6 +1,19 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Camera, PackagePlus, Search } from 'lucide-react';
-import { FoodItem, ProductDraft, QUANTITY_LABELS } from '../types/nutrition';
+import {
+  FoodItem,
+  ProductDraft,
+  NutritionPlan,
+  SaveProductEquivalence,
+  PAUTA_LABELS,
+  findPautaRule,
+  formatPortions,
+  QUANTITY_LABELS,
+} from '../types/nutrition';
+import {
+  ProductEquivalenceModal,
+  SuggestProductEquivalence,
+} from './ProductEquivalenceModal';
 import { searchProducts } from '../utils/productApi';
 import { emptyProduct, ProductEditor, productToDraft } from './ProductEditor';
 
@@ -9,12 +22,33 @@ export function ProductsView({
   onSave,
   onDelete,
   onOpenPlan,
+  plan,
+  onSaveEquivalence,
+  onSuggestEquivalence,
 }: {
   foods: FoodItem[];
+  plan?: NutritionPlan | null;
+  onSaveEquivalence?: (
+    id: string,
+    input: SaveProductEquivalence
+  ) => Promise<boolean>;
+  onSuggestEquivalence?: SuggestProductEquivalence;
   onSave: (food: FoodItem) => Promise<boolean>;
   onDelete: (id: string) => Promise<boolean>;
   onOpenPlan: () => void;
 }) {
+  const [equivalence, setEquivalence] = useState<FoodItem | null>(null);
+  const closeEquivalence = useCallback(() => setEquivalence(null), []);
+  const [savedProduct, setSavedProduct] = useState<FoodItem | null>(null);
+  async function saveProduct(food: FoodItem) {
+    const saved = await onSave(food);
+    if (saved) {
+      setSavedProduct(food);
+      if (plan?.enabled && onSaveEquivalence && onSuggestEquivalence)
+        setEquivalence(food);
+    }
+    return saved;
+  }
   const [filter, setFilter] = useState('');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ProductDraft[] | null>(null);
@@ -136,11 +170,28 @@ export function ProductsView({
           Después podrás elegirlos al agregar alimentos al diario.
         </p>
         <p className="mt-2 text-sm text-slate-400">
-          La ficha guarda sus calorías y macros. Para sumar porciones, busca el
-          producto desde «Asignar equivalencia» en tu diario y define su
-          referencia de pauta una vez.
+          Al guardar, podrás definir su equivalencia con tu pauta y pedir ayuda
+          para comparar referencias. También puedes completarla después desde
+          cada producto; sus macros se conservan por separado.
         </p>
       </div>
+      {savedProduct && !plan?.enabled && (
+        <div
+          role="status"
+          className="rounded-xl border border-amber-400/25 bg-amber-400/5 p-4 text-sm text-amber-200"
+        >
+          <p>
+            {savedProduct.name} está guardado con sus nutrientes. La
+            equivalencia queda pendiente hasta configurar o activar tu pauta.
+          </p>
+          <button
+            onClick={onOpenPlan}
+            className="mt-2 font-semibold underline underline-offset-4"
+          >
+            Configurar pauta para este producto
+          </button>
+        </div>
+      )}
       <div className="grid gap-3 sm:grid-cols-2">
         <button
           disabled={searching || !!reviewing}
@@ -287,86 +338,136 @@ export function ProductsView({
           </p>
         ) : (
           <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-            {filtered.map((food) => (
-              <li
-                key={food.id}
-                className="rounded-xl border border-slate-800 bg-slate-950/50 p-4"
-              >
-                <h4 className="font-semibold">{food.name}</h4>
-                {food.brand && (
-                  <p className="text-sm text-slate-400">{food.brand}</p>
-                )}
-                <p className="mt-2 text-xs text-slate-400">
-                  Por {food.servingSizeGrams}{' '}
-                  {QUANTITY_LABELS[food.quantityUnit ?? 'g']}
-                </p>
-                <p className="mt-1 text-sm">
-                  {food.calories} kcal · P {food.protein} g · C {food.carbs} g ·
-                  G {food.fat} g
-                </p>
-                {food.barcode && (
-                  <p className="mt-1 text-xs text-slate-500">
-                    Código: {food.barcode}
+            {filtered.map((food) => {
+              const rule = plan
+                ? findPautaRule(plan, food.id, food.name)
+                : undefined;
+              return (
+                <li
+                  key={food.id}
+                  className="rounded-xl border border-slate-800 bg-slate-950/50 p-4"
+                >
+                  <h4 className="font-semibold">{food.name}</h4>
+                  {food.brand && (
+                    <p className="text-sm text-slate-400">{food.brand}</p>
+                  )}
+                  <p className="mt-2 text-xs text-slate-400">
+                    Por {food.servingSizeGrams}{' '}
+                    {QUANTITY_LABELS[food.quantityUnit ?? 'g']}
                   </p>
-                )}
-                {food.productSource?.kind === 'open_food_facts' && (
-                  <a
-                    href={food.productSource.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-2 block text-xs text-emerald-300 underline"
-                  >
-                    Fuente: Open Food Facts · ODbL / DBCL
-                  </a>
-                )}
-                <div className="mt-3 flex gap-4">
-                  <button
-                    onClick={() =>
-                      setEditor({ food, draft: productToDraft(food) })
-                    }
-                    className="text-sm font-semibold text-emerald-300"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => setDeleteId(food.id)}
-                    className="text-sm text-slate-400"
-                  >
-                    Eliminar
-                  </button>
-                </div>
-                {deleteId === food.id && (
-                  <div className="mt-3 space-y-2 border-t border-slate-700 pt-3 text-sm">
-                    <p>
-                      ¿Eliminar del catálogo? Tus comidas y combos guardados
-                      conservan sus valores.
+                  <p className="mt-1 text-sm">
+                    {food.calories} kcal · P {food.protein} g · C {food.carbs} g
+                    · G {food.fat} g
+                  </p>
+                  {food.barcode && (
+                    <p className="mt-1 text-xs text-slate-500">
+                      Código: {food.barcode}
                     </p>
-                    <button
-                      disabled={deleting}
-                      onClick={() => void remove(food.id)}
-                      className="mr-4 text-rose-300"
+                  )}
+                  {food.productSource?.kind === 'open_food_facts' && (
+                    <a
+                      href={food.productSource.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-2 block text-xs text-emerald-300 underline"
                     >
-                      Sí, eliminar producto
+                      Fuente: Open Food Facts · ODbL / DBCL
+                    </a>
+                  )}
+                  <p
+                    className={`mt-3 text-xs ${
+                      rule ? 'text-emerald-200' : 'text-amber-200'
+                    }`}
+                  >
+                    {rule
+                      ? `${rule.referenceAmount} ${
+                          QUANTITY_LABELS[rule.unit]
+                        } → ${
+                          rule.free
+                            ? 'Libre según mi pauta'
+                            : rule.contributions
+                                .map(
+                                  (item) =>
+                                    `${formatPortions(item.portions)} ${
+                                      PAUTA_LABELS[item.group]
+                                    }`
+                                )
+                                .join(' + ')
+                        }`
+                      : 'Equivalencia pendiente'}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-4">
+                    {onSaveEquivalence && onSuggestEquivalence && (
+                      <button
+                        type="button"
+                        onClick={() => setEquivalence(food)}
+                        aria-label={`Configurar equivalencia de ${food.name}`}
+                        className="rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-sm font-semibold text-emerald-200"
+                      >
+                        {rule ? 'Ver equivalencia' : 'Definir equivalencia'}
+                      </button>
+                    )}
+                    <button
+                      onClick={() =>
+                        setEditor({ food, draft: productToDraft(food) })
+                      }
+                      className="text-sm font-semibold text-emerald-300"
+                    >
+                      Editar
                     </button>
                     <button
-                      disabled={deleting}
-                      onClick={() => setDeleteId(null)}
+                      onClick={() => setDeleteId(food.id)}
+                      className="text-sm text-slate-400"
                     >
-                      Cancelar
+                      Eliminar
                     </button>
                   </div>
-                )}
-              </li>
-            ))}
+                  {deleteId === food.id && (
+                    <div className="mt-3 space-y-2 border-t border-slate-700 pt-3 text-sm">
+                      <p>
+                        ¿Eliminar del catálogo? Tus comidas y combos guardados
+                        conservan sus valores.
+                      </p>
+                      <button
+                        disabled={deleting}
+                        onClick={() => void remove(food.id)}
+                        className="mr-4 text-rose-300"
+                      >
+                        Sí, eliminar producto
+                      </button>
+                      <button
+                        disabled={deleting}
+                        onClick={() => setDeleteId(null)}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
+      {equivalence && onSaveEquivalence && onSuggestEquivalence && (
+        <ProductEquivalenceModal
+          food={equivalence}
+          plan={plan}
+          onSave={onSaveEquivalence}
+          onSuggest={onSuggestEquivalence}
+          onClose={closeEquivalence}
+          onOpenPlan={() => {
+            closeEquivalence();
+            onOpenPlan();
+          }}
+        />
+      )}
       {editor && (
         <ProductEditor
           initial={editor.draft}
           food={editor.food}
           foods={foods}
-          onSave={onSave}
+          onSave={saveProduct}
           onClose={() => setEditor(null)}
         />
       )}

@@ -110,6 +110,7 @@ export function MacroFitWorkspace({
     saveNutritionPlan,
     classifyMeal,
     classifyProduct,
+    suggestEquivalences,
     saveProfileAndGoals,
     addMealEntry,
     addMultipleMealEntries,
@@ -120,6 +121,8 @@ export function MacroFitWorkspace({
     addCustomFood,
     customFoods,
     saveProduct,
+    saveProductEquivalence,
+    suggestProductEquivalence,
     deleteProduct,
     applyMealTemplate,
     saveMealAsTemplate,
@@ -267,6 +270,9 @@ export function MacroFitWorkspace({
                 <ProductsView
                   foods={customFoods}
                   onSave={saveProduct}
+                  plan={nutritionPlan}
+                  onSaveEquivalence={saveProductEquivalence}
+                  onSuggestEquivalence={suggestProductEquivalence}
                   onDelete={deleteProduct}
                   onOpenPlan={() => setActiveTab('plan')}
                 />
@@ -309,6 +315,7 @@ export function MacroFitWorkspace({
                   catalogPlan={nutritionPlan}
                   products={customFoods}
                   onClassifyProduct={classifyProduct}
+                  onSuggestEquivalences={suggestEquivalences}
                   onOpenProducts={() => navigate('products')}
                   onOpenPlan={() => setActiveTab('plan')}
                   waterIntakeMl={dailyLog.waterIntakeMl || 0}

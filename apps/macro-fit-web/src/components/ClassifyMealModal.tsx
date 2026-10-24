@@ -15,6 +15,10 @@ import {
   formatPortions,
   productEquivalenceSchema,
 } from '../types/nutrition';
+import {
+  EquivalenceSuggestionsPanel,
+  SuggestEquivalences,
+} from './EquivalenceSuggestionsPanel';
 import { useSaveAction } from '../hooks/useSaveAction';
 
 const normalize = (text: string) =>
@@ -46,6 +50,7 @@ export function ClassifyMealModal({
   products,
   onSave,
   onSaveProduct,
+  onSuggest,
   onClose,
   onOpenProducts,
 }: {
@@ -58,6 +63,7 @@ export function ClassifyMealModal({
     id: string,
     input: ProductEquivalenceInput
   ) => Promise<boolean>;
+  onSuggest?: SuggestEquivalences;
   onClose: () => void;
   onOpenProducts?: () => void;
 }) {
@@ -490,7 +496,68 @@ export function ClassifyMealModal({
               className="min-w-0 rounded-2xl border border-slate-700 bg-slate-950/40 p-4 sm:p-5"
               aria-label="Detalle de la clasificación"
               ref={detail}
+              tabIndex={-1}
             >
+              {onSuggest && (
+                <EquivalenceSuggestionsPanel
+                  key={JSON.stringify([
+                    source,
+                    product?.id,
+                    entry,
+                    plan,
+                    catalogPlan,
+                  ])}
+                  entry={entry}
+                  plan={plan}
+                  basis={{
+                    mealId: entry.id,
+                    productId:
+                      source === 'products' || copying
+                        ? product?.id ?? null
+                        : null,
+                    dayPlanVersion: plan.version,
+                    catalogPlanVersion: catalogPlan.version,
+                  }}
+                  onSuggest={(useAi, signal) =>
+                    onSuggest(
+                      entry.id,
+                      {
+                        productId:
+                          source === 'products' || copying
+                            ? product?.id
+                            : undefined,
+                        dayPlanVersion: plan.version,
+                        catalogPlanVersion: catalogPlan.version,
+                        useAi,
+                      },
+                      signal
+                    )
+                  }
+                  disabled={saving || (source === 'products' && !product)}
+                  onApply={(suggestion) => {
+                    if ((source === 'products' || copying) && product) {
+                      setSource('products');
+                      fill(suggestion.rule, product);
+                      if (
+                        quantity.unit === 'g' &&
+                        suggestion.rule.unit !== 'g' &&
+                        suggestion.rule.gramsPerUnit
+                      )
+                        setConverted(
+                          String(quantity.amount / suggestion.rule.gramsPerUnit)
+                        );
+                      setCopying(false);
+                    } else if (suggestion.origin === 'day') {
+                      setSource('rules');
+                      setCopying(false);
+                      chooseRule(suggestion.rule);
+                    }
+                    detail.current?.focus({ preventScroll: true });
+                    revealDetail();
+                  }}
+                />
+              )}
+
               {source === 'products' && product ? (
                 <>
                   <h3 className="text-lg font-bold">{product.name}</h3>

@@ -1,5 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
+  EquivalenceSuggestionRequest,
+  EquivalenceSuggestions,
   DailyLog,
   FoodItem,
   MacroGoals,
@@ -13,6 +15,8 @@ import {
   UserProfile,
   UpdateMealQuantity,
   ProductEquivalenceInput,
+  ProductSuggestionRequest,
+  SaveProductEquivalence,
   ProductEquivalenceResult,
 } from '../types/nutrition';
 import { COMMON_FOODS } from '../data/common-foods';
@@ -168,6 +172,18 @@ export function useMacroStore(userId: string) {
       setAccount(value);
       setRevision((revision) => revision + 1);
     });
+  const suggestEquivalences = useCallback(
+    (id: string, input: EquivalenceSuggestionRequest, signal: AbortSignal) =>
+      nutritionRequest<EquivalenceSuggestions>(
+        `/days/${selectedDate}/meals/${encodeURIComponent(
+          id
+        )}/equivalence-suggestions`,
+        'POST',
+        input,
+        signal
+      ),
+    [selectedDate]
+  );
   const classifyProduct = (id: string, input: ProductEquivalenceInput) => {
     const date = selectedDate;
     return mutate<ProductEquivalenceResult>(
@@ -220,6 +236,23 @@ export function useMacroStore(userId: string) {
       { ...food, id: crypto.randomUUID(), isCustom: true },
       setAccount
     );
+  const saveProductEquivalence = (id: string, input: SaveProductEquivalence) =>
+    mutate<NutritionAccount>(
+      `/foods/${encodeURIComponent(id)}/equivalence`,
+      'PUT',
+      input,
+      setAccount
+    );
+  const suggestProductEquivalence = useCallback(
+    (id: string, input: ProductSuggestionRequest, signal: AbortSignal) =>
+      nutritionRequest<EquivalenceSuggestions>(
+        `/foods/${encodeURIComponent(id)}/equivalence-suggestions`,
+        'POST',
+        input,
+        signal
+      ),
+    []
+  );
   const saveProduct = (food: FoodItem) =>
     mutate<NutritionAccount>(
       '/foods',
@@ -356,6 +389,7 @@ export function useMacroStore(userId: string) {
     saveNutritionPlan,
     classifyMeal,
     classifyProduct,
+    suggestEquivalences,
     loading,
     saving,
     error,
@@ -370,6 +404,8 @@ export function useMacroStore(userId: string) {
     resetWater,
     addCustomFood,
     saveProduct,
+    saveProductEquivalence,
+    suggestProductEquivalence,
     deleteProduct,
     applyMealTemplate,
     saveMealAsTemplate,

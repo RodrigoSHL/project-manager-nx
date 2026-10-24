@@ -8,6 +8,7 @@ import { CustomFoodModal } from './CustomFoodModal';
 import { MealTemplatesModal } from './MealTemplatesModal';
 import { PlateCameraModal } from './PlateCameraModal';
 import { PlateAnalysisResultModal } from './PlateAnalysisResultModal';
+import { SuggestEquivalences } from './EquivalenceSuggestionsPanel';
 import { ClassifyMealModal } from './ClassifyMealModal';
 import { EditMealQuantityModal } from './EditMealQuantityModal';
 import { MealTextModal } from './MealTextModal';
@@ -40,6 +41,7 @@ interface DailyTrackerViewProps {
   portionSummary?: ReturnType<typeof summarizePauta> | null;
   onClassifyMeal?: (id: string, selection: PautaSelection) => Promise<boolean>;
   onOpenPlan?: () => void;
+  onSuggestEquivalences?: SuggestEquivalences;
   catalogPlan?: NutritionPlan | null;
   products?: FoodItem[];
   onOpenProducts?: () => void;
@@ -93,6 +95,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
   products = [],
   onOpenProducts,
   onClassifyProduct,
+  onSuggestEquivalences,
   waterIntakeMl,
   allFoods,
   allTemplates,
@@ -379,6 +382,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           products={products}
           onSave={onClassifyMeal}
           onSaveProduct={onClassifyProduct}
+          onSuggest={onSuggestEquivalences}
           onClose={closeReview}
           onOpenProducts={
             onOpenProducts

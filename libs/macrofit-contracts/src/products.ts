@@ -44,15 +44,17 @@ export const productPreviewSchema = z
       )
       .nullable(),
   })
-  .strict();
-export const productSearchItemSchema = productDraftSchema.extend({
-  preview: productPreviewSchema.optional(),
-});
+  .strip();
+export const productSearchItemSchema = productDraftSchema
+  .extend({
+    preview: productPreviewSchema.optional(),
+  })
+  .strip();
 export const productSearchSchema = z
   .object({
     products: z.array(productSearchItemSchema).max(12),
   })
-  .strict();
+  .strip();
 export type ProductDraft = z.infer<typeof productDraftSchema>;
 export type ProductSource = z.infer<typeof productSourceSchema>;
 export type ProductSearchItem = z.infer<typeof productSearchItemSchema>;

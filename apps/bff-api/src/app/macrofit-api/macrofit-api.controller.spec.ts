@@ -218,6 +218,28 @@ describe('MacroFit BFF HTTP contract', () => {
       /\/api\/products\/search\?q=Kraft%20%26%20mayo$/
     );
   });
+  it('forwards the preview opt-in while keeping the original search URL unchanged for installed clients', async () => {
+    upstream.mockResolvedValue(new Response('{"products":[]}'));
+    const result = await httpFetch(
+      `${origin}/api/macrofit/products/search?q=Mayonesa&view=preview`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    expect(result.status).toBe(200);
+    expect(upstream.mock.calls[0][0]).toMatch(
+      /\/api\/products\/search\?q=Mayonesa&view=preview$/
+    );
+  });
+  it.each(['full', 'preview&view=preview'])(
+    'rejects an invalid search view %s before forwarding',
+    async (view) => {
+      const result = await httpFetch(
+        `${origin}/api/macrofit/products/search?q=Mayonesa&view=${view}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      expect(result.status).toBe(400);
+      expect(upstream).not.toHaveBeenCalled();
+    }
+  );
   it('forwards a label only to the label transcriber and preserves its real errors', async () => {
     upstream.mockResolvedValueOnce(new Response('{"name":"Etiqueta"}'));
     expect((await upload('/api/macrofit/analyze-product-label')).status).toBe(

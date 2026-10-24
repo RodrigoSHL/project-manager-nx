@@ -92,14 +92,19 @@ export class MacrofitApiController {
 
   @Get('macrofit/products/search')
   @UseGuards(JwtAuthGuard)
-  searchProducts(@Query('q') query: unknown) {
+  searchProducts(@Query('q') query: unknown, @Query('view') view?: unknown) {
     if (
       typeof query !== 'string' ||
       query.trim().length < 2 ||
       query.trim().length > 100
     )
       throw new BadRequestException('Busca usando entre 2 y 100 caracteres.');
-    return this.macrofit.searchProducts(query.trim());
+    if (view !== undefined && view !== 'preview')
+      throw new BadRequestException('Vista de búsqueda no válida.');
+    return this.macrofit.searchProducts(
+      query.trim(),
+      view === 'preview' ? 'preview' : undefined
+    );
   }
 
   @Post('macrofit/analyze-meal-text')

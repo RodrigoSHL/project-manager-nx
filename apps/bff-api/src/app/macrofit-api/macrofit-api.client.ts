@@ -19,8 +19,12 @@ export class MacrofitApiClient {
     return this.request('/ready');
   }
 
-  searchProducts(query: string) {
-    return this.request(`/products/search?q=${encodeURIComponent(query)}`);
+  searchProducts(query: string, view?: 'preview') {
+    return this.request(
+      `/products/search?q=${encodeURIComponent(query)}${
+        view === 'preview' ? '&view=preview' : ''
+      }`
+    );
   }
 
   analyzeProductLabel(file: { buffer: Buffer; mimetype: string }) {

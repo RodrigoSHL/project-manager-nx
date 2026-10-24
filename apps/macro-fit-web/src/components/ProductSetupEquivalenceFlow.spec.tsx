@@ -124,7 +124,7 @@ it('continues from creating a product to a reviewed equivalence and reuses it wi
   expect(screen.getByText(/Ficha nutricional guardada/)).toBeTruthy();
   expect(suggest).not.toHaveBeenCalled();
   fireEvent.click(
-    within(modal).getByRole('button', { name: 'Sugerir equivalencia' })
+    within(modal).getByRole('button', { name: 'Buscar en mi pauta' })
   );
   await within(modal).findByText('Referencia guardada para revisar.');
   expect(suggest.mock.calls[0][1]).toMatchObject({
@@ -189,7 +189,7 @@ it('saves nutrients without a plan and leaves a clear route to configure its equ
   );
   expect(screen.getByText('La equivalencia puede esperar')).toBeTruthy();
   expect(
-    screen.queryByRole('button', { name: 'Sugerir equivalencia' })
+    screen.queryByRole('button', { name: 'Buscar en mi pauta' })
   ).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Configurar mi pauta' }));
   await screen.findByRole('heading', { name: 'Mi pauta' });

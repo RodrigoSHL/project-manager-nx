@@ -383,10 +383,14 @@ export function ProductEquivalenceModal({
                     previewLabel={`Para ${food.servingSizeGrams} ${
                       QUANTITY_LABELS[food.quantityUnit ?? 'g']
                     } del producto`}
-                    onSuggest={(useAi, signal) =>
+                    onSuggest={(useAi, signal, mode) =>
                       onSuggest(
                         food.id,
-                        { catalogPlanVersion: version, useAi },
+                        {
+                          catalogPlanVersion: version,
+                          useAi,
+                          ...(mode ? { mode } : {}),
+                        },
                         signal
                       )
                     }

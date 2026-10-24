@@ -43,7 +43,8 @@ export function EquivalenceSuggestionsPanel({
   previewLabel?: string;
   onSuggest: (
     useAi: boolean,
-    signal: AbortSignal
+    signal: AbortSignal,
+    mode?: 'compare' | 'estimate'
   ) => Promise<EquivalenceSuggestions>;
   onApply: (suggestion: SuggestedEquivalence) => void;
   disabled: boolean;
@@ -51,6 +52,7 @@ export function EquivalenceSuggestionsPanel({
   const [result, setResult] = useState<EquivalenceSuggestions | null>(null);
   const [expanded, setExpanded] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [loadingLabel, setLoadingLabel] = useState('');
   const [error, setError] = useState('');
   const request = useRef<AbortController | null>(null);
   const deadline = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -63,7 +65,7 @@ export function EquivalenceSuggestionsPanel({
     },
     []
   );
-  async function suggest(useAi: boolean) {
+  async function suggest(useAi: boolean, mode?: 'compare' | 'estimate') {
     if (request.current || disabled) return;
     const controller = new AbortController();
     request.current = controller;
@@ -74,9 +76,16 @@ export function EquivalenceSuggestionsPanel({
     }, 40000);
     deadline.current = timer;
     setLoading(true);
+    setLoadingLabel(
+      useAi
+        ? mode === 'estimate'
+          ? 'Preparando propuesta con IA…'
+          : 'Comparando referencias con IA…'
+        : 'Buscando referencias…'
+    );
     setError('');
     try {
-      const response = await onSuggest(useAi, controller.signal);
+      const response = await onSuggest(useAi, controller.signal, mode);
       if (request.current !== controller || controller.signal.aborted) return;
       if (
         response.basis.mealId !== basis.mealId ||
@@ -88,6 +97,7 @@ export function EquivalenceSuggestionsPanel({
           'La respuesta corresponde a otra selección. Vuelve a solicitar la ayuda.'
         );
       setResult(response);
+      setApplied(null);
       setExpanded(true);
     } catch (failure) {
       if (
@@ -115,32 +125,55 @@ export function EquivalenceSuggestionsPanel({
       aria-label="Ayuda para elegir una equivalencia"
       className="mb-5 rounded-2xl border border-violet-400/30 bg-violet-400/5 p-4"
     >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h3 className="flex items-center gap-2 font-semibold text-violet-100">
-            <Sparkles className="size-4" /> ¿Cómo cuenta este alimento?
-          </h3>
-          <p className="mt-1 text-xs leading-relaxed text-slate-400">
-            Busca una referencia de tu pauta y revisa sus porciones. Nada se
-            guarda automáticamente.
-          </p>
-        </div>
+      <h3 className="flex items-center gap-2 font-semibold text-violet-100">
+        <Sparkles className="size-4" /> ¿Cómo cuenta este alimento?
+      </h3>
+      <div
+        role="group"
+        aria-label="Opciones de equivalencia"
+        className="mt-3 flex flex-wrap gap-2"
+      >
         <button
           type="button"
           onClick={() => suggest(false)}
           disabled={loading || disabled}
-          className="rounded-xl border border-violet-400/50 bg-violet-400/15 px-4 py-2.5 text-sm font-semibold text-violet-100 hover:bg-violet-400/25 disabled:opacity-50"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-600 bg-slate-800/60 px-3 py-2.5 text-sm font-semibold text-slate-100 hover:border-violet-400/60 disabled:opacity-50"
         >
-          Sugerir equivalencia
+          <BookOpen className="size-4 shrink-0" /> Buscar en mi pauta
         </button>
+        {basis.productId && (
+          <button
+            type="button"
+            disabled={loading || disabled}
+            onClick={() => suggest(true, 'estimate')}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-violet-400/50 bg-violet-400/20 px-3 py-2.5 text-sm font-semibold text-violet-100 hover:bg-violet-400/30 disabled:opacity-50"
+          >
+            <Sparkles className="size-4 shrink-0" /> Proponer con IA
+          </button>
+        )}
       </div>
+      <p className="mt-3 text-xs leading-relaxed text-slate-400">
+        <strong className="font-medium text-slate-300">
+          Buscar en mi pauta
+        </strong>{' '}
+        consulta equivalencias guardadas y referencias generales disponibles.{' '}
+        <strong className="font-medium text-slate-300">Proponer con IA</strong>{' '}
+        usa la ficha nutricional para crear una equivalencia nueva; puede
+        consumir una llamada de Gemini. Revisa la propuesta antes de aplicarla y
+        guardarla.
+      </p>
+      {!basis.productId && (
+        <p className="mt-2 text-xs leading-relaxed text-slate-400">
+          Selecciona un producto de Mis productos para pedir una equivalencia
+          nueva con su ficha nutricional.
+        </p>
+      )}
       {loading && (
         <p
           role="status"
           className="mt-3 flex items-center gap-2 text-sm text-violet-200"
         >
-          <LoaderCircle className="size-4 animate-spin" /> Comparando
-          referencias…
+          <LoaderCircle className="size-4 animate-spin" /> {loadingLabel}
         </p>
       )}
       {error && (
@@ -192,9 +225,15 @@ export function EquivalenceSuggestionsPanel({
                     <BookOpen className="size-3.5" />{' '}
                     {suggestion.origin === 'day'
                       ? 'Pauta de este día'
-                      : 'Equivalencia guardada en mi cuenta'}{' '}
+                      : suggestion.origin === 'catalog'
+                      ? 'Equivalencia guardada en mi cuenta'
+                      : 'Propuesta nueva · no incluida en tu pauta'}{' '}
                     ·{' '}
-                    {suggestion.match === 'ai'
+                    {suggestion.match === 'estimated'
+                      ? suggestion.evidence?.method === 'reference'
+                        ? 'Referencia general'
+                        : 'Estimada con IA'
+                      : suggestion.match === 'ai'
                       ? 'Comparada con IA'
                       : suggestion.match === 'exact'
                       ? 'Coincidencia guardada'
@@ -204,7 +243,10 @@ export function EquivalenceSuggestionsPanel({
                     {rule.name}
                   </h4>
                   <p className="mt-1 text-xs text-slate-400">
-                    Coincidencia:{' '}
+                    {suggestion.origin === 'estimate'
+                      ? 'Confianza orientativa'
+                      : 'Coincidencia'}
+                    :{' '}
                     {
                       { high: 'alta', medium: 'para revisar', low: 'dudosa' }[
                         suggestion.confidence
@@ -216,7 +258,9 @@ export function EquivalenceSuggestionsPanel({
                     {formatPortions(rule.referenceAmount)}{' '}
                     {QUANTITY_LABELS[rule.unit]} de referencia →{' '}
                     {rule.free
-                      ? 'Libre según esta referencia'
+                      ? suggestion.origin === 'estimate'
+                        ? 'Condimento sin sumar intercambios'
+                        : 'Libre según esta referencia'
                       : portionsText(rule.contributions)}
                   </p>
                   <p className="mt-2 text-sm leading-relaxed text-slate-300">
@@ -225,7 +269,43 @@ export function EquivalenceSuggestionsPanel({
                   <p className="mt-1 text-xs leading-relaxed text-amber-200">
                     {suggestion.uncertainty}
                   </p>
-                  {rule.notes && (
+                  {suggestion.evidence && (
+                    <div className="mt-3 space-y-2 rounded-lg border border-amber-400/20 bg-amber-400/5 p-3 text-xs leading-relaxed">
+                      <p className="font-semibold text-amber-200">
+                        Antes de aceptar, comprueba:
+                      </p>
+                      <ul className="list-disc space-y-1 pl-4 text-slate-300">
+                        {suggestion.evidence.assumptions.map(
+                          (assumption, index) => (
+                            <li key={index}>{assumption}</li>
+                          )
+                        )}
+                      </ul>
+                      {suggestion.evidence.sources.length ? (
+                        suggestion.evidence.sources.map((source) => (
+                          <a
+                            key={source.url}
+                            href={source.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block text-violet-200 underline underline-offset-2"
+                          >
+                            Fuente general: {source.title}
+                          </a>
+                        ))
+                      ) : (
+                        <p className="text-slate-400">
+                          Estimación del modelo: sin consulta web ni fuente
+                          externa verificada.
+                        </p>
+                      )}
+                      <p className="text-slate-400">
+                        No cambia tus metas, calorías ni macros. Al guardar se
+                        incorpora como una equivalencia que tú aceptaste.
+                      </p>
+                    </div>
+                  )}
+                  {rule.notes && !suggestion.evidence && (
                     <p className="mt-2 text-xs text-slate-400">
                       Notas guardadas: {rule.notes}
                     </p>
@@ -235,7 +315,7 @@ export function EquivalenceSuggestionsPanel({
                     {preview.status === 'matched'
                       ? portionsText(preview.contributions)
                       : preview.status === 'free'
-                      ? 'No suma porciones según esta referencia.'
+                      ? 'No suma porciones según esta referencia. Las calorías y macros se siguen contando.'
                       : 'Falta indicar la cantidad consumida en la unidad de esta referencia.'}
                   </p>
                   <button
@@ -259,12 +339,14 @@ export function EquivalenceSuggestionsPanel({
               confirma el guardado.
             </p>
           )}
-          {result.suggestions.length > 0 && (
+          {result.suggestions.some(
+            (suggestion) => suggestion.origin !== 'estimate'
+          ) && (
             <div className="border-t border-violet-400/20 pt-3">
               <button
                 type="button"
                 disabled={loading || disabled}
-                onClick={() => suggest(true)}
+                onClick={() => suggest(true, 'compare')}
                 className="inline-flex items-center gap-2 rounded-xl border border-violet-400/40 px-3 py-2 text-sm font-semibold text-violet-200 hover:bg-violet-400/10 disabled:opacity-50"
               >
                 <Sparkles className="size-4" /> Comparar con IA
@@ -276,14 +358,13 @@ export function EquivalenceSuggestionsPanel({
               </p>
             </div>
           )}
-          {result.status === 'insufficient' && (
-            <p className="text-xs leading-relaxed text-slate-400">
-              No se deduce que sea libre por tener pocas calorías. Completa la
-              equivalencia desde tu pauta o usa «Dejar pendiente»; puedes seguir
-              registrando tus alimentos.
-            </p>
-          )}
         </div>
+      )}
+      {result?.status === 'insufficient' && (
+        <p className="mt-3 text-xs leading-relaxed text-slate-400">
+          No se deduce que sea libre por tener pocas calorías. Puedes pedir una
+          propuesta o dejarlo pendiente; sus nutrientes siguen registrados.
+        </p>
       )}
     </section>
   );

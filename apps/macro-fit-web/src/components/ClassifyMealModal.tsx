@@ -518,7 +518,7 @@ export function ClassifyMealModal({
                     dayPlanVersion: plan.version,
                     catalogPlanVersion: catalogPlan.version,
                   }}
-                  onSuggest={(useAi, signal) =>
+                  onSuggest={(useAi, signal, mode) =>
                     onSuggest(
                       entry.id,
                       {
@@ -529,6 +529,7 @@ export function ClassifyMealModal({
                         dayPlanVersion: plan.version,
                         catalogPlanVersion: catalogPlan.version,
                         useAi,
+                        ...(mode ? { mode } : {}),
                       },
                       signal
                     )

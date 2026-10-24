@@ -103,6 +103,9 @@ Todas las rutas públicas siguientes requieren JWT y usan el prefijo `/api/macro
 | `POST /days/:date/meals` | Agregar `{entries: [...]}` en una transacción |
 | `PUT /days/:date/meals/:id/quantity` | Corregir `{quantity: {amount, unit}, expectedQuantity: {amount, unit}}` conservando la unidad original |
 | `PUT /days/:date/meals/:id/product-equivalence` | Guardar una equivalencia de un producto propio y clasificar el consumo de forma atómica |
+| `POST /days/:date/meals/:id/equivalence-suggestions` | Consultar referencias o pedir una propuesta para un producto seleccionado, sin guardar |
+| `POST /foods/:id/equivalence-suggestions` | Consultar referencias o pedir una propuesta desde la ficha del producto, sin un consumo |
+| `PUT /foods/:id/equivalence` | Guardar explícitamente una equivalencia reutilizable del producto |
 | `DELETE /days/:date/meals/:id` | Retirar una comida propia |
 | `POST /days/:date/water` | `{operationId, amountMl, reset?}`; incremento o reinicio |
 | `PUT /foods`, `PUT /templates` | Guardar alimentos o combos propios |
@@ -114,6 +117,12 @@ Fechas reales, cantidades finitas, campos anidados, límites y campos desconocid
 Editar una cantidad conserva identidad, fecha y posición del alimento. La primera edición guarda una referencia nutricional privada en el JSONB existente, que permite recalcular sin acumular redondeos ni consultar el catálogo actualizado. La respuesta no expone esa referencia. Las equivalencias usan la versión de pauta del diario y sus cantidades explícitas se ajustan proporcionalmente. La cantidad esperada evita sobrescribir un cambio concurrente (409); las unidades no se convierten automáticamente. No requiere migraciones nuevas.
 
 La clasificación desde producto recibe `productId`, `expectedPlanVersion`, `expectedDayPlanVersion`, `expectedQuantity`, una `equivalence` explícita (`referenceAmount`, `unit`, `contributions`, `free`, `notes`) y una `quantity` opcional si hay que expresar el consumo en otra unidad. Verifica la propiedad de producto y consumo, valida el contrato estricto en BFF/API y rechaza versiones/cantidades desactualizadas con 409. Devuelve `{account, day}` validados por el contrato compartido. No consulta proveedores ni deduce equivalencias nutricionales.
+
+Las sugerencias son operaciones de lectura con versiones esperadas. `useAi=false` busca equivalencias guardadas y referencias generales revisadas; actualmente hay una referencia de mostaza tradicional, con comprobaciones de identidad y ficha, fuente visible y supuestos explícitos. `useAi=true, mode="estimate"` pide una propuesta nueva a Gemini usando únicamente identidad, cantidad/unidad, nutrientes y un conjunto acotado de referencias de la pauta. No envía perfil, propietario, código de barras ni notas personales. `mode="compare"` conserva la comparación de referencias ya guardadas.
+
+Una propuesta nueva devuelve `origin="estimate"`, confianza media/baja y `evidence` con supuestos y fuentes cuando existen. Gemini no consulta la web ni genera enlaces; su respuesta se identifica como estimación sin fuente externa verificada. La base de etiqueta y la referencia de intercambio pueden tener cantidades distintas dentro de la misma unidad (100 g y 15 g, por ejemplo). Se rechazan conversiones de unidad no declaradas y propuestas libres sin respaldo, con mensajes diferenciados. Los errores del proveedor se propagan; una respuesta insuficiente no crea porciones ficticias.
+
+Pedir o aplicar una sugerencia al formulario no escribe en la base. Solo la confirmación explícita guarda la equivalencia, conservando el fundamento en sus notas y reutilizando las escrituras/versiones existentes. Esta funcionalidad no agrega tablas, migraciones ni variables de entorno.
 
 Esta operación requiere la migración `AddDayProductEquivalences1792785600000`, registrada en la configuración habitual de TypeORM. Agrega `nutrition_daily_logs.product_rules` JSONB con un arreglo vacío para los días existentes. Se guarda una versión nueva de la pauta de cuenta con la referencia del producto y se extiende únicamente el día elegido, conservando su versión de metas y las referencias anteriores. Las referencias diferentes reciben identidades diferentes; no se modifican nutrientes ni otros consumos. Una aplicación explícita de una pauta nueva a hoy reemplaza también estas adiciones del día. Se mantiene `synchronize=false`; el despliegue ejecuta la migración mediante `MACROFIT_MIGRATIONS_RUN=true`.
 

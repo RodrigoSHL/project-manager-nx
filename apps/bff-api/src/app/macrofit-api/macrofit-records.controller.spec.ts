@@ -163,6 +163,49 @@ describe('MacroFit personal records BFF', () => {
       ).status
     ).toBe(503);
   });
+  it('forwards explicit new-proposal mode through both product and diary routes while rejecting an implicit AI request', async () => {
+    for (const [path, version] of [
+      [
+        '/api/macrofit/me/foods/heinz/equivalence-suggestions',
+        { catalogPlanVersion: 2 },
+      ],
+      [
+        '/api/macrofit/me/days/2026-10-23/meals/meal/equivalence-suggestions',
+        { catalogPlanVersion: 2, dayPlanVersion: 1, productId: 'heinz' },
+      ],
+    ] as const) {
+      upstream.mockClear();
+      const body = { ...version, useAi: true, mode: 'estimate' };
+      expect(
+        (
+          await httpFetch(origin + path, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ ...body, useAi: false }),
+          })
+        ).status
+      ).toBe(400);
+      expect(upstream).not.toHaveBeenCalled();
+      upstream.mockResolvedValue(new Response('{}', { status: 200 }));
+      expect(
+        (
+          await httpFetch(origin + path, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(body),
+          })
+        ).status
+      ).toBe(200);
+      expect(upstream).toHaveBeenCalledWith(
+        expect.stringContaining('/equivalence-suggestions'),
+        expect.objectContaining({
+          headers: expect.objectContaining({ 'x-user-id': userId }),
+          body: expect.any(String),
+        })
+      );
+      expect(JSON.parse(upstream.mock.calls[0][1].body)).toEqual(body);
+    }
+  });
   it('protects and validates the product equivalence write before forwarding the verified owner', async () => {
     const path =
       '/api/macrofit/me/days/2026-10-23/meals/meal/product-equivalence';

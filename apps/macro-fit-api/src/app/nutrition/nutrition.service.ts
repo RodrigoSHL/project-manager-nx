@@ -472,6 +472,7 @@ export class NutritionService {
       return {
         plan: latest?.data ?? null,
         food: {
+          ...product.data,
           id: product.id,
           name: product.data.name,
           brand: product.data.brand,
@@ -579,6 +580,7 @@ export class NutritionService {
         catalog: catalog.data,
         food: product
           ? {
+              ...product.data,
               id: product.id,
               name: product.data.name,
               brand: product.data.brand,

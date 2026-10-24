@@ -8,6 +8,11 @@ import {
 } from '@project-manager/macrofit-contracts';
 import { NutritionService } from './nutrition.service';
 import { PlateAnalysisService } from '../plate-analysis/plate-analysis.service';
+import {
+  EquivalenceProposalFood,
+  equivalenceProposalSchema,
+} from '../plate-analysis/dto/equivalence-proposal.dto';
+import { condimentReference } from './equivalence-reference';
 
 const normalize = (value: string) =>
   value
@@ -164,7 +169,8 @@ export class EquivalenceSuggestionsService {
         dayPlanVersion: context.day.version,
         catalogPlanVersion: context.catalog.version,
       },
-      input.useAi
+      input.useAi,
+      input.mode
     );
   }
   async suggestProduct(
@@ -200,15 +206,17 @@ export class EquivalenceSuggestionsService {
       { ...context.plan, rules: [] },
       context.plan,
       basis,
-      input.useAi
+      input.useAi,
+      input.mode
     );
   }
   private async resolve(
-    food: { id: string; name: string; brand?: string },
+    food: EquivalenceProposalFood,
     day: NutritionPlan,
     catalog: NutritionPlan | undefined,
     basis: EquivalenceSuggestions['basis'],
-    useAi: boolean
+    useAi: boolean,
+    mode?: 'compare' | 'estimate'
   ): Promise<EquivalenceSuggestions> {
     const references = relatedReferences(food, day, catalog);
     const insufficient = (
@@ -228,7 +236,30 @@ export class EquivalenceSuggestionsService {
             `Falta una referencia de tu pauta para ${food.name}: cantidad, unidad y porciones, o una indicación explícita de que es libre. Puedes dejarlo pendiente y completar esa referencia después.`,
           ],
     });
-    if (!references.length) return insufficient('saved', []);
+    if (basis.productId && !references.some((reference) => reference.exact)) {
+      const reference = condimentReference(food);
+      if (reference)
+        return {
+          status: 'suggestions',
+          source: 'reference',
+          basis,
+          suggestions: [reference],
+          missingInfo: [],
+          message:
+            'Encontramos una propuesta en una referencia general. No pertenece a tu pauta: revisa el fundamento antes de incorporarla.',
+        };
+    }
+    if (useAi && (mode === 'estimate' || !references.length)) {
+      if (!basis.productId)
+        return insufficient('saved', [
+          'Selecciona un producto de Mis productos para usar su ficha nutricional y guardar una equivalencia nueva.',
+        ]);
+      return this.propose(food, catalog ?? day, basis, insufficient);
+    }
+    if (!references.length)
+      return insufficient('saved', [
+        `No hay una equivalencia guardada para ${food.name}. Puedes pedir una propuesta con IA usando su ficha nutricional, o completar una referencia manualmente.`,
+      ]);
     const asSuggestion = (
       ref: Reference
     ): EquivalenceSuggestions['suggestions'][number] => ({
@@ -283,6 +314,119 @@ export class EquivalenceSuggestionsService {
         'Revisa la referencia y aplícala al formulario. Nada se guarda hasta que lo confirmes.',
       missingInfo: [],
       suggestions,
+    };
+  }
+
+  private async propose(
+    food: EquivalenceProposalFood,
+    plan: NutritionPlan,
+    basis: EquivalenceSuggestions['basis'],
+    insufficient: (
+      source: 'saved' | 'ai',
+      missingInfo: string[]
+    ) => EquivalenceSuggestions
+  ): Promise<EquivalenceSuggestions> {
+    if (
+      !food.servingSizeGrams ||
+      ![food.calories, food.protein, food.carbs, food.fat].every(
+        (value) =>
+          typeof value === 'number' && Number.isFinite(value) && value >= 0
+      )
+    )
+      return insufficient('saved', [
+        'Completa en Mis productos la cantidad, unidad, calorías y macros de la ficha antes de pedir una propuesta.',
+      ]);
+    // Balance the bounded context across groups; the first 40 rows alone can all
+    // belong to the same section of a large imported plan.
+    const selected = new Map<string, PautaRule>();
+    for (const ref of relatedReferences(food, plan))
+      selected.set(ref.rule.id, ref.rule);
+    for (const group of Object.keys(plan.targets)) {
+      for (const rule of plan.rules
+        .filter((rule) =>
+          rule.contributions.some((item) => item.group === group)
+        )
+        .slice(0, 6))
+        selected.set(rule.id, rule);
+    }
+    const result = equivalenceProposalSchema.parse(
+      await this.analysis.proposeEquivalence({
+        food: {
+          name: food.name,
+          ...(food.brand ? { brand: food.brand } : {}),
+          servingSizeGrams: food.servingSizeGrams,
+          quantityUnit: food.quantityUnit ?? 'g',
+          calories: food.calories,
+          protein: food.protein,
+          carbs: food.carbs,
+          fat: food.fat,
+        },
+        targets: plan.targets,
+        references: [...selected.values()].slice(0, 48).map((rule) => ({
+          name: rule.name,
+          referenceAmount: rule.referenceAmount,
+          unit: rule.unit,
+          contributions: rule.contributions,
+          free: rule.free,
+        })),
+      })
+    );
+    if (!result.proposal) return insufficient('ai', result.missingInfo);
+    const proposal = result.proposal;
+    if (proposal.free)
+      throw new BadGatewayException(
+        'La IA propuso no sumar porciones sin una referencia que lo respalde. No se aplicó la propuesta. Puedes buscar una referencia de tu pauta o volver a solicitarla.'
+      );
+    // The label base (e.g. 100 g) and the exchange reference (e.g. 15 g)
+    // serve different purposes. Changing amount within one unit is valid;
+    // changing units would require a conversion the product does not declare.
+    if (proposal.unit !== (food.quantityUnit ?? 'g'))
+      throw new BadGatewayException(
+        `La IA propuso una referencia en ${
+          proposal.unit
+        }, pero la ficha está en ${
+          food.quantityUnit ?? 'g'
+        }. Falta una conversión explícita entre esas unidades. No se aplicó la propuesta; vuelve a solicitarla usando la unidad de la ficha.`
+      );
+    return {
+      status: 'suggestions',
+      source: 'ai',
+      basis,
+      missingInfo: result.missingInfo,
+      message:
+        'La IA propone una equivalencia nueva. Es orientativa y no forma parte de tu pauta hasta que revises y confirmes su guardado.',
+      suggestions: [
+        {
+          key: 'estimate:product',
+          origin: 'estimate',
+          match: 'estimated',
+          confidence: proposal.confidence,
+          explanation: proposal.explanation,
+          uncertainty: proposal.uncertainty,
+          evidence: {
+            method: 'model',
+            assumptions: proposal.assumptions,
+            sources: [],
+          },
+          rule: {
+            id: 'proposed-product',
+            name: food.name,
+            foodIds: [food.id],
+            aliases: [],
+            referenceAmount: proposal.referenceAmount,
+            unit: proposal.unit,
+            free: false,
+            contributions: proposal.contributions,
+            notes: `Propuesta orientativa de IA, aceptada por el usuario; no incluida en la pauta original. Sin fuente externa verificada. ${proposal.explanation.slice(
+              0,
+              600
+            )} Incertidumbre: ${proposal.uncertainty.slice(
+              0,
+              500
+            )} Supuestos: ${proposal.assumptions.join(' ').slice(0, 650)}`,
+          },
+        },
+      ],
     };
   }
 }

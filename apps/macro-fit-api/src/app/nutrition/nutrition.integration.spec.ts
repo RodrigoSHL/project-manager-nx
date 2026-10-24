@@ -1364,6 +1364,112 @@ suite('Nutrition PostgreSQL integration', () => {
     expect(await service.getDay(owner, today)).toEqual(day);
     expect(createPautaTemplate(today).targets.protein).toBe(10);
   });
+  it('proposes a sourced mustard equivalence through HTTP without mutations, then persists it only on confirmation and reuses it for future product entries', async () => {
+    const owner = randomUUID();
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Santiago',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+    await service.savePlan(owner, createPautaTemplate(today));
+    const product = {
+      ...food,
+      id: 'mustard-reviewed',
+      name: 'Mostaza Heinz',
+      brand: 'Heinz',
+      calories: 54.2,
+      protein: 3.5,
+      carbs: 6,
+      fat: 1.8,
+    };
+    await service.saveFood(owner, product);
+    const consumed = {
+      ...meal(),
+      foodId: 'ai-mustard',
+      foodName: 'mostaza',
+      amountGrams: 45,
+      quantity: { amount: 45, unit: 'g' as const },
+      calories: 29,
+      protein: 1.8,
+      carbs: 2.3,
+      fat: 1.2,
+    };
+    await service.addMeals(owner, today, [consumed]);
+    const before = await service.getDay(owner, today),
+      account = await service.getAccount(owner);
+    const post = await call(
+      `/days/${today}/meals/${consumed.id}/equivalence-suggestions`,
+      {
+        method: 'POST',
+        headers: { 'x-user-id': owner },
+        body: JSON.stringify({
+          productId: product.id,
+          dayPlanVersion: 1,
+          catalogPlanVersion: 1,
+          useAi: false,
+        }),
+      }
+    );
+    expect(post.status).toBe(200);
+    const result = equivalenceSuggestionsSchema.parse(await post.json());
+    expect(result).toMatchObject({
+      source: 'reference',
+      suggestions: [
+        { origin: 'estimate', rule: { free: true, contributions: [] } },
+      ],
+    });
+    expect(await service.getAccount(owner)).toEqual(account);
+    expect(await service.getDay(owner, today)).toEqual(before);
+    const rule = result.suggestions[0].rule;
+    const saved = await call(
+      `/days/${today}/meals/${consumed.id}/product-equivalence`,
+      {
+        method: 'PUT',
+        headers: { 'x-user-id': owner },
+        body: JSON.stringify({
+          productId: product.id,
+          expectedPlanVersion: 1,
+          expectedDayPlanVersion: 1,
+          expectedQuantity: consumed.quantity,
+          equivalence: {
+            referenceAmount: rule.referenceAmount,
+            unit: rule.unit,
+            free: rule.free,
+            contributions: rule.contributions,
+            notes: rule.notes,
+          },
+        }),
+      }
+    );
+    expect(saved.status).toBe(200);
+    const classified = productEquivalenceResultSchema.parse(await saved.json());
+    expect(classified.day.meals[0]).toMatchObject({
+      ...consumed,
+      pauta: { status: 'free' },
+    });
+    expect(classified.account.nutritionPlan?.rules).toHaveLength(134);
+    expect(classified.account.nutritionPlan?.targets).toEqual(
+      account.nutritionPlan?.targets
+    );
+    expect(classified.account.nutritionPlan?.rules.at(-1)?.notes).toContain(
+      'uclahealth.org'
+    );
+    const tomorrow = new Date(
+      new Date(today + 'T00:00:00Z').getTime() + 86400000
+    )
+      .toISOString()
+      .slice(0, 10);
+    const future = await service.addMeals(owner, tomorrow, [
+      {
+        ...consumed,
+        id: randomUUID(),
+        foodId: product.id,
+        foodName: product.name,
+      },
+    ]);
+    expect(future.meals[0].pauta?.status).toBe('free');
+  });
   it('survives a new database connection and runs migration down/up cleanly', async () => {
     await db.destroy();
     await db.initialize();

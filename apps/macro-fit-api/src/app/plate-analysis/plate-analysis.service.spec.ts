@@ -91,6 +91,95 @@ describe('PlateAnalysisService provider contract', () => {
       },
     ],
   };
+  const proposalInput = {
+    food: {
+      name: 'Yogur',
+      servingSizeGrams: 100,
+      quantityUnit: 'g' as const,
+      calories: 60,
+      protein: 5,
+      carbs: 7,
+      fat: 1,
+    },
+    targets: {
+      protein: 10,
+      carbs: 4,
+      fats: 2,
+      dairy: 3,
+      fruits: 3,
+      veggies: null,
+      supplements: 0,
+    },
+    references: [],
+  };
+  const proposal = {
+    referenceAmount: 100,
+    unit: 'g',
+    free: false,
+    contributions: [{ group: 'dairy', portions: 0.7 }],
+    confidence: 'low',
+    explanation: 'Porción orientativa de lácteos.',
+    uncertainty: 'Revisar la referencia de yogur de su pauta.',
+    assumptions: ['Es yogur lácteo sin agregados.'],
+  };
+  it('generates a reviewable new rule using the same provider deadline/quota and a distinct structured output contract', async () => {
+    process.env.MACROFIT_REQUESTS_PER_MINUTE = '1';
+    generate.mockResolvedValue({
+      text: JSON.stringify({ proposal, missingInfo: [] }),
+    });
+    const service = new PlateAnalysisService();
+    expect(await service.proposeEquivalence(proposalInput)).toEqual({
+      proposal,
+      missingInfo: [],
+    });
+    const request = generate.mock.calls[0][0];
+    expect(request.contents).toEqual([{ text: JSON.stringify(proposalInput) }]);
+    expect(request.config.systemInstruction).toContain(
+      'puedes proponer una nueva equivalencia'
+    );
+    expect(request.config.systemInstruction).toContain('NO usa búsqueda web');
+    expect(request.config.responseSchema.required).toContain('proposal');
+    await expect(service.rankEquivalences(rankingInput)).rejects.toMatchObject({
+      status: 429,
+    });
+  });
+  it.each([
+    { ...proposal, confidence: 'high' },
+    { ...proposal, assumptions: [] },
+    { ...proposal, contributions: [{ group: 'dairy', portions: -1 }] },
+    {
+      ...proposal,
+      contributions: [proposal.contributions[0], proposal.contributions[0]],
+    },
+    { ...proposal, free: true },
+    { ...proposal, sourceUrl: 'https://invented.example/' },
+  ])(
+    'rejects unsupported certainty, invented sources or invalid new rule output: %o',
+    async (invalid) => {
+      generate.mockResolvedValue({
+        text: JSON.stringify({ proposal: invalid, missingInfo: [] }),
+      });
+      await expect(
+        new PlateAnalysisService().proposeEquivalence(proposalInput)
+      ).rejects.toMatchObject({ status: 502 });
+    }
+  );
+  it('accepts a genuine no-proposal response and surfaces an unavailable provider', async () => {
+    generate.mockResolvedValueOnce({
+      text: JSON.stringify({
+        proposal: null,
+        missingInfo: ['Falta identificar la preparación.'],
+      }),
+    });
+    const service = new PlateAnalysisService();
+    expect(await service.proposeEquivalence(proposalInput)).toMatchObject({
+      proposal: null,
+    });
+    generate.mockRejectedValueOnce({ status: 429 });
+    await expect(
+      service.proposeEquivalence(proposalInput)
+    ).rejects.toMatchObject({ status: 503 });
+  });
   it('ranks reference keys without accepting model-generated amounts and shares the analysis budget', async () => {
     process.env.MACROFIT_REQUESTS_PER_MINUTE = '1';
     const ranking = {

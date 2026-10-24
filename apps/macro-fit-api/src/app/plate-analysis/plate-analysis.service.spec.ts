@@ -6,6 +6,7 @@ jest.mock('@google/genai', () => ({
   ThinkingLevel: { MINIMAL: 'MINIMAL' },
   Type: {
     OBJECT: 'OBJECT',
+    BOOLEAN: 'BOOLEAN',
     STRING: 'STRING',
     NUMBER: 'NUMBER',
     ARRAY: 'ARRAY',
@@ -78,6 +79,73 @@ describe('PlateAnalysisService provider contract', () => {
     fiber: null,
     warnings: ['Carbohidratos ilegibles.'],
   };
+  const rankingInput = {
+    food: { name: 'Atún' },
+    references: [
+      {
+        key: 'day:0',
+        name: 'Atún al agua',
+        aliases: [],
+        free: false,
+        unit: 'g',
+      },
+    ],
+  };
+  it('ranks reference keys without accepting model-generated amounts and shares the analysis budget', async () => {
+    process.env.MACROFIT_REQUESTS_PER_MINUTE = '1';
+    const ranking = {
+      candidates: [
+        {
+          key: 'day:0',
+          confidence: 'medium',
+          explanation: 'Nombre relacionado.',
+          uncertainty: 'Revisar preparación.',
+        },
+      ],
+      missingInfo: [],
+    };
+    generate.mockResolvedValue({ text: JSON.stringify(ranking) });
+    const service = new PlateAnalysisService();
+    expect(await service.rankEquivalences(rankingInput)).toEqual(ranking);
+    expect(generate.mock.calls[0][0].config.systemInstruction).toContain(
+      'Nunca generes referenceAmount'
+    );
+    await expect(service.analyzeMealText('Arroz')).rejects.toMatchObject({
+      status: 429,
+    });
+    expect(generate).toHaveBeenCalledTimes(1);
+  });
+  it.each([
+    'garbage',
+    JSON.stringify({
+      candidates: [
+        {
+          key: 'day:0',
+          confidence: 'medium',
+          explanation: 'x',
+          uncertainty: 'x',
+          referenceAmount: 100,
+        },
+      ],
+      missingInfo: [],
+    }),
+    JSON.stringify({
+      candidates: [
+        {
+          key: 'day:0',
+          confidence: 'high',
+          explanation: 'x',
+          uncertainty: 'x',
+        },
+      ],
+      missingInfo: [],
+    }),
+  ])('rejects malformed or invented ranking fields: %s', async (text) => {
+    generate.mockResolvedValue({ text });
+    await expect(
+      new PlateAnalysisService().rankEquivalences(rankingInput)
+    ).rejects.toMatchObject({ status: 502 });
+  });
   it('transcribes label data without inventing missing nutrients or recomputing printed calories', async () => {
     generate.mockResolvedValue({ text: JSON.stringify(label) });
     expect(

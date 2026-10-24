@@ -60,6 +60,27 @@ export const pautaSelectionSchema = z
       .optional(),
   })
   .strict();
+export const pautaRuleSchema = z
+  .object({
+    id: identifierSchema,
+    name: text(200),
+    foodIds: z.array(identifierSchema).max(100),
+    aliases: z.array(text(200)).max(30),
+    referenceAmount: positive(20000),
+    unit,
+    gramsPerUnit: positive(20000).optional(),
+    contributions: contributionsSchema,
+    free: z.boolean(),
+    notes: z.string().max(2000),
+  })
+  .strict()
+  .refine(
+    (rule) =>
+      rule.free
+        ? rule.contributions.length === 0
+        : rule.contributions.length > 0,
+    'Una equivalencia libre no lleva porciones; las demás requieren aportes'
+  );
 const nutritionPlanFieldsSchema = z
   .object({
     name: text(150),
@@ -78,31 +99,7 @@ const nutritionPlanFieldsSchema = z
       .strict(),
     waterTargetMl: positive(20000),
     waterIsMinimum: z.boolean(),
-    rules: z
-      .array(
-        z
-          .object({
-            id: identifierSchema,
-            name: text(200),
-            foodIds: z.array(identifierSchema).max(100),
-            aliases: z.array(text(200)).max(30),
-            referenceAmount: positive(20000),
-            unit,
-            gramsPerUnit: positive(20000).optional(),
-            contributions: contributionsSchema,
-            free: z.boolean(),
-            notes: z.string().max(2000),
-          })
-          .strict()
-          .refine(
-            (rule) =>
-              rule.free
-                ? rule.contributions.length === 0
-                : rule.contributions.length > 0,
-            'Una equivalencia libre no lleva porciones; las demás requieren aportes'
-          )
-      )
-      .max(250),
+    rules: z.array(pautaRuleSchema).max(250),
   })
   .strict();
 const uniqueRules = (plan: z.infer<typeof nutritionPlanFieldsSchema>) =>
@@ -268,32 +265,42 @@ export const updateMealQuantitySchema = z
   })
   .strict();
 export type UpdateMealQuantity = z.infer<typeof updateMealQuantitySchema>;
+export const productRuleInputSchema = z
+  .object({
+    referenceAmount: positive(20000),
+    unit,
+    contributions: contributionsSchema,
+    free: z.boolean(),
+    notes: z.string().max(2000),
+  })
+  .strict()
+  .refine(
+    (rule) =>
+      rule.free
+        ? rule.contributions.length === 0
+        : rule.contributions.length > 0,
+    'Indica porciones o marca el producto como libre según tu pauta.'
+  );
 export const productEquivalenceSchema = z
   .object({
     productId: identifierSchema,
     expectedPlanVersion: z.number().int().positive(),
     expectedDayPlanVersion: z.number().int().positive(),
     expectedQuantity: mealQuantitySchema,
-    equivalence: z
-      .object({
-        referenceAmount: positive(20000),
-        unit,
-        contributions: contributionsSchema,
-        free: z.boolean(),
-        notes: z.string().max(2000),
-      })
-      .strict()
-      .refine(
-        (rule) =>
-          rule.free
-            ? rule.contributions.length === 0
-            : rule.contributions.length > 0,
-        'Indica porciones o marca el producto como libre según tu pauta.'
-      ),
+    equivalence: productRuleInputSchema,
     quantity: mealQuantitySchema.optional(),
   })
   .strict();
 export type ProductEquivalenceInput = z.infer<typeof productEquivalenceSchema>;
+export const saveProductEquivalenceSchema = z
+  .object({
+    expectedPlanVersion: z.number().int().positive(),
+    equivalence: productRuleInputSchema,
+  })
+  .strict();
+export type SaveProductEquivalence = z.infer<
+  typeof saveProductEquivalenceSchema
+>;
 export const waterSchema = z
   .object({
     operationId: z.string().uuid(),

@@ -7,6 +7,9 @@ import {
 } from '@nestjs/common';
 import { DataSource, EntityManager, LessThanOrEqual } from 'typeorm';
 import {
+  EquivalenceSuggestionRequest,
+  ProductSuggestionRequest,
+  SaveProductEquivalence,
   DailyLog,
   FoodItem,
   ImportData,
@@ -312,32 +315,10 @@ export class NutritionService {
         throw new ConflictException(
           'La cantidad consumida cambió. Actualiza el diario antes de clasificar.'
         );
-      // A changed reference gets a new identity; existing consumption snapshots stay valid.
-      const ruleId =
-        'product-' +
-        createHash('sha256')
-          .update(
-            JSON.stringify([product.id, product.data.name, input.equivalence])
-          )
-          .digest('hex')
-          .slice(0, 32);
-      const rule: PautaRule = {
-        id: ruleId,
-        name: product.data.name,
-        foodIds: [product.id],
-        aliases: [],
-        ...input.equivalence,
-      };
-      // Product-specific copies never change the reference of a shared rule.
-      const upsertRules = (rules: PautaRule[]) => [
-        ...rules
-          .filter((item) => item.id !== ruleId)
-          .map((item) => ({
-            ...item,
-            foodIds: item.foodIds.filter((foodId) => foodId !== product.id),
-          })),
-        rule,
-      ];
+      const rule = this.productRule(product, input.equivalence);
+      const ruleId = rule.id;
+      const upsertRules = (rules: PautaRule[]) =>
+        this.upsertProductRule(rules, rule);
       const nextPlan: NutritionPlan = {
         ...latest.data,
         rules: upsertRules(latest.data.rules),
@@ -394,6 +375,111 @@ export class NutritionService {
     });
   }
 
+  private productRule(
+    product: NutritionFoodEntity,
+    equivalence: ProductEquivalenceInput['equivalence']
+  ): PautaRule {
+    // A changed reference gets a new identity; existing consumption snapshots stay valid.
+    const id =
+      'product-' +
+      createHash('sha256')
+        .update(JSON.stringify([product.id, product.data.name, equivalence]))
+        .digest('hex')
+        .slice(0, 32);
+    return {
+      id,
+      name: product.data.name,
+      foodIds: [product.id],
+      aliases: [],
+      ...equivalence,
+    };
+  }
+  private upsertProductRule(rules: PautaRule[], rule: PautaRule) {
+    return [
+      ...rules
+        .filter((item) => item.id !== rule.id)
+        .map((item) => ({
+          ...item,
+          foodIds: item.foodIds.filter((id) => !rule.foodIds.includes(id)),
+        })),
+      rule,
+    ];
+  }
+  saveProductEquivalence(
+    userId: string,
+    productId: string,
+    input: SaveProductEquivalence
+  ) {
+    return this.transaction(userId, async (manager) => {
+      const product = await manager.findOneBy(NutritionFoodEntity, {
+        userId,
+        id: productId,
+      });
+      if (!product)
+        throw new NotFoundException('El producto no existe en tu catálogo.');
+      const latest = await manager.findOne(NutritionPlanEntity, {
+        where: { userId },
+        order: { version: 'DESC' },
+      });
+      if (!latest?.data.enabled)
+        throw new BadRequestException(
+          'Configura una pauta activa antes de definir sus equivalencias. El producto conserva sus nutrientes.'
+        );
+      if (latest.version !== input.expectedPlanVersion)
+        throw new ConflictException(
+          'Tu pauta cambió. Actualiza tus productos antes de guardar la equivalencia.'
+        );
+      const rule = this.productRule(product, input.equivalence);
+      const nextPlan: NutritionPlan = {
+        ...latest.data,
+        rules: this.upsertProductRule(latest.data.rules, rule),
+        version: latest.version + 1,
+        createdAt: new Date().toISOString(),
+      };
+      if (!nutritionPlanSchema.safeParse(nextPlan).success)
+        throw new BadRequestException(
+          'Revisa la equivalencia y el límite de 250 referencias de tu pauta.'
+        );
+      await manager.insert(NutritionPlanEntity, {
+        userId,
+        version: nextPlan.version,
+        startsOn: nextPlan.startsOn,
+        data: nextPlan,
+      });
+      return this.account(manager, userId);
+    });
+  }
+  getProductEquivalenceContext(
+    userId: string,
+    productId: string,
+    input: ProductSuggestionRequest
+  ) {
+    return this.transaction(userId, async (manager) => {
+      const product = await manager.findOneBy(NutritionFoodEntity, {
+        userId,
+        id: productId,
+      });
+      if (!product)
+        throw new NotFoundException('El producto no existe en tu catálogo.');
+      const latest = await manager.findOne(NutritionPlanEntity, {
+        where: { userId },
+        order: { version: 'DESC' },
+      });
+      if ((latest?.version ?? null) !== input.catalogPlanVersion)
+        throw new ConflictException(
+          'Tu pauta cambió. Actualiza tus productos antes de pedir sugerencias.'
+        );
+      return {
+        plan: latest?.data ?? null,
+        food: {
+          id: product.id,
+          name: product.data.name,
+          brand: product.data.brand,
+        },
+      };
+    });
+  }
+
   private validateSelection(plan: NutritionPlan, selection?: PautaSelection) {
     if (
       selection?.ruleId &&
@@ -442,6 +528,64 @@ export class NutritionService {
     return this.transaction(userId, (manager) =>
       this.daily(manager, userId, date)
     );
+  }
+  getEquivalenceContext(
+    userId: string,
+    date: string,
+    mealId: string,
+    input: EquivalenceSuggestionRequest
+  ) {
+    return this.transaction(userId, async (manager) => {
+      const meal = await manager.findOneBy(NutritionMealEntryEntity, {
+        userId,
+        date,
+        id: mealId,
+      });
+      if (!meal)
+        throw new NotFoundException('No se encontró el alimento en este día.');
+      const log = await manager.findOneBy(NutritionDailyLogEntity, {
+        userId,
+        date,
+      });
+      const day = await this.dayPlan(
+        manager,
+        userId,
+        date,
+        log?.planVersion,
+        log?.productRules
+      );
+      const catalog = await manager.findOne(NutritionPlanEntity, {
+        where: { userId },
+        order: { version: 'DESC' },
+      });
+      if (
+        !day ||
+        day.version !== input.dayPlanVersion ||
+        catalog?.version !== input.catalogPlanVersion
+      )
+        throw new ConflictException(
+          'Tu pauta cambió. Cierra la clasificación y actualiza el diario.'
+        );
+      const product = input.productId
+        ? await manager.findOneBy(NutritionFoodEntity, {
+            userId,
+            id: input.productId,
+          })
+        : null;
+      if (input.productId && !product)
+        throw new NotFoundException('No se encontró el producto en tu cuenta.');
+      return {
+        day,
+        catalog: catalog.data,
+        food: product
+          ? {
+              id: product.id,
+              name: product.data.name,
+              brand: product.data.brand,
+            }
+          : { id: meal.data.foodId, name: meal.data.foodName },
+      };
+    });
   }
   private async ensureDay(
     manager: EntityManager,

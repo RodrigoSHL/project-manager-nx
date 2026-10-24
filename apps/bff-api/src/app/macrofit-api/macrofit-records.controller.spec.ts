@@ -38,6 +38,130 @@ describe('MacroFit personal records BFF', () => {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
   };
+  it('authenticates and validates direct product suggestions and equivalence writes without a diary route', async () => {
+    const base = '/api/macrofit/me/foods/own-product';
+    const input = {
+      expectedPlanVersion: 1,
+      equivalence: {
+        referenceAmount: 60,
+        unit: 'g',
+        contributions: [{ group: 'protein', portions: 1 }],
+        free: false,
+        notes: '',
+      },
+    };
+    for (const [suffix, method, body] of [
+      [
+        '/equivalence-suggestions',
+        'POST',
+        { catalogPlanVersion: 1, useAi: false },
+      ],
+      ['/equivalence', 'PUT', input],
+    ] as const) {
+      expect(
+        (
+          await httpFetch(origin + base + suffix, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          })
+        ).status
+      ).toBe(401);
+      expect(
+        (
+          await httpFetch(origin + base + suffix, {
+            method,
+            headers,
+            body: JSON.stringify({ ...body, userId: 'forged' }),
+          })
+        ).status
+      ).toBe(400);
+      expect(upstream).not.toHaveBeenCalled();
+      upstream.mockResolvedValue(new Response('{}', { status: 200 }));
+      expect(
+        (
+          await httpFetch(origin + base + suffix, {
+            method,
+            headers: { ...headers, 'x-user-id': 'forged' },
+            body: JSON.stringify(body),
+          })
+        ).status
+      ).toBe(200);
+      expect(upstream).toHaveBeenLastCalledWith(
+        expect.stringContaining('/foods/own-product' + suffix),
+        expect.objectContaining({
+          method,
+          headers: expect.objectContaining({ 'x-user-id': userId }),
+          body: JSON.stringify(body),
+        })
+      );
+      upstream.mockClear();
+    }
+  });
+  it('protects recommendation reads and forwards only validated input with the JWT owner', async () => {
+    const path =
+      '/api/macrofit/me/days/2026-10-23/meals/meal/equivalence-suggestions';
+    const body = {
+      productId: 'heinz',
+      dayPlanVersion: 1,
+      catalogPlanVersion: 2,
+      useAi: false,
+    };
+    expect(
+      (
+        await httpFetch(origin + path, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+      ).status
+    ).toBe(401);
+    for (const invalid of [
+      { ...body, userId: 'foreign' },
+      { ...body, useAi: 'yes' },
+      { ...body, dayPlanVersion: 0 },
+    ])
+      expect(
+        (
+          await httpFetch(origin + path, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(invalid),
+          })
+        ).status
+      ).toBe(400);
+    expect(upstream).not.toHaveBeenCalled();
+    upstream.mockResolvedValue(new Response('{}', { status: 200 }));
+    const response = await httpFetch(origin + path, {
+      method: 'POST',
+      headers: { ...headers, 'x-user-id': 'foreign' },
+      body: JSON.stringify(body),
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(upstream).toHaveBeenCalledWith(
+      expect.stringContaining('/meals/meal/equivalence-suggestions'),
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ 'x-user-id': userId }),
+        body: JSON.stringify(body),
+      })
+    );
+    upstream.mockResolvedValue(
+      new Response(JSON.stringify({ message: 'Proveedor no disponible' }), {
+        status: 503,
+      })
+    );
+    expect(
+      (
+        await httpFetch(origin + path, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ ...body, useAi: true }),
+        })
+      ).status
+    ).toBe(503);
+  });
   it('protects and validates the product equivalence write before forwarding the verified owner', async () => {
     const path =
       '/api/macrofit/me/days/2026-10-23/meals/meal/product-equivalence';

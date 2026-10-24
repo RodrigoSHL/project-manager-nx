@@ -27,7 +27,8 @@ aporte = cantidad consumida / cantidad de referencia × aporte de la regla
 El backend vuelve a calcular todos los aportes; ignora snapshots enviados por el
 cliente. La selección explícita tiene prioridad sobre una coincidencia exacta de
 ID o nombre. Los casos ambiguos, sin equivalencia o con unidades incompatibles
-quedan pendientes. No hay coincidencias difusas ni conversiones inferidas por IA.
+quedan pendientes. El cálculo automático no usa coincidencias difusas ni conversiones inferidas por IA.
+Las sugerencias por nombres relacionados requieren una selección y confirmación explícitas.
 La precisión se mantiene al sumar; solo se redondea al mostrar.
 
 Se admiten `g`, `ml`, `unit` y `scoop`. Una conversión de gramos a otra unidad
@@ -85,3 +86,50 @@ Los writes usan los bloqueos transaccionales por usuario que ya emplean los
 registros personales. Se preservan la atomicidad de lotes y los reintentos
 idempotentes. Los errores reales de almacenamiento y análisis siguen llegando
 al cliente; no se generan alimentos ni consumos ficticios.
+
+## Sugerencias revisables al clasificar
+
+En el clasificador del diario, **Sugerir equivalencia** consulta las reglas reales
+que ya están guardadas: las de la pauta fijada de ese día (incluidas sus reglas
+locales de productos) y, al seleccionar un producto propio, las de la última
+versión de la cuenta. No modifica datos. La respuesta distingue el origen,
+la coincidencia de nombre y lo que falta verificar. Cada tarjeta muestra la
+cantidad/unidad de referencia y el aporte proporcional del consumo actual.
+
+Se priorizan identificadores y nombres/alias exactos. Los nombres relacionados
+son candidatos para revisar, nunca selecciones automáticas; se excluyen
+preparaciones explícitamente contradictorias y referencias libres que no
+identifiquen exactamente el alimento. Si hay varias opciones, el usuario elige.
+Una marca o una palabra genérica de preparación no basta para relacionar comidas.
+La búsqueda conservadora puede dejar sin sugerencia un sinónimo no configurado.
+
+**Comparar con IA** es opcional y requiere pulsar su botón. Gemini solo puede
+seleccionar identificadores de un conjunto acotado de referencias relacionadas:
+no devuelve cantidades, grupos o porciones nuevos. El servidor recupera esos
+valores de la regla guardada y rechaza claves desconocidas o salidas inválidas.
+Solo se envían nombres/marca del alimento y nombres, alias (hasta ocho), unidad
+y estado libre de hasta veinte referencias; no se envían perfil, metas, diario,
+credenciales, nutrientes ni notas personales. Usa el modelo, los límites,
+concurrencia, plazo y manejo de errores compartidos de los otros análisis.
+No requiere variables ni dependencias nuevas.
+
+Sin una referencia adecuada (por ejemplo, mostaza ausente de la pauta), se indica
+qué falta y se ofrece continuar pendiente. No se consulta al proveedor cuando
+no hay candidatos elegibles. Pocas calorías no implican que sea libre; los macros
+no se convierten a grupos de intercambio. Una respuesta de IA vacía o un error
+se muestran como tales, sin reemplazarlos por recomendaciones ficticias.
+
+**Aplicar al formulario** rellena una propuesta; no guarda nada. El usuario revisa
+la referencia, las unidades y el aporte, y confirma con el guardado existente.
+Si las unidades no son compatibles, debe declarar el consumo en la unidad de
+la referencia. Solo se usa una conversión `gramsPerUnit` ya configurada.
+Las respuestas no sobrescriben ediciones manuales al llegar. Cambiar de producto,
+catálogo, versión, consumo o cerrar el modal descarta la solicitud anterior.
+
+`POST /api/macrofit/me/days/:date/meals/:id/equivalence-suggestions` pasa por el
+BFF con JWT y valida cuerpo estricto (`productId?`, `dayPlanVersion`,
+`catalogPlanVersion`, `useAi`). Comprueba propietario del registro/producto y
+versiones (409 si cambiaron), responde con `Cache-Control: no-store` y conserva
+la versión histórica del diario. No crea registros ni fija pautas al consultar.
+La API interna usa el mismo guard de identidad del módulo personal.
+No agrega migraciones, tablas, servicios Docker ni cambios de infraestructura.

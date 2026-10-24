@@ -9,6 +9,7 @@ import {
   Settings,
   NutritionPlanInput,
   dailyLogSchema,
+  equivalenceSuggestionsSchema,
   productEquivalenceResultSchema,
   ProductEquivalenceInput,
 } from '@project-manager/macrofit-contracts';
@@ -18,6 +19,9 @@ import {
   nutritionEntities,
 } from './entities/nutrition.entity';
 import { NutritionService } from './nutrition.service';
+import { EquivalenceSuggestionsController } from './equivalence-suggestions.controller';
+import { EquivalenceSuggestionsService } from './equivalence-suggestions.service';
+import { PlateAnalysisService } from '../plate-analysis/plate-analysis.service';
 import { NutritionController } from './nutrition.controller';
 import { AddNutritionPlans1792742400000 } from '../../migrations/1792742400000-AddNutritionPlans';
 import { AddDayProductEquivalences1792785600000 } from '../../migrations/1792785600000-AddDayProductEquivalences';
@@ -86,6 +90,7 @@ suite('Nutrition PostgreSQL integration', () => {
     ],
     synchronize: false,
   });
+  const rankEquivalences = jest.fn();
   let service: NutritionService;
   let app: INestApplication;
   let origin: string;
@@ -93,8 +98,16 @@ suite('Nutrition PostgreSQL integration', () => {
     await db.initialize();
     await db.runMigrations();
     const module = await Test.createTestingModule({
-      controllers: [NutritionController],
-      providers: [NutritionService, { provide: DataSource, useValue: db }],
+      controllers: [NutritionController, EquivalenceSuggestionsController],
+      providers: [
+        NutritionService,
+        EquivalenceSuggestionsService,
+        {
+          provide: PlateAnalysisService,
+          useValue: { rankEquivalences },
+        },
+        { provide: DataSource, useValue: db },
+      ],
     }).compile();
     app = module.createNestApplication();
     app.setGlobalPrefix('api');
@@ -1042,6 +1055,243 @@ suite('Nutrition PostgreSQL integration', () => {
       { group: 'fats', portions: 2 },
     ]);
     expect(result.day.meals[0].amountGrams).toBe(item.amountGrams);
+  });
+  it('suggests only owned stored rules, checks versions, and leaves all persisted records untouched', async () => {
+    const owner = randomUUID(),
+      stranger = randomUUID();
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Santiago',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+    const plan: NutritionPlanInput = {
+      name: 'Plan de prueba',
+      startsOn: today,
+      enabled: true,
+      targets: {
+        protein: 10,
+        carbs: 4,
+        fats: 2,
+        dairy: 3,
+        fruits: 3,
+        veggies: null,
+        supplements: 0,
+      },
+      waterTargetMl: 2000,
+      waterIsMinimum: false,
+      rules: [
+        {
+          id: 'carne-ref',
+          name: 'Carne',
+          foodIds: [food.id],
+          aliases: [],
+          referenceAmount: 50,
+          unit: 'g',
+          free: false,
+          contributions: [{ group: 'protein', portions: 1 }],
+          notes: 'Referencia de prueba.',
+        },
+      ],
+    };
+    await service.savePlan(owner, plan);
+    await service.saveFood(owner, food);
+    const item = meal();
+    await service.addMeals(owner, today, [item]);
+    await service.savePlan(owner, {
+      ...plan,
+      name: 'Nueva versión',
+      targets: { ...plan.targets, protein: 12 },
+    });
+    const beforeDay = await service.getDay(owner, today),
+      beforeAccount = await service.getAccount(owner);
+    const path = `/days/${today}/meals/${item.id}/equivalence-suggestions`;
+    const body = {
+      productId: food.id,
+      dayPlanVersion: 1,
+      catalogPlanVersion: 2,
+      useAi: false,
+    };
+    const post = (input: unknown, userId: string = owner) =>
+      call(path, {
+        method: 'POST',
+        headers: { 'x-user-id': userId },
+        body: JSON.stringify(input),
+      });
+    const response = await post(body);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    const result = equivalenceSuggestionsSchema.parse(await response.json());
+    expect(result.suggestions[0]).toMatchObject({
+      origin: 'day',
+      rule: { id: 'carne-ref', referenceAmount: 50 },
+    });
+    expect(result.basis).toMatchObject({
+      dayPlanVersion: 1,
+      catalogPlanVersion: 2,
+    });
+    expect((await post({ ...body, userId: stranger })).status).toBe(400);
+    expect((await post({ ...body, referenceAmount: 1 })).status).toBe(400);
+    expect((await post({ ...body, catalogPlanVersion: 1 })).status).toBe(409);
+    expect((await post({ ...body, dayPlanVersion: 2 })).status).toBe(409);
+    expect((await post({ ...body, productId: 'foreign' })).status).toBe(404);
+    expect((await post(body, stranger)).status).toBe(404);
+    expect((await post(body, 'invalid')).status).toBe(401);
+    expect(await service.getDay(owner, today)).toEqual(beforeDay);
+    expect(await service.getAccount(owner)).toEqual(beforeAccount);
+  });
+  it('configures an owned product without a meal and preserves frozen diaries, nutrients and plan targets', async () => {
+    const owner = randomUUID(),
+      foreign = randomUUID();
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Santiago',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+    const tomorrow = new Date(
+      new Date(today + 'T00:00:00Z').getTime() + 86400000
+    )
+      .toISOString()
+      .slice(0, 10);
+    const product = { ...food, name: 'Carne marca propia' };
+    await service.saveFood(owner, product);
+    const path = `/foods/${product.id}/equivalence`;
+    const input = {
+      expectedPlanVersion: 1,
+      equivalence: {
+        referenceAmount: 100,
+        unit: 'g',
+        free: false,
+        contributions: [{ group: 'protein', portions: 2 }],
+        notes: 'Referencia confirmada de prueba.',
+      },
+    };
+    const put = (body: unknown, userId: string = owner) =>
+      call(path, {
+        method: 'PUT',
+        headers: { 'x-user-id': userId },
+        body: JSON.stringify(body),
+      });
+    expect((await put(input)).status).toBe(400);
+    const pending = await call(`/foods/${product.id}/equivalence-suggestions`, {
+      method: 'POST',
+      headers: { 'x-user-id': owner },
+      body: JSON.stringify({ catalogPlanVersion: null, useAi: true }),
+    });
+    expect(pending.status).toBe(200);
+    expect(
+      equivalenceSuggestionsSchema.parse(await pending.json())
+    ).toMatchObject({
+      status: 'insufficient',
+      source: 'saved',
+      basis: { mealId: null, dayPlanVersion: null, catalogPlanVersion: null },
+    });
+    expect(rankEquivalences).not.toHaveBeenCalled();
+    await service.savePlan(owner, {
+      name: 'Pauta de prueba',
+      startsOn: today,
+      enabled: true,
+      targets: {
+        protein: 10,
+        carbs: 4,
+        fats: 2,
+        dairy: 3,
+        fruits: 3,
+        veggies: null,
+        supplements: 0,
+      },
+      waterTargetMl: 2000,
+      waterIsMinimum: false,
+      rules: [
+        {
+          id: 'carne-base',
+          name: 'Carne',
+          foodIds: [],
+          aliases: [],
+          referenceAmount: 50,
+          unit: 'g',
+          free: false,
+          contributions: [{ group: 'protein', portions: 1 }],
+          notes: '',
+        },
+      ],
+    });
+    await service.addMeals(owner, today, [meal()]);
+    await service.changeWater(owner, today, {
+      operationId: randomUUID(),
+      amountMl: 500,
+    });
+    const before = await service.getDay(owner, today),
+      account = await service.getAccount(owner);
+    const saved = await put(input);
+    expect(saved.status).toBe(200);
+    const result = await saved.json();
+    expect(result.customFoods).toEqual(account.customFoods);
+    expect(result.nutritionPlan).toMatchObject({
+      version: 2,
+      targets: account.nutritionPlan?.targets,
+      startsOn: today,
+    });
+    expect(result.nutritionPlan.rules.at(-1)).toMatchObject({
+      foodIds: [product.id],
+      name: product.name,
+      ...input.equivalence,
+    });
+    expect(await service.getDay(owner, today)).toEqual(before);
+    const suggested = await call(
+      `/foods/${product.id}/equivalence-suggestions`,
+      {
+        method: 'POST',
+        headers: { 'x-user-id': owner },
+        body: JSON.stringify({ catalogPlanVersion: 2, useAi: false }),
+      }
+    );
+    expect(suggested.headers.get('cache-control')).toBe('no-store');
+    expect(
+      equivalenceSuggestionsSchema.parse(await suggested.json()).suggestions[0]
+    ).toMatchObject({
+      origin: 'catalog',
+      match: 'exact',
+      rule: { foodIds: [product.id], referenceAmount: 100 },
+    });
+    await service.addMeals(owner, tomorrow, [
+      { ...meal(), foodName: product.name },
+    ]);
+    expect(
+      (await service.getDay(owner, tomorrow)).meals[0].pauta?.contributions
+    ).toEqual([{ group: 'protein', portions: 4 }]);
+    expect((await put(input)).status).toBe(409);
+    expect((await put({ ...input, userId: foreign })).status).toBe(400);
+    expect(
+      (
+        await put({
+          ...input,
+          expectedPlanVersion: 2,
+          equivalence: { ...input.equivalence, free: true },
+        })
+      ).status
+    ).toBe(400);
+    expect((await put(input, foreign)).status).toBe(404);
+    expect(
+      (
+        await call(`/foods/foreign/equivalence`, {
+          method: 'PUT',
+          headers: { 'x-user-id': owner },
+          body: JSON.stringify(input),
+        })
+      ).status
+    ).toBe(404);
+    expect(
+      (
+        await call(`/foods/${product.id}/equivalence-suggestions`, {
+          method: 'POST',
+          headers: { 'x-user-id': foreign },
+          body: JSON.stringify({ catalogPlanVersion: 2, useAi: false }),
+        })
+      ).status
+    ).toBe(404);
+    expect((await service.getAccount(owner)).nutritionPlan?.version).toBe(2);
   });
   it('survives a new database connection and runs migration down/up cleanly', async () => {
     await db.destroy();

@@ -5,6 +5,7 @@ import {
   Delete,
   Get,
   Header,
+  HttpCode,
   Param,
   Post,
   Put,
@@ -13,6 +14,9 @@ import {
 } from '@nestjs/common';
 import { z } from 'zod';
 import {
+  equivalenceSuggestionRequestSchema,
+  productSuggestionRequestSchema,
+  saveProductEquivalenceSchema,
   addMealsSchema,
   dateSchema,
   foodSchema,
@@ -97,6 +101,50 @@ export class MacrofitRecordsController {
       `${day(date)}/meals/${segment(id)}/product-equivalence`,
       'PUT',
       parse(productEquivalenceSchema, body)
+    );
+  }
+  @Post('foods/:id/equivalence-suggestions')
+  @HttpCode(200)
+  @Header('Cache-Control', 'no-store')
+  productSuggestions(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() body: unknown
+  ) {
+    return this.send(
+      req,
+      `/foods/${segment(id)}/equivalence-suggestions`,
+      'POST',
+      parse(productSuggestionRequestSchema, body)
+    );
+  }
+  @Put('foods/:id/equivalence')
+  productEquivalence(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() body: unknown
+  ) {
+    return this.send(
+      req,
+      `/foods/${segment(id)}/equivalence`,
+      'PUT',
+      parse(saveProductEquivalenceSchema, body)
+    );
+  }
+  @Post('days/:date/meals/:id/equivalence-suggestions')
+  @HttpCode(200)
+  @Header('Cache-Control', 'no-store')
+  suggestions(
+    @Req() req: AuthenticatedRequest,
+    @Param('date') date: string,
+    @Param('id') id: string,
+    @Body() body: unknown
+  ) {
+    return this.send(
+      req,
+      `${day(date)}/meals/${segment(id)}/equivalence-suggestions`,
+      'POST',
+      parse(equivalenceSuggestionRequestSchema, body)
     );
   }
   @Get('days/:date')

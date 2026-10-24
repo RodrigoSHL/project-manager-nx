@@ -12,11 +12,65 @@ previstas. Cada equivalencia declara cantidad y unidad de referencia, preparaci�
 nombres alternativos exactos y aportes a uno o varios grupos. Los alimentos libres
 no necesitan aportes numéricos.
 
-La referencia precargable es editable y requiere guardar para activarse. Se basa
-en las tablas revisadas del documento aportado; no asigna automáticamente metas
-calóricas ni convierte el menú de ejemplo en una distribución obligatoria.
-Se muestra la discrepancia de 50/100 g de pollo del documento al cargarla.
-Se omiten equivalencias del catálogo que no se pudieron confirmar en esas tablas.
+Las equivalencias guardadas se exploran como lista o cuadrícula, con búsqueda
+por nombre, alias o preparación indicada en el nombre, filtros de grupo de aporte y unidad,
+conteos y páginas alfabéticas de 12 registros. Los alimentos libres tienen su
+propio filtro; los grupos sin aportes no se ofrecen como opciones vacías.
+Preparación y notas se despliegan por alimento. Editar y quitar usan botones
+con iconos, nombres accesibles y ayudas; la edición recibe el foco y se lleva
+a la vista. Filtrar, paginar o cambiar de vista no altera el borrador: guardar
+siempre envía todas sus reglas, incluyendo las que no se muestran.
+
+En **Mi pauta → Explorar plantillas** está «Pauta de intercambios · base julio
+2026», versión 1: 133 equivalencias en 18 categorías, que cubren todas las filas
+de alimentos y los tres aportes explícitos de proteína en polvo/barras del
+Word aportado durante el desarrollo. Una regla puede agrupar varios alimentos
+que comparten cantidad y aportes. La búsqueda incluye nombres alternativos,
+preparación y medida casera. Los datos personales y los consejos clínicos del
+documento no se publican.
+
+El catálogo versionado está en
+`libs/macrofit-contracts/src/nutrition-plan-templates.ts`, independiente de
+`COMMON_FOODS` y de los nutrientes del catálogo. `getNutritionPlanTemplates()`
+entrega copias; agregar otra plantilla consiste en registrar sus metadatos,
+definiciones y versión allí. No hay una plantilla obligatoria ni una copia
+compartida mutable entre usuarios. No se requiere una migración o seed sobre
+cuentas existentes: al guardar se utiliza `nutrition_plans` con el flujo
+versionado y autenticado habitual.
+
+La carga actualiza el **borrador**: añade las referencias faltantes y reemplaza
+las que tienen el mismo ID de la base por la versión auditada (cantidades,
+aportes, nombres y notas). Conserva las reglas adicionales, incluidas las de
+productos propios. La regla antigua separada de naranja se consolida en la fila
+compartida de frutas para evitar vínculos duplicados. El usuario puede optar explícitamente por reemplazar todas
+las reglas. Las metas y agua se importan solo al marcar su casilla (marcada
+inicialmente para una pauta sin reglas); por defecto una pauta existente
+conserva sus metas. Nombre, fecha y estado activo se conservan. No se permite
+importar mientras haya una equivalencia en edición ni superar 250 reglas.
+La búsqueda/filtrado no limita la carga: siempre se importa la plantilla completa.
+
+Hay vista previa, categorías, medidas caseras y notas para las discrepancias:
+
+- Pollo: tabla de 50 g cocidos, ejemplo de 100 g; se usa la tabla.
+- Galletas de arroz: 5 unidades / 35 g por porción; se usa la tabla, no el
+  conteo contradictorio del ejemplo.
+- Quesillo light: se conservan las alternativas de 60 y 90 g; su alias común
+  no produce una clasificación automática cuando es ambiguo.
+- Frambuesas, moras y arándanos: 1 taza con rango de 120–130 g. Se mantiene
+  `cup` sin `gramsPerUnit`; los gramos solos quedan pendientes. Puede indicarse
+  el consumo en tazas al clasificar.
+- Yogurt proteico, Crackelet y scoop: unidades nativas sin inventar pesos.
+- Se separan legumbres crudas, cocidas y frescas, soya cruda/cocida y conservas
+  al agua/en aceite. Las verduras conservan sus medidas informativas y son
+  libres según la meta del documento; no incluyen papas, choclo ni legumbres.
+
+**Guardar pauta en mi cuenta** crea la copia editable por usuario. Solo se
+recalcula el diario de hoy si se marca su opción explícita; el historial sigue
+con su versión. Las metas 10/4/2/3/3 son las del documento de referencia, no una
+recomendación universal. No se asignan metas calóricas ni se convierte el menú
+de ejemplo en una distribución obligatoria. Tampoco se crean productos con
+macros ficticios: los promedios por grupo del Word no son fichas nutricionales
+por alimento; esas fichas se agregan desde etiquetas o productos verificados.
 
 `libs/macrofit-contracts/src/pauta.ts` implementa el cálculo compartido:
 
@@ -31,7 +85,7 @@ quedan pendientes. El cálculo automático no usa coincidencias difusas ni conve
 Las sugerencias por nombres relacionados requieren una selección y confirmación explícitas.
 La precisión se mantiene al sumar; solo se redondea al mostrar.
 
-Se admiten `g`, `ml`, `unit` y `scoop`. Una conversión de gramos a otra unidad
+Se admiten `g`, `ml`, `unit`, `scoop` y `cup` (tazas). Una conversión de gramos a otra unidad
 solo se permite cuando se configura `gramsPerUnit`. Una cantidad adicional de
 pauta permite registrar, por ejemplo, una barra por unidad mientras los
 nutrientes del análisis siguen calculados sobre su peso real.

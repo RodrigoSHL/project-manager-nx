@@ -147,11 +147,11 @@ export const MealSection: React.FC<MealSectionProps> = ({
       >
         <p className="sr-only">{subtitle}</p>
         {entries.length > 0 && (
-          <div className="mb-4 rounded-xl border border-slate-700/50 bg-slate-800/30 p-3 sm:p-4">
-            <p className="mb-3 text-xs font-semibold text-slate-300">
+          <div className="mb-2 rounded-xl border border-slate-700/50 bg-slate-800/30 p-2.5 sm:p-3">
+            <p className="mb-1.5 text-[11px] font-semibold text-slate-300">
               Total consumido en {title.toLowerCase()}
             </p>
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+            <dl className="grid grid-cols-4 gap-x-2 sm:gap-x-4">
               {[
                 {
                   label: 'Energía',
@@ -179,9 +179,11 @@ export const MealSection: React.FC<MealSectionProps> = ({
                 },
               ].map(({ label, value, unit, color }) => (
                 <div key={label}>
-                  <dt className="text-xs text-slate-400">{label}</dt>
+                  <dt className="text-[10px] text-slate-400 sm:text-xs">
+                    {label}
+                  </dt>
                   <dd
-                    className={`mt-1 text-lg font-semibold tabular-nums ${color}`}
+                    className={`mt-0.5 text-sm font-semibold tabular-nums sm:text-base ${color}`}
                   >
                     {new Intl.NumberFormat('es-CL', {
                       maximumFractionDigits: 1,

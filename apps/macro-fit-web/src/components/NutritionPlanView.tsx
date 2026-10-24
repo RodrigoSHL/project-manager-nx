@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Plus } from 'lucide-react';
 import {
   NutritionPlan,
   NutritionPlanInput,
@@ -11,9 +12,9 @@ import {
   PautaRule,
   QUANTITY_LABELS,
   FoodItem,
-  formatPortions,
 } from '../types/nutrition';
-import { createPautaTemplate } from '../data/pauta-template';
+import { PautaRulesBrowser } from './PautaRulesBrowser';
+import { NutritionTemplatePicker } from './NutritionTemplatePicker';
 import { getTodayDateString } from '../hooks/useMacroStore';
 import { useSaveAction } from '../hooks/useSaveAction';
 
@@ -65,9 +66,15 @@ export function NutritionPlanView({
     !plan || !isNutritionPlanConfigured(plan)
   );
   const [editing, setEditing] = useState<PautaRule | null>(null);
-  const [search, setSearch] = useState('');
+  const editorRef = useRef<HTMLDivElement>(null);
+  const editingId = editing?.id;
+  useEffect(() => {
+    if (!editingId) return;
+    editorRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    editorRef.current?.querySelector('input')?.focus({ preventScroll: true });
+  }, [editingId]);
   const [validationError, setValidationError] = useState('');
-  const [templateLoaded, setTemplateLoaded] = useState(false);
+  const [templateMessage, setTemplateMessage] = useState('');
   const { save, saveError } = useSaveAction();
   const commitRule = () => {
     if (!editing) return;
@@ -118,7 +125,7 @@ export function NutritionPlanView({
           if (!parsed.success) {
             setValidationError(
               !isNutritionPlanConfigured(draft)
-                ? 'Todavía faltan metas o equivalencias. Pulsa Cargar referencia o completa ambos apartados antes de activar la pauta.'
+                ? 'Todavía faltan metas o equivalencias. Explora las plantillas o completa ambos apartados antes de activar la pauta.'
                 : 'Revisa las metas y equivalencias: las cantidades deben ser válidas y no puede haber grupos repetidos.'
             );
             return;
@@ -185,27 +192,24 @@ export function NutritionPlanView({
               </span>
             </label>
           )}
-          <button
-            type="button"
-            onClick={() => {
-              setDraft(createPautaTemplate(draft.startsOn));
-              setEditing(null);
-              setTemplateLoaded(true);
-              setValidationError('');
-            }}
-            className="rounded-lg border border-emerald-500/40 px-3 py-2 text-xs font-semibold text-emerald-300"
-          >
-            Cargar referencia de la pauta revisada (10 / 4 / 2 / 3 / 3)
-          </button>
-          {templateLoaded && (
-            <p className="text-xs text-amber-200">
-              Referencia editable de las tablas del documento. Para pollo se
-              usan 50 g cocidos por porción; un ejemplo del Word dice 100 g y
-              requiere confirmación con tu nutricionista. El agua figura como
-              más de 2 litros. Revisa las equivalencias antes de guardar.
-            </p>
-          )}
         </div>
+        <NutritionTemplatePicker
+          draft={draft}
+          disabled={!!editing}
+          onApply={(next, message) => {
+            setDraft(next);
+            setTemplateMessage(message);
+            setValidationError('');
+          }}
+        />
+        {templateMessage && (
+          <p
+            role="status"
+            className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm text-emerald-200"
+          >
+            {templateMessage}
+          </p>
+        )}
         <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
           <h3 className="font-semibold">Metas diarias de porciones</h3>
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -287,7 +291,7 @@ export function NutritionPlanView({
             <button
               type="button"
               disabled={draft.rules.length >= 250}
-              className="text-sm font-semibold text-emerald-300"
+              className="flex min-h-11 items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-400/5 px-3 text-sm font-semibold text-emerald-300 hover:bg-emerald-400/15"
               onClick={() =>
                 setEditing({
                   id: crypto.randomUUID(),
@@ -302,7 +306,7 @@ export function NutritionPlanView({
                 })
               }
             >
-              + Agregar equivalencia
+              <Plus size={17} aria-hidden /> Agregar equivalencia
             </button>
           </div>
           <p className="text-xs text-slate-400">
@@ -311,15 +315,11 @@ export function NutritionPlanView({
             nombre alternativo. No se asumen conversiones entre gramos, volumen
             y unidades.
           </p>
-          <input
-            aria-label="Buscar equivalencias"
-            placeholder="Buscar equivalencia…"
-            className={field}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
           {editing && (
-            <div className="space-y-3 rounded-xl border border-emerald-500/40 bg-slate-950 p-3">
+            <div
+              ref={editorRef}
+              className="scroll-mt-24 space-y-3 rounded-xl border border-emerald-500/40 bg-slate-950 p-3"
+            >
               <h4 className="text-sm font-semibold">Editar equivalencia</h4>
               <label className="block text-xs">
                 Nombre (incluye preparación y marca si corresponde)
@@ -518,64 +518,19 @@ export function NutritionPlanView({
               </div>
             </div>
           )}
-          <div className="max-h-96 space-y-2 overflow-y-auto">
-            {draft.rules
-              .filter((rule) =>
-                rule.name.toLowerCase().includes(search.toLowerCase())
-              )
-              .map((rule) => (
-                <div
-                  key={rule.id}
-                  className="flex items-start justify-between gap-3 rounded-xl bg-slate-950/70 p-3 text-xs"
-                >
-                  <div>
-                    <p className="font-semibold">{rule.name}</p>
-                    <p className="mt-1 text-slate-400">
-                      {rule.referenceAmount} {QUANTITY_LABELS[rule.unit]} →{' '}
-                      {rule.free
-                        ? 'Libre'
-                        : rule.contributions
-                            .map(
-                              (item) =>
-                                `${formatPortions(item.portions)} ${
-                                  PAUTA_LABELS[item.group]
-                                }`
-                            )
-                            .join(' + ')}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setEditing(structuredClone(rule))}
-                      className="text-emerald-300"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setDraft({
-                          ...draft,
-                          rules: draft.rules.filter(
-                            (item) => item.id !== rule.id
-                          ),
-                        })
-                      }
-                      className="text-rose-300"
-                    >
-                      Quitar
-                    </button>
-                  </div>
-                </div>
-              ))}
-          </div>
-          {!draft.rules.length && (
-            <p className="text-xs text-amber-300">
-              Agrega equivalencias para que los alimentos puedan sumar
-              porciones.
-            </p>
-          )}
+          <PautaRulesBrowser
+            rules={draft.rules}
+            onEdit={(rule) => setEditing(structuredClone(rule))}
+            onRemove={(rule) => {
+              setDraft((current) => ({
+                ...current,
+                rules: current.rules.filter((item) => item.id !== rule.id),
+              }));
+              setEditing((current) =>
+                current?.id === rule.id ? null : current
+              );
+            }}
+          />
         </div>
         {(validationError || saveError) && (
           <p role="alert" className="text-sm text-rose-300">

@@ -74,8 +74,9 @@ it('saves a configurable plan separately from calculated macros and shows it for
   await screen.findByText('Registrar comida con IA');
   expect(screen.queryByText('Avance de mi pauta')).toBeNull();
   fireEvent.click(screen.getAllByRole('button', { name: 'Mi pauta' })[0]);
+  fireEvent.click(screen.getByRole('button', { name: 'Explorar plantillas' }));
   fireEvent.click(
-    screen.getByRole('button', { name: /Cargar referencia de la pauta/ })
+    screen.getByRole('button', { name: 'Cargar plantilla en el borrador' })
   );
   fireEvent.change(screen.getByLabelText('Proteínas', { exact: true }), {
     target: { value: '12' },
@@ -139,8 +140,9 @@ it('guides repair of a previously empty plan and explicitly updates today withou
   expect(
     records.fetch.mock.calls.filter(([path]) => path.endsWith('/plan'))
   ).toHaveLength(0);
+  fireEvent.click(screen.getByRole('button', { name: 'Explorar plantillas' }));
   fireEvent.click(
-    screen.getByRole('button', { name: /Cargar referencia de la pauta/ })
+    screen.getByRole('button', { name: 'Cargar plantilla en el borrador' })
   );
   expect(
     (

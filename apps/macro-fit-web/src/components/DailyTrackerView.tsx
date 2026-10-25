@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { MacroProgressRings } from './MacroProgressRings';
+import { FoodGuideShortcut } from '../features/food-guide/FoodGuideView';
 import { PautaSummaryCard } from './PautaSummaryCard';
 import { MealSection } from './MealSection';
 import { WaterTrackerCard } from './WaterTrackerCard';
@@ -29,6 +30,7 @@ import {
 import { Camera, Mic, Sparkles, UtensilsCrossed } from 'lucide-react';
 
 interface DailyTrackerViewProps {
+  onOpenFoodGuide?: () => void;
   goals: MacroGoals;
   meals: MealEntry[];
   consumedTotals: {
@@ -84,6 +86,7 @@ interface DailyTrackerViewProps {
 }
 
 export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
+  onOpenFoodGuide,
   goals,
   meals,
   consumedTotals,
@@ -156,6 +159,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
 
   return (
     <div className="space-y-6 mx-auto pb-8 animate-in fade-in duration-300">
+      {onOpenFoodGuide && <FoodGuideShortcut onOpen={onOpenFoodGuide} />}
       {nutritionPlan && portionSummary ? (
         <>
           <PautaSummaryCard

@@ -7,6 +7,7 @@ import { WorkspaceSection } from '../components/workspace-navigation';
 import { PwaInstallModal } from '../components/PwaInstallModal';
 import { PwaUpdatePrompt } from '../components/PwaUpdatePrompt';
 import { DailyTrackerView } from '../components/DailyTrackerView';
+import { FoodGuideView } from '../features/food-guide/FoodGuideView';
 import { ProductsView } from '../components/ProductsView';
 import { NutritionPlanView } from '../components/NutritionPlanView';
 import { CalculatorView } from '../components/CalculatorView';
@@ -186,12 +187,18 @@ export function MacroFitWorkspace({
           id="workspace-content"
           className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-7 sm:py-8"
         >
-          {activeTab === 'tracker' && (
+          {(activeTab === 'tracker' || activeTab === 'food-guide') && (
             <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
-                <h2 className="text-2xl font-bold tracking-tight">Tu diario</h2>
+                <h2 className="text-2xl font-bold tracking-tight">
+                  {activeTab === 'food-guide'
+                    ? '¿Qué puedo comer?'
+                    : 'Tu diario'}
+                </h2>
                 <p className="mt-1.5 text-sm text-slate-400">
-                  Tus comidas, tus metas y tu progreso diario.
+                  {activeTab === 'food-guide'
+                    ? 'Dos análisis para comparar tus próximas opciones de comida.'
+                    : 'Tus comidas, tus metas y tu progreso diario.'}
                 </p>
               </div>
               <DiaryDatePicker
@@ -305,9 +312,23 @@ export function MacroFitWorkspace({
                   onSave={saveNutritionPlan}
                   onGoToTracker={() => setActiveTab('tracker')}
                 />
+              ) : activeTab === 'food-guide' ? (
+                <FoodGuideView
+                  key={selectedDate}
+                  date={selectedDate}
+                  goals={goals}
+                  meals={dailyLog.meals}
+                  foods={allFoods}
+                  plan={dayPlan}
+                  onOpenPlan={() => navigate('plan')}
+                  onOpenProducts={() => navigate('products')}
+                  onOpenDiary={() => navigate('tracker')}
+                  onAddMeal={addMealEntry}
+                />
               ) : activeTab === 'tracker' ? (
                 <DailyTrackerView
                   key={selectedDate}
+                  onOpenFoodGuide={() => navigate('food-guide')}
                   goals={goals}
                   meals={dailyLog.meals}
                   consumedTotals={consumedTotals}

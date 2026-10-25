@@ -28,6 +28,7 @@ import {
   SessionChangedError,
 } from '../features/auth/auth-session';
 import { readLegacyData } from '../features/auth/account-storage';
+import { scaleFoodNutrients } from '../utils/food-nutrients';
 
 export function getTodayDateString(): string {
   const now = new Date();
@@ -42,7 +43,6 @@ function entry(
   food: FoodItem,
   amountGrams: number
 ): MealEntry {
-  const ratio = amountGrams / food.servingSizeGrams;
   const now = new Date();
   return {
     id: crypto.randomUUID(),
@@ -51,10 +51,7 @@ function entry(
     foodName: food.name,
     amountGrams,
     quantity: { amount: amountGrams, unit: food.quantityUnit ?? 'g' },
-    calories: Math.round(food.calories * ratio),
-    protein: Number((food.protein * ratio).toFixed(1)),
-    carbs: Number((food.carbs * ratio).toFixed(1)),
-    fat: Number((food.fat * ratio).toFixed(1)),
+    ...scaleFoodNutrients(food, amountGrams),
     ...(food.pautaSelection ? { pautaSelection: food.pautaSelection } : {}),
     timestamp: `${String(now.getHours()).padStart(2, '0')}:${String(
       now.getMinutes()

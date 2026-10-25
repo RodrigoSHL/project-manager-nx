@@ -1,6 +1,7 @@
 import {
   BookOpen,
   Calculator,
+  Compass,
   ClipboardCheck,
   Package,
   Settings,
@@ -9,6 +10,7 @@ import {
 
 export type WorkspaceSection =
   | 'tracker'
+  | 'food-guide'
   | 'calculator'
   | 'plan'
   | 'products'
@@ -22,6 +24,7 @@ export const WORKSPACE_NAVIGATION: Array<{
     label: 'Seguimiento',
     items: [
       { id: 'tracker', label: 'Diario', icon: BookOpen },
+      { id: 'food-guide', label: 'Qué puedo comer', icon: Compass },
       { id: 'products', label: 'Mis productos', icon: Package },
       { id: 'plan', label: 'Mi pauta', icon: ClipboardCheck },
       { id: 'calculator', label: 'Calculadora', icon: Calculator },

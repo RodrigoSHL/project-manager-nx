@@ -22,6 +22,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { MacrofitApiClient } from './macrofit-api.client';
+import { webProductSearchInputSchema } from '@project-manager/macrofit-contracts';
 
 class AnalyzePlateBody {
   @IsOptional()
@@ -88,6 +89,16 @@ export class MacrofitApiController {
   @Get('macrofit/ready')
   ready() {
     return this.macrofit.ready();
+  }
+
+  @Post('macrofit/products/search-web')
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard)
+  searchProductsWeb(@Body() body: unknown) {
+    const parsed = webProductSearchInputSchema.safeParse(body);
+    if (!parsed.success)
+      throw new BadRequestException('Busca usando entre 2 y 100 caracteres.');
+    return this.macrofit.searchProductsWeb(parsed.data.query);
   }
 
   @Get('macrofit/products/search')

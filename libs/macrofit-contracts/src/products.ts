@@ -3,7 +3,24 @@ import { z } from 'zod';
 export const barcodeSchema = z
   .string()
   .regex(/^\d{8,14}$/, 'Usa un código de barras de 8 a 14 dígitos.');
-export const productSourceSchema = z
+export const webSourceSchema = z
+  .object({
+    title: z.string().trim().min(1).max(300),
+    url: z
+      .string()
+      .max(2048)
+      .url()
+      .refine((value) => {
+        try {
+          const url = new URL(value);
+          return url.protocol === 'https:' && !url.username && !url.password;
+        } catch {
+          return false;
+        }
+      }, 'La fuente debe usar HTTPS.'),
+  })
+  .strict();
+const originalProductSourceSchema = z
   .object({
     kind: z.enum(['manual', 'open_food_facts', 'label']),
     url: z
@@ -12,6 +29,15 @@ export const productSourceSchema = z
       .optional(),
   })
   .strict();
+export const productSourceSchema = z.union([
+  originalProductSourceSchema,
+  z
+    .object({
+      kind: z.literal('web_search'),
+      sources: z.array(webSourceSchema).min(1).max(5),
+    })
+    .strict(),
+]);
 
 // A draft deliberately distinguishes missing values from a declared zero.
 export const productDraftSchema = z
@@ -58,3 +84,18 @@ export const productSearchSchema = z
 export type ProductDraft = z.infer<typeof productDraftSchema>;
 export type ProductSource = z.infer<typeof productSourceSchema>;
 export type ProductSearchItem = z.infer<typeof productSearchItemSchema>;
+
+export const webProductSearchInputSchema = z
+  .object({
+    query: z.string().trim().min(2).max(100),
+  })
+  .strict();
+export const webProductSearchSchema = z
+  .object({
+    products: z.array(productSearchItemSchema).max(5),
+    message: z.string().max(1000),
+    // Provider search suggestions are displayed in a scriptless sandbox.
+    searchSuggestions: z.string().max(100000).nullable(),
+  })
+  .strict();
+export type WebProductSearch = z.infer<typeof webProductSearchSchema>;

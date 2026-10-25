@@ -58,6 +58,46 @@ describe('PlateAnalysisService provider contract', () => {
   const analyze = (service: PlateAnalysisService) =>
     service.analyzePlate(Buffer.from('pixels'), 'image/jpeg');
 
+  it('uses real Google Search under the same concurrency quota as plate analysis', async () => {
+    let finish!: (value: unknown) => void;
+    generate.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        })
+    );
+    const service = new PlateAnalysisService();
+    const pending = service.searchProductsWeb('Mostaza Heinz');
+    expect(generate.mock.calls[0][0].config.tools).toEqual([
+      { googleSearch: {} },
+    ]);
+    expect(generate.mock.calls[0][0].model).toBe(
+      process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite'
+    );
+    generate.mockResolvedValueOnce({ text: JSON.stringify(result) });
+    await analyze(service);
+    let finishSecond!: (value: unknown) => void;
+    generate.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishSecond = resolve;
+        })
+    );
+    const second = service.searchProductsWeb('Mayonesa');
+    await expect(analyze(service)).rejects.toMatchObject({ status: 429 });
+    // Release both requests without waiting for a timeout.
+    finish({
+      text: '{"products":[]}',
+      candidates: [{ groundingMetadata: { webSearchQueries: ['mostaza'] } }],
+    });
+    await pending;
+    finishSecond({
+      text: '{"products":[]}',
+      candidates: [{ groundingMetadata: { webSearchQueries: ['mayonesa'] } }],
+    });
+    await second;
+  });
+
   const textResult = {
     ...result,
     meal_type: 'lunch',

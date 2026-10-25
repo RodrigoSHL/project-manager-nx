@@ -27,6 +27,14 @@ export class MacrofitApiClient {
     );
   }
 
+  searchProductsWeb(query: string) {
+    return this.request('/products/search-web', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
+  }
+
   analyzeProductLabel(file: { buffer: Buffer; mimetype: string }) {
     const form = new FormData();
     form.append(

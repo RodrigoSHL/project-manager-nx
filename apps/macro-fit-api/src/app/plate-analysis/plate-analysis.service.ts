@@ -26,8 +26,14 @@ import {
 } from './dto/equivalence-ranking.dto';
 import {
   ProductDraft,
+  WebProductSearch,
   productDraftSchema,
 } from '@project-manager/macrofit-contracts';
+import {
+  parseWebProducts,
+  webProductInstruction,
+  webProductResponseSchema,
+} from '../products/web-product-search';
 import {
   MEAL_TYPES,
   MealType,
@@ -272,6 +278,27 @@ No alteres ni recalcules los nutrientes guardados. Una propuesta no se guarda ni
     );
   }
 
+  searchProductsWeb(query: string): Promise<WebProductSearch> {
+    return this.analyzeContent(
+      JSON.stringify({ query, market: 'Chile' }),
+      webProductInstruction,
+      false,
+      false,
+      false,
+      false,
+      true
+    );
+  }
+
+  private analyzeContent(
+    contents: GenerateContentParameters['contents'],
+    systemInstruction: string,
+    textMode: false,
+    labelMode: false,
+    suggestionMode: false,
+    proposalMode: false,
+    webSearchMode: true
+  ): Promise<WebProductSearch>;
   private analyzeContent(
     contents: GenerateContentParameters['contents'],
     systemInstruction: string,
@@ -304,12 +331,14 @@ No alteres ni recalcules los nutrientes guardados. Una propuesta no se guarda ni
     textMode = false,
     labelMode = false,
     suggestionMode = false,
-    proposalMode = false
+    proposalMode = false,
+    webSearchMode = false
   ): Promise<
     | PlateAnalysisResponseDto
     | ProductDraft
     | EquivalenceRanking
     | EquivalenceProposal
+    | WebProductSearch
   > {
     this.readiness();
     if (Date.now() - this.windowStart >= 60000) {
@@ -330,7 +359,9 @@ No alteres ni recalcules los nutrientes guardados. Una propuesta no se guarda ni
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
-      const responseSchema = proposalMode
+      const responseSchema = webSearchMode
+        ? webProductResponseSchema
+        : proposalMode
         ? {
             type: Type.OBJECT,
             properties: {
@@ -573,6 +604,7 @@ No alteres ni recalcules los nutrientes guardados. Una propuesta no se guarda ni
         contents,
         config: {
           systemInstruction,
+          ...(webSearchMode ? { tools: [{ googleSearch: {} }] } : {}),
           responseMimeType: 'application/json',
           responseSchema,
           temperature: 0.2,
@@ -628,6 +660,7 @@ No alteres ni recalcules los nutrientes guardados. Una propuesta no se guarda ni
         }
       };
       const response = await Promise.race([generate(), timeout]);
+      if (webSearchMode) return parseWebProducts(response);
       if (proposalMode) {
         const parsed = equivalenceProposalSchema.safeParse(
           (() => {

@@ -101,6 +101,50 @@ describe('MacroFit BFF HTTP contract', () => {
     );
     expect(analysis.status).toBe(200);
   });
+  it('forwards an authenticated web product search and preserves provider errors', async () => {
+    upstream.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          products: [],
+          message: 'Sin resultados',
+          searchSuggestions: null,
+        }),
+        { status: 200 }
+      )
+    );
+    const call = (body: unknown) =>
+      httpFetch(`${origin}/api/macrofit/products/search-web`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+    const response = await call({ query: ' Mostaza Heinz ' });
+    expect(response.status).toBe(200);
+    expect(upstream).toHaveBeenCalledWith(
+      expect.stringContaining('/products/search-web'),
+      expect.objectContaining({
+        method: 'POST',
+        body: '{"query":"Mostaza Heinz"}',
+      })
+    );
+    upstream.mockClear();
+    for (const body of [
+      { query: 'x' },
+      { query: 3 },
+      { query: 'mostaza', source: 'invented' },
+    ])
+      expect((await call(body)).status).toBe(400);
+    expect(upstream).not.toHaveBeenCalled();
+    upstream.mockResolvedValueOnce(
+      new Response('{"message":"Cuota agotada"}', { status: 503 })
+    );
+    const failure = await call({ query: 'Mostaza' });
+    expect(failure.status).toBe(503);
+    expect((await failure.json()).message).toBe('Cuota agotada');
+  });
   it('rejects incorrect platform credentials', async () => {
     const response = await httpFetch(`${origin}/api/auth/login`, {
       method: 'POST',
@@ -114,6 +158,7 @@ describe('MacroFit BFF HTTP contract', () => {
     '/api/macrofit/analyze-meal-text',
     '/api/macrofit/analyze-plate',
     '/api/macrofit/analyze-product-label',
+    '/api/macrofit/products/search-web',
     '/api/analyze-plate',
   ])(
     'rejects missing, invalid and expired sessions at %s before calling the provider',

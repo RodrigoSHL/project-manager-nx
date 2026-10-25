@@ -6,6 +6,7 @@ import {
 } from '@project-manager/macrofit-contracts';
 import { ProductsController } from './products.controller';
 import { normalizeSearchProduct, ProductsService } from './products.service';
+import { PlateAnalysisService } from '../plate-analysis/plate-analysis.service';
 
 // Frozen contract used by the installed frontend before product previews.
 const installedClientSchema = z
@@ -22,10 +23,33 @@ const product = normalizeSearchProduct({
 describe('Product search compatibility', () => {
   const cached = { products: [product] };
   const search = jest.fn().mockResolvedValue(cached);
-  const controller = new ProductsController({
-    search,
-  } as unknown as ProductsService);
-  beforeEach(() => search.mockClear());
+  const searchProductsWeb = jest.fn().mockResolvedValue({ products: [] });
+  const controller = new ProductsController(
+    {
+      search,
+    } as unknown as ProductsService,
+    { searchProductsWeb } as unknown as PlateAnalysisService
+  );
+  beforeEach(() => {
+    search.mockClear();
+    searchProductsWeb.mockClear();
+  });
+
+  it.each([
+    null,
+    {},
+    { query: 'a' },
+    { query: 9 },
+    { query: 'a'.repeat(101) },
+    { query: 'mostaza', url: 'https://example.com' },
+  ])('validates a web query %j before the paid call', (body) => {
+    expect(() => controller.searchWeb(body)).toThrow();
+    expect(searchProductsWeb).not.toHaveBeenCalled();
+  });
+  it('trims a valid web search query', async () => {
+    await controller.searchWeb({ query: ' Mostaza Heinz ' });
+    expect(searchProductsWeb).toHaveBeenCalledWith('Mostaza Heinz');
+  });
 
   it('reproduces the installed client failure and keeps default searches compatible without changing the cache', async () => {
     expect(installedClientSchema.safeParse(cached).success).toBe(false);

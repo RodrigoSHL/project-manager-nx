@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Camera, PackagePlus, Search } from 'lucide-react';
+import { Camera, PackagePlus, Search, Sparkles } from 'lucide-react';
 import {
   FoodItem,
   ProductDraft,
@@ -15,7 +15,8 @@ import {
   ProductEquivalenceModal,
   SuggestProductEquivalence,
 } from './ProductEquivalenceModal';
-import { searchProducts } from '../utils/productApi';
+import { searchProducts, searchProductsWeb } from '../utils/productApi';
+import { ProductSources, SearchSuggestions } from './ProductSources';
 import { emptyProduct, ProductEditor, productToDraft } from './ProductEditor';
 import { ProductSearchResult } from './ProductSearchResult';
 
@@ -55,6 +56,9 @@ export function ProductsView({
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ProductSearchItem[] | null>(null);
   const [searching, setSearching] = useState(false);
+  const [searchMode, setSearchMode] = useState<'catalog' | 'web'>('catalog');
+  const [searchMessage, setSearchMessage] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editor, setEditor] = useState<{
@@ -71,18 +75,36 @@ export function ProductsView({
     },
     []
   );
-  async function search(event: React.FormEvent) {
-    event.preventDefault();
+  async function search(mode: 'catalog' | 'web') {
     if (searching || reviewing) return;
+    if (query.trim().length < 2 || query.trim().length > 100) {
+      setError('Busca usando entre 2 y 100 caracteres.');
+      return;
+    }
     const controller = new AbortController();
     active.current = controller;
-    const timeout = setTimeout(() => controller.abort(), 18000);
+    const timeout = setTimeout(
+      () => controller.abort(),
+      mode === 'web' ? 38000 : 18000
+    );
     setSearching(true);
+    setSearchMode(mode);
+    setSearchMessage(null);
+    setSuggestions(null);
     setError(null);
     setResults(null);
     try {
-      const products = await searchProducts(query, controller.signal);
-      if (!controller.signal.aborted) setResults(products);
+      if (mode === 'web') {
+        const response = await searchProductsWeb(query, controller.signal);
+        if (!controller.signal.aborted) {
+          setResults(response.products);
+          setSearchMessage(response.message);
+          setSuggestions(response.searchSuggestions);
+        }
+      } else {
+        const products = await searchProducts(query, controller.signal);
+        if (!controller.signal.aborted) setResults(products);
+      }
     } catch (failure) {
       if (active.current === controller)
         setError(
@@ -99,12 +121,20 @@ export function ProductsView({
     }
   }
   async function review(product: ProductSearchItem) {
-    if (!product.barcode || reviewing || searching) return;
-    const existing = foods.find((food) => food.barcode === product.barcode);
+    if (reviewing || searching) return;
+    const existing = product.barcode
+      ? foods.find((food) => food.barcode === product.barcode)
+      : undefined;
     if (existing) {
       setEditor({ food: existing, draft: productToDraft(existing) });
       return;
     }
+    if (product.source.kind === 'web_search') {
+      const { preview: _preview, ...draft } = product;
+      setEditor({ draft });
+      return;
+    }
+    if (!product.barcode) return;
     const controller = new AbortController();
     active.current = controller;
     const timeout = setTimeout(() => controller.abort(), 18000);
@@ -237,8 +267,11 @@ export function ProductsView({
           ingrésalo manualmente o fotografía su tabla nutricional.
         </p>
         <form
-          onSubmit={search}
-          className="mt-4 flex flex-col gap-3 sm:flex-row"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void search('catalog');
+          }}
+          className="mt-4 flex flex-wrap gap-3"
         >
           <input
             aria-label="Nombre o código de barras"
@@ -248,14 +281,27 @@ export function ProductsView({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Ej.: mayonesa Kraft o código de barras"
-            className="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-950 px-3 py-3"
+            className="min-w-0 basis-full flex-1 rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 xl:basis-48"
           />
           <button
             disabled={searching || !!reviewing}
             className="flex items-center justify-center gap-2 rounded-xl bg-slate-800 px-4 py-3 font-semibold text-emerald-300 disabled:opacity-50"
           >
             <Search className="h-4 w-4" />
-            {searching ? 'Buscando…' : 'Buscar en Open Food Facts'}
+            {searching && searchMode === 'catalog'
+              ? 'Buscando…'
+              : 'Buscar en Open Food Facts'}
+          </button>
+          <button
+            type="button"
+            disabled={searching || !!reviewing}
+            onClick={() => void search('web')}
+            className="flex items-center justify-center gap-2 rounded-xl border border-violet-400/30 bg-violet-400/15 px-4 py-3 font-semibold text-violet-200 disabled:opacity-50"
+          >
+            <Sparkles className="h-4 w-4" aria-hidden="true" />
+            {searching && searchMode === 'web'
+              ? 'Buscando en internet…'
+              : 'Buscar en internet con IA'}
           </button>
         </form>
         <p className="mt-3 text-xs text-slate-400">
@@ -280,15 +326,22 @@ export function ProductsView({
           </a>
           .
         </p>
+        <p className="mt-2 text-xs text-violet-200/80">
+          La búsqueda con IA consulta Google Search mediante Gemini y muestra
+          sus fuentes. Se envía solo tu consulta; puede consumir cuota del
+          proveedor. Tú revisas antes de guardar.
+        </p>
         {searching && (
           <p role="status" className="mt-3 text-sm text-slate-400">
-            Consultando el catálogo…
+            {searchMode === 'web'
+              ? 'Buscando productos y tablas nutricionales en internet…'
+              : 'Consultando el catálogo…'}
           </p>
         )}
         {results?.length === 0 && (
           <p role="status" className="mt-4 text-amber-300">
-            No encontramos ese producto. Usa el ingreso manual o la foto de la
-            etiqueta.
+            {searchMessage ||
+              'No encontramos ese producto. Usa el ingreso manual o la foto de la etiqueta.'}
           </p>
         )}
         {!!results?.length && (
@@ -298,21 +351,22 @@ export function ProductsView({
               disponibles antes de importar.
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              Vista previa del catálogo. Al revisar se consulta la ficha
-              vigente; los datos ausentes se completan desde la etiqueta.
+              {searchMode === 'web'
+                ? searchMessage
+                : 'Vista previa del catálogo. Al revisar se consulta la ficha vigente; los datos ausentes se completan desde la etiqueta.'}
             </p>
             <ul className="mt-3 space-y-3">
-              {results.map((product) => {
-                const existing = foods.find(
-                  (food) => food.barcode === product.barcode
-                );
+              {results.map((product, index) => {
+                const existing =
+                  product.barcode &&
+                  foods.find((food) => food.barcode === product.barcode);
                 return (
                   <ProductSearchResult
-                    key={product.barcode}
+                    key={`${product.barcode ?? product.name}-${index}`}
                     product={product}
                     existing={!!existing}
                     busy={!!reviewing || searching}
-                    reviewing={reviewing === product.barcode}
+                    reviewing={!!reviewing && reviewing === product.barcode}
                     onReview={() => void review(product)}
                   />
                 );
@@ -320,6 +374,7 @@ export function ProductsView({
             </ul>
           </>
         )}
+        <SearchSuggestions html={suggestions} />
       </section>
       {error && (
         <p role="alert" className="rounded-xl bg-rose-950/30 p-4 text-rose-300">
@@ -393,6 +448,9 @@ export function ProductsView({
                     >
                       Fuente: Open Food Facts · ODbL / DBCL
                     </a>
+                  )}
+                  {food.productSource && (
+                    <ProductSources source={food.productSource} />
                   )}
                   <p
                     className={`mt-3 text-xs ${

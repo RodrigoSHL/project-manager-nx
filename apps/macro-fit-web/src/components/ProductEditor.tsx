@@ -9,6 +9,7 @@ import {
 } from '../types/nutrition';
 import { readProductLabel } from '../utils/productApi';
 import { useSaveAction } from '../hooks/useSaveAction';
+import { ProductSources } from './ProductSources';
 
 export const emptyProduct = (): ProductDraft => ({
   name: null,
@@ -123,7 +124,10 @@ export function ProductEditor({
         barcode: result.barcode ?? old.barcode,
         // Preserve OFF attribution when the label fills an imported draft.
         source:
-          old.source.kind === 'open_food_facts' ? old.source : result.source,
+          old.source.kind === 'open_food_facts' ||
+          old.source.kind === 'web_search'
+            ? old.source
+            : result.source,
       }));
       setValues(
         Object.fromEntries(
@@ -456,6 +460,7 @@ export function ProductEditor({
                 · base ODbL, contenidos DBCL. Revisa los datos con tu envase.
               </p>
             )}
+            <ProductSources source={draft.source} />
             <label className="flex items-start gap-2 text-sm">
               <input
                 required

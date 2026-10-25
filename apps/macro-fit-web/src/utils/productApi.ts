@@ -3,6 +3,8 @@ import {
   ProductSearchItem,
   productDraftSchema,
   productSearchSchema,
+  webProductSearchSchema,
+  WebProductSearch,
 } from '../types/nutrition';
 import {
   authenticatedFetch,
@@ -53,6 +55,28 @@ export async function searchProducts(
     );
   return result.data.products;
 }
+export async function searchProductsWeb(
+  query: string,
+  signal: AbortSignal
+): Promise<WebProductSearch> {
+  const data = await request(
+    'products/search-web',
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ query: query.trim() }),
+      cache: 'no-store',
+    },
+    signal
+  );
+  const result = webProductSearchSchema.safeParse(data);
+  if (!result.success)
+    throw new Error(
+      'La búsqueda con IA entregó datos inválidos. Prueba con Open Food Facts o tu etiqueta.'
+    );
+  return result.data;
+}
+
 export async function readProductLabel(
   file: File,
   signal: AbortSignal

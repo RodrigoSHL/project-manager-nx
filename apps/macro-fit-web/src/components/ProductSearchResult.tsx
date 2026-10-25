@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowRight, ImageOff, Package } from 'lucide-react';
 import { ProductSearchItem } from '../types/nutrition';
+import { ProductSources } from './ProductSources';
 
 const number = new Intl.NumberFormat('es-CL', { maximumFractionDigits: 2 });
 
@@ -38,7 +39,7 @@ export function ProductSearchResult({
   return (
     <li
       className="@container rounded-xl border border-slate-700 bg-slate-950/30 p-3"
-      aria-label={`${name} · ${product.barcode}`}
+      aria-label={`${name}${product.barcode ? ` · ${product.barcode}` : ''}`}
     >
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 @min-[54rem]:grid-cols-[minmax(0,1.15fr)_minmax(18rem,1fr)_auto] @min-[54rem]:items-center @min-[54rem]:gap-x-5">
         <div className="flex min-w-0 items-start gap-3">
@@ -99,22 +100,26 @@ export function ProductSearchResult({
                 {preview.categories.join(' · ')}
               </p>
             )}
-            <p className="mt-1 break-all text-xs text-slate-500">
-              Código:{' '}
-              {product.source.url ? (
-                <a
-                  href={product.source.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="underline underline-offset-2"
-                  aria-label={`Ver ficha de ${name} en Open Food Facts (${product.barcode})`}
-                >
-                  {product.barcode}
-                </a>
-              ) : (
-                product.barcode
-              )}
-            </p>
+            {product.barcode && (
+              <p className="mt-1 break-all text-xs text-slate-500">
+                Código:{' '}
+                {product.source.kind === 'open_food_facts' &&
+                product.source.url ? (
+                  <a
+                    href={product.source.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline underline-offset-2"
+                    aria-label={`Ver ficha de ${name} en Open Food Facts (${product.barcode})`}
+                  >
+                    {product.barcode}
+                  </a>
+                ) : (
+                  product.barcode
+                )}
+              </p>
+            )}
+            <ProductSources source={product.source} />
           </div>
         </div>
         <div className="order-3 col-span-2 min-w-0 border-t border-slate-800 pt-2 @min-[54rem]:order-2 @min-[54rem]:col-span-1 @min-[54rem]:border-t-0 @min-[54rem]:pt-0">
@@ -130,6 +135,8 @@ export function ProductSearchResult({
               <p className="text-slate-400">
                 {product.referenceUnit
                   ? `Por ${product.referenceAmount} ${product.referenceUnit}`
+                  : product.source.kind === 'web_search'
+                  ? 'Base pendiente · revisa la etiqueta'
                   : 'Por 100 · confirma si es g o ml'}
               </p>
             )}

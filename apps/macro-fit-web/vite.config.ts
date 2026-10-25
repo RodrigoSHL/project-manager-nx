@@ -34,13 +34,14 @@ export default defineConfig(() => ({
     nxViteTsPaths(),
     nxCopyAssetsPlugin(['*.md']),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       injectRegister: 'auto',
       manifest: {
         id: '/',
         name: 'MacroFit - Calculadora y Contador de Macros',
         short_name: 'MacroFit',
-        description: 'Calculadora de macronutrientes y contador de consumo diario',
+        description:
+          'Calculadora de macronutrientes y contador de consumo diario',
         start_url: '/',
         scope: '/',
         display: 'standalone',
@@ -73,7 +74,7 @@ export default defineConfig(() => ({
         navigateFallbackDenylist: [/^\/api\//],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
-        skipWaiting: true,
+        skipWaiting: false,
       },
       devOptions: { enabled: false },
     }),

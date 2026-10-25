@@ -5,6 +5,7 @@ import { DiaryDatePicker } from '../components/DiaryDatePicker';
 import { ProfileView, SettingsView } from '../components/AccountViews';
 import { WorkspaceSection } from '../components/workspace-navigation';
 import { PwaInstallModal } from '../components/PwaInstallModal';
+import { PwaUpdatePrompt } from '../components/PwaUpdatePrompt';
 import { DailyTrackerView } from '../components/DailyTrackerView';
 import { ProductsView } from '../components/ProductsView';
 import { NutritionPlanView } from '../components/NutritionPlanView';
@@ -25,6 +26,7 @@ export function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="*" element={<RequireSession />} />
       </Routes>
+      <PwaUpdatePrompt />
     </AuthProvider>
   );
 }

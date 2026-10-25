@@ -6,8 +6,10 @@ import {
 } from '@project-manager/macrofit-contracts';
 
 // Only nutrition facts and plan references are sent, never account/profile data.
-export type EquivalenceProposalFood = Pick<FoodItem, 'id' | 'name' | 'brand'> &
-  Partial<
+export type EquivalenceProposalFood = Pick<
+  FoodItem,
+  'id' | 'name' | 'brand'
+> & { preparation?: string } & Partial<
     Pick<
       FoodItem,
       | 'servingSizeGrams'
@@ -19,6 +21,7 @@ export type EquivalenceProposalFood = Pick<FoodItem, 'id' | 'name' | 'brand'> &
     >
   >;
 export type EquivalenceProposalInput = {
+  source?: 'product' | 'recorded-meal';
   food: Omit<EquivalenceProposalFood, 'id'>;
   targets: NutritionPlan['targets'];
   references: Array<

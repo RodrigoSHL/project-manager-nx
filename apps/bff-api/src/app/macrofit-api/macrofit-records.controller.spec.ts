@@ -39,6 +39,64 @@ describe('MacroFit personal records BFF', () => {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
   };
+  it('authenticates and validates a meal equivalence without a product, using only the JWT owner upstream', async () => {
+    const path = '/api/macrofit/me/days/2026-10-25/meals/meal/equivalence';
+    const body = {
+      expectedPlanVersion: 2,
+      expectedDayPlanVersion: 1,
+      expectedQuantity: { amount: 200, unit: 'g' },
+      equivalence: {
+        referenceAmount: 100,
+        unit: 'g',
+        free: false,
+        contributions: [{ group: 'carbs', portions: 1 }],
+        notes: 'Referencia sintética de prueba.',
+      },
+    };
+    expect(
+      (
+        await httpFetch(origin + path, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+      ).status
+    ).toBe(401);
+    for (const invalid of [
+      { ...body, userId: 'forged' },
+      { ...body, productId: 'foreign' },
+      { ...body, expectedQuantity: { amount: 0, unit: 'g' } },
+      { ...body, equivalence: { ...body.equivalence, contributions: [] } },
+    ])
+      expect(
+        (
+          await httpFetch(origin + path, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify(invalid),
+          })
+        ).status
+      ).toBe(400);
+    expect(upstream).not.toHaveBeenCalled();
+    upstream.mockResolvedValue(new Response('{}', { status: 200 }));
+    expect(
+      (
+        await httpFetch(origin + path, {
+          method: 'PUT',
+          headers: { ...headers, 'x-user-id': 'forged' },
+          body: JSON.stringify(body),
+        })
+      ).status
+    ).toBe(200);
+    expect(upstream).toHaveBeenCalledWith(
+      expect.stringContaining('/days/2026-10-25/meals/meal/equivalence'),
+      expect.objectContaining({
+        method: 'PUT',
+        headers: expect.objectContaining({ 'x-user-id': userId }),
+      })
+    );
+    expect(JSON.parse(upstream.mock.calls[0][1].body)).toEqual(body);
+  });
   it('authenticates and validates direct product suggestions and equivalence writes without a diary route', async () => {
     const base = '/api/macrofit/me/foods/own-product';
     const input = {

@@ -8,6 +8,7 @@ export const equivalenceSuggestionRequestSchema = z
     catalogPlanVersion: z.number().int().positive(),
     useAi: z.boolean(),
     mode: z.enum(['compare', 'estimate']).optional(),
+    preparation: z.string().trim().max(800).optional(),
   })
   .strict()
   .refine(

@@ -29,6 +29,7 @@ import {
   pautaSelectionSchema,
   updateMealQuantitySchema,
   productEquivalenceSchema,
+  mealEquivalenceSchema,
 } from '@project-manager/macrofit-contracts';
 import { NutritionService } from './nutrition.service';
 
@@ -98,6 +99,20 @@ export class NutritionController {
       parseInput(dateSchema, date),
       parseInput(identifierSchema, id),
       parseInput(productEquivalenceSchema, body)
+    );
+  }
+  @Put('days/:date/meals/:id/equivalence')
+  classifyMealEquivalence(
+    @Headers('x-user-id') userId: string,
+    @Param('date') date: string,
+    @Param('id') id: string,
+    @Body() body: unknown
+  ) {
+    return this.service.classifyMealEquivalence(
+      userId,
+      parseInput(dateSchema, date),
+      parseInput(identifierSchema, id),
+      parseInput(mealEquivalenceSchema, body)
     );
   }
   @Get('days/:date')

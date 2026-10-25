@@ -12,6 +12,7 @@ import {
   equivalenceSuggestionsSchema,
   productEquivalenceResultSchema,
   ProductEquivalenceInput,
+  MealEquivalenceInput,
   createPautaTemplate,
 } from '@project-manager/macrofit-contracts';
 import {
@@ -129,6 +130,155 @@ suite('Nutrition PostgreSQL integration', () => {
         ...init.headers,
       },
     });
+  it('creates a reusable meal equivalence without a product, preserving day snapshots and nutrients atomically', async () => {
+    const owner = randomUUID();
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Santiago',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+    const nextDate = new Date(today + 'T12:00:00Z');
+    nextDate.setUTCDate(nextDate.getUTCDate() + 1);
+    const frozenDate = nextDate.toISOString().slice(0, 10);
+    nextDate.setUTCDate(nextDate.getUTCDate() + 1);
+    const reuseDate = nextDate.toISOString().slice(0, 10);
+    const original = createPautaTemplate(today);
+    await service.savePlan(owner, original);
+    const potatoes: MealEntry = {
+      ...meal(),
+      foodId: 'ai-potatoes',
+      foodName: 'Papas fritas en air fryer',
+      amountGrams: 200,
+      quantity: { amount: 200, unit: 'g' },
+      calories: 320,
+      protein: 5,
+      carbs: 60,
+      fat: 7,
+    };
+    const sibling = meal();
+    await service.addMeals(owner, today, [potatoes, sibling]);
+    await service.addMeals(owner, frozenDate, [
+      { ...potatoes, id: randomUUID() },
+    ]);
+    const historic = await service.getDay(owner, frozenDate);
+    const before = await service.getDay(owner, today);
+    await service.savePlan(owner, {
+      ...original,
+      targets: { ...original.targets, carbs: 6 },
+    });
+    const context = await service.getEquivalenceContext(
+      owner,
+      today,
+      potatoes.id,
+      {
+        dayPlanVersion: 1,
+        catalogPlanVersion: 2,
+        useAi: true,
+        mode: 'estimate',
+      }
+    );
+    expect(context.food).toMatchObject({
+      servingSizeGrams: 200,
+      quantityUnit: 'g',
+      calories: 320,
+      protein: 5,
+      carbs: 60,
+      fat: 7,
+    });
+    const input: MealEquivalenceInput = {
+      expectedPlanVersion: 2,
+      expectedDayPlanVersion: 1,
+      expectedQuantity: { amount: 200, unit: 'g' },
+      equivalence: {
+        referenceAmount: 100,
+        unit: 'g',
+        free: false,
+        contributions: [
+          { group: 'carbs', portions: 1 },
+          { group: 'fats', portions: 0.25 },
+        ],
+        notes: 'Solo una equivalencia sintética para probar persistencia.',
+      },
+    };
+    const route = `/days/${today}/meals/${potatoes.id}/equivalence`;
+    for (const [body, userId, status] of [
+      [input, randomUUID(), 404],
+      [{ ...input, productId: 'foreign' }, owner, 400],
+      [{ ...input, expectedQuantity: { amount: 100, unit: 'g' } }, owner, 409],
+      [
+        { ...input, equivalence: { ...input.equivalence, unit: 'ml' } },
+        owner,
+        400,
+      ],
+    ] as const) {
+      const response = await call(route, {
+        method: 'PUT',
+        headers: { 'x-user-id': userId },
+        body: JSON.stringify(body),
+      });
+      expect(response.status).toBe(status);
+    }
+    expect((await service.getAccount(owner)).nutritionPlan?.version).toBe(2);
+    expect(await service.getDay(owner, today)).toEqual(before);
+    const response = await call(route, {
+      method: 'PUT',
+      headers: { 'x-user-id': owner },
+      body: JSON.stringify(input),
+    });
+    expect(response.status).toBe(200);
+    const result = await response.json();
+    expect(productEquivalenceResultSchema.safeParse(result).success).toBe(true);
+    expect(result.account.customFoods).toEqual([]);
+    expect(result.account.nutritionPlan.version).toBe(3);
+    expect(result.account.nutritionPlan.targets.carbs).toBe(6);
+    expect(result.day.nutritionPlan.version).toBe(1);
+    expect(result.day.nutritionPlan.targets).toEqual(original.targets);
+    expect(result.day.meals[0]).toMatchObject({
+      ...potatoes,
+      pauta: {
+        status: 'matched',
+        ruleName: potatoes.foodName,
+        contributions: [
+          { group: 'carbs', portions: 2 },
+          { group: 'fats', portions: 0.5 },
+        ],
+      },
+    });
+    expect(result.day.meals[1]).toEqual(before.meals[1]);
+    expect(await service.getDay(owner, frozenDate)).toEqual(historic);
+    await expect(
+      service.classifyMealEquivalence(owner, today, potatoes.id, input)
+    ).rejects.toMatchObject({ status: 409 });
+    const reused = await service.addMeals(owner, reuseDate, [
+      { ...potatoes, id: randomUUID(), foodId: 'new-recognition-id' },
+    ]);
+    expect(reused.meals[0].pauta?.contributions).toEqual([
+      { group: 'carbs', portions: 2 },
+      { group: 'fats', portions: 0.5 },
+    ]);
+    const resized = await service.updateMealQuantity(
+      owner,
+      today,
+      potatoes.id,
+      {
+        expectedQuantity: { amount: 200, unit: 'g' },
+        quantity: { amount: 100, unit: 'g' },
+      }
+    );
+    expect(resized.meals[0]).toMatchObject({
+      calories: 160,
+      protein: 2.5,
+      carbs: 30,
+      fat: 3.5,
+      pauta: {
+        contributions: [
+          { group: 'carbs', portions: 1 },
+          { group: 'fats', portions: 0.25 },
+        ],
+      },
+    });
+  });
   it('starts without any profile or fabricated records and requires a valid internal identity', async () => {
     expect(await service.getAccount(a)).toEqual({
       profile: null,

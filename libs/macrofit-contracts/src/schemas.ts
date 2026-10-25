@@ -281,9 +281,8 @@ export const productRuleInputSchema = z
         : rule.contributions.length > 0,
     'Indica porciones o marca el producto como libre según tu pauta.'
   );
-export const productEquivalenceSchema = z
+export const mealEquivalenceSchema = z
   .object({
-    productId: identifierSchema,
     expectedPlanVersion: z.number().int().positive(),
     expectedDayPlanVersion: z.number().int().positive(),
     expectedQuantity: mealQuantitySchema,
@@ -291,6 +290,10 @@ export const productEquivalenceSchema = z
     quantity: mealQuantitySchema.optional(),
   })
   .strict();
+export type MealEquivalenceInput = z.infer<typeof mealEquivalenceSchema>;
+export const productEquivalenceSchema = mealEquivalenceSchema.extend({
+  productId: identifierSchema,
+});
 export type ProductEquivalenceInput = z.infer<typeof productEquivalenceSchema>;
 export const saveProductEquivalenceSchema = z
   .object({

@@ -26,6 +26,7 @@ import {
   UpdateMealQuantity,
   mealEntrySchema,
   ProductEquivalenceInput,
+  MealEquivalenceInput,
   ProductEquivalenceResult,
   PautaRule,
   nutritionPlanSchema,
@@ -271,6 +272,25 @@ export class NutritionService {
     id: string,
     input: ProductEquivalenceInput
   ): Promise<ProductEquivalenceResult> {
+    return this.classifyEquivalence(userId, date, id, input, input.productId);
+  }
+
+  classifyMealEquivalence(
+    userId: string,
+    date: string,
+    id: string,
+    input: MealEquivalenceInput
+  ): Promise<ProductEquivalenceResult> {
+    return this.classifyEquivalence(userId, date, id, input);
+  }
+
+  private classifyEquivalence(
+    userId: string,
+    date: string,
+    id: string,
+    input: MealEquivalenceInput,
+    productId?: string
+  ): Promise<ProductEquivalenceResult> {
     return this.transaction(userId, async (manager) => {
       const row = await manager.findOneBy(NutritionMealEntryEntity, {
         userId,
@@ -278,11 +298,13 @@ export class NutritionService {
         id,
       });
       if (!row) throw new NotFoundException('Consumo no encontrado.');
-      const product = await manager.findOneBy(NutritionFoodEntity, {
-        userId,
-        id: input.productId,
-      });
-      if (!product)
+      const product = productId
+        ? await manager.findOneBy(NutritionFoodEntity, {
+            userId,
+            id: productId,
+          })
+        : null;
+      if (productId && !product)
         throw new NotFoundException('El producto no existe en tu catálogo.');
       const latest = await manager.findOne(NutritionPlanEntity, {
         where: { userId },
@@ -315,7 +337,9 @@ export class NutritionService {
         throw new ConflictException(
           'La cantidad consumida cambió. Actualiza el diario antes de clasificar.'
         );
-      const rule = this.productRule(product, input.equivalence);
+      const rule = product
+        ? this.productRule(product, input.equivalence)
+        : this.mealRule(row.data, input.equivalence);
       const ruleId = rule.id;
       const upsertRules = (rules: PautaRule[]) =>
         this.upsertProductRule(rules, rule);
@@ -373,6 +397,24 @@ export class NutritionService {
         day: await this.daily(manager, userId, date),
       };
     });
+  }
+
+  private mealRule(
+    meal: MealEntry,
+    equivalence: MealEquivalenceInput['equivalence']
+  ): PautaRule {
+    return {
+      id:
+        'meal-' +
+        createHash('sha256')
+          .update(JSON.stringify([meal.foodId, meal.foodName, equivalence]))
+          .digest('hex')
+          .slice(0, 32),
+      name: meal.foodName,
+      foodIds: [meal.foodId],
+      aliases: [],
+      ...equivalence,
+    };
   }
 
   private productRule(
@@ -585,7 +627,17 @@ export class NutritionService {
               name: product.data.name,
               brand: product.data.brand,
             }
-          : { id: meal.data.foodId, name: meal.data.foodName },
+          : {
+              id: meal.data.foodId,
+              name: meal.data.foodName,
+              servingSizeGrams:
+                meal.data.quantity?.amount ?? meal.data.amountGrams,
+              quantityUnit: meal.data.quantity?.unit ?? ('g' as const),
+              calories: meal.data.calories,
+              protein: meal.data.protein,
+              carbs: meal.data.carbs,
+              fat: meal.data.fat,
+            },
       };
     });
   }

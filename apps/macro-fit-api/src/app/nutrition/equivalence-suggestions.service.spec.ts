@@ -135,6 +135,113 @@ describe('Grounded equivalence suggestions', () => {
     expect(result.suggestions[0].rule).toBe(tuna);
     expect(rankEquivalences).not.toHaveBeenCalled();
   });
+  it('finds singular potato references for a plural prepared-food name without confirming that preparation', () => {
+    const potato = rule('Papa cocida', {
+      contributions: [{ group: 'carbs', portions: 1 }],
+    });
+    const results = relatedReferences(
+      { id: 'ai-potatoes', name: 'Papas fritas en air fryer' },
+      plan([potato])
+    );
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({ exact: false, rule: potato });
+  });
+  it('proposes from a recorded meal without a saved product, preserving the consumed base and preparation', async () => {
+    const food = {
+      id: 'ai-potatoes',
+      name: 'Papas fritas en air fryer',
+      servingSizeGrams: 200,
+      quantityUnit: 'g',
+      calories: 320,
+      protein: 5,
+      carbs: 60,
+      fat: 7,
+    };
+    getEquivalenceContext.mockResolvedValue({
+      food,
+      day: plan([]),
+      catalog: plan([tuna], 2),
+    });
+    proposeEquivalence.mockResolvedValue({
+      proposal: {
+        referenceAmount: 100,
+        unit: 'g',
+        free: false,
+        contributions: [{ group: 'carbs', portions: 1 }],
+        confidence: 'low',
+        explanation: 'Propuesta sintética de prueba.',
+        uncertainty: 'Los macros del consumo son estimados.',
+        assumptions: ['Comprueba la preparación y el peso.'],
+      },
+      missingInfo: [],
+    });
+    const input = {
+      dayPlanVersion: 1,
+      catalogPlanVersion: 2,
+      useAi: true,
+      mode: 'estimate' as const,
+      preparation: 'Papas naturales; peso cocido, con aceite medido.',
+    };
+    const result = await service.suggest('owner', '2026-10-23', 'meal', input);
+    expect(equivalenceSuggestionsSchema.safeParse(result).success).toBe(true);
+    expect(result.basis).toMatchObject({ mealId: 'meal', productId: null });
+    expect(result.suggestions[0]).toMatchObject({
+      origin: 'estimate',
+      match: 'estimated',
+      confidence: 'low',
+    });
+    expect(proposeEquivalence).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: 'recorded-meal',
+        food: expect.objectContaining({
+          servingSizeGrams: 200,
+          calories: 320,
+          carbs: 60,
+          preparation: input.preparation,
+        }),
+      })
+    );
+    expect(food).toEqual(
+      expect.objectContaining({ servingSizeGrams: 200, calories: 320 })
+    );
+  });
+  it('keeps unsupported meal proposals pending and propagates provider errors without a fabricated fallback', async () => {
+    getEquivalenceContext.mockResolvedValue({
+      food: {
+        id: 'ai-food',
+        name: 'Preparación casera',
+        servingSizeGrams: 200,
+        quantityUnit: 'g',
+        calories: 320,
+        protein: 5,
+        carbs: 60,
+        fat: 7,
+      },
+      day: plan([]),
+      catalog: plan([], 2),
+    });
+    proposeEquivalence.mockResolvedValueOnce({
+      proposal: null,
+      missingInfo: ['¿Cuánto aceite añadiste?'],
+    });
+    const input = {
+      dayPlanVersion: 1,
+      catalogPlanVersion: 2,
+      useAi: true,
+      mode: 'estimate' as const,
+    };
+    expect(
+      await service.suggest('owner', '2026-10-23', 'meal', input)
+    ).toMatchObject({
+      status: 'insufficient',
+      suggestions: [],
+      missingInfo: ['¿Cuánto aceite añadiste?'],
+    });
+    proposeEquivalence.mockRejectedValueOnce(new Error('Gemini unavailable'));
+    await expect(
+      service.suggest('owner', '2026-10-23', 'meal', input)
+    ).rejects.toThrow('Gemini unavailable');
+  });
   it('requires a complete product label before proposing a new equivalence, without assuming that mustard is free from its name alone', async () => {
     getEquivalenceContext.mockResolvedValue({
       food: { id: 'mustard', name: 'Mostaza Heinz', brand: 'Heinz' },

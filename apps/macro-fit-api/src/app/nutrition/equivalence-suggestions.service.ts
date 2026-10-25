@@ -58,7 +58,8 @@ const tokens = (value: string, brand = '') =>
           'descremado',
           'descremada',
         ].includes(word)
-    );
+    )
+    .map((word) => word.replace(/s$/, ''));
 // Explicitly incompatible preparations cannot be proposed even by the model.
 const incompatible = (a: string, b: string) =>
   [
@@ -160,9 +161,9 @@ export class EquivalenceSuggestionsService {
       input
     );
     return this.resolve(
-      context.food,
+      { ...context.food, preparation: input.preparation },
       context.day,
-      input.productId ? context.catalog : undefined,
+      context.catalog,
       {
         mealId,
         productId: input.productId ?? null,
@@ -236,7 +237,10 @@ export class EquivalenceSuggestionsService {
             `Falta una referencia de tu pauta para ${food.name}: cantidad, unidad y porciones, o una indicación explícita de que es libre. Puedes dejarlo pendiente y completar esa referencia después.`,
           ],
     });
-    if (basis.productId && !references.some((reference) => reference.exact)) {
+    if (
+      (basis.productId || basis.mealId) &&
+      !references.some((reference) => reference.exact)
+    ) {
       const reference = condimentReference(food);
       if (reference)
         return {
@@ -250,10 +254,6 @@ export class EquivalenceSuggestionsService {
         };
     }
     if (useAi && (mode === 'estimate' || !references.length)) {
-      if (!basis.productId)
-        return insufficient('saved', [
-          'Selecciona un producto de Mis productos para usar su ficha nutricional y guardar una equivalencia nueva.',
-        ]);
       return this.propose(food, catalog ?? day, basis, insufficient);
     }
     if (!references.length)
@@ -334,7 +334,9 @@ export class EquivalenceSuggestionsService {
       )
     )
       return insufficient('saved', [
-        'Completa en Mis productos la cantidad, unidad, calorías y macros de la ficha antes de pedir una propuesta.',
+        basis.productId
+          ? 'Completa en Mis productos la cantidad, unidad, calorías y macros de la ficha antes de pedir una propuesta.'
+          : 'Revisa la cantidad, unidad, calorías y macros del consumo antes de pedir una propuesta.',
       ]);
     // Balance the bounded context across groups; the first 40 rows alone can all
     // belong to the same section of a large imported plan.
@@ -351,9 +353,11 @@ export class EquivalenceSuggestionsService {
     }
     const result = equivalenceProposalSchema.parse(
       await this.analysis.proposeEquivalence({
+        source: basis.productId ? 'product' : 'recorded-meal',
         food: {
           name: food.name,
           ...(food.brand ? { brand: food.brand } : {}),
+          ...(food.preparation ? { preparation: food.preparation } : {}),
           servingSizeGrams: food.servingSizeGrams,
           quantityUnit: food.quantityUnit ?? 'g',
           calories: food.calories,

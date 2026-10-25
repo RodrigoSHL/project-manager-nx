@@ -29,6 +29,7 @@ import {
   pautaSelectionSchema,
   updateMealQuantitySchema,
   productEquivalenceSchema,
+  mealEquivalenceSchema,
 } from '@project-manager/macrofit-contracts';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { MacrofitApiClient } from './macrofit-api.client';
@@ -101,6 +102,20 @@ export class MacrofitRecordsController {
       `${day(date)}/meals/${segment(id)}/product-equivalence`,
       'PUT',
       parse(productEquivalenceSchema, body)
+    );
+  }
+  @Put('days/:date/meals/:id/equivalence')
+  classifyMealEquivalence(
+    @Req() req: AuthenticatedRequest,
+    @Param('date') date: string,
+    @Param('id') id: string,
+    @Body() body: unknown
+  ) {
+    return this.send(
+      req,
+      `${day(date)}/meals/${segment(id)}/equivalence`,
+      'PUT',
+      parse(mealEquivalenceSchema, body)
     );
   }
   @Post('foods/:id/equivalence-suggestions')

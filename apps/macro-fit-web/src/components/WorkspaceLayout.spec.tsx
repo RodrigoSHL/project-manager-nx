@@ -7,6 +7,7 @@ import {
   within,
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Sun } from 'lucide-react';
 import { MacroFitWorkspace } from '../app/app';
 import { nutritionFixture, testToken } from '../testing/nutrition-fixture';
 import { MealSection } from './MealSection';
@@ -133,7 +134,7 @@ describe('Collapsible meal sections', () => {
         mealType="lunch"
         title="Almuerzo"
         subtitle="Alimentos registrados"
-        icon="☀️"
+        icon={Sun}
         entries={[first]}
         onOpenAddFood={add}
         onOpenTextMeal={text}
@@ -180,7 +181,7 @@ describe('Collapsible meal sections', () => {
       mealType: 'lunch' as const,
       title: 'Almuerzo',
       subtitle: '',
-      icon: '☀️',
+      icon: Sun,
       onOpenAddFood: vi.fn(),
       onRemoveEntry: vi.fn(),
     };

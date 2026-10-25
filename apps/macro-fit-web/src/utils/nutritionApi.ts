@@ -39,7 +39,8 @@ export async function nutritionRequest<T>(
   const parsed = (
     path.endsWith('/equivalence-suggestions')
       ? equivalenceSuggestionsSchema
-      : path.endsWith('/product-equivalence')
+      : path.endsWith('/product-equivalence') ||
+        (path.startsWith('/days/') && path.endsWith('/equivalence'))
       ? productEquivalenceResultSchema
       : path.startsWith('/days/')
       ? dailyLogSchema

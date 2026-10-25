@@ -163,7 +163,7 @@ export function nutritionFixture(initial: NutritionAccount = testAccount) {
         );
     }
     const productClassification =
-      /^\/meals\/([^/]+)\/product-equivalence$/.exec(suffix);
+      /^\/meals\/([^/]+)\/(product-equivalence|equivalence)$/.exec(suffix);
     if (productClassification && log.nutritionPlan && account.nutritionPlan) {
       const product = account.customFoods.find(
         (food) => food.id === body.productId
@@ -171,12 +171,25 @@ export function nutritionFixture(initial: NutritionAccount = testAccount) {
       const entry = log.meals.find(
         (item) => item.id === productClassification[1]
       );
-      if (!product || !entry)
+      if (
+        !entry ||
+        (productClassification[2] === 'product-equivalence' && !product)
+      )
         throw new Error('Missing product or meal in fixture');
       const rule = {
-        id: 'product-' + product.id,
-        name: product.name,
-        foodIds: [product.id],
+        id:
+          productClassification[2] === 'product-equivalence'
+            ? 'product-' + product!.id
+            : 'meal-' + entry.id,
+        name:
+          productClassification[2] === 'product-equivalence'
+            ? product!.name
+            : entry.foodName,
+        foodIds: [
+          productClassification[2] === 'product-equivalence'
+            ? product!.id
+            : entry.foodId,
+        ],
         aliases: [],
         ...body.equivalence,
       };

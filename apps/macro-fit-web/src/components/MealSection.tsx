@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Camera, ChevronDown, Mic, Plus, Utensils, Zap } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { MealEntry, MealType } from '../types/nutrition';
 import { MealEntryCard } from './MealEntryCard';
 
@@ -7,7 +8,7 @@ interface MealSectionProps {
   mealType: MealType;
   title: string;
   subtitle: string;
-  icon: string;
+  icon: LucideIcon;
   entries: MealEntry[];
   onOpenAddFood: (mealType: MealType) => void;
   onOpenTemplates?: (mealType: MealType) => void;
@@ -22,7 +23,7 @@ export const MealSection: React.FC<MealSectionProps> = ({
   mealType,
   title,
   subtitle,
-  icon,
+  icon: Icon,
   entries,
   onOpenAddFood,
   onOpenTemplates,
@@ -66,10 +67,10 @@ export const MealSection: React.FC<MealSectionProps> = ({
             className="flex min-h-11 w-full items-center gap-2 sm:gap-3 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
           >
             <span
-              className="grid size-9 sm:size-11 shrink-0 place-items-center rounded-xl bg-slate-950/70 text-lg sm:text-xl"
+              className="grid size-9 sm:size-11 shrink-0 place-items-center rounded-xl border border-slate-800/70 bg-slate-950/50 text-slate-400"
               aria-hidden="true"
             >
-              {icon}
+              <Icon className="size-5" strokeWidth={1.75} />
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-xs sm:text-sm font-bold text-slate-100">

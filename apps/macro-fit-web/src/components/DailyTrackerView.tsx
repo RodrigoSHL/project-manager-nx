@@ -17,6 +17,7 @@ import {
   FoodItem,
   UpdateMealQuantity,
   ProductEquivalenceInput,
+  MealEquivalenceInput,
   MacroGoals,
   MealEntry,
   MealTemplate,
@@ -27,9 +28,24 @@ import {
   summarizePauta,
   isNutritionPlanConfigured,
 } from '../types/nutrition';
-import { Camera, Mic, Sparkles, UtensilsCrossed } from 'lucide-react';
+import {
+  Apple,
+  Camera,
+  Coffee,
+  Mic,
+  Moon,
+  Sandwich,
+  Sparkles,
+  Sun,
+  UtensilsCrossed,
+  Zap,
+} from 'lucide-react';
 
 interface DailyTrackerViewProps {
+  onClassifyMealEquivalence?: (
+    id: string,
+    input: MealEquivalenceInput
+  ) => Promise<boolean>;
   onOpenFoodGuide?: () => void;
   goals: MacroGoals;
   meals: MealEntry[];
@@ -86,6 +102,7 @@ interface DailyTrackerViewProps {
 }
 
 export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
+  onClassifyMealEquivalence,
   onOpenFoodGuide,
   goals,
   meals,
@@ -275,7 +292,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           mealType="breakfast"
           title="Desayuno"
           subtitle="Registra tus alimentos y cantidades"
-          icon="🌅"
+          icon={Coffee}
           entries={breakfastMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
@@ -291,7 +308,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           mealType="colacion_am"
           title="Colación Mañana"
           subtitle="Registra tus alimentos y cantidades"
-          icon="🍏"
+          icon={Apple}
           entries={colacionAmMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
@@ -307,7 +324,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           mealType="lunch"
           title="Almuerzo"
           subtitle="Registra tus alimentos y cantidades"
-          icon="☀️"
+          icon={Sun}
           entries={lunchMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
@@ -323,7 +340,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           mealType="colacion_pm"
           title="Colación Tarde"
           subtitle="Registra tus alimentos y cantidades"
-          icon="🥪"
+          icon={Sandwich}
           entries={colacionPmMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
@@ -339,7 +356,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           mealType="dinner"
           title="Cena"
           subtitle="Registra tus alimentos y cantidades"
-          icon="🌙"
+          icon={Moon}
           entries={dinnerMeals}
           onOpenAddFood={(type) => setSelectedMealType(type)}
           onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
@@ -356,7 +373,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
             mealType="snacks"
             title="Snacks Extra / Pre/Post Entreno"
             subtitle="Barras proteicas, colaciones adicionales"
-            icon="⚡"
+            icon={Zap}
             entries={snackMeals}
             onOpenAddFood={(type) => setSelectedMealType(type)}
             onOpenTemplates={(type) => setSelectedTemplateMealType(type)}
@@ -386,6 +403,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
           products={products}
           onSave={onClassifyMeal}
           onSaveProduct={onClassifyProduct}
+          onSaveMeal={onClassifyMealEquivalence}
           onSuggest={onSuggestEquivalences}
           onClose={closeReview}
           onOpenProducts={

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Package, Search, X } from 'lucide-react';
+import { Check, Package, Plus, Search, X } from 'lucide-react';
 import {
   FoodItem,
   MealEntry,
@@ -7,6 +7,7 @@ import {
   PautaRule,
   PautaSelection,
   ProductEquivalenceInput,
+  MealEquivalenceInput,
   PAUTA_GROUPS,
   PAUTA_LABELS,
   QUANTITY_LABELS,
@@ -14,6 +15,7 @@ import {
   findPautaRule,
   formatPortions,
   productEquivalenceSchema,
+  mealEquivalenceSchema,
 } from '../types/nutrition';
 import {
   EquivalenceSuggestionsPanel,
@@ -30,7 +32,29 @@ const matches = (text: string, query: string) =>
   normalize(query)
     .trim()
     .split(/\s+/)
-    .every((word) => normalize(text).includes(word));
+    .every(
+      (word) =>
+        normalize(text).includes(word) ||
+        normalize(text)
+          .split(/[^a-z0-9]+/)
+          .some(
+            (candidate) =>
+              word.length > 3 &&
+              word.replace(/s$/, '') === candidate.replace(/s$/, '')
+          )
+    );
+// Ranking is only a search aid. It never applies or saves an equivalence.
+const relevance = (text: string, name: string) => {
+  const words = (value: string) =>
+    normalize(value)
+      .split(/[^a-z0-9]+/)
+      .filter((word) => word.length > 2)
+      .map((word) => word.replace(/s$/, ''));
+  const target = words(text);
+  return normalize(text).trim() === normalize(name).trim()
+    ? 100
+    : words(name).filter((word) => target.includes(word)).length;
+};
 const contributionsText = (rule: PautaRule) =>
   rule.free
     ? 'Libre según tu pauta'
@@ -50,6 +74,7 @@ export function ClassifyMealModal({
   products,
   onSave,
   onSaveProduct,
+  onSaveMeal,
   onSuggest,
   onClose,
   onOpenProducts,
@@ -63,12 +88,17 @@ export function ClassifyMealModal({
     id: string,
     input: ProductEquivalenceInput
   ) => Promise<boolean>;
+  onSaveMeal?: (id: string, input: MealEquivalenceInput) => Promise<boolean>;
   onSuggest?: SuggestEquivalences;
   onClose: () => void;
   onOpenProducts?: () => void;
 }) {
-  const [source, setSource] = useState<'products' | 'rules'>(
-    products.length && entry.pauta?.status !== 'matched' ? 'products' : 'rules'
+  const [source, setSource] = useState<'all' | 'products' | 'rules'>('all');
+  const [editor, setEditor] = useState<'product' | 'meal' | 'rule' | null>(
+    entry.pautaSelection?.ruleId ||
+      findPautaRule(plan, entry.foodId, entry.foodName)
+      ? 'rule'
+      : null
   );
   const [query, setQuery] = useState('');
   const [product, setProduct] = useState<FoodItem | null>(null);
@@ -85,6 +115,7 @@ export function ClassifyMealModal({
     Partial<Record<(typeof PAUTA_GROUPS)[number], string>>
   >({});
   const [notes, setNotes] = useState('');
+  const [preparation, setPreparation] = useState('');
   const [converted, setConverted] = useState(
     String(entry.pautaSelection?.quantity?.amount ?? '')
   );
@@ -135,7 +166,7 @@ export function ClassifyMealModal({
   };
   const draft: PautaRule = {
     id: 'preview-product',
-    name: product?.name ?? '',
+    name: editor === 'meal' ? entry.foodName : product?.name ?? '',
     foodIds: [],
     aliases: [],
     referenceAmount: Number(reference),
@@ -149,11 +180,13 @@ export function ClassifyMealModal({
         ),
   };
   const selectedRule =
-    source === 'products'
-      ? product
+    editor === 'product' || editor === 'meal'
+      ? product || editor === 'meal'
         ? draft
         : undefined
-      : plan.rules.find((rule) => rule.id === ruleId);
+      : editor === 'rule'
+      ? plan.rules.find((rule) => rule.id === ruleId)
+      : undefined;
   const needsQuantity =
     selectedRule &&
     !selectedRule.free &&
@@ -174,7 +207,10 @@ export function ClassifyMealModal({
         selectedRule.contributions.length > 0))
       ? calculatePauta({ ...plan, rules: [selectedRule] }, entry, selection)
       : null;
-  function fill(rule?: PautaRule, food?: FoodItem) {
+  function fill(
+    rule?: PautaRule,
+    food?: Pick<FoodItem, 'servingSizeGrams' | 'quantityUnit'>
+  ) {
     setReference(String(rule?.referenceAmount ?? food?.servingSizeGrams ?? ''));
     setUnit(rule?.unit ?? food?.quantityUnit ?? 'g');
     setFree(rule?.free ?? false);
@@ -192,12 +228,23 @@ export function ClassifyMealModal({
   }
   function chooseProduct(food: FoodItem) {
     setProduct(food);
+    setEditor('product');
     setCopying(false);
     fill(
       findPautaRule(catalogPlan, food.id, food.name) ??
         findPautaRule(plan, food.id, food.name),
       food
     );
+    revealDetail();
+  }
+  function createMealDraft(rule?: PautaRule) {
+    setEditor('meal');
+    setProduct(null);
+    setCopying(false);
+    fill(rule, {
+      servingSizeGrams: quantity.amount,
+      quantityUnit: quantity.unit,
+    });
     revealDetail();
   }
   function revealDetail() {
@@ -212,12 +259,13 @@ export function ClassifyMealModal({
       });
   }
   function chooseRule(rule: PautaRule) {
-    if (copying && product) {
+    if (copying && (editor === 'meal' || product)) {
       fill(rule);
-      setSource('products');
+      setSource('all');
       setCopying(false);
       setQuery('');
     } else {
+      setEditor('rule');
       setRuleId(rule.id);
       setConverted('');
       setError(null);
@@ -228,7 +276,10 @@ export function ClassifyMealModal({
     if (busy.current) return;
     let action: () => Promise<boolean>;
     if (pending) action = () => onSave(entry.id, { ruleId: null });
-    else if (source === 'products' && product && onSaveProduct) {
+    else if (
+      (editor === 'product' && product && onSaveProduct) ||
+      (editor === 'meal' && onSaveMeal)
+    ) {
       if (
         !free &&
         Object.values(portions).some(
@@ -242,8 +293,7 @@ export function ClassifyMealModal({
         setError('Las porciones deben ser valores entre 0 y 1000.');
         return;
       }
-      const parsed = productEquivalenceSchema.safeParse({
-        productId: product.id,
+      const input = {
         expectedPlanVersion: catalogPlan.version,
         expectedDayPlanVersion: plan.version,
         expectedQuantity: quantity,
@@ -257,16 +307,27 @@ export function ClassifyMealModal({
         ...(needsQuantity
           ? { quantity: { amount: Number(converted), unit } }
           : {}),
-      });
+      };
+      const parsed = mealEquivalenceSchema.safeParse(input);
       if (!parsed.success || !preview || preview.status === 'pending') {
         setError(
           'Indica la cantidad de referencia y sus porciones, o marca libre según tu pauta. Revisa también las unidades.'
         );
         return;
       }
-      action = () => onSaveProduct(entry.id, parsed.data);
+      action =
+        editor === 'meal'
+          ? () => onSaveMeal!(entry.id, parsed.data)
+          : () =>
+              onSaveProduct!(
+                entry.id,
+                productEquivalenceSchema.parse({
+                  ...parsed.data,
+                  productId: product!.id,
+                })
+              );
     } else if (
-      source === 'rules' &&
+      editor === 'rule' &&
       selectedRule &&
       preview?.status !== 'pending'
     )
@@ -291,6 +352,27 @@ export function ClassifyMealModal({
       query
     )
   );
+  const results = [
+    ...(source !== 'rules'
+      ? foods.map((food) => ({
+          kind: 'product' as const,
+          food,
+          name: food.name,
+          score: relevance(food.name, entry.foodName),
+        }))
+      : []),
+    ...(source !== 'products'
+      ? rules.map((rule) => ({
+          kind: 'rule' as const,
+          rule,
+          name: rule.name,
+          score: relevance(
+            `${rule.name} ${rule.aliases.join(' ')}`,
+            entry.foodName
+          ),
+        }))
+      : []),
+  ].sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, 'es'));
   return (
     <div
       role="dialog"
@@ -336,6 +418,7 @@ export function ClassifyMealModal({
               >
                 {(
                   [
+                    ['all', 'Todos'],
                     ['products', `Mis productos (${products.length})`],
                     [
                       'rules',
@@ -354,7 +437,6 @@ export function ClassifyMealModal({
                       setSource(value);
                       setCopying(false);
                       setQuery('');
-                      setConverted('');
                     }}
                     className={`flex-1 rounded-xl border px-3 py-3 text-xs font-semibold ${
                       source === value
@@ -385,29 +467,46 @@ export function ClassifyMealModal({
                   role="status"
                   className="mt-3 rounded-xl bg-emerald-400/10 p-3 text-sm text-emerald-200"
                 >
-                  Elige una referencia para copiar a {product?.name}. Puedes
+                  Elige una referencia para copiar a{' '}
+                  {editor === 'meal' ? entry.foodName : product?.name}. Puedes
                   ajustar sus valores antes de guardar.
                 </p>
               )}
               <p className="my-3 text-xs text-slate-500">
-                {source === 'products' ? foods.length : rules.length} resultados
-                ·{' '}
-                {source === 'products'
+                {results.length} resultados ·{' '}
+                {source === 'all'
+                  ? 'Productos y equivalencias · relacionados por nombre primero'
+                  : source === 'products'
                   ? 'Tu catálogo guardado'
                   : 'Referencias de porciones'}
               </p>
+              {onSaveMeal && (
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => createMealDraft()}
+                  className="mb-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-emerald-400/40 bg-emerald-400/10 px-3 py-2.5 text-sm font-semibold text-emerald-200 hover:bg-emerald-400/20"
+                >
+                  <Plus className="size-4 shrink-0" /> Crear equivalencia para
+                  este alimento
+                </button>
+              )}
               <div className="max-h-[42vh] space-y-2 overflow-y-auto pr-1 lg:max-h-[50vh]">
-                {source === 'products'
-                  ? foods.slice(0, 80).map((food) => (
+                {results.slice(0, 80).map((result) => {
+                  if (result.kind === 'product') {
+                    const food = result.food;
+                    return (
                       <button
-                        key={food.id}
+                        key={`product:${food.id}`}
                         type="button"
                         disabled={saving}
                         aria-label={`Elegir producto: ${food.name}`}
-                        aria-pressed={product?.id === food.id}
+                        aria-pressed={
+                          editor === 'product' && product?.id === food.id
+                        }
                         onClick={() => chooseProduct(food)}
                         className={`w-full rounded-xl border p-4 text-left transition ${
-                          product?.id === food.id
+                          editor === 'product' && product?.id === food.id
                             ? 'border-emerald-400 bg-emerald-400/10'
                             : 'border-slate-700 bg-slate-950/40 hover:border-slate-500'
                         }`}
@@ -416,9 +515,12 @@ export function ClassifyMealModal({
                           <strong className="break-words text-sm">
                             {food.name}
                           </strong>
-                          {product?.id === food.id && (
+                          {editor === 'product' && product?.id === food.id && (
                             <Check className="size-4 shrink-0 text-emerald-300" />
                           )}
+                        </span>
+                        <span className="mt-1 block text-[11px] text-slate-500">
+                          Mi producto
                         </span>
                         <span className="mt-1 block text-xs text-slate-400">
                           {[food.brand, food.barcode]
@@ -440,40 +542,48 @@ export function ClassifyMealModal({
                             : 'Necesita definir su equivalencia'}
                         </span>
                       </button>
-                    ))
-                  : rules.slice(0, 80).map((rule) => (
-                      <button
-                        key={rule.id}
-                        type="button"
-                        disabled={saving}
-                        aria-label={`Elegir equivalencia: ${rule.name}`}
-                        aria-pressed={!copying && ruleId === rule.id}
-                        onClick={() => chooseRule(rule)}
-                        className={`w-full rounded-xl border p-4 text-left ${
-                          !copying && ruleId === rule.id
-                            ? 'border-emerald-400 bg-emerald-400/10'
-                            : 'border-slate-700 bg-slate-950/40 hover:border-slate-500'
-                        }`}
-                      >
-                        <strong className="block text-sm">{rule.name}</strong>
-                        <span className="mt-1 block text-xs text-slate-400">
-                          {rule.referenceAmount} {QUANTITY_LABELS[rule.unit]} →{' '}
-                          {contributionsText(rule)}
+                    );
+                  }
+                  const rule = result.rule;
+                  return (
+                    <button
+                      key={`rule:${rule.id}`}
+                      type="button"
+                      disabled={saving}
+                      aria-label={`Elegir equivalencia: ${rule.name}`}
+                      aria-pressed={
+                        editor === 'rule' && !copying && ruleId === rule.id
+                      }
+                      onClick={() => chooseRule(rule)}
+                      className={`w-full rounded-xl border p-4 text-left ${
+                        editor === 'rule' && !copying && ruleId === rule.id
+                          ? 'border-emerald-400 bg-emerald-400/10'
+                          : 'border-slate-700 bg-slate-950/40 hover:border-slate-500'
+                      }`}
+                    >
+                      <strong className="block text-sm">{rule.name}</strong>
+                      <span className="mt-1 block text-[11px] text-slate-500">
+                        Equivalencia de mi pauta
+                      </span>
+                      <span className="mt-1 block text-xs text-slate-400">
+                        {rule.referenceAmount} {QUANTITY_LABELS[rule.unit]} →{' '}
+                        {contributionsText(rule)}
+                      </span>
+                      {rule.notes && (
+                        <span className="mt-2 block text-xs text-slate-500">
+                          {rule.notes}
                         </span>
-                        {rule.notes && (
-                          <span className="mt-2 block text-xs text-slate-500">
-                            {rule.notes}
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                {(source === 'products' ? foods : rules).length === 0 && (
+                      )}
+                    </button>
+                  );
+                })}
+                {results.length === 0 && (
                   <div className="rounded-xl border border-dashed border-slate-700 p-5 text-sm text-slate-400">
-                    No hay coincidencias. Prueba otro nombre o busca en el otro
-                    catálogo.
+                    No hay coincidencias. Prueba otro nombre o crea una
+                    equivalencia para este alimento con el botón de arriba.
                   </div>
                 )}
-                {(source === 'products' ? foods : rules).length > 80 && (
+                {results.length > 80 && (
                   <p className="text-xs text-slate-400">
                     Se muestran los primeros 80. Afina tu búsqueda para ver
                     otros resultados.
@@ -498,23 +608,41 @@ export function ClassifyMealModal({
               ref={detail}
               tabIndex={-1}
             >
+              {onSaveMeal && editor !== 'product' && (
+                <details className="mb-4 rounded-xl border border-slate-700 p-3 text-sm">
+                  <summary className="cursor-pointer text-slate-300">
+                    Detalles para la propuesta (opcional)
+                  </summary>
+                  <label className="mt-3 block text-xs text-slate-400">
+                    Preparación y medida del alimento
+                    <textarea
+                      value={preparation}
+                      maxLength={800}
+                      rows={2}
+                      disabled={saving}
+                      onChange={(event) => setPreparation(event.target.value)}
+                      placeholder="Ej.: papas naturales o congeladas prefritas, aceite añadido y peso crudo o cocido."
+                      className={inputClass}
+                    />
+                  </label>
+                </details>
+              )}
               {onSuggest && (
                 <EquivalenceSuggestionsPanel
                   key={JSON.stringify([
-                    source,
+                    editor,
                     product?.id,
                     entry,
                     plan,
                     catalogPlan,
+                    preparation,
                   ])}
                   entry={entry}
                   plan={plan}
                   basis={{
                     mealId: entry.id,
                     productId:
-                      source === 'products' || copying
-                        ? product?.id ?? null
-                        : null,
+                      editor === 'product' ? product?.id ?? null : null,
                     dayPlanVersion: plan.version,
                     catalogPlanVersion: catalogPlan.version,
                   }}
@@ -523,21 +651,21 @@ export function ClassifyMealModal({
                       entry.id,
                       {
                         productId:
-                          source === 'products' || copying
-                            ? product?.id
-                            : undefined,
+                          editor === 'product' ? product?.id : undefined,
                         dayPlanVersion: plan.version,
                         catalogPlanVersion: catalogPlan.version,
                         useAi,
                         ...(mode ? { mode } : {}),
+                        ...(editor !== 'product' && preparation.trim()
+                          ? { preparation: preparation.trim() }
+                          : {}),
                       },
                       signal
                     )
                   }
-                  disabled={saving || (source === 'products' && !product)}
+                  disabled={saving || (editor === 'product' && !product)}
                   onApply={(suggestion) => {
-                    if ((source === 'products' || copying) && product) {
-                      setSource('products');
+                    if (editor === 'product' && product) {
                       fill(suggestion.rule, product);
                       if (
                         quantity.unit === 'g' &&
@@ -552,6 +680,16 @@ export function ClassifyMealModal({
                       setSource('rules');
                       setCopying(false);
                       chooseRule(suggestion.rule);
+                    } else {
+                      createMealDraft(suggestion.rule);
+                      if (
+                        quantity.unit === 'g' &&
+                        suggestion.rule.unit !== 'g' &&
+                        suggestion.rule.gramsPerUnit
+                      )
+                        setConverted(
+                          String(quantity.amount / suggestion.rule.gramsPerUnit)
+                        );
                     }
                     detail.current?.focus({ preventScroll: true });
                     revealDetail();
@@ -559,14 +697,37 @@ export function ClassifyMealModal({
                 />
               )}
 
-              {source === 'products' && product ? (
+              {(editor === 'product' && product) || editor === 'meal' ? (
                 <>
-                  <h3 className="text-lg font-bold">{product.name}</h3>
-                  <p className="mt-1 text-sm text-slate-400">{product.brand}</p>
-                  <p className="mt-3 text-sm leading-6 text-slate-300">
-                    Su ficha nutricional está guardada. Ahora define cómo suma
-                    porciones en tu pauta.
-                  </p>
+                  <h3 className="text-lg font-bold">
+                    {editor === 'meal' ? entry.foodName : product!.name}
+                  </h3>
+                  {editor === 'product' && (
+                    <p className="mt-1 text-sm text-slate-400">
+                      {product!.brand}
+                    </p>
+                  )}
+                  {editor === 'meal' ? (
+                    <div className="mt-3 rounded-xl bg-slate-800/50 p-3 text-xs leading-6 text-slate-300">
+                      <p>
+                        {quantity.amount} {QUANTITY_LABELS[quantity.unit]}{' '}
+                        registrados · {entry.calories} kcal
+                      </p>
+                      <p>
+                        Proteínas {entry.protein} g · Carbohidratos{' '}
+                        {entry.carbs} g · Grasas {entry.fat} g
+                      </p>
+                      <p className="mt-1 text-slate-400">
+                        Se conservan estos nutrientes. La nueva equivalencia se
+                        guardará para próximos registros cuando confirmes.
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-sm leading-6 text-slate-300">
+                      Su ficha nutricional está guardada. Ahora define cómo suma
+                      porciones en tu pauta.
+                    </p>
+                  )}
                   <button
                     type="button"
                     disabled={saving}
@@ -622,7 +783,9 @@ export function ClassifyMealModal({
                       onChange={(event) => setFree(event.target.checked)}
                       className="mt-1 accent-emerald-400"
                     />
-                    Libre según mi pauta (sin sumar porciones)
+                    {editor === 'meal'
+                      ? 'No sumar porciones de pauta (decisión manual)'
+                      : 'Libre según mi pauta (sin sumar porciones)'}
                   </label>
                   {!free && (
                     <fieldset disabled={saving} className="mt-4">
@@ -630,8 +793,9 @@ export function ClassifyMealModal({
                         ¿Cuántas porciones aporta esa referencia?
                       </legend>
                       <p className="mb-3 text-xs leading-5 text-slate-400">
-                        Usa la equivalencia de tu pauta. La tabla nutricional no
-                        define estos grupos automáticamente.
+                        {editor === 'meal'
+                          ? 'Indica las porciones que representa la cantidad de referencia. Puedes revisar una propuesta con IA y ajustar sus valores.'
+                          : 'Usa la equivalencia de tu pauta. La tabla nutricional no define estos grupos automáticamente.'}
                       </p>
                       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                         {PAUTA_GROUPS.map((group) => (
@@ -669,7 +833,7 @@ export function ClassifyMealModal({
                     />
                   </label>
                 </>
-              ) : source === 'rules' && selectedRule ? (
+              ) : editor === 'rule' && selectedRule ? (
                 <>
                   <h3 className="text-lg font-bold">{selectedRule.name}</h3>
                   <p className="mt-3 text-sm text-slate-300">
@@ -684,9 +848,10 @@ export function ClassifyMealModal({
               ) : (
                 <div className="py-8 text-sm leading-7 text-slate-400">
                   <Package className="mb-4 size-8 text-slate-600" />
-                  Selecciona tu producto guardado o una equivalencia. Aquí
-                  podrás revisar la referencia y el aporte de este consumo antes
-                  de confirmar.
+                  Busca una referencia en ambos catálogos o crea una
+                  equivalencia para este alimento. También puedes pedir una
+                  propuesta con IA usando los nutrientes del consumo. Nada se
+                  guarda hasta que confirmes.
                 </div>
               )}
               {needsQuantity && (
@@ -776,7 +941,7 @@ export function ClassifyMealModal({
               >
                 {saving
                   ? 'Guardando…'
-                  : source === 'products'
+                  : editor === 'product' || editor === 'meal'
                   ? 'Guardar equivalencia y clasificar'
                   : 'Guardar equivalencia'}
               </button>

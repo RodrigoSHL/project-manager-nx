@@ -15,6 +15,7 @@ import {
   UserProfile,
   UpdateMealQuantity,
   ProductEquivalenceInput,
+  MealEquivalenceInput,
   ProductSuggestionRequest,
   SaveProductEquivalence,
   ProductEquivalenceResult,
@@ -181,10 +182,14 @@ export function useMacroStore(userId: string) {
       ),
     [selectedDate]
   );
-  const classifyProduct = (id: string, input: ProductEquivalenceInput) => {
+  const saveMealEquivalence = (
+    id: string,
+    input: MealEquivalenceInput,
+    endpoint: string
+  ) => {
     const date = selectedDate;
     return mutate<ProductEquivalenceResult>(
-      `/days/${date}/meals/${encodeURIComponent(id)}/product-equivalence`,
+      `/days/${date}/meals/${encodeURIComponent(id)}/${endpoint}`,
       'PUT',
       input,
       (result) => {
@@ -193,6 +198,10 @@ export function useMacroStore(userId: string) {
       }
     );
   };
+  const classifyProduct = (id: string, input: ProductEquivalenceInput) =>
+    saveMealEquivalence(id, input, 'product-equivalence');
+  const classifyMealEquivalence = (id: string, input: MealEquivalenceInput) =>
+    saveMealEquivalence(id, input, 'equivalence');
   const changeDay = (suffix: string, method: string, body?: unknown) => {
     const date = selectedDate;
     return mutate<DailyLog>(`/days/${date}${suffix}`, method, body, (log) => {
@@ -386,6 +395,7 @@ export function useMacroStore(userId: string) {
     saveNutritionPlan,
     classifyMeal,
     classifyProduct,
+    classifyMealEquivalence,
     suggestEquivalences,
     loading,
     saving,

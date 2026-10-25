@@ -113,6 +113,7 @@ export function MacroFitWorkspace({
     saveNutritionPlan,
     classifyMeal,
     classifyProduct,
+    classifyMealEquivalence,
     suggestEquivalences,
     saveProfileAndGoals,
     addMealEntry,
@@ -338,6 +339,7 @@ export function MacroFitWorkspace({
                   catalogPlan={nutritionPlan}
                   products={customFoods}
                   onClassifyProduct={classifyProduct}
+                  onClassifyMealEquivalence={classifyMealEquivalence}
                   onSuggestEquivalences={suggestEquivalences}
                   onOpenProducts={() => navigate('products')}
                   onOpenPlan={() => setActiveTab('plan')}

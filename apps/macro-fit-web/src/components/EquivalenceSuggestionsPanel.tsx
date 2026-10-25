@@ -141,7 +141,7 @@ export function EquivalenceSuggestionsPanel({
         >
           <BookOpen className="size-4 shrink-0" /> Buscar en mi pauta
         </button>
-        {basis.productId && (
+        {(basis.productId || basis.mealId) && (
           <button
             type="button"
             disabled={loading || disabled}
@@ -156,16 +156,18 @@ export function EquivalenceSuggestionsPanel({
         <strong className="font-medium text-slate-300">
           Buscar en mi pauta
         </strong>{' '}
-        consulta equivalencias guardadas y referencias generales disponibles.{' '}
+        consulta referencias guardadas.{' '}
         <strong className="font-medium text-slate-300">Proponer con IA</strong>{' '}
-        usa la ficha nutricional para crear una equivalencia nueva; puede
-        consumir una llamada de Gemini. Revisa la propuesta antes de aplicarla y
-        guardarla.
+        crea una estimación con{' '}
+        {basis.productId
+          ? 'la ficha del producto'
+          : 'los datos registrados de esta comida'}
+        . Puede consumir cuota de Gemini. Revisa antes de guardar.
       </p>
       {!basis.productId && (
         <p className="mt-2 text-xs leading-relaxed text-slate-400">
-          Selecciona un producto de Mis productos para pedir una equivalencia
-          nueva con su ficha nutricional.
+          No requiere un producto. Los nutrientes pueden ser estimados; agrega
+          detalles de preparación si hace falta.
         </p>
       )}
       {loading && (

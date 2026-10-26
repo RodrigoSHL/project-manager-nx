@@ -191,17 +191,17 @@ export function MacroFitWorkspace({
         />
         <main
           id="workspace-content"
-          className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-7 sm:py-8"
+          className="mx-auto w-full max-w-6xl px-3 py-3 sm:px-7 sm:py-8"
         >
           {(activeTab === 'tracker' || activeTab === 'food-guide') && (
-            <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 sm:mb-7 sm:gap-4">
               <div>
-                <h2 className="text-2xl font-bold tracking-tight">
+                <h2 className="text-lg sm:text-2xl font-bold tracking-tight">
                   {activeTab === 'food-guide'
                     ? '¿Qué puedo comer?'
                     : 'Tu diario'}
                 </h2>
-                <p className="mt-1.5 text-sm text-slate-400">
+                <p className="mt-1.5 hidden text-sm text-slate-400 sm:block">
                   {activeTab === 'food-guide'
                     ? 'Dos análisis para comparar tus próximas opciones de comida.'
                     : 'Tus comidas, tus metas y tu progreso diario.'}

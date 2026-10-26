@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { MacroProgressRings } from './MacroProgressRings';
 import { FoodGuideShortcut } from '../features/food-guide/FoodGuideView';
 import { PautaSummaryCard } from './PautaSummaryCard';
@@ -30,6 +30,7 @@ import {
 } from '../types/nutrition';
 import {
   Apple,
+  ArrowDown,
   Camera,
   Coffee,
   Mic,
@@ -132,6 +133,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
   onSaveCurrentAsTemplate,
   onOpenCalculator,
 }) => {
+  const mealsHeading = useRef<HTMLHeadingElement>(null);
   const [editingEntry, setEditingEntry] = useState<MealEntry | null>(null);
   const closeQuantityEditor = useCallback(() => setEditingEntry(null), []);
   const openQuantityEditor = onUpdateMealQuantity
@@ -177,8 +179,66 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
     : [];
 
   return (
-    <div className="space-y-6 mx-auto pb-8 animate-in fade-in duration-300">
-      {onOpenFoodGuide && <FoodGuideShortcut onOpen={onOpenFoodGuide} />}
+    <div className="space-y-3 sm:space-y-6 mx-auto pb-8 animate-in fade-in duration-300">
+      <section
+        aria-labelledby="quick-analysis-title"
+        className="flex items-center justify-between gap-2 sm:gap-5 rounded-2xl border border-emerald-400/25 bg-gradient-to-br from-emerald-500/10 via-slate-900 to-indigo-500/10 p-3 sm:p-6"
+      >
+        <div className="min-w-0">
+          <h3
+            id="quick-analysis-title"
+            className="flex items-center gap-2 text-xs sm:text-base font-semibold text-slate-100"
+          >
+            <Sparkles
+              className="hidden size-5 text-emerald-300 sm:block"
+              aria-hidden="true"
+            />
+            Registrar comida con IA
+          </h3>
+          <button
+            type="button"
+            onClick={() => {
+              mealsHeading.current?.focus({ preventScroll: true });
+              mealsHeading.current?.scrollIntoView({ block: 'start' });
+            }}
+            aria-label="Ir a agregar alimentos en mis comidas"
+            title="Ir a mis comidas"
+            className="mt-1 flex min-h-9 items-center gap-1.5 text-xs font-semibold text-emerald-300 sm:hidden"
+          >
+            Ir a mis comidas{' '}
+            <ArrowDown className="size-3.5" aria-hidden="true" />
+          </button>
+          <p className="mt-2 hidden max-w-md text-sm sm:block leading-6 text-slate-400">
+            Usa una foto o describe tu comida con texto o voz. Tú revisas las
+            cantidades antes de guardar.
+          </p>
+        </div>
+        <div
+          role="group"
+          aria-label="Registrar comida con inteligencia artificial"
+          className="flex shrink-0 items-center gap-2 sm:gap-3"
+        >
+          <button
+            type="button"
+            onClick={() => setTextEntryMeal('auto')}
+            aria-label="Escribir / Dictar comida"
+            title="Escribir o dictar comida"
+            className="grid size-11 sm:size-16 place-items-center rounded-2xl border border-emerald-300/50 bg-gradient-to-br from-emerald-400 to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/15 transition hover:-translate-y-0.5 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+          >
+            <Mic className="size-5 sm:size-6" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setScanCameraMealType('lunch')}
+            aria-label="Abrir Cámara / Foto"
+            title="Analizar una foto de comida"
+            className="grid size-11 sm:size-16 place-items-center rounded-2xl border border-indigo-300/50 bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-lg shadow-indigo-500/20 transition hover:-translate-y-0.5 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+          >
+            <Camera className="size-5 sm:size-6" aria-hidden="true" />
+          </button>
+        </div>
+      </section>
+
       {nutritionPlan && portionSummary ? (
         <>
           <PautaSummaryCard
@@ -187,7 +247,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
             onConfigure={() => onOpenPlan?.()}
           />
           {readyPlan && portionSummary.pending > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap">
               {meals
                 .filter(
                   (meal) =>
@@ -199,7 +259,7 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
                   <button
                     key={meal.id}
                     onClick={() => openReview(meal.id)}
-                    className="rounded-lg border border-amber-500/30 px-3 py-2 text-xs text-amber-200"
+                    className="shrink-0 rounded-lg border border-amber-500/30 px-3 py-2 text-xs text-amber-200"
                   >
                     Clasificar: {meal.foodName}
                   </button>
@@ -230,55 +290,19 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
         onResetWater={onResetWater}
       />
 
-      <section
-        aria-labelledby="quick-analysis-title"
-        className="flex flex-wrap items-center justify-between gap-5 rounded-2xl border border-emerald-400/25 bg-gradient-to-br from-emerald-500/10 via-slate-900 to-indigo-500/10 p-5 sm:p-6"
-      >
-        <div className="min-w-0">
-          <h3
-            id="quick-analysis-title"
-            className="flex items-center gap-2 text-base font-semibold text-slate-100"
-          >
-            <Sparkles className="size-5 text-emerald-300" aria-hidden="true" />
-            Registrar comida con IA
-          </h3>
-          <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">
-            Usa una foto o describe tu comida con texto o voz. Tú revisas las
-            cantidades antes de guardar.
-          </p>
-        </div>
-        <div
-          role="group"
-          aria-label="Registrar comida con inteligencia artificial"
-          className="flex shrink-0 items-center gap-3"
-        >
-          <button
-            type="button"
-            onClick={() => setTextEntryMeal('auto')}
-            aria-label="Escribir / Dictar comida"
-            title="Escribir o dictar comida"
-            className="grid size-14 place-items-center rounded-2xl border border-emerald-300/50 bg-gradient-to-br from-emerald-400 to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/15 transition hover:-translate-y-0.5 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 sm:size-16"
-          >
-            <Mic className="size-6" aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setScanCameraMealType('lunch')}
-            aria-label="Abrir Cámara / Foto"
-            title="Analizar una foto de comida"
-            className="grid size-14 place-items-center rounded-2xl border border-indigo-300/50 bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-lg shadow-indigo-500/20 transition hover:-translate-y-0.5 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 sm:size-16"
-          >
-            <Camera className="size-6" aria-hidden="true" />
-          </button>
-        </div>
-      </section>
+      {onOpenFoodGuide && <FoodGuideShortcut onOpen={onOpenFoodGuide} />}
 
       {/* 5. Secciones de Comidas (Estructura de 5 tiempos recomendada en pauta) */}
       <div className="space-y-3.5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2
+            ref={mealsHeading}
+            tabIndex={-1}
+            className="scroll-mt-20 sm:scroll-mt-24 text-xs sm:text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2"
+          >
             <UtensilsCrossed className="w-4 h-4 text-emerald-400" />
-            <span>Tiempos de Comida Diarios</span>
+            <span className="sm:hidden">Mis comidas</span>
+            <span className="hidden sm:inline">Tiempos de Comida Diarios</span>
           </h2>
           <button
             onClick={onOpenCalculator}

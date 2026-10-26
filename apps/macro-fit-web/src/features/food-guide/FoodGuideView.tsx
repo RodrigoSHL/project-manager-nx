@@ -42,12 +42,17 @@ const style = {
 
 export function FoodGuideShortcut({ onOpen }: { onOpen: () => void }) {
   return (
-    <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-teal-400/25 bg-gradient-to-r from-teal-400/10 to-slate-900 p-4">
-      <div className="flex items-center gap-3">
-        <Compass className="size-6 shrink-0 text-teal-300" aria-hidden="true" />
+    <section className="flex items-center justify-between gap-2 rounded-xl border border-teal-400/25 bg-gradient-to-r from-teal-400/10 to-slate-900 px-3 py-1.5 sm:flex-wrap sm:gap-3 sm:rounded-2xl sm:p-4">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+        <Compass
+          className="size-4 sm:size-6 shrink-0 text-teal-300"
+          aria-hidden="true"
+        />
         <div>
-          <h3 className="font-semibold">¿Qué puedo comer?</h3>
-          <p className="mt-1 text-xs text-slate-400">
+          <h3 className="text-xs font-semibold sm:text-base">
+            ¿Qué puedo comer?
+          </h3>
+          <p className="mt-1 hidden text-xs text-slate-400 sm:block">
             Ideas según tus macros restantes y los grupos pendientes de tu
             pauta.
           </p>
@@ -56,7 +61,7 @@ export function FoodGuideShortcut({ onOpen }: { onOpen: () => void }) {
       <button
         type="button"
         onClick={onOpen}
-        className="flex min-h-11 items-center gap-2 rounded-xl bg-teal-400/15 px-4 text-sm font-semibold text-teal-200 hover:bg-teal-400/25"
+        className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl bg-teal-400/15 px-3 text-xs sm:px-4 sm:text-sm font-semibold text-teal-200 hover:bg-teal-400/25"
       >
         Ver opciones
         <ArrowRight className="size-4" aria-hidden="true" />

@@ -25,7 +25,7 @@ export function Header({
     (item) => item.id === section
   )?.label;
   return (
-    <header className="sticky top-0 z-30 flex h-20 items-center justify-between gap-3 border-b border-slate-800/70 bg-[#090d16]/95 px-4 backdrop-blur-xl sm:px-7">
+    <header className="sticky top-0 z-30 flex h-16 sm:h-20 items-center justify-between gap-3 border-b border-slate-800/70 bg-[#090d16]/95 px-3 backdrop-blur-xl sm:px-7">
       <div className="flex min-w-0 items-center gap-3">
         <button
           type="button"
@@ -60,7 +60,7 @@ export function Header({
           >
             {userInitials(user.name)}
           </span>
-          <span className="block max-w-24 min-w-0 sm:max-w-44">
+          <span className="hidden min-[380px]:block max-w-24 min-w-0 sm:max-w-44">
             <span className="block truncate text-sm font-semibold text-slate-100">
               {user.name}
             </span>

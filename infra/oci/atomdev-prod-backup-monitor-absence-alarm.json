@@ -1,0 +1,12 @@
+{
+  "displayName": "atomdev-prod-backup-monitor-absence",
+  "notificationTitle": "atomdev-prod-backup-monitor-absence",
+  "namespace": "atomdev_backup",
+  "queryText": "VerifiedBackupAgeSeconds[15m]{server = \"atomdev-prod\"}.groupBy(server).absent(72h)",
+  "pendingDuration": "PT1M",
+  "severity": "CRITICAL",
+  "body": "No se recibe la comprobación de edad del respaldo de atomdev-prod desde hace al menos 15 minutos. Esto no confirma que el respaldo haya fallado: revisar VM, atomdev-oci-backup-health.timer/service, offsite-last-success.json y permisos/conectividad OCI. El monitor debe emitir cada cinco minutos.",
+  "isEnabled": true,
+  "messageFormat": "ONS_OPTIMIZED",
+  "repeatNotificationDuration": "PT6H"
+}

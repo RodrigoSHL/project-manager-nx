@@ -1,0 +1,12 @@
+{
+  "displayName": "atomdev-prod-backup-age",
+  "notificationTitle": "atomdev-prod-backup-age",
+  "namespace": "atomdev_backup",
+  "queryText": "VerifiedBackupAgeSeconds[5m]{server = \"atomdev-prod\"}.groupBy(server).max() > 90000",
+  "pendingDuration": "PT1M",
+  "severity": "CRITICAL",
+  "body": "El último respaldo verificado de atomdev-prod tiene más de 25 horas. Revisar atomdev-oci-backup.timer, atomdev-oci-backup.service y el último objeto en Object Storage. La edad se calcula desde la fecha del respaldo verificado, no desde la ejecución del monitor.",
+  "isEnabled": true,
+  "messageFormat": "ONS_OPTIMIZED",
+  "repeatNotificationDuration": "PT6H"
+}

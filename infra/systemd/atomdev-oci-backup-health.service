@@ -1,0 +1,18 @@
+[Unit]
+Description=Publish age of the last verified AtomDev backup to OCI Monitoring
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/project-manager-nx
+UMask=0077
+EnvironmentFile=/etc/atomdev-backup-alert.env
+ExecStart=/home/ubuntu/.local/oci-cli-venv/bin/python /home/ubuntu/project-manager-nx/scripts/oci-backup-signal.py health
+TimeoutStartSec=2min
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true

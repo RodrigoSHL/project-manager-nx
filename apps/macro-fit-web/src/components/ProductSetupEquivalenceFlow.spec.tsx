@@ -21,6 +21,7 @@ import {
   NutritionPlan,
 } from '../types/nutrition';
 import { ProductEquivalenceModal } from './ProductEquivalenceModal';
+import { nutritionRequest } from '../utils/nutritionApi';
 
 beforeEach(() => {
   sessionStorage.clear();
@@ -206,6 +207,95 @@ const savedFood: FoodItem = {
   fat: 1,
   category: 'protein',
 };
+it('reports a proxy HTML error for chocolate proposals without changing the manual draft or claiming the product has no reference', async () => {
+  const food: FoodItem = {
+    ...savedFood,
+    id: 'chocolate',
+    name: 'Chips de chocolate 60% sin azúcar',
+    calories: 600,
+    protein: 5,
+    carbs: 50,
+    fat: 42,
+    category: 'fats',
+  };
+  const onSave = vi.fn();
+  const fetch = vi.fn(async (_url: string, init: RequestInit) => {
+    const input = JSON.parse(String(init.body));
+    return input.useAi
+      ? new Response('<!DOCTYPE html><title>Proxy error</title>', {
+          status: 502,
+          headers: { 'Content-Type': 'text/html' },
+        })
+      : new Response(
+          JSON.stringify({
+            status: 'insufficient',
+            source: 'saved',
+            message:
+              'Todavía no hay una referencia guardada para este chocolate.',
+            missingInfo: [],
+            suggestions: [],
+            basis: {
+              mealId: null,
+              productId: food.id,
+              dayPlanVersion: null,
+              catalogPlanVersion: plan.version,
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+  });
+  vi.stubGlobal('fetch', fetch);
+  render(
+    <ProductEquivalenceModal
+      food={food}
+      plan={plan}
+      onSave={onSave}
+      onSuggest={(id, input, signal) =>
+        nutritionRequest(
+          `/foods/${id}/equivalence-suggestions`,
+          'POST',
+          input,
+          signal
+        )
+      }
+      onClose={() => undefined}
+      onOpenPlan={() => undefined}
+    />
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Buscar en mi pauta' }));
+  await screen.findByText(
+    'Todavía no hay una referencia guardada para este chocolate.'
+  );
+  set('Cantidad de referencia', '10');
+  set('Grasas', '0.5');
+  fireEvent.click(screen.getByRole('button', { name: 'Proponer con IA' }));
+  const error = await screen.findByRole('alert');
+  expect(error.textContent).toContain('HTTP 502');
+  expect(error.textContent).not.toMatch(/Unexpected token|DOCTYPE|Proxy error/);
+  expect(
+    screen.queryByText(
+      'Todavía no hay una referencia guardada para este chocolate.'
+    )
+  ).toBeNull();
+  expect(screen.getByLabelText('Cantidad de referencia')).toHaveProperty(
+    'value',
+    '10'
+  );
+  expect(screen.getByLabelText('Grasas', { exact: true })).toHaveProperty(
+    'value',
+    '0.5'
+  );
+  expect(
+    (
+      screen.getByRole('button', {
+        name: 'Proponer con IA',
+      }) as HTMLButtonElement
+    ).disabled
+  ).toBe(false);
+  expect(fetch).toHaveBeenCalledTimes(2);
+  expect(onSave).not.toHaveBeenCalled();
+  expect(food.calories).toBe(600);
+});
 it('supports a searchable manual reference, validates input and cancels without changing the product', async () => {
   const onSave = vi.fn().mockResolvedValue(true),
     onSuggest = vi.fn(),

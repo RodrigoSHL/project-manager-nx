@@ -84,6 +84,11 @@ export function EquivalenceSuggestionsPanel({
         : 'Buscando referencias…'
     );
     setError('');
+    // An earlier "no reference" result must not look like the outcome of the
+    // new AI request when that request fails. Keep valid saved references usable.
+    setResult((previous) =>
+      previous?.status === 'insufficient' ? null : previous
+    );
     try {
       const response = await onSuggest(useAi, controller.signal, mode);
       if (request.current !== controller || controller.signal.aborted) return;

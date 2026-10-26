@@ -22,7 +22,10 @@ import {
 } from '../types/nutrition';
 import { COMMON_FOODS } from '../data/common-foods';
 import { DEFAULT_MEAL_TEMPLATES } from '../data/meal-templates';
-import { resolveTemplateFood } from '../utils/mealTemplates';
+import {
+  previewMealTemplate,
+  snapshotMealTemplate,
+} from '../utils/mealTemplates';
 import { nutritionRequest } from '../utils/nutritionApi';
 import {
   getAccessToken,
@@ -278,25 +281,47 @@ export function useMacroStore(userId: string) {
     ...(account?.customTemplates ?? []),
     ...DEFAULT_MEAL_TEMPLATES,
   ];
+  const saveTemplate = (template: MealTemplate) => {
+    try {
+      const saved = snapshotMealTemplate(template, allFoods);
+      return mutate<NutritionAccount>('/templates', 'PUT', saved, setAccount);
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : 'Revisa el combo antes de guardarlo.'
+      );
+      return Promise.resolve(false);
+    }
+  };
+  const deleteTemplate = (id: string) =>
+    mutate<NutritionAccount>(
+      `/templates/${encodeURIComponent(id)}`,
+      'DELETE',
+      undefined,
+      setAccount
+    );
   const applyMealTemplate = async (
     template: MealTemplate,
     target?: MealType
   ) => {
-    const items = template.items.map((item) => ({
-      ...item,
-      food: resolveTemplateFood(item, allFoods),
-    }));
-    if (items.some((item) => !item.food)) {
+    const preview = previewMealTemplate(
+      template,
+      allFoods,
+      1,
+      dailyLog?.nutritionPlan ?? null
+    );
+    if (!preview.complete) {
       setError(
-        'Este combo necesita revisión: falta un alimento o sus unidades cambiaron. Vuelve a guardarlo desde el diario.'
+        'Este combo necesita revisión: falta un alimento o sus cantidades o unidades cambiaron. Puedes corregirlo en Mis combos.'
       );
       return false;
     }
     return addMultipleMealEntries(
-      items.map((item) => ({
+      preview.items.map((item) => ({
         mealType: target ?? template.mealType,
         food: item.food!,
-        amountGrams: item.amountGrams,
+        amountGrams: item.amount,
       }))
     );
   };
@@ -311,8 +336,7 @@ export function useMacroStore(userId: string) {
       name,
       description,
       mealType,
-      icon:
-        mealType === 'breakfast' ? '🥣' : mealType === 'lunch' ? '🍱' : '🌙',
+      icon: 'utensils',
       isCustom: true,
       items: entries.map((item) => ({
         foodId: item.foodId,
@@ -321,7 +345,7 @@ export function useMacroStore(userId: string) {
         food: {
           id: item.foodId,
           name: item.foodName,
-          servingUnit: `${item.amountGrams}g`,
+          servingUnit: `${item.amountGrams} ${item.quantity?.unit ?? 'g'}`,
           servingSizeGrams: item.amountGrams,
           quantityUnit: item.quantity?.unit,
           calories: item.calories,
@@ -343,7 +367,7 @@ export function useMacroStore(userId: string) {
         },
       })),
     };
-    return mutate<NutritionAccount>('/templates', 'PUT', template, setAccount);
+    return saveTemplate(template);
   };
   const importLegacy = async () => {
     try {
@@ -384,6 +408,7 @@ export function useMacroStore(userId: string) {
     legacyImported: account?.legacyImported ?? false,
     allFoods,
     allTemplates,
+    customTemplates: account?.customTemplates ?? [],
     customFoods: account?.customFoods ?? [],
     selectedDate,
     setSelectedDate,
@@ -416,6 +441,8 @@ export function useMacroStore(userId: string) {
     deleteProduct,
     applyMealTemplate,
     saveMealAsTemplate,
+    saveTemplate,
+    deleteTemplate,
     importLegacy,
   };
 }

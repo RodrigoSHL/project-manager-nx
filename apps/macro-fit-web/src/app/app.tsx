@@ -8,6 +8,8 @@ import { PwaInstallModal } from '../components/PwaInstallModal';
 import { PwaUpdatePrompt } from '../components/PwaUpdatePrompt';
 import { DailyTrackerView } from '../components/DailyTrackerView';
 import { FoodGuideView } from '../features/food-guide/FoodGuideView';
+import { CombosView } from '../features/combos/CombosView';
+import { DEFAULT_MEAL_TEMPLATES } from '../data/meal-templates';
 import { ProductsView } from '../components/ProductsView';
 import { NutritionPlanView } from '../components/NutritionPlanView';
 import { CalculatorView } from '../components/CalculatorView';
@@ -103,6 +105,9 @@ export function MacroFitWorkspace({
     goals,
     allFoods,
     allTemplates,
+    customTemplates,
+    saveTemplate,
+    deleteTemplate,
     selectedDate,
     setSelectedDate,
     dailyLog,
@@ -286,6 +291,21 @@ export function MacroFitWorkspace({
                   onDelete={deleteProduct}
                   onOpenPlan={() => setActiveTab('plan')}
                 />
+              ) : activeTab === 'combos' ? (
+                <CombosView
+                  key={selectedDate}
+                  templates={customTemplates}
+                  examples={DEFAULT_MEAL_TEMPLATES}
+                  foods={allFoods}
+                  date={selectedDate}
+                  onDateChange={setSelectedDate}
+                  plan={dayPlan}
+                  onSave={saveTemplate}
+                  onDelete={deleteTemplate}
+                  onApply={applyMealTemplate}
+                  onOpenDiary={() => navigate('tracker')}
+                  onOpenProducts={() => navigate('products')}
+                />
               ) : activeTab === 'profile' ? (
                 <ProfileView
                   user={user}
@@ -355,6 +375,7 @@ export function MacroFitWorkspace({
                   onSaveCustomFood={addCustomFood}
                   onApplyTemplate={applyMealTemplate}
                   onSaveCurrentAsTemplate={saveMealAsTemplate}
+                  onManageTemplates={() => navigate('combos')}
                   onOpenCalculator={() => setActiveTab('calculator')}
                 />
               ) : (

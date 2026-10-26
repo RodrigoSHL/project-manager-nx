@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 
 interface DailyTrackerViewProps {
+  onManageTemplates?: () => void;
   onClassifyMealEquivalence?: (
     id: string,
     input: MealEquivalenceInput
@@ -102,6 +103,7 @@ interface DailyTrackerViewProps {
 }
 
 export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
+  onManageTemplates,
   onClassifyMealEquivalence,
   onOpenFoodGuide,
   goals,
@@ -441,6 +443,14 @@ export const DailyTrackerView: React.FC<DailyTrackerViewProps> = ({
         onClose={() => setSelectedTemplateMealType(null)}
         onApplyTemplate={onApplyTemplate}
         onSaveCurrentAsTemplate={onSaveCurrentAsTemplate}
+        onManageTemplates={
+          onManageTemplates
+            ? () => {
+                setSelectedTemplateMealType(null);
+                onManageTemplates();
+              }
+            : undefined
+        }
       />
 
       {/* Modal: Create Custom Food */}

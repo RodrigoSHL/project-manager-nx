@@ -68,7 +68,17 @@ export function nutritionFixture(initial: NutritionAccount = testAccount) {
       return response(account);
     }
     if (path === '/templates') {
-      account.customTemplates.push(body);
+      account.customTemplates = [
+        ...account.customTemplates.filter((item) => item.id !== body.id),
+        body,
+      ];
+      return response(account);
+    }
+    if (path.startsWith('/templates/') && init.method === 'DELETE') {
+      account.customTemplates = account.customTemplates.filter(
+        (item) =>
+          item.id !== decodeURIComponent(path.slice('/templates/'.length))
+      );
       return response(account);
     }
     if (path === '/foods') {

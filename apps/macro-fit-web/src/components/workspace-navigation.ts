@@ -4,6 +4,7 @@ import {
   Compass,
   ClipboardCheck,
   Package,
+  Utensils,
   Settings,
   UserRound,
 } from 'lucide-react';
@@ -14,6 +15,7 @@ export type WorkspaceSection =
   | 'calculator'
   | 'plan'
   | 'products'
+  | 'combos'
   | 'profile'
   | 'settings';
 export const WORKSPACE_NAVIGATION: Array<{
@@ -26,6 +28,7 @@ export const WORKSPACE_NAVIGATION: Array<{
       { id: 'tracker', label: 'Diario', icon: BookOpen },
       { id: 'food-guide', label: 'Qué puedo comer', icon: Compass },
       { id: 'products', label: 'Mis productos', icon: Package },
+      { id: 'combos', label: 'Mis combos', icon: Utensils },
       { id: 'plan', label: 'Mi pauta', icon: ClipboardCheck },
       { id: 'calculator', label: 'Calculadora', icon: Calculator },
     ],

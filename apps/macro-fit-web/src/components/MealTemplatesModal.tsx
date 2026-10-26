@@ -1,8 +1,11 @@
-import { resolveTemplateFood } from '../utils/mealTemplates';
+import {
+  previewMealTemplate,
+  resolveTemplateFood,
+} from '../utils/mealTemplates';
 import { QUANTITY_LABELS } from '../types/nutrition';
 import { useSaveAction } from '../hooks/useSaveAction';
-import React, { useState } from 'react';
-import { X, Zap, Plus, BookmarkPlus } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { X, Zap, Plus, BookmarkPlus, Utensils } from 'lucide-react';
 import {
   FoodItem,
   MealEntry,
@@ -11,6 +14,7 @@ import {
 } from '../types/nutrition';
 
 interface MealTemplatesModalProps {
+  onManageTemplates?: () => void;
   isOpen: boolean;
   mealType: MealType | null;
   templates: MealTemplate[];
@@ -30,6 +34,7 @@ interface MealTemplatesModalProps {
 }
 
 export const MealTemplatesModal: React.FC<MealTemplatesModalProps> = ({
+  onManageTemplates,
   isOpen,
   mealType,
   templates,
@@ -46,6 +51,12 @@ export const MealTemplatesModal: React.FC<MealTemplatesModalProps> = ({
   const [isCreating, setIsCreating] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
   const [newTemplateDesc, setNewTemplateDesc] = useState('');
+  useEffect(() => {
+    if (isOpen && mealType) {
+      setSelectedMealFilter(mealType);
+      setIsCreating(false);
+    }
+  }, [isOpen, mealType]);
 
   if (!isOpen || !mealType) return null;
 
@@ -62,24 +73,6 @@ export const MealTemplatesModal: React.FC<MealTemplatesModalProps> = ({
     if (selectedMealFilter === 'all') return true;
     return tpl.mealType === selectedMealFilter;
   });
-
-  // Calculate totals for a template
-  const getTemplateTotals = (tpl: MealTemplate) => {
-    return tpl.items.reduce(
-      (acc, item) => {
-        const food = resolveTemplateFood(item, allFoods);
-        if (!food) return acc;
-        const ratio = item.amountGrams / food.servingSizeGrams;
-        return {
-          calories: acc.calories + Math.round(food.calories * ratio),
-          protein: acc.protein + Number((food.protein * ratio).toFixed(1)),
-          carbs: acc.carbs + Number((food.carbs * ratio).toFixed(1)),
-          fat: acc.fat + Number((food.fat * ratio).toFixed(1)),
-        };
-      },
-      { calories: 0, protein: 0, carbs: 0, fat: 0 }
-    );
-  };
 
   const handleApply = (tpl: MealTemplate) => {
     void save(() => onApplyTemplate(tpl, mealType), onClose);
@@ -235,10 +228,9 @@ export const MealTemplatesModal: React.FC<MealTemplatesModalProps> = ({
             </div>
           ) : (
             filteredTemplates.map((tpl) => {
-              const totals = getTemplateTotals(tpl);
-              const incomplete = tpl.items.some(
-                (item) => !resolveTemplateFood(item, allFoods)
-              );
+              const preview = previewMealTemplate(tpl, allFoods);
+              const totals = preview.totals;
+              const incomplete = !preview.complete;
 
               return (
                 <div
@@ -248,18 +240,22 @@ export const MealTemplatesModal: React.FC<MealTemplatesModalProps> = ({
                   <div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-xl select-none">{tpl.icon}</span>
+                        <Utensils
+                          className="size-5 shrink-0 text-slate-400"
+                          aria-hidden="true"
+                        />
                         <div>
                           <h4 className="text-xs font-bold text-white group-hover:text-emerald-400 transition">
                             {tpl.name}
                           </h4>
                           <span className="text-[10px] text-slate-400">
+                            {tpl.isCustom ? 'Mi combo · ' : 'Ejemplo · '}
                             {tpl.description}
                           </span>
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        {incomplete ? (
+                        {!totals ? (
                           <span className="text-xs text-amber-300">
                             Requiere revisar unidades
                           </span>
@@ -280,12 +276,12 @@ export const MealTemplatesModal: React.FC<MealTemplatesModalProps> = ({
 
                     {/* Items pills */}
                     <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2 border-t border-slate-900">
-                      {tpl.items.map((item) => {
+                      {tpl.items.map((item, index) => {
                         const food = resolveTemplateFood(item, allFoods);
                         if (!food) return null;
                         return (
                           <span
-                            key={item.foodId}
+                            key={`${item.foodId}-${index}`}
                             className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-slate-300"
                           >
                             <span>{food.name}</span>
@@ -312,6 +308,17 @@ export const MealTemplatesModal: React.FC<MealTemplatesModalProps> = ({
             })
           )}
         </div>
+        {onManageTemplates && (
+          <div className="shrink-0 border-t border-slate-800 px-4 py-3">
+            <button
+              type="button"
+              onClick={onManageTemplates}
+              className="min-h-10 text-xs font-semibold text-emerald-300"
+            >
+              Administrar mis combos
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

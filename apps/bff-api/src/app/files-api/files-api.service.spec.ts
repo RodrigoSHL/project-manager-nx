@@ -94,7 +94,7 @@ describe('FilesApiService Jira attachments', () => {
       user
     );
 
-    expect(projectAccess.assertProjectWriteAccess).toHaveBeenCalledWith(
+    expect(projectAccess.assertProjectAccess).toHaveBeenCalledWith(
       projectId,
       user
     );
@@ -130,7 +130,7 @@ describe('FilesApiService Jira attachments', () => {
       )
     ).resolves.toEqual({ id: 'file-1' });
 
-    expect(projectAccess.assertProjectWriteAccess).toHaveBeenCalledWith(
+    expect(projectAccess.assertProjectAccess).toHaveBeenCalledWith(
       projectId,
       user
     );
@@ -138,7 +138,7 @@ describe('FilesApiService Jira attachments', () => {
   });
 
   it('rejects Jira attachments when project membership is denied', async () => {
-    projectAccess.assertProjectWriteAccess.mockRejectedValueOnce(
+    projectAccess.assertProjectAccess.mockRejectedValueOnce(
       new ForbiddenException('Project access denied')
     );
 
@@ -159,8 +159,11 @@ describe('FilesApiService Jira attachments', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('rejects a viewer uploading Jira attachments', async () => {
-    projectAccess.assertProjectWriteAccess.mockRejectedValueOnce(
+  it('allows a viewer to upload documentation without ticket write access', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ id: 'file-1' }), { status: 201 })
+    );
+    projectAccess.assertProjectWriteAccess.mockRejectedValue(
       new ForbiddenException('Workspace role cannot modify project tickets')
     );
 
@@ -175,10 +178,12 @@ describe('FilesApiService Jira attachments', () => {
         },
         user
       )
-    ).rejects.toBeInstanceOf(ForbiddenException);
+    ).resolves.toEqual({ id: 'file-1' });
 
-    expect(projectApi.findTicket).not.toHaveBeenCalled();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(projectAccess.assertProjectAccess).toHaveBeenCalledWith(projectId, user);
+    expect(projectAccess.assertProjectWriteAccess).not.toHaveBeenCalled();
+    expect(projectApi.findTicket).toHaveBeenCalledWith(projectId, ticketId);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('rejects executable content before contacting upstream services', async () => {

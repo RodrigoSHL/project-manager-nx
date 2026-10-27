@@ -126,7 +126,8 @@ export class FilesApiService {
           'Only images, PDF, Word, Excel, PowerPoint, CSV and text files are allowed'
         );
       }
-      await this.authorizeJiraTicket(projectId, body.ownerId, user, true);
+      // Project readers can contribute documentation; deletion still requires write access.
+      await this.authorizeJiraTicket(projectId, body.ownerId, user);
       metadata.category = category;
       metadata.projectId = projectId;
       metadata.uploadedBy = user.userId;

@@ -508,7 +508,7 @@ export function TicketDetail({
   }
 
   const addAttachment = async (file?: File) => {
-    if (!canWrite || !file || attachmentAction) return
+    if (!file || attachmentAction) return
     setAttachmentAction('upload')
     setAttachmentError(null)
     try {
@@ -1008,14 +1008,15 @@ export function TicketDetail({
                   <Paperclip className="h-4 w-4" />
                   <h3 className="text-sm font-semibold">Archivos ({attachments.length})</h3>
                 </div>
-                {canWrite && <input
+                <input
                   ref={attachmentInputRef}
                   type="file"
+                  aria-label="Adjuntar archivo al ticket"
                   accept={TICKET_ATTACHMENT_ACCEPT}
                   className="hidden"
                   onChange={event => void addAttachment(event.target.files?.[0])}
-                />}
-                {canWrite && <Button
+                />
+                <Button
                   type="button"
                   variant="outline"
                   size="sm"
@@ -1028,7 +1029,7 @@ export function TicketDetail({
                     <Upload className="mr-2 h-3.5 w-3.5" />
                   )}
                   Adjuntar
-                </Button>}
+                </Button>
               </div>
 
               <p className="mb-3 text-xs text-muted-foreground">

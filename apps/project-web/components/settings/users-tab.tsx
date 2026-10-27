@@ -1,15 +1,15 @@
 "use client"
 
 import * as React from "react"
-import { Check, Plus, Users, Trash2, Mail, Loader2, Search, ShieldCheck, UserRound } from "lucide-react"
+import { Check, Plus, Trash2, Loader2, ShieldCheck, UserRound } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
+import { UsersTable } from "./users-table"
 import { UserService, type User, type CreateUserDto, type UserRole } from "@/services/userService"
 
 const roleOptions: Array<{ value: UserRole; label: string; description: string; icon: React.ElementType }> = [
@@ -38,7 +38,6 @@ function avatarColor(name: string) {
 export function UsersTab() {
   const [users, setUsers] = React.useState<User[]>([])
   const [loading, setLoading] = React.useState(true)
-  const [search, setSearch] = React.useState("")
   const [createOpen, setCreateOpen] = React.useState(false)
   const [creating, setCreating] = React.useState(false)
   const [createError, setCreateError] = React.useState("")
@@ -57,11 +56,6 @@ export function UsersTab() {
       .then(setUsers)
       .finally(() => setLoading(false))
   }, [])
-
-  const filtered = users.filter(u =>
-    u.name.toLowerCase().includes(search.toLowerCase()) ||
-    u.email.toLowerCase().includes(search.toLowerCase())
-  )
 
   const handleCreate = async () => {
     const normalizedName = name.trim()
@@ -122,81 +116,17 @@ export function UsersTab() {
 
   return (
     <div className="flex min-w-0 flex-col gap-6 xl:flex-row">
-      {/* Lista */}
       <div className="min-w-0 flex-1 space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative w-full min-w-0 flex-1">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar usuarios..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-9"
-            />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold">Usuarios</h3>
+            <p className="text-xs text-muted-foreground">{users.length} en total</p>
           </div>
-          <Button className="w-full shrink-0 sm:w-auto" onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Nuevo usuario
+          <Button className="shrink-0" onClick={() => setCreateOpen(true)}>
+            <Plus className="mr-1 h-4 w-4" /> Nuevo usuario
           </Button>
         </div>
-
-        {filtered.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-              <Users className="h-10 w-10 text-muted-foreground/40 mb-3" />
-              <p className="font-medium text-sm">
-                {search ? "Sin resultados" : "No hay usuarios"}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {search ? "Prueba con otra búsqueda" : "Crea el primer usuario del sistema"}
-              </p>
-              {!search && (
-                <Button size="sm" variant="outline" className="mt-4" onClick={() => setCreateOpen(true)}>
-                  Crear usuario
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-            {filtered.map(user => (
-              <button
-                key={user.id}
-                onClick={() => setSelectedUser(user)}
-                className={`text-left rounded-xl border p-4 transition-all hover:shadow-sm group ${
-                  selectedUser?.id === user.id
-                    ? "border-ring bg-primary/5 shadow-sm"
-                    : "border-border bg-card hover:border-primary/40"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10 shrink-0">
-                    {user.avatarUrl ? (
-                      <img src={user.avatarUrl} alt={user.name} className="rounded-full object-cover" />
-                    ) : (
-                      <AvatarFallback className={`text-sm font-semibold ${avatarColor(user.name)}`}>
-                        {initials(user.name)}
-                      </AvatarFallback>
-                    )}
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium text-sm truncate">{user.name}</div>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground truncate">
-                      <Mail className="h-3 w-3 shrink-0" />
-                      <span className="truncate">{user.email}</span>
-                    </div>
-                    <div className="mt-1.5 flex flex-wrap gap-1">
-                      {user.roles.map(role => (
-                        <Badge key={role} variant="secondary" className="px-1.5 py-0 text-[10px] capitalize">
-                          {role}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
+        <UsersTable users={users} onSelectUser={setSelectedUser} onRemoveUser={handleRemove} />
       </div>
 
       {/* Panel detalle */}

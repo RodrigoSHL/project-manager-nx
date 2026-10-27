@@ -18,8 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Users, Plus, Trash2, Loader2, UserCheck } from "lucide-react"
+import { Users, Plus, Loader2 } from "lucide-react"
+import { ProjectTeamTable } from "@/components/project-team-table"
+import { TEAM_ROLES } from "@/lib/team-roles"
 import { TeamMember, Project } from "@/types/project"
 import { ProjectService } from "@/services/projectService"
 import { WorkspaceService, type WorkspaceMember } from "@/services/userService"
@@ -33,24 +34,6 @@ interface EditTeamMembersDialogProps {
   onProjectUpdate?: (updatedProject: Project) => void
   workspaceId?: string
   workspaceName?: string
-}
-
-const TEAM_ROLES = [
-  { value: 'tech_lead', label: 'Tech Lead' },
-  { value: 'developer', label: 'Developer' },
-  { value: 'devops', label: 'DevOps' },
-  { value: 'product_owner', label: 'Product Owner' },
-  { value: 'scrum_master', label: 'Scrum Master' },
-  { value: 'qa', label: 'QA' },
-  { value: 'designer', label: 'Designer' },
-  { value: 'architect', label: 'Architect' },
-  { value: 'member', label: 'Miembro' },
-  { value: 'analyst', label: 'Analista' },
-  { value: 'technician', label: 'Técnico' },
-]
-
-function getInitials(name: string) {
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 }
 
 export function EditTeamMembersDialog({
@@ -158,7 +141,7 @@ export function EditTeamMembersDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
@@ -190,9 +173,9 @@ export function EditTeamMembersDialog({
                   : "Todos los miembros del workspace ya están en el proyecto."}
               </p>
             ) : (
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                  <SelectTrigger className="flex-1 !h-14">
+                  <SelectTrigger aria-label="Miembro del workspace" className="min-w-0 flex-1 basis-full !h-14 sm:basis-0">
                     <SelectValue placeholder="Selecciona un miembro..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -210,7 +193,7 @@ export function EditTeamMembersDialog({
                 </Select>
 
                 <Select value={selectedRole} onValueChange={setSelectedRole}>
-                  <SelectTrigger className="w-36 !h-14">
+                  <SelectTrigger aria-label="Rol del nuevo participante" className="w-36 !h-14">
                     <SelectValue placeholder="Rol..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -224,6 +207,7 @@ export function EditTeamMembersDialog({
                   size="icon"
                   className="h-14 w-14 shrink-0"
                   onClick={handleAdd}
+                  aria-label="Añadir participante al proyecto"
                   disabled={!selectedUserId || !selectedRole}
                 >
                   <Plus className="h-4 w-4" />
@@ -238,54 +222,8 @@ export function EditTeamMembersDialog({
               En el proyecto ({teamMembers.length})
             </Label>
 
-            {teamMembers.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground border rounded-lg">
-                <UserCheck className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                <p className="text-sm">Sin miembros asignados</p>
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                {teamMembers.map(member => (
-                  <div
-                    key={member.id}
-                    className="flex items-center gap-3 p-2.5 rounded-lg border bg-card"
-                  >
-                    <Avatar className="h-8 w-8 shrink-0">
-                      <AvatarFallback className="text-xs bg-primary/10 text-brand-foreground">
-                        {getInitials(member.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{member.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{member.email}</p>
-                    </div>
-                    <Select
-                      value={member.role}
-                      onValueChange={(role) => handleRoleChange(member.id, role)}
-                    >
-                      <SelectTrigger className="h-8 w-36 text-xs shrink-0">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {TEAM_ROLES.map(role => (
-                          <SelectItem key={role.value} value={role.value}>
-                            {role.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
-                      onClick={() => handleRemove(member.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
+            <ProjectTeamTable key={`${project?.id}-${open}`} members={teamMembers}
+              onRoleChange={handleRoleChange} onRemoveMember={handleRemove} disabled={saving} />
           </div>
         </div>
 

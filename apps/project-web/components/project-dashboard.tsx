@@ -24,14 +24,12 @@ import {
   Clock,
   AlertCircle,
   CheckCircle,
-  Mail,
   MessageSquare,
   BookOpen,
   Target,
   Zap,
   Loader2,
   Edit3,
-  Phone,
   AlertTriangle,
   Palette,
   Activity,
@@ -47,6 +45,7 @@ import { Project, FileType } from "@/types/project"
 import { FileService } from "@/services/fileService"
 import { EditProjectDialog } from "./edit-project-dialog"
 import { EditRepositoriesDialog } from "./edit-repositories-dialog"
+import { ProjectTeamTable } from "./project-team-table"
 import { EditTeamMembersDialog } from "./edit-team-members-dialog"
 import { EditTasksDialog } from "./edit-tasks-dialog"
 import { EditUsefulLinksDialog } from "./edit-useful-links-dialog"
@@ -134,23 +133,6 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
   // Manejar edición de servicios cloud
   const handleEditCloudServices = async (updatedProject: Project) => {
     // No necesitamos hacer nada aquí ya que el modal maneja la actualización directamente
-  }
-
-  const getRoleBadge = (role: string) => {
-    const roleMap: Record<string, string> = {
-      'tech_lead': 'Tech Lead',
-      'developer': 'Developer',
-      'devops': 'DevOps',
-      'product_owner': 'Product Owner',
-      'scrum_master': 'Scrum Master',
-      'qa': 'QA',
-      'designer': 'Designer',
-      'architect': 'Architect',
-      'member': 'Miembro',
-      'analyst': 'Analista',
-      'technician': 'Técnico',
-    }
-    return roleMap[role] || role
   }
 
   const getPriorityBadge = (priority: string) => {
@@ -761,50 +743,7 @@ export function ProjectDashboard({ projectId }: { projectId?: string }) {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    {currentProject.teamMembers && currentProject.teamMembers.length > 0 ? (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Rol</TableHead>
-                            <TableHead>Nombre</TableHead>
-                            <TableHead>Contacto</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {currentProject.teamMembers.map((member) => (
-                            <TableRow key={member.id}>
-                              <TableCell>
-                                <Badge variant="default">{getRoleBadge(member.role)}</Badge>
-                              </TableCell>
-                              <TableCell className="font-medium">{member.name}</TableCell>
-                              <TableCell>
-                                <div className="space-y-1">
-                                  <a
-                                    href={`mailto:${member.email}`}
-                                    className="flex items-center gap-2 text-brand-foreground underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
-                                  >
-                                    <Mail className="h-4 w-4" />
-                                    {member.email}
-                                  </a>
-                                  {member.phone && (
-                                    <div className="flex items-center gap-2 text-muted-foreground">
-                                      <Phone className="h-3 w-3" />
-                                      <span className="text-sm">{member.phone}</span>
-                                    </div>
-                                  )}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Users className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-                        <p>No hay miembros del equipo configurados</p>
-                        {isAdmin && <p className="text-sm">Haz clic en &quot;Editar&quot; para agregar miembros al equipo</p>}
-                      </div>
-                    )}
+                    <ProjectTeamTable key={currentProject.id} members={currentProject.teamMembers ?? []} />
                   </CardContent>
                 </Card>
 

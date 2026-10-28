@@ -1,5 +1,11 @@
 import { vi } from 'vitest';
-import { DailyLog, NutritionAccount, calculatePauta } from '../types/nutrition';
+import {
+  DailyLog,
+  NutritionAccount,
+  calculatePauta,
+  dashboardDates,
+  summarizeDashboardDay,
+} from '../types/nutrition';
 
 export const testAccount: NutritionAccount = {
   profile: {
@@ -40,6 +46,21 @@ export function nutritionFixture(initial: NutritionAccount = testAccount) {
     const body = init.body ? JSON.parse(init.body as string) : null;
     const path = url.replace('/api/macrofit/me', '');
     if (path === '') return response(account);
+    if (path.startsWith('/dashboard?')) {
+      const query = new URLSearchParams(path.split('?')[1]);
+      const from = query.get('from')!;
+      const to = query.get('to')!;
+      return response({
+        from,
+        to,
+        goals: account.goals,
+        days: dashboardDates(from, to).map((date) =>
+          summarizeDashboardDay(
+            days.get(date) ?? { date, meals: [], waterIntakeMl: 0 }
+          )
+        ),
+      });
+    }
     if (path === '/settings') {
       account = { ...account, ...body };
       return response(account);

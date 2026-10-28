@@ -8,6 +8,7 @@ import {
   dailyLogSchema,
   nutritionAccountSchema,
   productEquivalenceResultSchema,
+  dashboardResponseSchema,
 } from '../types/nutrition';
 
 function responseError(status: number) {
@@ -77,7 +78,9 @@ export async function nutritionRequest<T>(
     );
   }
   const parsed = (
-    path.endsWith('/equivalence-suggestions')
+    path.startsWith('/dashboard?')
+      ? dashboardResponseSchema
+      : path.endsWith('/equivalence-suggestions')
       ? equivalenceSuggestionsSchema
       : path.endsWith('/product-equivalence') ||
         (path.startsWith('/days/') && path.endsWith('/equivalence'))

@@ -1,4 +1,5 @@
-import React, { useCallback, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useState } from 'react';
+import { ChartNoAxesCombined } from 'lucide-react';
 import { Header } from '../components/Header';
 import { Sidebar } from '../components/Sidebar';
 import { DiaryDatePicker } from '../components/DiaryDatePicker';
@@ -21,6 +22,8 @@ import { AuthProvider, useAuth } from '../features/auth/auth-context';
 import { CurrentUser } from '../features/auth/auth-session';
 import { canImportLegacy } from '../features/auth/account-storage';
 import { LoginPage } from '../pages/LoginPage';
+
+const DashboardView = lazy(() => import('../features/dashboard/DashboardView'));
 
 export function App() {
   return (
@@ -281,7 +284,17 @@ export function MacroFitWorkspace({
                   )}
                 </section>
               )}
-              {activeTab === 'products' ? (
+              {activeTab === 'dashboard' ? (
+                <Suspense fallback={<p role="status">Cargando dashboard…</p>}>
+                  <DashboardView
+                    date={selectedDate}
+                    onOpenDiary={(date) => {
+                      setSelectedDate(date);
+                      navigate('tracker');
+                    }}
+                  />
+                </Suspense>
+              ) : activeTab === 'products' ? (
                 <ProductsView
                   foods={customFoods}
                   onSave={saveProduct}
@@ -347,37 +360,47 @@ export function MacroFitWorkspace({
                   onAddMeal={addMealEntry}
                 />
               ) : activeTab === 'tracker' ? (
-                <DailyTrackerView
-                  key={selectedDate}
-                  onOpenFoodGuide={() => navigate('food-guide')}
-                  goals={goals}
-                  meals={dailyLog.meals}
-                  consumedTotals={consumedTotals}
-                  nutritionPlan={dayPlan}
-                  portionSummary={portionSummary}
-                  onClassifyMeal={classifyMeal}
-                  catalogPlan={nutritionPlan}
-                  products={customFoods}
-                  onClassifyProduct={classifyProduct}
-                  onClassifyMealEquivalence={classifyMealEquivalence}
-                  onSuggestEquivalences={suggestEquivalences}
-                  onOpenProducts={() => navigate('products')}
-                  onOpenPlan={() => setActiveTab('plan')}
-                  waterIntakeMl={dailyLog.waterIntakeMl || 0}
-                  allFoods={allFoods}
-                  allTemplates={allTemplates}
-                  onAddMealEntry={addMealEntry}
-                  onAddMultipleMealEntries={addMultipleMealEntries}
-                  onRemoveMealEntry={removeMealEntry}
-                  onUpdateMealQuantity={updateMealQuantity}
-                  onAddWater={addWater}
-                  onResetWater={resetWater}
-                  onSaveCustomFood={addCustomFood}
-                  onApplyTemplate={applyMealTemplate}
-                  onSaveCurrentAsTemplate={saveMealAsTemplate}
-                  onManageTemplates={() => navigate('combos')}
-                  onOpenCalculator={() => setActiveTab('calculator')}
-                />
+                <>
+                  <button
+                    type="button"
+                    onClick={() => navigate('dashboard')}
+                    className="mb-3 flex min-h-11 items-center gap-2 text-sm font-semibold text-emerald-300"
+                  >
+                    <ChartNoAxesCombined className="size-4" /> Ver mi
+                    seguimiento
+                  </button>
+                  <DailyTrackerView
+                    key={selectedDate}
+                    onOpenFoodGuide={() => navigate('food-guide')}
+                    goals={goals}
+                    meals={dailyLog.meals}
+                    consumedTotals={consumedTotals}
+                    nutritionPlan={dayPlan}
+                    portionSummary={portionSummary}
+                    onClassifyMeal={classifyMeal}
+                    catalogPlan={nutritionPlan}
+                    products={customFoods}
+                    onClassifyProduct={classifyProduct}
+                    onClassifyMealEquivalence={classifyMealEquivalence}
+                    onSuggestEquivalences={suggestEquivalences}
+                    onOpenProducts={() => navigate('products')}
+                    onOpenPlan={() => setActiveTab('plan')}
+                    waterIntakeMl={dailyLog.waterIntakeMl || 0}
+                    allFoods={allFoods}
+                    allTemplates={allTemplates}
+                    onAddMealEntry={addMealEntry}
+                    onAddMultipleMealEntries={addMultipleMealEntries}
+                    onRemoveMealEntry={removeMealEntry}
+                    onUpdateMealQuantity={updateMealQuantity}
+                    onAddWater={addWater}
+                    onResetWater={resetWater}
+                    onSaveCustomFood={addCustomFood}
+                    onApplyTemplate={applyMealTemplate}
+                    onSaveCurrentAsTemplate={saveMealAsTemplate}
+                    onManageTemplates={() => navigate('combos')}
+                    onOpenCalculator={() => setActiveTab('calculator')}
+                  />
+                </>
               ) : (
                 <CalculatorView
                   initialProfile={profile}

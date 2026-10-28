@@ -7,9 +7,11 @@ import {
   Utensils,
   Settings,
   UserRound,
+  ChartNoAxesCombined,
 } from 'lucide-react';
 
 export type WorkspaceSection =
+  | 'dashboard'
   | 'tracker'
   | 'food-guide'
   | 'calculator'
@@ -25,6 +27,7 @@ export const WORKSPACE_NAVIGATION: Array<{
   {
     label: 'Seguimiento',
     items: [
+      { id: 'dashboard', label: 'Mi seguimiento', icon: ChartNoAxesCombined },
       { id: 'tracker', label: 'Diario', icon: BookOpen },
       { id: 'food-guide', label: 'Qué puedo comer', icon: Compass },
       { id: 'products', label: 'Mis productos', icon: Package },

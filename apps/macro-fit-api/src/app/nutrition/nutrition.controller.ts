@@ -14,6 +14,7 @@ import {
   UnauthorizedException,
   UseGuards,
   Header,
+  Query,
 } from '@nestjs/common';
 import { z } from 'zod';
 import {
@@ -30,6 +31,7 @@ import {
   updateMealQuantitySchema,
   productEquivalenceSchema,
   mealEquivalenceSchema,
+  dashboardRangeSchema,
 } from '@project-manager/macrofit-contracts';
 import { NutritionService } from './nutrition.service';
 
@@ -61,6 +63,12 @@ export class NutritionController {
   @Header('Cache-Control', 'no-store')
   account(@Headers('x-user-id') userId: string) {
     return this.service.getAccount(userId);
+  }
+  @Get('dashboard')
+  @Header('Cache-Control', 'no-store')
+  dashboard(@Headers('x-user-id') userId: string, @Query() query: unknown) {
+    const { from, to } = parseInput(dashboardRangeSchema, query);
+    return this.service.getDashboard(userId, from, to);
   }
   @Put('settings')
   settings(@Headers('x-user-id') userId: string, @Body() body: unknown) {

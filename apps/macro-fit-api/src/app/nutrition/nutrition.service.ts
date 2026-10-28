@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DataSource, EntityManager, LessThanOrEqual } from 'typeorm';
+import { Between, DataSource, EntityManager, LessThanOrEqual } from 'typeorm';
 import {
   EquivalenceSuggestionRequest,
   ProductSuggestionRequest,
@@ -30,6 +30,10 @@ import {
   ProductEquivalenceResult,
   PautaRule,
   nutritionPlanSchema,
+  DashboardResponse,
+  dashboardRangeSchema,
+  dashboardDates,
+  summarizeDashboardDay,
 } from '@project-manager/macrofit-contracts';
 import {
   NutritionDailyLogEntity,
@@ -571,6 +575,59 @@ export class NutritionService {
     return this.transaction(userId, (manager) =>
       this.daily(manager, userId, date)
     );
+  }
+  getDashboard(
+    userId: string,
+    from: string,
+    to: string
+  ): Promise<DashboardResponse> {
+    if (!dashboardRangeSchema.safeParse({ from, to }).success)
+      throw new BadRequestException(
+        'Selecciona un período válido de hasta 90 días.'
+      );
+    return this.transaction(userId, async (manager) => {
+      // Four reads instead of one query per day, all scoped to the authenticated owner.
+      // Reading never creates days or changes saved classifications.
+      const [profile, logs, entries, plans] = await Promise.all([
+        manager.findOneBy(NutritionProfileEntity, { userId }),
+        manager.find(NutritionDailyLogEntity, {
+          where: { userId, date: Between(from, to) },
+        }),
+        manager.find(NutritionMealEntryEntity, {
+          where: { userId, date: Between(from, to) },
+        }),
+        manager.find(NutritionPlanEntity, {
+          where: { userId },
+          order: { version: 'DESC' },
+        }),
+      ]);
+      const byDate = new Map(logs.map((log) => [log.date, log]));
+      const meals = new Map<string, MealEntry[]>();
+      for (const entry of entries) {
+        const list = meals.get(entry.date) ?? [];
+        list.push(entry.data);
+        meals.set(entry.date, list);
+      }
+      return {
+        from,
+        to,
+        goals: profile?.goals ?? null,
+        days: dashboardDates(from, to).map((date) => {
+          const log = byDate.get(date);
+          const plan =
+            log?.planVersion != null
+              ? plans.find((plan) => plan.version === log.planVersion)
+              : plans.find((plan) => plan.startsOn <= date);
+          return summarizeDashboardDay({
+            date,
+            meals: meals.get(date) ?? [],
+            waterIntakeMl: log?.waterIntakeMl ?? 0,
+            // Portion snapshots are sufficient; rule catalogs never leave this endpoint.
+            nutritionPlan: plan?.data ?? null,
+          });
+        }),
+      };
+    });
   }
   getEquivalenceContext(
     userId: string,

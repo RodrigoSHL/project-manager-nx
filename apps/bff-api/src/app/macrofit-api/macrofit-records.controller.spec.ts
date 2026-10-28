@@ -39,6 +39,37 @@ describe('MacroFit personal records BFF', () => {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
   };
+  it('protects dashboard history, bounds its range and replaces a forged owner with the JWT identity', async () => {
+    const path = '/api/macrofit/me/dashboard';
+    expect(
+      (await httpFetch(origin + path + '?from=2026-10-01&to=2026-10-07')).status
+    ).toBe(401);
+    for (const query of [
+      '?from=2026-02-30&to=2026-03-01',
+      '?from=2026-10-07&to=2026-10-01',
+      '?from=2026-01-01&to=2026-04-01',
+      '?from=2026-10-01&to=2026-10-07&userId=foreign',
+      '?from=2026-10-01',
+    ])
+      expect((await httpFetch(origin + path + query, { headers })).status).toBe(
+        400
+      );
+    expect(upstream).not.toHaveBeenCalled();
+    upstream.mockResolvedValue(new Response('{}', { status: 200 }));
+    const response = await httpFetch(
+      origin + path + '?from=2026-10-01&to=2026-10-07',
+      { headers: { ...headers, 'x-user-id': 'foreign' } }
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(upstream).toHaveBeenCalledWith(
+      expect.stringContaining('/me/dashboard?from=2026-10-01&to=2026-10-07'),
+      expect.objectContaining({
+        method: 'GET',
+        headers: expect.objectContaining({ 'x-user-id': userId }),
+      })
+    );
+  });
   it('authenticates and validates a meal equivalence without a product, using only the JWT owner upstream', async () => {
     const path = '/api/macrofit/me/days/2026-10-25/meals/meal/equivalence';
     const body = {

@@ -11,6 +11,7 @@ import {
   Put,
   Req,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { z } from 'zod';
 import {
@@ -30,6 +31,7 @@ import {
   updateMealQuantitySchema,
   productEquivalenceSchema,
   mealEquivalenceSchema,
+  dashboardRangeSchema,
 } from '@project-manager/macrofit-contracts';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { MacrofitApiClient } from './macrofit-api.client';
@@ -67,6 +69,12 @@ export class MacrofitRecordsController {
   @Header('Cache-Control', 'no-store')
   account(@Req() req: AuthenticatedRequest) {
     return this.send(req, '');
+  }
+  @Get('dashboard')
+  @Header('Cache-Control', 'no-store')
+  dashboard(@Req() req: AuthenticatedRequest, @Query() query: unknown) {
+    const { from, to } = parse(dashboardRangeSchema, query);
+    return this.send(req, `/dashboard?from=${from}&to=${to}`);
   }
   @Put('settings')
   settings(@Req() req: AuthenticatedRequest, @Body() body: unknown) {

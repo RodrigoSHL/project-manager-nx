@@ -63,14 +63,14 @@ export class TicketsService {
     type: TicketType,
     epicId?: string | null,
     repository = this.ticketsRepository,
-  ): Promise<void> {
+  ): Promise<Ticket | null> {
     if (type !== TicketType.STORY) {
       if (epicId) {
         throw new BadRequestException(
           'Solo las historias de usuario pueden vincularse a una épica',
         );
       }
-      return;
+      return null;
     }
 
     if (!epicId) {
@@ -87,6 +87,7 @@ export class TicketsService {
         'La épica seleccionada no existe o pertenece a otro proyecto',
       );
     }
+    return epic;
   }
 
   private async assertEpicHasNoStories(ticket: Ticket, repository = this.ticketsRepository): Promise<void> {
@@ -102,6 +103,31 @@ export class TicketsService {
     }
   }
 
+  private async findSubtaskParent(
+    projectId: string,
+    type: TicketType,
+    parentTicketId: string | null | undefined,
+    repository: Repository<Ticket>,
+    ticketId?: string,
+  ): Promise<Ticket | null> {
+    if (type !== TicketType.SUBTASK) {
+      if (parentTicketId) throw new BadRequestException('Solo las subtareas pueden vincularse a una historia de usuario');
+      return null;
+    }
+    if (!parentTicketId) throw new BadRequestException('La subtarea debe estar vinculada a una historia de usuario');
+    if (parentTicketId.toLowerCase() === ticketId?.toLowerCase()) throw new BadRequestException('Un ticket no puede ser su propia historia de usuario');
+    const parent = await repository.findOne({ where: { id: parentTicketId, projectId, type: TicketType.STORY } });
+    if (!parent) throw new BadRequestException('La historia seleccionada no existe, no es una HDU o pertenece a otro proyecto');
+    return parent;
+  }
+
+  private async assertStoryHasNoSubtasks(ticket: Ticket, repository: Repository<Ticket>): Promise<void> {
+    if (ticket.type !== TicketType.STORY) return;
+    if (await repository.count({ where: { parentTicketId: ticket.id } })) {
+      throw new BadRequestException('La historia tiene subtareas vinculadas. Reasígnalas antes de continuar');
+    }
+  }
+
   async create(projectId: string, dto: CreateTicketDto): Promise<Ticket> {
     await this.findProjectSprint(projectId, dto.sprintId);
     await this.assertProjectMemberAssignee(projectId, dto.assigneeId);
@@ -114,7 +140,8 @@ export class TicketsService {
       const key = await this.generateKey(manager, projectId);
       await this.findProjectSprint(projectId, dto.sprintId, manager.getRepository(Sprint));
       const tickets = manager.getRepository(Ticket);
-      const ticket = tickets.create({ ...dto, projectId, key });
+      const parent = await this.findSubtaskParent(projectId, dto.type ?? TicketType.TASK, dto.parentTicketId, tickets);
+      const ticket = tickets.create({ ...dto, parentTicketId: parent?.id ?? null, projectId, key });
       const saved = await tickets.save(ticket);
 
       if (saved.type === TicketType.SUPPORT) {
@@ -184,8 +211,19 @@ export class TicketsService {
         if (ticket.type === TicketType.EPIC && nextType !== TicketType.EPIC) {
           await this.assertEpicHasNoStories(ticket, repository);
         }
-        await this.assertValidEpic(projectId, nextType, nextEpicId, repository);
+        ticket.epic = await this.assertValidEpic(projectId, nextType, nextEpicId, repository);
         dto.epicId = nextEpicId;
+      }
+      if (dto.type !== undefined || dto.parentTicketId !== undefined) {
+        const nextType = dto.type ?? ticket.type;
+        const nextParentId = dto.parentTicketId !== undefined ? dto.parentTicketId
+          : nextType === TicketType.SUBTASK ? ticket.parentTicketId : null;
+        if (ticket.type === TicketType.STORY && nextType !== TicketType.STORY) {
+          await this.assertStoryHasNoSubtasks(ticket, repository);
+        }
+        const parent = await this.findSubtaskParent(projectId, nextType, nextParentId, repository, ticket.id);
+        ticket.parentTicket = parent;
+        dto.parentTicketId = parent?.id ?? null;
       }
       Object.assign(ticket, dto);
       return repository.save(ticket);
@@ -198,6 +236,7 @@ export class TicketsService {
       const repository = manager.getRepository(Ticket);
       const ticket = await this.findOne(projectId, id, repository);
       await this.assertEpicHasNoStories(ticket, repository);
+      await this.assertStoryHasNoSubtasks(ticket, repository);
       await repository.remove(ticket);
     });
   }

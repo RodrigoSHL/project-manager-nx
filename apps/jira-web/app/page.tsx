@@ -5,6 +5,7 @@ import { Layers, LayoutGrid, Zap, Ticket as TicketIcon, BarChart3, Plus, Calenda
 import { cn } from '@/lib/utils'
 import { getTicketSprintUpdate } from '@/lib/ticket-sprint'
 import { parseTicketLink } from '@/lib/ticket-link'
+import { getSavedProjectId, saveProjectId } from '@/lib/project-selection'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { AppSidebar } from '@/components/app-sidebar'
 import { MobileSidebar } from '@/components/mobile-sidebar'
@@ -46,6 +47,7 @@ export default function ProjectManagement() {
   const [activeView, setActiveView] = React.useState('sprint')
   const [currentProject, setCurrentProject] = React.useState('')
   const [apiProjects, setApiProjects] = React.useState<ApiProject[]>([])
+  const projectsWorkspaceRef = React.useRef<string | null>(null)
   const [loadingProjects, setLoadingProjects] = React.useState(true)
   const [sprints, setSprints] = React.useState<ApiSprint[]>([])
   const [tickets, setTickets] = React.useState<ApiTicket[]>([])
@@ -63,6 +65,7 @@ export default function ProjectManagement() {
   const [createTicketInitialSprintId, setCreateTicketInitialSprintId] = React.useState<string | null | undefined>(undefined)
   const [createTicketInitialType, setCreateTicketInitialType] = React.useState<ApiTicket['type']>('task')
   const [createTicketInitialEpicId, setCreateTicketInitialEpicId] = React.useState<string | null>(null)
+  const [createTicketInitialParentId, setCreateTicketInitialParentId] = React.useState<string | null>(null)
   const [ticketDetailOpen, setTicketDetailOpen] = React.useState(false)
   const [highlightedCommentId, setHighlightedCommentId] = React.useState<string | undefined>()
   const openedLinkedTicket = React.useRef(false)
@@ -76,6 +79,7 @@ export default function ProjectManagement() {
   const [boardAssigneeFilters, setBoardAssigneeFilters] = React.useState<string[]>([])
 
   React.useEffect(() => {
+    projectsWorkspaceRef.current = null
     if (!selectedWorkspace) {
       setApiProjects([])
       setCurrentProject('')
@@ -88,15 +92,28 @@ export default function ProjectManagement() {
       .then((data) => {
         if (cancelled) return
         setApiProjects(data)
+        projectsWorkspaceRef.current = selectedWorkspace.id
         const link = parseTicketLink(window.location.search)
         const linkedProject = !openedLinkedTicket.current && link?.workspaceId === selectedWorkspace.id
           ? data.find(p => p.id === link.projectId) : undefined
-        setCurrentProject(prev => linkedProject?.id ?? (data.find(p => p.id === prev) ? prev : (data[0]?.id ?? '')))
+        const savedId = getSavedProjectId(selectedWorkspace.id)
+        const nextProjectId = linkedProject?.id
+          ?? data.find(project => project.id === currentProjectRef.current)?.id
+          ?? data.find(project => project.id === savedId)?.id
+          ?? data[0]?.id ?? ''
+        setCurrentProject(nextProjectId)
+        saveProjectId(selectedWorkspace.id, nextProjectId)
       })
       .catch(console.error)
       .finally(() => { if (!cancelled) setLoadingProjects(false) })
     return () => { cancelled = true }
   }, [selectedWorkspace])
+
+  const handleProjectChange = (projectId: string) => {
+    if (!selectedWorkspace || projectsWorkspaceRef.current !== selectedWorkspace.id || !apiProjects.some(project => project.id === projectId)) return
+    setCurrentProject(projectId)
+    saveProjectId(selectedWorkspace.id, projectId)
+  }
 
   React.useEffect(() => {
     setProjectPermission(null)
@@ -177,12 +194,14 @@ export default function ProjectManagement() {
     sprintId?: string | null,
     type: ApiTicket['type'] = 'task',
     epicId: string | null = null,
+    parentTicketId: string | null = null,
   ) => {
     if (!canWrite) return
     setCreateTicketInitialStatus(status ?? 'todo')
     setCreateTicketInitialSprintId(sprintId)
     setCreateTicketInitialType(type)
     setCreateTicketInitialEpicId(epicId)
+    setCreateTicketInitialParentId(parentTicketId)
     setCreateTicketOpen(true)
   }
 
@@ -925,7 +944,7 @@ export default function ProjectManagement() {
           activeView={activeView}
           onViewChange={setActiveView}
           currentProject={currentProject}
-          onProjectChange={setCurrentProject}
+          onProjectChange={handleProjectChange}
           projects={apiProjects}
           loadingProjects={loadingProjects}
         />
@@ -938,7 +957,7 @@ export default function ProjectManagement() {
         activeView={activeView}
         onViewChange={setActiveView}
         currentProject={currentProject}
-        onProjectChange={setCurrentProject}
+        onProjectChange={handleProjectChange}
       />
 
       {/* Main Content */}
@@ -947,7 +966,7 @@ export default function ProjectManagement() {
           onMenuClick={() => setMobileSidebarOpen(true)}
           isMobile={!!isMobile}
           currentProject={currentProject}
-          onProjectChange={setCurrentProject}
+          onProjectChange={handleProjectChange}
           onCreateTicket={() => handleCreateTicket()}
           canWrite={canWrite}
           searchQuery={searchQuery}
@@ -977,6 +996,12 @@ export default function ProjectManagement() {
         sprints={sprints}
         onUpdated={handleTicketUpdated}
         onSelectTicket={handleTicketClick}
+        onCreateChild={parent => {
+          const parentSprint = sprints.find(sprint => sprint.id === parent.sprintId)
+          handleCreateTicket('todo', parent.type === 'story' && !parentSprint?.completedAt ? parent.sprintId : null,
+            parent.type === 'epic' ? 'story' : 'subtask', parent.type === 'epic' ? parent.id : null,
+            parent.type === 'story' ? parent.id : null)
+        }}
         onDeleted={ticketId => {
           setTickets(prev => prev.filter(ticket => ticket.id !== ticketId))
           setTicketDetailOpen(false)
@@ -1024,10 +1049,12 @@ export default function ProjectManagement() {
         sprints={sprints}
         teamMembers={teamMembers}
         availableEpics={tickets.filter(ticket => ticket.type === 'epic')}
+        availableStories={tickets.filter(ticket => ticket.type === 'story')}
         initialStatus={createTicketInitialStatus}
         initialSprintId={createTicketInitialSprintId}
         initialType={createTicketInitialType}
         initialEpicId={createTicketInitialEpicId}
+        initialParentTicketId={createTicketInitialParentId}
         onCreated={handleTicketCreated}
       />}
 

@@ -318,4 +318,60 @@ describe('TicketsService', () => {
     expect(await service.create('project-1', { title: 'Backlog', sprintId: null })).toMatchObject({ sprintId: null });
     expect(sprintsRepository.findOne).not.toHaveBeenCalled();
   });
+
+  it('creates a subtask linked to a user story inside the project transaction', async () => {
+    ticketsRepository.findOne.mockResolvedValue({ id: 'story-1', projectId: 'project-1', type: TicketType.STORY });
+    expect(await service.create('project-1', { title: 'Subtask', type: TicketType.SUBTASK, parentTicketId: 'story-1' }))
+      .toMatchObject({ type: TicketType.SUBTASK, parentTicketId: 'story-1', key: 'WEB-1' });
+    expect(ticketsRepository.findOne).toHaveBeenCalledWith({ where: { id: 'story-1', projectId: 'project-1', type: TicketType.STORY } });
+  });
+
+  it('requires a story for new subtasks and rejects an invalid parent', async () => {
+    await expect(service.create('project-1', { title: 'Orphan', type: TicketType.SUBTASK })).rejects.toThrow('debe estar vinculada');
+    ticketsRepository.findOne.mockResolvedValue(null);
+    await expect(service.create('project-1', { title: 'Invalid', type: TicketType.SUBTASK, parentTicketId: 'foreign' })).rejects.toThrow('otro proyecto');
+    expect(ticketsRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('rejects a parent on ordinary tickets even when the type is explicitly provided', async () => {
+    await expect(service.create('project-1', { title: 'Task', type: TicketType.TASK, parentTicketId: 'story-1' })).rejects.toThrow('Solo las subtareas');
+    ticketsRepository.findOne.mockResolvedValue({ id: 'task-1', projectId: 'project-1', type: TicketType.TASK });
+    await expect(service.update('project-1', 'task-1', { type: TicketType.TASK, parentTicketId: 'story-1' })).rejects.toThrow('Solo las subtareas');
+    expect(ticketsRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('reassigns a subtask and updates the loaded parent relation', async () => {
+    const child = { id: 'child-1', projectId: 'project-1', type: TicketType.SUBTASK, parentTicketId: 'old', parentTicket: { id: 'old' } };
+    const story = { id: 'story-2', projectId: 'project-1', type: TicketType.STORY };
+    ticketsRepository.findOne.mockImplementation(async ({ where }) => where.id === child.id ? child : story);
+    expect(await service.update('project-1', 'child-1', { parentTicketId: 'story-2' })).toMatchObject({ parentTicketId: 'story-2', parentTicket: story });
+    expect(ticketsRepository.findOne).toHaveBeenCalledWith({ where: { id: 'story-2', projectId: 'project-1', type: TicketType.STORY } });
+  });
+
+  it('clears the parent when converting a subtask into an ordinary task', async () => {
+    ticketsRepository.findOne.mockResolvedValue({ id: 'child-1', projectId: 'project-1', type: TicketType.SUBTASK, parentTicketId: 'story-1', parentTicket: { id: 'story-1' } });
+    expect(await service.update('project-1', 'child-1', { type: TicketType.TASK })).toMatchObject({ type: TicketType.TASK, parentTicketId: null, parentTicket: null });
+  });
+
+  it('does not allow self references or detaching a subtask from its story', async () => {
+    ticketsRepository.findOne.mockResolvedValue({ id: 'child-1', projectId: 'project-1', type: TicketType.SUBTASK, parentTicketId: 'story-1' });
+    await expect(service.update('project-1', 'child-1', { parentTicketId: 'child-1' })).rejects.toThrow('su propia');
+    await expect(service.update('project-1', 'child-1', { parentTicketId: 'CHILD-1' })).rejects.toThrow('su propia');
+    await expect(service.update('project-1', 'child-1', { parentTicketId: null })).rejects.toThrow('debe estar vinculada');
+    expect(ticketsRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('preserves legacy standalone subtasks on unrelated edits', async () => {
+    ticketsRepository.findOne.mockResolvedValue({ id: 'legacy', projectId: 'project-1', type: TicketType.SUBTASK, parentTicketId: null });
+    expect(await service.update('project-1', 'legacy', { status: TicketStatus.DONE })).toMatchObject({ status: TicketStatus.DONE, parentTicketId: null });
+  });
+
+  it('blocks deleting or changing the type of stories with linked subtasks', async () => {
+    ticketsRepository.findOne.mockResolvedValue({ id: 'story-1', projectId: 'project-1', type: TicketType.STORY });
+    ticketsRepository.count.mockResolvedValue(1);
+    await expect(service.remove('project-1', 'story-1')).rejects.toThrow('subtareas vinculadas');
+    await expect(service.update('project-1', 'story-1', { type: TicketType.TASK })).rejects.toThrow('subtareas vinculadas');
+    expect(ticketsRepository.remove).not.toHaveBeenCalled();
+    expect(ticketsRepository.save).not.toHaveBeenCalled();
+  });
 });

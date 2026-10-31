@@ -27,6 +27,7 @@ export async function createTicket(projectId: string, data: {
   sprintId?: string | null
   assigneeId?: string | null
   epicId?: string | null
+  parentTicketId?: string | null
   storyPoints?: number | null
   dueDate?: string | null
 }): Promise<ApiTicket> {
@@ -48,6 +49,7 @@ export async function updateTicket(projectId: string, ticketId: string, data: Pa
   sprintId: string | null
   assigneeId: string | null
   epicId: string | null
+  parentTicketId: string | null
   storyPoints: number | null
   dueDate: string | null
 }>): Promise<ApiTicket> {

@@ -37,10 +37,12 @@ interface CreateTicketDialogProps {
   sprints: ApiSprint[]
   teamMembers?: ApiTeamMember[]
   availableEpics?: ApiTicket[]
+  availableStories?: ApiTicket[]
   initialStatus?: ApiTicket['status']
   initialSprintId?: string | null
   initialType?: ApiTicket['type']
   initialEpicId?: string | null
+  initialParentTicketId?: string | null
   onCreated: (ticket: ApiTicket) => void
 }
 
@@ -76,10 +78,12 @@ export function CreateTicketDialog({
   sprints,
   teamMembers = [],
   availableEpics = [],
+  availableStories = [],
   initialStatus,
   initialSprintId,
   initialType,
   initialEpicId,
+  initialParentTicketId,
   onCreated,
 }: CreateTicketDialogProps) {
   const [title, setTitle] = React.useState('')
@@ -91,6 +95,7 @@ export function CreateTicketDialog({
   const [sprintId, setSprintId] = React.useState<string>('none')
   const [assigneeId, setAssigneeId] = React.useState<string>('none')
   const [epicId, setEpicId] = React.useState<string>('none')
+  const [parentTicketId, setParentTicketId] = React.useState<string>('none')
   const [storyPoints, setStoryPoints] = React.useState('')
   const [dueDate, setDueDate] = React.useState('')
   const [saving, setSaving] = React.useState(false)
@@ -98,6 +103,7 @@ export function CreateTicketDialog({
   const [templateMessage, setTemplateMessage] = React.useState('')
 
   const activeSprint = sprints.find(s => s.projectId === projectId && s.isActive && !s.completedAt)
+  const parentStories = availableStories.filter(story => story.type === 'story' && story.projectId === projectId)
 
   React.useEffect(() => {
     if (!open) return
@@ -111,11 +117,12 @@ export function CreateTicketDialog({
     setSprintId(initialSprintId !== undefined ? (initialSprintId ?? 'none') : (activeSprint?.id ?? 'none'))
     setAssigneeId('none')
     setEpicId(initialEpicId ?? 'none')
+    setParentTicketId(initialParentTicketId ?? 'none')
     setStoryPoints('')
     setDueDate('')
     setError('')
     setTemplateMessage('')
-  }, [open, initialStatus, initialSprintId, initialType, initialEpicId, activeSprint?.id])
+  }, [open, initialStatus, initialSprintId, initialType, initialEpicId, initialParentTicketId, activeSprint?.id])
 
   const handleCopyTemplate = async () => {
     setError('')
@@ -181,6 +188,10 @@ export function CreateTicketDialog({
       setError('Selecciona la épica a la que pertenece la historia de usuario.')
       return
     }
+    if (type === 'subtask' && !parentStories.some(story => story.id === parentTicketId)) {
+      setError('Selecciona la historia de usuario a la que pertenece la subtarea.')
+      return
+    }
     setSaving(true)
     setError('')
     try {
@@ -194,6 +205,7 @@ export function CreateTicketDialog({
         sprintId: type === 'epic' || sprintId === 'none' ? null : sprintId,
         assigneeId: assigneeId === 'none' ? null : assigneeId,
         epicId: type === 'story' ? epicId : null,
+        parentTicketId: type === 'subtask' ? parentTicketId : null,
         storyPoints: storyPoints ? parseInt(storyPoints, 10) : null,
         dueDate: dueDate || null,
       })
@@ -305,6 +317,20 @@ export function CreateTicketDialog({
                   Primero debes crear una épica en este proyecto.
                 </p>
               )}
+            </div>
+          )}
+
+          {type === 'subtask' && (
+            <div className="space-y-1.5">
+              <Label htmlFor="subtask-parent">Historia de usuario *</Label>
+              <Select value={parentTicketId} onValueChange={setParentTicketId} disabled={saving}>
+                <SelectTrigger id="subtask-parent"><SelectValue placeholder="Selecciona una historia de usuario" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none" disabled>Selecciona una historia de usuario</SelectItem>
+                  {parentStories.map(story => <SelectItem key={story.id} value={story.id}>{story.key} · {story.title}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {parentStories.length === 0 && <p className="text-xs text-muted-foreground">Primero debes crear una historia de usuario en este proyecto.</p>}
             </div>
           )}
 

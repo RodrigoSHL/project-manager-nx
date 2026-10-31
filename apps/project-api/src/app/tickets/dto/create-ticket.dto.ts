@@ -45,6 +45,10 @@ export class CreateTicketDto {
 
   @IsUUID()
   @IsOptional()
+  parentTicketId?: string | null;
+
+  @IsUUID()
+  @IsOptional()
   reporterId?: string;
 
   @IsInt()

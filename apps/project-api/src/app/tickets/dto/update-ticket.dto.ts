@@ -46,6 +46,10 @@ export class UpdateTicketDto {
 
   @IsUUID()
   @IsOptional()
+  parentTicketId?: string | null;
+
+  @IsUUID()
+  @IsOptional()
   reporterId?: string;
 
   @IsInt()

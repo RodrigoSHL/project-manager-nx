@@ -10,6 +10,7 @@ import {
   Index,
   CreateDateColumn,
   UpdateDateColumn,
+  Check,
 } from 'typeorm';
 import { Project } from '../../projects/entities/project.entity';
 import { Sprint } from '../../sprints/entities/sprint.entity';
@@ -42,6 +43,7 @@ export enum TicketType {
 }
 
 @Entity('tickets')
+@Check('CHK_tickets_subtask_parent', `"parentTicketId" IS NULL OR ("type" = 'subtask' AND "parentTicketId" <> "id")`)
 export class Ticket {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -83,6 +85,10 @@ export class Ticket {
   epicId: string | null;
 
   @Column({ type: 'uuid', nullable: true })
+  @Index('IDX_tickets_parentTicketId')
+  parentTicketId: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
   reporterId: string;
 
   @Column({ type: 'integer', nullable: true })
@@ -114,6 +120,16 @@ export class Ticket {
 
   @OneToMany(() => Ticket, (ticket) => ticket.epic)
   stories: Ticket[];
+
+  @ManyToOne(() => Ticket, (ticket) => ticket.childTickets, {
+    nullable: true,
+    onDelete: 'RESTRICT',
+  })
+  @JoinColumn({ name: 'parentTicketId', foreignKeyConstraintName: 'FK_tickets_parentTicketId' })
+  parentTicket: Ticket | null;
+
+  @OneToMany(() => Ticket, (ticket) => ticket.parentTicket)
+  childTickets: Ticket[];
 
   @ManyToMany(() => Label)
   @JoinTable({

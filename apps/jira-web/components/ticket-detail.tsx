@@ -36,6 +36,7 @@ import { CommentMentionEditor } from '@/components/comment-mention-editor'
 import { TicketAttachmentViewer } from '@/components/ticket-attachment-viewer'
 import { TicketCommentComposer } from '@/components/ticket-comment-composer'
 import { CommentAttachments } from '@/components/comment-attachments'
+import { TicketChildren } from '@/components/ticket-children'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -148,6 +149,7 @@ interface TicketDetailProps {
   onUpdated: (ticket: ApiTicket) => void
   onDeleted: (ticketId: string) => void
   onSelectTicket: (ticket: ApiTicket) => void
+  onCreateChild?: (ticket: ApiTicket) => void
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -165,12 +167,15 @@ export function TicketDetail({
   onUpdated,
   onDeleted,
   onSelectTicket,
+  onCreateChild,
 }: TicketDetailProps) {
   const { user } = useAuth()
   const [saving, setSaving] = React.useState(false)
   const [saveError, setSaveError] = React.useState<string | null>(null)
   const [storyTypeDialogOpen, setStoryTypeDialogOpen] = React.useState(false)
   const [storyEpicId, setStoryEpicId] = React.useState('none')
+  const [subtaskTypeDialogOpen, setSubtaskTypeDialogOpen] = React.useState(false)
+  const [subtaskParentId, setSubtaskParentId] = React.useState('none')
 
   const [title, setTitle] = React.useState('')
   const [isEditingTitle, setIsEditingTitle] = React.useState(false)
@@ -231,6 +236,8 @@ export function TicketDetail({
     setSaveError(null)
     setStoryTypeDialogOpen(false)
     setStoryEpicId('none')
+    setSubtaskTypeDialogOpen(false)
+    setSubtaskParentId('none')
   }, [ticket?.id])
 
   React.useEffect(() => {
@@ -300,10 +307,9 @@ export function TicketDetail({
   const selectedAssignee = findTeamMemberByAssigneeId(teamMembers, ticket.assigneeId)
   const projectSprints = sprints.filter(sprint => sprint.projectId === projectId)
   const selectedSprint = projectSprints.find(sprint => sprint.id === ticket.sprintId)
-  const availableEpics = tickets.filter(candidate => candidate.type === 'epic' && candidate.id !== ticket.id)
-  const epicStories = ticket.type === 'epic'
-    ? tickets.filter(candidate => candidate.type === 'story' && candidate.epicId === ticket.id)
-    : []
+  const availableEpics = tickets.filter(candidate => candidate.projectId === ticket.projectId && candidate.type === 'epic' && candidate.id !== ticket.id)
+  const availableStories = tickets.filter(candidate => candidate.projectId === ticket.projectId && candidate.type === 'story' && candidate.id !== ticket.id)
+  const parentStory = availableStories.find(candidate => candidate.id === ticket.parentTicketId)
 
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString('es-ES', {
@@ -569,6 +575,15 @@ export function TicketDetail({
                             setStoryTypeDialogOpen(true)
                             return
                           }
+                          if (option.value === 'subtask') {
+                            if (availableStories.length === 0) {
+                              setSaveError('Crea primero una historia de usuario para poder vincular la subtarea.')
+                              return
+                            }
+                            setSubtaskParentId(ticket.parentTicketId ?? 'none')
+                            setSubtaskTypeDialogOpen(true)
+                            return
+                          }
                           patch({ type: option.value })
                         }}
                       >
@@ -696,6 +711,20 @@ export function TicketDetail({
                 </div>
               )}
 
+              {ticket.type === 'subtask' && (
+                <div className="col-span-2 space-y-1.5">
+                  <label htmlFor="ticket-parent-story" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Historia de usuario</label>
+                  <Select disabled={!canWrite || saving} value={ticket.parentTicketId ?? 'none'} onValueChange={value => { if (value !== 'none') void patch({ parentTicketId: value }) }}>
+                    <SelectTrigger id="ticket-parent-story" className="h-9 w-full"><SelectValue placeholder="Selecciona una historia de usuario" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none" disabled>Selecciona una historia de usuario</SelectItem>
+                      {availableStories.map(story => <SelectItem key={story.id} value={story.id}>{story.key} · {story.title}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  {parentStory && <Button type="button" variant="link" size="sm" className="h-auto p-0" onClick={() => onSelectTicket(parentStory)}>Ver historia {parentStory.key}</Button>}
+                </div>
+              )}
+
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Estado
@@ -815,35 +844,8 @@ export function TicketDetail({
               </p>
             )}
 
-            {ticket.type === 'epic' && (
-              <div className="mb-6 rounded-lg border border-purple-500/20 bg-purple-500/5 p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-medium uppercase tracking-wider text-purple-600">
-                    Historias de usuario
-                  </p>
-                  <Badge variant="secondary">{epicStories.length}</Badge>
-                </div>
-                {epicStories.length > 0 ? (
-                  <div className="space-y-2">
-                    {epicStories.map(story => (
-                      <button
-                        key={story.id}
-                        type="button"
-                        className="flex w-full items-center gap-2 rounded-md bg-background px-3 py-2 text-left text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        onClick={() => onSelectTicket(story)}
-                      >
-                        <BookOpen className="h-3.5 w-3.5 text-green-600 shrink-0" />
-                        <span className="font-mono text-xs text-muted-foreground">{story.key}</span>
-                        <span className="min-w-0 flex-1 truncate">{story.title}</span>
-                        <Badge variant="outline" className="ml-auto shrink-0 text-[10px]">{story.status}</Badge>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Esta épica aún no tiene historias vinculadas.</p>
-                )}
-              </div>
-            )}
+            <TicketChildren ticket={ticket} tickets={tickets} onSelect={onSelectTicket}
+              onCreate={canWrite && onCreateChild ? () => onCreateChild(ticket) : undefined} />
 
             {/* ── Description ───────────────────────────────────────────────── */}
             <div className="mb-6">
@@ -1270,6 +1272,32 @@ export function TicketDetail({
     {open && previewAttachment && (
       <TicketAttachmentViewer key={previewAttachment.id} attachment={previewAttachment} onClose={() => setPreviewAttachment(null)} />
     )}
+
+    <Dialog open={subtaskTypeDialogOpen} onOpenChange={setSubtaskTypeDialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Convertir en subtarea</DialogTitle>
+          <DialogDescription>Selecciona la historia de usuario a la que pertenecerá este ticket.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-1.5 py-2">
+          <label htmlFor="convert-subtask-parent" className="text-sm font-medium">Historia de usuario *</label>
+          <Select value={subtaskParentId} onValueChange={setSubtaskParentId} disabled={saving}>
+            <SelectTrigger id="convert-subtask-parent"><SelectValue placeholder="Selecciona una historia de usuario" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none" disabled>Selecciona una historia de usuario</SelectItem>
+              {availableStories.map(story => <SelectItem key={story.id} value={story.id}>{story.key} · {story.title}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        {saveError && <p role="alert" className="text-sm text-destructive">{saveError}</p>}
+        <DialogFooter>
+          <Button variant="outline" disabled={saving} onClick={() => setSubtaskTypeDialogOpen(false)}>Cancelar</Button>
+          <Button disabled={saving || subtaskParentId === 'none'} onClick={async () => {
+            if (await patch({ type: 'subtask', parentTicketId: subtaskParentId })) setSubtaskTypeDialogOpen(false)
+          }}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Convertir</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     <Dialog open={storyTypeDialogOpen} onOpenChange={setStoryTypeDialogOpen}>
       <DialogContent>

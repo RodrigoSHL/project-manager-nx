@@ -113,6 +113,7 @@ export interface ApiTicket {
   type: 'story' | 'bug' | 'task' | 'epic' | 'subtask' | 'support'
   assigneeId: string | null
   epicId: string | null
+  parentTicketId?: string | null
   reporterId: string | null
   storyPoints: number | null
   dueDate: string | null

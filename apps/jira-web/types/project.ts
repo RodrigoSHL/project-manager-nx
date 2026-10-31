@@ -51,6 +51,7 @@ export interface ApiComment {
   authorId: string
   parentCommentId: string | null
   body: string
+  attachmentIds?: string[]
   createdAt: string
   updatedAt: string
 }

@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -19,12 +20,15 @@ export class CommentsService {
   ) {}
 
   async create(ticketId: string, dto: CreateCommentDto): Promise<Comment> {
+    this.assertContent(dto.body, dto.attachmentIds);
     if (dto.parentCommentId) await this.findOne(ticketId, dto.parentCommentId);
     return this.commentsRepository.manager.transaction(async (manager) => {
       const repository = manager.getRepository(Comment);
       const comment = await repository.save(
         repository.create({
           ...dto,
+          body: dto.body.trim(),
+          attachmentIds: dto.attachmentIds ?? [],
           ticketId,
           parentCommentId: dto.parentCommentId ?? null,
         })
@@ -67,8 +71,9 @@ export class CommentsService {
           lock: { mode: 'pessimistic_write' },
         });
       if (!current) throw new NotFoundException(`Comment ${id} not found`);
+      this.assertContent(dto.body, current.attachmentIds);
       const previousBody = current.body;
-      current.body = dto.body;
+      current.body = dto.body.trim();
       const saved = await manager.getRepository(Comment).save(current);
       await this.notifications.enqueue(manager, saved, previousBody);
       return saved;
@@ -84,5 +89,11 @@ export class CommentsService {
     if (comment.authorId !== requesterId)
       throw new ForbiddenException('Only the author can delete this comment');
     await this.commentsRepository.remove(comment);
+  }
+
+  private assertContent(body: string, attachmentIds: string[] = []): void {
+    if (!body.trim() && !attachmentIds?.length) {
+      throw new BadRequestException('Escribe un comentario o adjunta al menos un archivo.');
+    }
   }
 }

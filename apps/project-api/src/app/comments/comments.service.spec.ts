@@ -1,4 +1,4 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { Comment } from './entities/comment.entity';
 import { CommentsService } from './comments.service';
@@ -68,6 +68,23 @@ describe('CommentsService replies', () => {
     });
     expect(comment.parentCommentId).toBeNull();
     expect(repository.findOne).not.toHaveBeenCalled();
+    expect(comment.attachmentIds).toEqual([]);
+  });
+
+  it('persists an attachment-only comment and keeps its references on text edits', async () => {
+    const created = await service.create('ticket-1', { body: '', authorId: 'user-1', attachmentIds: ['file-1'] });
+    expect(created.attachmentIds).toEqual(['file-1']);
+    repository.findOne.mockResolvedValue({ ...created, id: 'comment-1' });
+    const edited = await service.update('ticket-1', 'comment-1', { body: '  Detalle  ' }, 'user-1');
+    expect(edited).toMatchObject({ body: 'Detalle', attachmentIds: ['file-1'] });
+    expect(await service.update('ticket-1', 'comment-1', { body: '' }, 'user-1')).toMatchObject({ body: '', attachmentIds: ['file-1'] });
+  });
+
+  it('rejects empty comments and edits without attachments', async () => {
+    await expect(service.create('ticket-1', { body: '   ', authorId: 'user-1' })).rejects.toBeInstanceOf(BadRequestException);
+    repository.findOne.mockResolvedValue({ id: 'comment-1', authorId: 'user-1', body: 'Before', attachmentIds: [] });
+    await expect(service.update('ticket-1', 'comment-1', { body: '   ' }, 'user-1')).rejects.toBeInstanceOf(BadRequestException);
+    expect(repository.save).not.toHaveBeenCalled();
   });
 
   it('keeps reply editing and deletion restricted to their author', async () => {

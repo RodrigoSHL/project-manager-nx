@@ -20,6 +20,7 @@ import { CommentMentionNotification } from '../comments/entities/comment-mention
 import { AddCommentMentionNotifications1791072000000 } from '../../migrations/1791072000000-AddCommentMentionNotifications';
 import { AddProjectTicketCounter1791547200000 } from '../../migrations/1791547200000-AddProjectTicketCounter';
 import { AddSprintCompletion1792627200000 } from '../../migrations/1792627200000-AddSprintCompletion';
+import { AddCommentAttachments1793404800000 } from '../../migrations/1793404800000-AddCommentAttachments';
 
 export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
   type: 'postgres',
@@ -52,6 +53,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     AddCommentMentionNotifications1791072000000,
     AddProjectTicketCounter1791547200000,
     AddSprintCompletion1792627200000,
+    AddCommentAttachments1793404800000,
   ],
   migrationsRun: process.env.PROJECT_MIGRATIONS_RUN === 'true',
   synchronize: process.env.TYPEORM_SYNCHRONIZE

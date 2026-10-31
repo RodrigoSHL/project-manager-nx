@@ -24,6 +24,9 @@ export class Comment {
   @Column({ type: 'text' })
   body: string;
 
+  @Column({ type: 'uuid', array: true, default: () => "'{}'::uuid[]" })
+  attachmentIds: string[];
+
   @CreateDateColumn()
   createdAt: Date;
 

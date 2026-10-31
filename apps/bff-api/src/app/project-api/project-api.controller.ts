@@ -21,6 +21,7 @@ import { CommentBodyDto, CreateCommentBodyDto } from './dto/comment-body.dto';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { ProjectAccessService } from './project-access.service';
 import { ProjectApiClient } from './project-api.client';
+import { CommentAttachmentsService } from './comment-attachments.service';
 
 @Controller('api/projects')
 @UseGuards(JwtAuthGuard)
@@ -28,6 +29,7 @@ export class ProjectApiController {
   constructor(
     private readonly projectApiClient: ProjectApiClient,
     private readonly projectAccessService: ProjectAccessService,
+    private readonly commentAttachments: CommentAttachmentsService,
   ) {}
 
   @Get()
@@ -300,12 +302,14 @@ export class ProjectApiController {
   ) {
     await this.projectAccessService.assertProjectAccess(projectId, req.user);
     await this.projectApiClient.findTicket(projectId, ticketId);
+    await this.commentAttachments.assertTicketAttachments(projectId, ticketId, dto.attachmentIds);
     return this.projectApiClient.createTicketComment(
       projectId,
       ticketId,
       dto.body.trim(),
       req.user,
       dto.parentCommentId,
+      dto.attachmentIds,
     );
   }
 

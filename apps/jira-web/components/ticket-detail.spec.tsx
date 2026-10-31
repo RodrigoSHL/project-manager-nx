@@ -24,6 +24,8 @@ it('lets a viewer attach documentation while ticket fields and attachment deleti
   const ticket = {
     id: 'ticket-1', projectId: 'project-1', key: 'WEB-1', title: 'Revisar documentación',
     type: 'task', status: 'todo', priority: 'medium', labels: [],
+    sprintId: null, description: null, acceptanceCriteria: null, assigneeId: null,
+    epicId: null, reporterId: null, storyPoints: null, dueDate: null,
     createdAt: '2026-10-26T12:00:00Z', updatedAt: '2026-10-26T12:00:00Z',
   } as ApiTicket
   const attachment = {

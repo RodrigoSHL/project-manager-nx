@@ -1,9 +1,16 @@
-import { IsString, IsNotEmpty, IsUUID, IsOptional } from 'class-validator';
+import { ArrayMaxSize, ArrayUnique, IsArray, IsString, IsNotEmpty, IsUUID, IsOptional, MaxLength } from 'class-validator';
 
 export class CreateCommentDto {
   @IsString()
-  @IsNotEmpty()
+  @MaxLength(5000)
   body: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(10)
+  @ArrayUnique()
+  @IsUUID('all', { each: true })
+  attachmentIds?: string[];
 
   @IsUUID()
   @IsNotEmpty()

@@ -99,7 +99,7 @@ export function TopBar({
                 )}
                 <span className="min-w-0 flex-1 truncate text-left">
                   <SelectValue placeholder="Seleccionar proyecto">
-                    {project?.name}
+                    <span>{project?.name ?? 'Seleccionar proyecto'}</span>
                   </SelectValue>
                 </span>
               </div>

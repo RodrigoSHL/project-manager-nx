@@ -34,6 +34,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Textarea } from '@/components/ui/textarea'
 import { CommentMentionEditor } from '@/components/comment-mention-editor'
 import { TicketAttachmentViewer } from '@/components/ticket-attachment-viewer'
+import { TicketCommentComposer } from '@/components/ticket-comment-composer'
+import { CommentAttachments } from '@/components/comment-attachments'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -68,7 +70,6 @@ import { typeConfig } from '@/lib/mock-data'
 import type { ApiComment, ApiTicket, ApiSprint, ApiTeamMember, ApiTicketAttachment } from '@/types/project'
 import { deleteTicket, updateTicket } from '@/services/ticketService'
 import {
-  createTicketComment,
   deleteTicketComment,
   getTicketComments,
   updateTicketComment,
@@ -183,11 +184,7 @@ export function TicketDetail({
   const [labelInput, setLabelInput] = React.useState('')
   const [showLabelInput, setShowLabelInput] = React.useState(false)
 
-  const [newComment, setNewComment] = React.useState('')
-  const [newCommentMentions, setNewCommentMentions] = React.useState<CommentMention[]>([])
   const [replyingToCommentId, setReplyingToCommentId] = React.useState<string | null>(null)
-  const [replyComment, setReplyComment] = React.useState('')
-  const [replyCommentMentions, setReplyCommentMentions] = React.useState<CommentMention[]>([])
   const [comments, setComments] = React.useState<ApiComment[]>([])
   const [commentsLoading, setCommentsLoading] = React.useState(false)
   const [commentSaving, setCommentSaving] = React.useState(false)
@@ -221,11 +218,7 @@ export function TicketDetail({
     setIsEditingTitle(false)
     setIsEditingDescription(false)
     setIsEditingAcceptanceCriteria(false)
-    setNewComment('')
-    setNewCommentMentions([])
     setReplyingToCommentId(null)
-    setReplyComment('')
-    setReplyCommentMentions([])
     setLabelInput('')
     setShowLabelInput(false)
     setCommentError(null)
@@ -389,36 +382,10 @@ export function TicketDetail({
 
   const cancelReply = () => {
     setReplyingToCommentId(null)
-    setReplyComment('')
-    setReplyCommentMentions([])
   }
 
-  const addComment = async (parentCommentId?: string) => {
-    const body = serializeCommentMentions(
-      parentCommentId ? replyComment : newComment,
-      parentCommentId ? replyCommentMentions : newCommentMentions,
-    ).trim()
-    if (!body || commentSaving) return
-    if (body.length > 5000) {
-      setCommentError('El comentario supera el límite de 5000 caracteres.')
-      return
-    }
-
-    setCommentSaving(true)
-    setCommentError(null)
-    try {
-      const created = await createTicketComment(projectId, ticket.id, body, parentCommentId)
-      setComments(prev => [...prev, created])
-      if (parentCommentId) cancelReply()
-      else {
-        setNewComment('')
-        setNewCommentMentions([])
-      }
-    } catch (error) {
-      setCommentError(error instanceof Error ? error.message : 'No se pudo publicar el comentario.')
-    } finally {
-      setCommentSaving(false)
-    }
+  const onCommentAttachmentUploaded = (attachment: ApiTicketAttachment) => {
+    setAttachments(previous => [attachment, ...previous.filter(file => file.id !== attachment.id)])
   }
 
   const startEditingComment = (comment: ApiComment) => {
@@ -432,7 +399,7 @@ export function TicketDetail({
 
   const saveComment = async (commentId: string) => {
     const body = serializeCommentMentions(editingCommentBody, editingCommentMentions).trim()
-    if (!body || commentSaving) return
+    if ((!body && !comments.find(comment => comment.id === commentId)?.attachmentIds?.length) || commentSaving) return
     if (body.length > 5000) {
       setCommentError('El comentario supera el límite de 5000 caracteres.')
       return
@@ -1122,23 +1089,17 @@ export function TicketDetail({
                 <Avatar className="h-8 w-8 shrink-0">
                   <AvatarFallback className="text-xs">{getInitials(user.name)}</AvatarFallback>
                 </Avatar>
-                <div className="flex-1 space-y-2">
-                  <CommentMentionEditor
-                    placeholder="Escribe un comentario..."
-                    value={newComment}
-                    mentions={newCommentMentions}
-                    onChange={(value, mentions) => { setNewComment(value); setNewCommentMentions(mentions) }}
-                    onSubmit={() => void addComment()}
+                <div className="min-w-0 flex-1">
+                  <TicketCommentComposer
+                    key={ticket.id}
+                    projectId={projectId}
+                    ticketId={ticket.id}
+                    ticketKey={ticket.key}
                     teamMembers={teamMembers}
                     disabled={commentSaving}
+                    onCreated={created => setComments(previous => [...previous, created])}
+                    onAttachmentUploaded={onCommentAttachmentUploaded}
                   />
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-muted-foreground">Escribe @ para etiquetar · ⌘ + Enter para enviar</span>
-                    <Button size="sm" disabled={!newComment.trim() || commentSaving} onClick={() => void addComment()}>
-                      {commentSaving && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
-                      Publicar
-                    </Button>
-                  </div>
                 </div>
               </div>
 
@@ -1240,7 +1201,7 @@ export function TicketDetail({
                                 </Button>
                                 <Button
                                   size="sm"
-                                  disabled={!editingCommentBody.trim() || commentSaving}
+                                  disabled={(!editingCommentBody.trim() && !comment.attachmentIds?.length) || commentSaving}
                                   onClick={() => void saveComment(comment.id)}
                                 >
                                   {commentSaving && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
@@ -1253,6 +1214,13 @@ export function TicketDetail({
                               {renderCommentBody(comment.body)}
                             </p>
                           )}
+                          <CommentAttachments
+                            ids={comment.attachmentIds ?? []}
+                            attachments={attachments}
+                            loading={attachmentsLoading}
+                            onPreview={setPreviewAttachment}
+                            onDownload={attachment => void downloadAttachment(attachment)}
+                          />
                           {editingCommentId !== comment.id && replyingToCommentId !== comment.id && (
                             <Button
                               variant="ghost"
@@ -1272,24 +1240,18 @@ export function TicketDetail({
                           {replyingToCommentId === comment.id && (
                             <div className="mt-2 space-y-2 rounded-lg border p-3">
                               <p className="text-xs text-muted-foreground">Responder a {author.name}</p>
-                              <CommentMentionEditor
-                                value={replyComment}
-                                mentions={replyCommentMentions}
-                                onChange={(value, mentions) => { setReplyComment(value); setReplyCommentMentions(mentions) }}
-                                onSubmit={() => void addComment(comment.id)}
+                              <TicketCommentComposer
+                                key={`${ticket.id}:${comment.id}`}
+                                projectId={projectId}
+                                ticketId={ticket.id}
+                                ticketKey={ticket.key}
+                                parentCommentId={comment.id}
                                 onCancel={cancelReply}
                                 teamMembers={teamMembers}
-                                placeholder="Escribe una respuesta..."
                                 disabled={commentSaving}
-                                autoFocus
+                                onCreated={created => { setComments(previous => [...previous, created]); cancelReply() }}
+                                onAttachmentUploaded={onCommentAttachmentUploaded}
                               />
-                              <div className="flex justify-end gap-2">
-                                <Button variant="ghost" size="sm" disabled={commentSaving} onClick={cancelReply}>Cancelar</Button>
-                                <Button size="sm" disabled={!replyComment.trim() || commentSaving} onClick={() => void addComment(comment.id)}>
-                                  {commentSaving && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
-                                  Responder
-                                </Button>
-                              </div>
                             </div>
                           )}
                         </div>

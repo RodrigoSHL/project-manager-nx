@@ -4,6 +4,7 @@ import { UserRole } from '../user-api/user-api.client';
 import { ProjectAccessService } from './project-access.service';
 import { ProjectApiClient } from './project-api.client';
 import { ProjectApiController } from './project-api.controller';
+import { CommentAttachmentsService } from './comment-attachments.service';
 
 describe('ProjectApiController workspace role permissions', () => {
   const request = {
@@ -14,6 +15,7 @@ describe('ProjectApiController workspace role permissions', () => {
   let controller: ProjectApiController;
   let client: { forwardJsonRequest: jest.Mock; createTicketComment: jest.Mock; findTicket: jest.Mock };
   let access: { assertProjectAccess: jest.Mock; assertProjectWriteAccess: jest.Mock };
+  let attachments: { assertTicketAttachments: jest.Mock };
 
   beforeEach(() => {
     client = { forwardJsonRequest: jest.fn(), createTicketComment: jest.fn().mockResolvedValue({ id: 'comment-1' }), findTicket: jest.fn().mockResolvedValue({ id: ticketId }) };
@@ -21,9 +23,11 @@ describe('ProjectApiController workspace role permissions', () => {
       assertProjectAccess: jest.fn().mockResolvedValue(undefined),
       assertProjectWriteAccess: jest.fn().mockRejectedValue(new ForbiddenException()),
     };
+    attachments = { assertTicketAttachments: jest.fn().mockResolvedValue(undefined) };
     controller = new ProjectApiController(
       client as unknown as ProjectApiClient,
       access as unknown as ProjectAccessService,
+      attachments as unknown as CommentAttachmentsService,
     );
   });
 
@@ -52,18 +56,31 @@ describe('ProjectApiController workspace role permissions', () => {
     await expect(controller.createTicketComment(projectId, ticketId, { body: '  Comentario  ' }, request))
       .resolves.toEqual({ id: 'comment-1' });
     expect(access.assertProjectAccess).toHaveBeenCalledWith(projectId, request.user);
-    expect(client.createTicketComment).toHaveBeenCalledWith(projectId, ticketId, 'Comentario', request.user, undefined);
+    expect(client.createTicketComment).toHaveBeenCalledWith(projectId, ticketId, 'Comentario', request.user, undefined, undefined);
   });
 
   it('allows a viewer to reply while preserving the authenticated author', async () => {
     await controller.createTicketComment(projectId, ticketId, { body: 'Respuesta', parentCommentId: 'parent-1' }, request);
-    expect(client.createTicketComment).toHaveBeenCalledWith(projectId, ticketId, 'Respuesta', request.user, 'parent-1');
+    expect(client.createTicketComment).toHaveBeenCalledWith(projectId, ticketId, 'Respuesta', request.user, 'parent-1', undefined);
   });
 
   it('rejects replies when the ticket does not belong to the accessible project', async () => {
     client.findTicket.mockRejectedValue(new ForbiddenException());
     await expect(controller.createTicketComment(projectId, ticketId, { body: 'Respuesta', parentCommentId: 'parent-1' }, request))
       .rejects.toBeInstanceOf(ForbiddenException);
+    expect(client.createTicketComment).not.toHaveBeenCalled();
+    expect(attachments.assertTicketAttachments).not.toHaveBeenCalled();
+  });
+
+  it('validates attached files before creating an attachment-only comment', async () => {
+    await controller.createTicketComment(projectId, ticketId, { body: '', attachmentIds: ['file-1'] }, request);
+    expect(attachments.assertTicketAttachments).toHaveBeenCalledWith(projectId, ticketId, ['file-1']);
+    expect(client.createTicketComment).toHaveBeenCalledWith(projectId, ticketId, '', request.user, undefined, ['file-1']);
+  });
+
+  it('does not create the comment when an attachment belongs to another ticket', async () => {
+    attachments.assertTicketAttachments.mockRejectedValue(new ForbiddenException());
+    await expect(controller.createTicketComment(projectId, ticketId, { body: '', attachmentIds: ['foreign-file'] }, request)).rejects.toBeInstanceOf(ForbiddenException);
     expect(client.createTicketComment).not.toHaveBeenCalled();
   });
 });

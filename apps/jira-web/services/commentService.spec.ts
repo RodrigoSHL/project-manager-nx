@@ -86,6 +86,14 @@ describe('jira-web comment service', () => {
     )
   })
 
+  it('creates an attachment-only reply with references to the ticket files', async () => {
+    mockedFetch.mockResolvedValue(jsonResponse({ ...comment, body: '', attachmentIds: ['file-1'] }, 201))
+    await createTicketComment('project-1', 'ticket-1', '', 'parent-1', ['file-1'])
+    expect(mockedFetch).toHaveBeenCalledWith('/api/projects/project-1/tickets/ticket-1/comments', expect.objectContaining({
+      body: JSON.stringify({ body: '', parentCommentId: 'parent-1', attachmentIds: ['file-1'] }),
+    }))
+  })
+
   it('deletes a comment using its resource URL', async () => {
     mockedFetch.mockResolvedValue(jsonResponse(undefined, 204))
 

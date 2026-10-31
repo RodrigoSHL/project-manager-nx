@@ -30,3 +30,17 @@ it('shows one project color indicator and keeps the selected name when the proje
   expect(selector.querySelectorAll('[style*="background-color"]')).toHaveLength(1)
   expect(selector.querySelector('[style*="background-color"]')).toHaveStyle({ backgroundColor: projects[1].color })
 })
+
+it('loads the selected project without letting a portal compete with React text children', async () => {
+  const errors = jest.spyOn(console, 'error').mockImplementation(() => undefined)
+  try {
+    const { rerender } = render(<TopBar {...props} projects={[]} currentProject="first" />)
+    rerender(<TopBar {...props} currentProject="first" />)
+    const selector = screen.getByRole('combobox', { name: 'Seleccionar proyecto' })
+    await waitFor(() => expect(selector).toHaveTextContent(projects[0].name))
+    expect(errors.mock.calls.flat().join(' ')).not.toContain('Cannot use a ref on a React element as a container')
+    expect(selector.querySelectorAll('[style*="background-color"]')).toHaveLength(1)
+  } finally {
+    errors.mockRestore()
+  }
+})

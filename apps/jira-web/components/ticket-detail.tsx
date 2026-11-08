@@ -13,6 +13,7 @@ import {
   MessageSquare,
   Plus,
   MoreHorizontal,
+  Copy,
   Link,
   Share2,
   Trash2,
@@ -172,6 +173,8 @@ export function TicketDetail({
   const { user } = useAuth()
   const [saving, setSaving] = React.useState(false)
   const [saveError, setSaveError] = React.useState<string | null>(null)
+  const [copyMessage, setCopyMessage] = React.useState<string | null>(null)
+  const [copyError, setCopyError] = React.useState<string | null>(null)
   const [storyTypeDialogOpen, setStoryTypeDialogOpen] = React.useState(false)
   const [storyEpicId, setStoryEpicId] = React.useState('none')
   const [subtaskTypeDialogOpen, setSubtaskTypeDialogOpen] = React.useState(false)
@@ -211,6 +214,8 @@ export function TicketDetail({
 
   React.useEffect(() => {
     setPreviewAttachment(null)
+    setCopyMessage(null)
+    setCopyError(null)
   }, [open, ticket?.id])
 
   React.useEffect(() => {
@@ -333,6 +338,21 @@ export function TicketDetail({
       return false
     } finally {
       setSaving(false)
+    }
+  }
+
+  const copyTicketJson = async () => {
+    setCopyMessage(null)
+    setCopyError(null)
+    if (!navigator.clipboard?.writeText) {
+      setCopyError('Tu navegador no permite acceder al portapapeles.')
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(ticket, null, 2))
+      setCopyMessage(`Ticket ${ticket.key} copiado como JSON.`)
+    } catch {
+      setCopyError('No se pudo copiar el ticket al portapapeles. Intenta de nuevo.')
     }
   }
 
@@ -604,26 +624,36 @@ export function TicketDetail({
               <Button variant="ghost" size="icon" className="h-8 w-8">
                 <Share2 className="h-4 w-4" />
               </Button>
-              {canWrite && <DropdownMenu>
+              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Acciones del ticket">
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => void copyTicketJson()} disabled={saving}>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copiar ticket como JSON
+                  </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Link className="h-4 w-4 mr-2" />
                     Copiar enlace
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive" onClick={() => void removeTicket()}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Eliminar
-                  </DropdownMenuItem>
+                  {canWrite && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-destructive" onClick={() => void removeTicket()}>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Eliminar
+                      </DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
-              </DropdownMenu>}
+              </DropdownMenu>
             </div>
           </div>
+          {copyMessage && <p role="status" className="text-sm text-muted-foreground">{copyMessage}</p>}
+          {copyError && <p role="alert" className="text-sm text-destructive">{copyError}</p>}
         </SheetHeader>
 
         <div ref={contentRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain" tabIndex={0}>

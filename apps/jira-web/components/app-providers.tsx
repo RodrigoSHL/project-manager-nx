@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { AuthProvider } from '@/contexts/auth-context'
 import { WorkspaceProvider } from '@/contexts/workspace-context'
 import { ThemeProvider } from '@/components/theme-provider'
+import { ProjectWorkspaceLayout } from '@/components/project-workspace-layout'
 
 const PUBLIC_ROUTES = ['/login', '/portal']
 
@@ -25,7 +26,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         children
       ) : (
         <AuthProvider>
-          <WorkspaceProvider>{children}</WorkspaceProvider>
+          <WorkspaceProvider>
+            <ProjectWorkspaceLayout>{children}</ProjectWorkspaceLayout>
+          </WorkspaceProvider>
         </AuthProvider>
       )}
     </ThemeProvider>

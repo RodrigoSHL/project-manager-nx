@@ -58,6 +58,8 @@ interface AppSidebarProps {
   onProjectChange: (projectId: string) => void
   projects?: ApiProject[]
   loadingProjects?: boolean
+  onWorkspaceChange?: () => void
+  toggleLabel?: string
 }
 
 export function AppSidebar({ 
@@ -69,13 +71,15 @@ export function AppSidebar({
   onProjectChange,
   projects = [],
   loadingProjects = false,
+  onWorkspaceChange,
+  toggleLabel = 'Contraer menú',
 }: AppSidebarProps) {
   const { workspaces, selectedWorkspace, setSelectedWorkspace } = useWorkspace()
 
   return (
     <TooltipProvider delayDuration={0}>
       <aside className={cn(
-        "flex flex-col h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out",
+        "flex flex-col h-dvh bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out",
         collapsed ? "w-16" : "w-64"
       )}>
         {/* Header */}
@@ -99,7 +103,7 @@ export function AppSidebar({
               collapsed && "hidden"
             )}
             onClick={onToggle}
-            aria-label="Contraer menú"
+            aria-label={toggleLabel}
           >
             <PanelLeftClose className="h-4 w-4" />
           </Button>
@@ -127,7 +131,7 @@ export function AppSidebar({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56">
                 {workspaces.map((ws) => (
-                  <DropdownMenuItem key={ws.id} onClick={() => setSelectedWorkspace(ws)}>
+                  <DropdownMenuItem key={ws.id} onClick={() => { setSelectedWorkspace(ws); onWorkspaceChange?.() }}>
                     <Avatar className="h-5 w-5 rounded mr-2">
                       <AvatarFallback className="rounded text-[10px]">
                         {ws.name.charAt(0)}

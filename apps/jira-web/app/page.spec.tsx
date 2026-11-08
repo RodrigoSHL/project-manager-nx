@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import ProjectManagement from './page'
+import ProjectManagement from '@/components/project-management'
 import { getProjectsByWorkspace, getProjectPermissions } from '@/services/projectService'
 import { completeSprint, getSprintsByProject } from '@/services/sprintService'
 import { getTicketsByProject } from '@/services/ticketService'

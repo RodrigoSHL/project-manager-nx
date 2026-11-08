@@ -164,7 +164,7 @@ function TicketDetailFrame({ variant, open, onClose, children }: {
   children: React.ReactNode
 }) {
   if (variant === 'page') {
-    return <section className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">{children}</section>
+    return <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">{children}</section>
   }
   return (
     <Sheet open={open} onOpenChange={onClose}>

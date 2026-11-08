@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { useRouter } from 'next/navigation'
 import { TicketPage } from './ticket-page'
 import { TicketDetail } from './ticket-detail'
@@ -10,7 +10,8 @@ jest.mock('next/navigation', () => ({ useRouter: jest.fn() }))
 jest.mock('@/components/ticket-detail', () => ({ TicketDetail: jest.fn() }))
 
 const project = { id: 'project-1', workspaceId: 'workspace-1', name: 'Proyecto de prueba' } as ApiProject
-const ticket = { id: 'ticket-1', projectId: project.id, title: 'Detalle completo', type: 'story' } as ApiTicket
+const ticket = { id: 'ticket-1', key: 'P-1', projectId: project.id, title: 'Detalle completo', type: 'story',
+  status: 'todo', priority: 'high', storyPoints: null, assigneeId: null, sprintId: null } as ApiTicket
 const child = { ...ticket, id: 'ticket-2', title: 'Subtarea', type: 'subtask' as const }
 const push = jest.fn()
 const onTicketDeleted = jest.fn()
@@ -34,7 +35,7 @@ beforeEach(() => {
     <h1>{props.ticket?.title}</h1>
     <span>{props.variant}:{String(props.canWrite)}</span>
     <button onClick={() => props.onSelectTicket(child)}>Ver subtarea</button>
-    <button onClick={() => props.onUpdated({ ...ticket, title: 'Título actualizado' })}>Guardar título</button>
+    <button onClick={() => props.onUpdated({ ...ticket, title: 'Título actualizado', status: 'done', storyPoints: 5 })}>Guardar título</button>
     <button onClick={() => props.onDeleted(ticket.id)}>Eliminar ticket</button>
     {props.onCreateChild && <button onClick={() => props.onCreateChild?.(ticket)}>Crear subtarea</button>}
   </div>)
@@ -55,6 +56,9 @@ it('updates shared tickets, creates children and returns to the board after dele
   expect(screen.getByText('page:true')).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Guardar título' }))
   expect(screen.getByRole('heading', { name: 'Título actualizado' })).toBeInTheDocument()
+  const summary = within(screen.getByRole('complementary', { name: 'Resumen del ticket' }))
+  expect(summary.getByText('Completado')).toBeInTheDocument()
+  expect(summary.getByText('5 pts')).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Crear subtarea' }))
   expect(onCreateChild).toHaveBeenCalledWith(ticket)
   fireEvent.click(screen.getByRole('button', { name: 'Eliminar ticket' }))

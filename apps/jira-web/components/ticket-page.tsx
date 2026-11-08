@@ -2,8 +2,9 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ClipboardList, Loader2 } from 'lucide-react'
 import { TicketDetail } from '@/components/ticket-detail'
+import { TicketSummary } from '@/components/ticket-summary'
 import { Button } from '@/components/ui/button'
 import { useProject } from '@/contexts/project-context'
 import { buildTicketPageHref } from '@/lib/ticket-link'
@@ -40,7 +41,17 @@ export function TicketPage({ projectId, ticketId }: { projectId: string; ticketI
           <p className="text-sm text-muted-foreground">El ticket no existe en este proyecto o ya no tienes acceso.</p>
         </div>
       ) : (
-        <TicketDetail
+        <div className="flex min-h-0 flex-1 flex-col xl:flex-row">
+          <details className="group shrink-0 border-b bg-muted/20 xl:hidden">
+            <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium sm:px-6 [&::-webkit-details-marker]:hidden">
+              <ClipboardList className="h-4 w-4 text-muted-foreground" />Resumen del ticket
+              <ChevronDown className="ml-auto h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="max-h-[40dvh] overflow-y-auto border-t px-4 py-4 sm:px-6">
+              <TicketSummary ticket={ticket} tickets={tickets} sprints={sprints} teamMembers={teamMembers} />
+            </div>
+          </details>
+          <TicketDetail
           key={ticket.id}
           variant="page"
           open
@@ -55,7 +66,17 @@ export function TicketPage({ projectId, ticketId }: { projectId: string; ticketI
           onDeleted={id => { onTicketDeleted(id); router.push('/') }}
           onSelectTicket={next => router.push(buildTicketPageHref(projectId, next.id))}
           onCreateChild={canWrite ? onCreateChild : undefined}
-        />
+          />
+          <aside aria-label="Resumen del ticket" className="hidden w-80 shrink-0 overflow-y-auto overscroll-contain border-l bg-muted/20 xl:block">
+            <div className="flex items-center gap-2 border-b px-5 py-4">
+              <ClipboardList className="h-4 w-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold">Resumen del ticket</h2>
+            </div>
+            <div className="p-5">
+              <TicketSummary ticket={ticket} tickets={tickets} sprints={sprints} teamMembers={teamMembers} />
+            </div>
+          </aside>
+        </div>
       )}
     </div>
   )

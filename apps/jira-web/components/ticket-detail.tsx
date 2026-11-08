@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import NextLink from 'next/link'
 import {
   X,
   Bug,
@@ -14,6 +15,7 @@ import {
   Plus,
   MoreHorizontal,
   Copy,
+  ExternalLink,
   Link,
   Share2,
   Trash2,
@@ -29,6 +31,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getTicketSprintUpdate } from '@/lib/ticket-sprint'
+import { buildTicketPageHref } from '@/lib/ticket-link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -138,6 +141,7 @@ const typeIcons: Record<string, React.ElementType> = {
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface TicketDetailProps {
+  variant?: 'panel' | 'page'
   canWrite: boolean
   ticket: ApiTicket | null
   highlightedCommentId?: string
@@ -153,9 +157,28 @@ interface TicketDetailProps {
   onCreateChild?: (ticket: ApiTicket) => void
 }
 
+function TicketDetailFrame({ variant, open, onClose, children }: {
+  variant: 'panel' | 'page'
+  open: boolean
+  onClose: () => void
+  children: React.ReactNode
+}) {
+  if (variant === 'page') {
+    return <section className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">{children}</section>
+  }
+  return (
+    <Sheet open={open} onOpenChange={onClose}>
+      <SheetContent className="h-dvh w-full sm:max-w-[850px] gap-0 overflow-hidden p-0">
+        {children}
+      </SheetContent>
+    </Sheet>
+  )
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function TicketDetail({
+  variant = 'panel',
   canWrite,
   ticket,
   highlightedCommentId,
@@ -315,6 +338,7 @@ export function TicketDetail({
   const availableEpics = tickets.filter(candidate => candidate.projectId === ticket.projectId && candidate.type === 'epic' && candidate.id !== ticket.id)
   const availableStories = tickets.filter(candidate => candidate.projectId === ticket.projectId && candidate.type === 'story' && candidate.id !== ticket.id)
   const parentStory = availableStories.find(candidate => candidate.id === ticket.parentTicketId)
+  const TitleHeading = variant === 'page' ? 'h1' : 'h2'
 
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString('es-ES', {
@@ -552,12 +576,11 @@ export function TicketDetail({
 
   return (
     <>
-    <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent className="h-dvh w-full sm:max-w-[850px] gap-0 overflow-hidden p-0">
+    <TicketDetailFrame variant={variant} open={open} onClose={onClose}>
 
         {/* Header — pr-14 leaves space for Radix's built-in close button */}
-        <SheetHeader className="px-6 py-4 border-b shrink-0 pr-14">
-          <SheetTitle className="sr-only">{ticket.title}</SheetTitle>
+        <SheetHeader className={cn('px-6 py-4 border-b shrink-0', variant === 'panel' && 'pr-14')}>
+          {variant === 'panel' && <SheetTitle className="sr-only">{ticket.title}</SheetTitle>}
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -616,11 +639,32 @@ export function TicketDetail({
                   })}
                 </DropdownMenuContent>
               </DropdownMenu> : <span className={cn('flex h-8 w-8 items-center justify-center rounded-md', type.bgColor)}><TypeIcon className={cn('h-4 w-4', type.color)} /></span>}
-              <span className="text-sm font-mono text-muted-foreground">{ticket.key}</span>
+              {variant === 'panel' ? (
+                <NextLink
+                  href={buildTicketPageHref(projectId, ticket.id)}
+                  className="inline-flex items-center gap-1.5 rounded text-sm font-mono text-muted-foreground hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={`Abrir ${ticket.key} en página completa`}
+                  title="Abrir página del ticket"
+                >
+                  {ticket.key}<ExternalLink className="h-3.5 w-3.5" />
+                </NextLink>
+              ) : <span className="text-sm font-mono text-muted-foreground">{ticket.key}</span>}
               {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
             </div>
 
             <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                aria-label="Copiar ticket como JSON"
+                title="Copiar ticket como JSON"
+                onClick={() => void copyTicketJson()}
+                disabled={saving}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
               <Button variant="ghost" size="icon" className="h-8 w-8">
                 <Share2 className="h-4 w-4" />
               </Button>
@@ -671,12 +715,12 @@ export function TicketDetail({
                   autoFocus
                 />
               ) : (
-                <h2
+                <TitleHeading
                   className={cn('text-xl font-semibold rounded px-1 -mx-1 py-0.5 transition-colors', canWrite && 'cursor-text hover:bg-accent/50')}
                   onClick={() => { if (canWrite) setIsEditingTitle(true) }}
                 >
                   {title || ticket.title}
-                </h2>
+                </TitleHeading>
               )}
             </div>
 
@@ -1296,8 +1340,7 @@ export function TicketDetail({
 
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+    </TicketDetailFrame>
 
     {open && previewAttachment && (
       <TicketAttachmentViewer key={previewAttachment.id} attachment={previewAttachment} onClose={() => setPreviewAttachment(null)} />

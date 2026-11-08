@@ -41,3 +41,20 @@ it('lets a reader navigate to the parent story and keeps the parent selector rea
   expect(screen.queryByRole('button', { name: 'Crear subtarea' })).not.toBeInTheDocument()
   await screen.findByText('Este ticket todavía no tiene archivos adjuntos.')
 })
+
+it('links the ticket key in the panel header to its dedicated page', async () => {
+  render(<TicketDetail {...props()} ticket={story} />)
+  expect(screen.getByRole('link', { name: 'Abrir P-1 en página completa' })).toHaveAttribute('href', '/projects/project-1/tickets/story-1')
+  await screen.findByText('Este ticket todavía no tiene archivos adjuntos.')
+})
+
+it('renders the full detail as a page without a sheet overlay and keeps child navigation', async () => {
+  const callbacks = props()
+  render(<TicketDetail {...callbacks} ticket={story} variant="page" />)
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 1, name: 'Historia' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Acciones del ticket' })).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: /P-2 Validar formulario/ }))
+  expect(callbacks.onSelectTicket).toHaveBeenCalledWith(subtask)
+  await screen.findByText('Este ticket todavía no tiene archivos adjuntos.')
+})

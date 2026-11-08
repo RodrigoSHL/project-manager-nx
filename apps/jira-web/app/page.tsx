@@ -4,7 +4,7 @@ import * as React from 'react'
 import { Layers, LayoutGrid, Zap, Ticket as TicketIcon, BarChart3, Plus, Calendar, Pencil, Trash2, Bug, BookOpen, CheckSquare, LifeBuoy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getTicketSprintUpdate } from '@/lib/ticket-sprint'
-import { parseTicketLink } from '@/lib/ticket-link'
+import { parseProjectLink, parseTicketLink } from '@/lib/ticket-link'
 import { getSavedProjectId, saveProjectId } from '@/lib/project-selection'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { AppSidebar } from '@/components/app-sidebar'
@@ -69,6 +69,7 @@ export default function ProjectManagement() {
   const [ticketDetailOpen, setTicketDetailOpen] = React.useState(false)
   const [highlightedCommentId, setHighlightedCommentId] = React.useState<string | undefined>()
   const openedLinkedTicket = React.useRef(false)
+  const appliedProjectLink = React.useRef(false)
   const [createSupportOpen, setCreateSupportOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState('')
   const [filters, setFilters] = React.useState({
@@ -93,9 +94,10 @@ export default function ProjectManagement() {
         if (cancelled) return
         setApiProjects(data)
         projectsWorkspaceRef.current = selectedWorkspace.id
-        const link = parseTicketLink(window.location.search)
-        const linkedProject = !openedLinkedTicket.current && link?.workspaceId === selectedWorkspace.id
+        const link = parseProjectLink(window.location.search)
+        const linkedProject = !appliedProjectLink.current && link?.workspaceId === selectedWorkspace.id
           ? data.find(p => p.id === link.projectId) : undefined
+        if (linkedProject) appliedProjectLink.current = true
         const savedId = getSavedProjectId(selectedWorkspace.id)
         const nextProjectId = linkedProject?.id
           ?? data.find(project => project.id === currentProjectRef.current)?.id

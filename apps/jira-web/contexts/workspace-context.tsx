@@ -1,8 +1,9 @@
 'use client'
 
 import * as React from 'react'
+import { usePathname } from 'next/navigation'
 import { WorkspaceService, type Workspace } from '@/services/userService'
-import { parseTicketLink } from '@/lib/ticket-link'
+import { parseProjectLink } from '@/lib/ticket-link'
 
 interface WorkspaceContextValue {
   workspaces: Workspace[]
@@ -23,6 +24,7 @@ const WorkspaceContext = React.createContext<WorkspaceContextValue>({
 const STORAGE_KEY = 'jira-web:workspaceId'
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
   const [workspaces, setWorkspaces] = React.useState<Workspace[]>([])
   const [selectedWorkspace, setSelectedWorkspaceState] = React.useState<Workspace | null>(null)
   const [loading, setLoading] = React.useState(true)
@@ -36,7 +38,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
       const savedId = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null
       const saved = savedId ? data.find(w => w.id === savedId) : null
-      const link = appliedTicketLink.current ? null : parseTicketLink(window.location.search)
+      const link = appliedTicketLink.current ? null : parseProjectLink(window.location.search)
       const linked = link ? data.find(w => w.id === link.workspaceId) : null
       appliedTicketLink.current = true
       setSelectedWorkspaceState(linked ?? saved ?? data[0] ?? null)
@@ -48,6 +50,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   React.useEffect(() => { load() }, [load])
+
+  React.useEffect(() => {
+    const link = parseProjectLink(window.location.search)
+    const linked = link ? workspaces.find(workspace => workspace.id === link.workspaceId) : null
+    if (linked) setSelectedWorkspaceState(linked)
+  }, [pathname, workspaces])
 
   const setSelectedWorkspace = React.useCallback((ws: Workspace | null) => {
     setSelectedWorkspaceState(ws)

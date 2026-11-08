@@ -200,6 +200,29 @@ describe('remembered project selection', () => {
     expect(localStorage.getItem(key)).toBe(projectId)
   })
 
+  it('returns from a ticket page to the linked project without opening a panel', async () => {
+    localStorage.setItem(key, secondId)
+    window.history.replaceState({}, '', '/?' + new URLSearchParams({ workspaceId, projectId }))
+    render(<ProjectManagement />)
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Proyecto actual' })).toHaveValue(projectId))
+    expect(localStorage.getItem(key)).toBe(projectId)
+    expect(jest.mocked(TicketDetail).mock.calls.every(([props]) => !props.open)).toBe(true)
+  })
+
+  it('applies the return link once and preserves later project choices when switching workspaces', async () => {
+    window.history.replaceState({}, '', '/?' + new URLSearchParams({ workspaceId, projectId }))
+    jest.mocked(getProjectsByWorkspace).mockImplementation(async id => (id === workspaceId ? projects : [{ id: otherProjectId, workspaceId: otherWorkspaceId, name: 'Otro workspace' }]) as never)
+    const view = render(<ProjectManagement />)
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Proyecto actual' })).toHaveValue(projectId))
+    fireEvent.change(screen.getByRole('combobox', { name: 'Proyecto actual' }), { target: { value: secondId } })
+    jest.mocked(useWorkspace).mockReturnValue({ selectedWorkspace: { id: otherWorkspaceId } } as never)
+    view.rerender(<ProjectManagement />)
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Proyecto actual' })).toHaveValue(otherProjectId))
+    jest.mocked(useWorkspace).mockReturnValue({ selectedWorkspace: { id: workspaceId } } as never)
+    view.rerender(<ProjectManagement />)
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Proyecto actual' })).toHaveValue(secondId))
+  })
+
   it('clears an obsolete preference when a workspace no longer has accessible projects', async () => {
     localStorage.setItem(key, secondId)
     jest.mocked(getProjectsByWorkspace).mockResolvedValue([])

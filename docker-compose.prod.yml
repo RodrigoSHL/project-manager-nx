@@ -12,6 +12,7 @@ services:
       FILES_DB_NAME: ${FILES_DB_NAME:-files_db}
       INSPECTION_DB_NAME: ${INSPECTION_DB_NAME:-inspection_db}
       MACROFIT_DB_NAME: ${MACROFIT_DB_NAME:-macrofit_db}
+      NOTIFICATION_DB_NAME: ${NOTIFICATION_DB_NAME:-notification_db}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
@@ -29,6 +30,8 @@ services:
         APP: project-api
     restart: unless-stopped
     environment:
+      NOTIFICATION_API_URL: http://notification-api:3008/api
+      NOTIFICATION_SERVICE_TOKEN: ${NOTIFICATION_SERVICE_TOKEN:-}
       NODE_ENV: production
       API_PORT: 3002
       API_PREFIX: api
@@ -62,6 +65,8 @@ services:
         APP: user-api
     restart: unless-stopped
     environment:
+      NOTIFICATION_API_URL: http://notification-api:3008/api
+      NOTIFICATION_SERVICE_TOKEN: ${NOTIFICATION_SERVICE_TOKEN:-}
       NODE_ENV: production
       USER_API_PORT: 3001
       API_PREFIX: api
@@ -91,6 +96,8 @@ services:
         APP: files-api
     restart: unless-stopped
     environment:
+      NOTIFICATION_API_URL: http://notification-api:3008/api
+      NOTIFICATION_SERVICE_TOKEN: ${NOTIFICATION_SERVICE_TOKEN:-}
       NODE_ENV: production
       PORT: 3004
       API_PREFIX: api
@@ -122,6 +129,8 @@ services:
         APP: inspection-api
     restart: unless-stopped
     environment:
+      NOTIFICATION_API_URL: http://notification-api:3008/api
+      NOTIFICATION_SERVICE_TOKEN: ${NOTIFICATION_SERVICE_TOKEN:-}
       NODE_ENV: production
       PORT: 3005
       API_PREFIX: api
@@ -143,6 +152,36 @@ services:
       timeout: 5s
       retries: 10
 
+  notification-api:
+    profiles: [notification]
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+      args:
+        APP: notification-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NOTIFICATION_API_PORT: 3008
+      API_PREFIX: api
+      NOTIFICATION_SERVICE_TOKEN: ${NOTIFICATION_SERVICE_TOKEN:-}
+      NOTIFICATION_DB_HOST: postgres
+      NOTIFICATION_DB_PORT: 5432
+      NOTIFICATION_DB_NAME: ${NOTIFICATION_DB_NAME:-notification_db}
+      NOTIFICATION_DB_USERNAME: ${DATABASE_USERNAME:-project_user}
+      NOTIFICATION_DB_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD is required}
+      NOTIFICATION_MIGRATIONS_RUN: "true"
+      DATABASE_SSL: ${DATABASE_SSL:-false}
+      TYPEORM_SYNCHRONIZE: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3008/api/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   mailer-api:
     profiles: [mailer]
     build:
@@ -152,6 +191,8 @@ services:
         APP: mailer-api
     restart: unless-stopped
     environment:
+      NOTIFICATION_API_URL: http://notification-api:3008/api
+      NOTIFICATION_SERVICE_TOKEN: ${NOTIFICATION_SERVICE_TOKEN:-}
       NODE_ENV: production
       MAILER_API_PORT: 3006
       JIRA_WEB_URL: ${JIRA_WEB_URL:-https://jira.atomdev.cl}
@@ -247,6 +288,8 @@ services:
         APP: macro-fit-api
     restart: unless-stopped
     environment:
+      NOTIFICATION_API_URL: http://notification-api:3008/api
+      NOTIFICATION_SERVICE_TOKEN: ${NOTIFICATION_SERVICE_TOKEN:-}
       NODE_ENV: production
       MACRO_FIT_API_PORT: 3007
       API_PREFIX: api
@@ -331,6 +374,8 @@ services:
         APP: travel-planner-api
     restart: unless-stopped
     environment:
+      NOTIFICATION_API_URL: http://notification-api:3008/api
+      NOTIFICATION_SERVICE_TOKEN: ${NOTIFICATION_SERVICE_TOKEN:-}
       NODE_ENV: production
       PORT: 3003
       TRAVEL_DB_HOST: postgres

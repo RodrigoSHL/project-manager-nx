@@ -14,6 +14,7 @@ services:
       FILES_DB_NAME: ${FILES_DB_NAME:-files_db}
       INSPECTION_DB_NAME: ${INSPECTION_DB_NAME:-inspection_db}
       MACROFIT_DB_NAME: ${MACROFIT_DB_NAME:-macrofit_db}
+      NOTIFICATION_DB_NAME: ${NOTIFICATION_DB_NAME:-notification_db}
     ports:
       - '${DATABASE_PORT:-5432}:5432'
     volumes:
@@ -28,6 +29,36 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  notification-api:
+    profiles: [notification]
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+      args:
+        APP: notification-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      NOTIFICATION_API_PORT: 3008
+      API_PREFIX: api
+      NOTIFICATION_SERVICE_TOKEN: ${NOTIFICATION_SERVICE_TOKEN:-}
+      NOTIFICATION_DB_HOST: postgres
+      NOTIFICATION_DB_PORT: 5432
+      NOTIFICATION_DB_NAME: ${NOTIFICATION_DB_NAME:-notification_db}
+      NOTIFICATION_DB_USERNAME: ${DATABASE_USERNAME:-user_project}
+      NOTIFICATION_DB_PASSWORD: ${DATABASE_PASSWORD:-password_project}
+      NOTIFICATION_MIGRATIONS_RUN: "true"
+      DATABASE_SSL: ${DATABASE_SSL:-false}
+      TYPEORM_SYNCHRONIZE: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3008/api/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   mailer-api:
     profiles: [mailer]

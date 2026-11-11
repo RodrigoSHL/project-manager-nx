@@ -11,6 +11,7 @@ for (const app of [
   'travel-planner-api',
   'files-api',
   'inspection-api',
+  'notification-api',
 ]) {
   // TypeORM loads pg dynamically; a successful Webpack build alone cannot prove it is installed.
   const code =

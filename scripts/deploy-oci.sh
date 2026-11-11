@@ -38,6 +38,7 @@ CANONICAL_SERVICES=(
   files-api
   inspection-api
   mailer-api
+  notification-api
   macro-fit-api
   bff-api
   inspection-web
@@ -73,7 +74,7 @@ Opciones:
   --profile PERFIL       travel-full, travel-frontend, travel-backend,
                          inspection-full, inspection-frontend,
                          inspection-qa-frontend,
-                         inspection-backend, mailer-backend, macrofit-full,
+                         inspection-backend, mailer-backend, notification-backend, macrofit-full,
                          macrofit-frontend, macrofit-backend, platform-full o custom
   --services LISTA       Servicios separados por coma; implica perfil custom
   --key RUTA             Clave privada SSH (también ATOMDEV_SSH_KEY)
@@ -155,7 +156,8 @@ select_profile_interactively() {
   printf ' 11) MacroFit completo (API, BFF, frontend y Caddy)\n'
   printf ' 12) Solo frontend MacroFit y Caddy\n'
   printf ' 13) Backend MacroFit (API, BFF y Caddy)\n'
-  read -r -p 'Selecciona [1-13]: ' selection
+  printf ' 14) Notification API (interno y base de datos)\n'
+  read -r -p 'Selecciona [1-14]: ' selection
 
   case "$selection" in
     1) PROFILE="travel-full" ;;
@@ -171,6 +173,7 @@ select_profile_interactively() {
     11) PROFILE="macrofit-full" ;;
     12) PROFILE="macrofit-frontend" ;;
     13) PROFILE="macrofit-backend" ;;
+    14) PROFILE="notification-backend" ;;
     *) die "Selección inválida" ;;
   esac
 }
@@ -207,6 +210,9 @@ resolve_services() {
       ;;
     inspection-backend)
       raw_services="inspection-api,bff-api"
+      ;;
+    notification-backend)
+      raw_services="notification-api"
       ;;
     mailer-backend)
       raw_services="mailer-api"
@@ -569,7 +575,8 @@ REMOTE
 ensure_remote_databases() {
   if ! contains_service files-api "${SERVICES[@]}" \
     && ! contains_service inspection-api "${SERVICES[@]}" \
-    && ! contains_service macro-fit-api "${SERVICES[@]}"; then
+    && ! contains_service macro-fit-api "${SERVICES[@]}" \
+    && ! contains_service notification-api "${SERVICES[@]}"; then
     return 0
   fi
 
@@ -596,6 +603,9 @@ for SERVICE in "${SERVICES[@]}"; do
       ;;
     inspection-api)
       TARGET_DATABASE=${INSPECTION_DB_NAME:-inspection_db}
+      ;;
+    notification-api)
+      TARGET_DATABASE=${NOTIFICATION_DB_NAME:-notification_db}
       ;;
     macro-fit-api)
       TARGET_DATABASE=${MACROFIT_DB_NAME:-macrofit_db}
@@ -764,10 +774,20 @@ if printf '%s\n' "${SERVICES[@]}" | grep -qx mailer-api; then
   MAILER_CONTAINER=$(docker compose --env-file .env.deploy -f docker-compose.prod.yml ps -q mailer-api)
   test -n "$MAILER_CONTAINER"
   docker exec "$MAILER_CONTAINER" node -e "Promise.all([fetch('http://127.0.0.1:3006/api/health'),fetch('http://127.0.0.1:3006/api/emails',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})]).then(r=>{console.log('MAILER_HEALTH='+r[0].status);console.log('MAILER_WITHOUT_TOKEN='+r[1].status);if(r[0].status!==200||r[1].status!==401)process.exit(1)}).catch(()=>process.exit(1))"
-  if [[ ${#SERVICES[@]} -eq 1 ]]; then
-    exit 0
-  fi
 fi
+
+if printf '%s\n' "${SERVICES[@]}" | grep -qx notification-api; then
+  NOTIFICATION_CONTAINER=$(docker compose --env-file .env.deploy -f docker-compose.prod.yml ps -q notification-api)
+  test -n "$NOTIFICATION_CONTAINER"
+  docker exec "$NOTIFICATION_CONTAINER" node -e "Promise.all([fetch('http://127.0.0.1:3008/api/health'),fetch('http://127.0.0.1:3008/api/notifications')]).then(r=>{console.log('NOTIFICATION_HEALTH='+r[0].status);console.log('NOTIFICATION_WITHOUT_TOKEN='+r[1].status);if(r[0].status!==200||r[1].status!==401)process.exit(1)}).catch(()=>process.exit(1))"
+fi
+
+# These two services have no public routes or BFF dependency.
+INTERNAL_ONLY=true
+for SERVICE in "${SERVICES[@]}"; do
+  case "$SERVICE" in mailer-api|notification-api) ;; *) INTERNAL_ONLY=false ;; esac
+done
+if [[ "$INTERNAL_ONLY" == true ]]; then exit 0; fi
 
 BFF_CONTAINER=$(docker compose --env-file .env.deploy -f docker-compose.prod.yml ps -q bff-api)
 docker exec "$BFF_CONTAINER" node -e "Promise.all([fetch('http://127.0.0.1:3000/health'),fetch('http://127.0.0.1:3000/api/trips'),fetch('http://travel-planner-api:3003/api'),fetch('http://user-api:3001/api/health'),fetch('http://files-api:3004/api/health'),fetch('http://inspection-api:3005/api/health'),fetch('http://127.0.0.1:3000/api/inspection/tenants')]).then(r=>{console.log('BFF_HEALTH='+r[0].status);console.log('TRIPS_WITHOUT_JWT='+r[1].status);console.log('TRAVEL_UPSTREAM='+r[2].status);console.log('USER_UPSTREAM='+r[3].status);console.log('FILES_UPSTREAM='+r[4].status);console.log('INSPECTION_UPSTREAM='+r[5].status);console.log('INSPECTION_WITHOUT_JWT='+r[6].status);if(r[0].status!==200||r[1].status!==401||r[2].status!==200||r[3].status!==200||r[4].status!==200||r[5].status!==200||r[6].status!==401)process.exit(1)})"
@@ -817,8 +837,13 @@ REMOTE
 }
 
 verify_external() {
-  if [[ ${#SERVICES[@]} -eq 1 && "${SERVICES[0]}" == mailer-api ]]; then
-    log "Mailer API es interno; verificado dentro de su contenedor"
+  local internal_only=true
+  local service
+  for service in "${SERVICES[@]}"; do
+    case "$service" in mailer-api|notification-api) ;; *) internal_only=false ;; esac
+  done
+  if [[ "$internal_only" == true ]]; then
+    log "Servicios internos verificados dentro de sus contenedores"
     return 0
   fi
   log "Ejecutando smoke tests HTTPS externos"

@@ -15,6 +15,10 @@ El microservicio [Mailer API](apps/mailer-api/README.md) envía correos desde ot
 servicios mediante HTTP, con proveedores intercambiables por inyección de
 dependencias. Incluye Resend y simulación local, y funciona sin PostgreSQL ni BFF.
 
+[Notification API](apps/notification-api/README.md) almacena notificaciones por
+aplicación, proyecto y destinatario en `notification_db`. Los backends lo consumen
+por HTTP interno con token de servicio, sin rutas BFF ni puertos publicados.
+
 To run the dev server for your app, use:
 
 ```sh

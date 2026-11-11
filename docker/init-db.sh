@@ -37,3 +37,7 @@ fi
 if [ -n "$MACROFIT_DB_NAME" ] && [ "$MACROFIT_DB_NAME" != "$POSTGRES_DB" ]; then
   create_db_if_missing "$MACROFIT_DB_NAME"
 fi
+
+if [ -n "$NOTIFICATION_DB_NAME" ] && [ "$NOTIFICATION_DB_NAME" != "$POSTGRES_DB" ]; then
+  create_db_if_missing "$NOTIFICATION_DB_NAME"
+fi

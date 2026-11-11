@@ -67,6 +67,13 @@ la selección anterior; agregar Mailer explícitamente cuando tenga sus secretos
 Antes de iniciarlo, configurar `MAILER_SERVICE_TOKEN`, `RESEND_API_KEY` y el
 remitente verificado en `.env.deploy`. Ver [contrato y configuración](../apps/mailer-api/README.md).
 
+`notification-api` usa `3008` y `notification_db`. Es interno, sin BFF, frontend ni
+dominio público. Usa el perfil Compose `notification` y el perfil de despliegue
+`notification-backend`; configurar `NOTIFICATION_SERVICE_TOKEN` en `.env.deploy`.
+El script crea la base en volúmenes existentes después del backup y verifica health
+y rechazo sin token. Los demás backends reciben su URL y token sin una dependencia
+de arranque obligatoria. Ver [contrato y configuración](../apps/notification-api/README.md).
+
 ## 2. Implementar el API NestJS
 
 El target Nx debe producir `dist/apps/<api>/main.js`, porque `Dockerfile.api` copia esa ruta.

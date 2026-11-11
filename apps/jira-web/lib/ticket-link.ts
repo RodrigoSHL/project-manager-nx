@@ -8,8 +8,9 @@ export interface TicketLink extends ProjectLink {
   commentId: string
 }
 
-export function buildTicketPageHref(projectId: string, ticketId: string): string {
-  return `/projects/${encodeURIComponent(projectId)}/tickets/${encodeURIComponent(ticketId)}`
+export function buildTicketPageHref(projectId: string, ticketId: string, commentId?: string): string {
+  const path = `/projects/${encodeURIComponent(projectId)}/tickets/${encodeURIComponent(ticketId)}`
+  return commentId ? `${path}?${new URLSearchParams({ commentId })}` : path
 }
 
 export function buildProjectBoardHref(project: { id: string; workspaceId: string | null }): string {

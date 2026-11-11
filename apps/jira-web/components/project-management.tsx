@@ -1035,7 +1035,7 @@ export default function ProjectManagement({ children, ticketProjectId, showPage 
         <AppSidebar
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-          activeView={showPage ? 'tickets' : activeView}
+          activeView={ticketProjectId ? 'tickets' : showPage ? '' : activeView}
           onViewChange={handleViewChange}
           onWorkspaceChange={() => { if (showPage) onNavigateToBoard?.() }}
           currentProject={currentProject}
@@ -1049,7 +1049,7 @@ export default function ProjectManagement({ children, ticketProjectId, showPage 
       <MobileSidebar
         open={mobileSidebarOpen}
         onClose={() => setMobileSidebarOpen(false)}
-        activeView={showPage ? 'tickets' : activeView}
+        activeView={ticketProjectId ? 'tickets' : showPage ? '' : activeView}
         onViewChange={handleViewChange}
         onWorkspaceChange={() => { if (showPage) onNavigateToBoard?.() }}
         currentProject={currentProject}

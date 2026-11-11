@@ -4,6 +4,7 @@ import type React from 'react'
 import { usePathname } from 'next/navigation'
 import { AuthProvider } from '@/contexts/auth-context'
 import { WorkspaceProvider } from '@/contexts/workspace-context'
+import { NotificationsProvider } from '@/contexts/notifications-context'
 import { ThemeProvider } from '@/components/theme-provider'
 import { ProjectWorkspaceLayout } from '@/components/project-workspace-layout'
 
@@ -27,7 +28,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       ) : (
         <AuthProvider>
           <WorkspaceProvider>
-            <ProjectWorkspaceLayout>{children}</ProjectWorkspaceLayout>
+            <NotificationsProvider>
+              <ProjectWorkspaceLayout>{children}</ProjectWorkspaceLayout>
+            </NotificationsProvider>
           </WorkspaceProvider>
         </AuthProvider>
       )}

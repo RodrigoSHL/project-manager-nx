@@ -6,6 +6,7 @@ jest.mock('@/contexts/auth-context', () => ({
   useAuth: () => ({ user: { name: 'Test User', email: 'test@example.invalid', roles: ['user'] }, logout: jest.fn() }),
 }))
 jest.mock('@/components/theme-toggle', () => ({ ThemeToggle: () => null }))
+jest.mock('@/components/notification-bell', () => ({ NotificationBell: () => null }))
 
 const projects = [
   { id: 'first', name: 'ServiuPRO Ingreso de Proyectos con un nombre largo', color: '#a78bfa' },

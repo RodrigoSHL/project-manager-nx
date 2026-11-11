@@ -1,7 +1,8 @@
 'use client'
 
 import * as React from 'react'
-import { Search, Plus, Bell, Menu, SlidersHorizontal, LogOut, Shield } from 'lucide-react'
+import { Search, Plus, Menu, SlidersHorizontal, LogOut, Shield } from 'lucide-react'
+import { NotificationBell } from '@/components/notification-bell'
 import { FlowBoardLogo } from '@/components/brand-logo'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
@@ -214,11 +215,7 @@ export function TopBar({
         {/* Theme Toggle */}
         <ThemeToggle className="size-10" />
 
-        {/* Notifications */}
-        <Button variant="ghost" size="icon" className="h-9 w-9 relative" aria-label="Notificaciones">
-          <Bell className="h-4 w-4" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-destructive" />
-        </Button>
+        <NotificationBell />
 
         {/* User Menu */}
         <DropdownMenu>

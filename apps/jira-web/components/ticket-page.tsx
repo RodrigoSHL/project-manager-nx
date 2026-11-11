@@ -9,7 +9,11 @@ import { Button } from '@/components/ui/button'
 import { useProject } from '@/contexts/project-context'
 import { buildTicketPageHref } from '@/lib/ticket-link'
 
-export function TicketPage({ projectId, ticketId }: { projectId: string; ticketId: string }) {
+export function TicketPage({ projectId, ticketId, commentId }: {
+  projectId: string
+  ticketId: string
+  commentId?: string
+}) {
   const router = useRouter()
   const { project, tickets, sprints, teamMembers, canWrite, loading, error, reload,
     onTicketUpdated, onTicketDeleted, onCreateChild } = useProject()
@@ -56,6 +60,7 @@ export function TicketPage({ projectId, ticketId }: { projectId: string; ticketI
           variant="page"
           open
           ticket={ticket}
+          highlightedCommentId={commentId}
           projectId={projectId}
           tickets={tickets}
           sprints={sprints}

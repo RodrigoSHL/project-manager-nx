@@ -23,6 +23,8 @@ import { AddSprintCompletion1792627200000 } from '../../migrations/1792627200000
 import { AddCommentAttachments1793404800000 } from '../../migrations/1793404800000-AddCommentAttachments';
 import { AddStorySubtaskTickets1793491200000 } from '../../migrations/1793491200000-AddStorySubtaskTickets';
 import { AddCommentMentionInboxDelivery1794355200000 } from '../../migrations/1794355200000-AddCommentMentionInboxDelivery';
+import { AddTicketDependencies1794358800000 } from '../../migrations/1794358800000-AddTicketDependencies';
+import { TicketDependency } from '../tickets/entities/ticket-dependency.entity';
 
 export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
   type: 'postgres',
@@ -44,6 +46,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     Sprint,
     Label,
     Ticket,
+    TicketDependency,
     Comment,
     CommentMentionNotification,
     Subtask,
@@ -58,6 +61,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     AddCommentAttachments1793404800000,
     AddStorySubtaskTickets1793491200000,
     AddCommentMentionInboxDelivery1794355200000,
+    AddTicketDependencies1794358800000,
   ],
   migrationsRun: process.env.PROJECT_MIGRATIONS_RUN === 'true',
   synchronize: process.env.TYPEORM_SYNCHRONIZE

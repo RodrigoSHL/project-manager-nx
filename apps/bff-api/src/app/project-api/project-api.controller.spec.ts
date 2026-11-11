@@ -45,6 +45,18 @@ describe('ProjectApiController workspace role permissions', () => {
     expect(client.forwardJsonRequest).not.toHaveBeenCalled();
   });
 
+  it('allows a viewer to read dependencies and checks write access for both mutations', async () => {
+    await controller.findTicketDependencies(projectId, ticketId, request);
+    expect(access.assertProjectAccess).toHaveBeenCalledWith(projectId, request.user);
+    expect(client.forwardJsonRequest).toHaveBeenCalledWith('GET', '/projects/project-1/tickets/ticket-1/dependencies');
+    client.forwardJsonRequest.mockClear();
+    await expect(controller.addTicketDependency(projectId, ticketId, { prerequisiteId: 'ticket-2' }, request))
+      .rejects.toBeInstanceOf(ForbiddenException);
+    await expect(controller.removeTicketDependency(projectId, ticketId, 'ticket-2', request))
+      .rejects.toBeInstanceOf(ForbiddenException);
+    expect(client.forwardJsonRequest).not.toHaveBeenCalled();
+  });
+
   it('forwards sprint completion and its destination after checking write access', async () => {
     access.assertProjectWriteAccess.mockResolvedValue(undefined);
     await controller.completeSprint(projectId, 'sprint-1', { targetSprintId: 'next-sprint' }, request);

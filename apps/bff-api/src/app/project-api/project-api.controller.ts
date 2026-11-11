@@ -235,6 +235,46 @@ export class ProjectApiController {
     );
   }
 
+  @Get(':projectId/tickets/:ticketId/dependencies')
+  async findTicketDependencies(
+    @Param('projectId') projectId: string,
+    @Param('ticketId') ticketId: string,
+    @Request() req: ExpressRequestWithUser,
+  ) {
+    await this.projectAccessService.assertProjectAccess(projectId, req.user);
+    return this.projectApiClient.forwardJsonRequest('GET', this.ticketDependenciesPath(projectId, ticketId));
+  }
+
+  @Post(':projectId/tickets/:ticketId/dependencies')
+  async addTicketDependency(
+    @Param('projectId') projectId: string,
+    @Param('ticketId') ticketId: string,
+    @Body() dto: Record<string, unknown>,
+    @Request() req: ExpressRequestWithUser,
+  ) {
+    await this.projectAccessService.assertProjectWriteAccess(projectId, req.user);
+    return this.projectApiClient.forwardJsonRequest('POST', this.ticketDependenciesPath(projectId, ticketId), dto);
+  }
+
+  @Delete(':projectId/tickets/:ticketId/dependencies/:prerequisiteId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async removeTicketDependency(
+    @Param('projectId') projectId: string,
+    @Param('ticketId') ticketId: string,
+    @Param('prerequisiteId') prerequisiteId: string,
+    @Request() req: ExpressRequestWithUser,
+  ) {
+    await this.projectAccessService.assertProjectWriteAccess(projectId, req.user);
+    return this.projectApiClient.forwardJsonRequest(
+      'DELETE',
+      `${this.ticketDependenciesPath(projectId, ticketId)}/${encodeURIComponent(prerequisiteId)}`,
+    );
+  }
+
+  private ticketDependenciesPath(projectId: string, ticketId: string) {
+    return `/projects/${encodeURIComponent(projectId)}/tickets/${encodeURIComponent(ticketId)}/dependencies`;
+  }
+
   @Get(':projectId/tickets/:ticketId/support-detail')
   async findSupportDetail(
     @Param('projectId') projectId: string,

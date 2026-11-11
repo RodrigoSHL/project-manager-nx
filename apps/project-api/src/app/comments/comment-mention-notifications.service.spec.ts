@@ -58,6 +58,8 @@ describe('mention notification queue', () => {
     process.env.MAILER_API_URL = 'http://mailer-api:3006/api';
     process.env.USER_API_URL = 'http://user-api:3001';
     process.env.MAILER_SERVICE_TOKEN = 'unit-test-token';
+    process.env.NOTIFICATION_API_URL = 'http://notification-api:3008/api';
+    process.env.NOTIFICATION_SERVICE_TOKEN = 'inbox-test-token';
     service = new CommentMentionNotificationsService(
       repository as unknown as Repository<CommentMentionNotification>
     );
@@ -69,6 +71,7 @@ describe('mention notification queue', () => {
       payload,
       attempts: 1,
       deliveryPayload: null,
+      createdAt: new Date('2026-11-01T13:00:00Z'),
     } as CommentMentionNotification;
     query.mockImplementation(async () =>
       query.mock.calls.length === 1 ? [] : [notification]
@@ -275,6 +278,37 @@ describe('mention notification queue', () => {
         status: 'failed',
         lastCode: 'provider_validation_error',
       })
+    );
+  });
+
+  it('retries publishing a sent email under the same key without resending it', async () => {
+    query.mockResolvedValue([notification]);
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 503 }));
+    await service.publishInbox();
+    expect(query.mock.calls[0][0]).toContain('"status" = \'sent\'');
+    expect(update).toHaveBeenLastCalledWith(
+      { id: 'notification', appNextAttemptAt: expect.any(Date) },
+      { appNextAttemptAt: expect.any(Date) }
+    );
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 201 }));
+    await service.publishInbox();
+    const bodies = fetchMock.mock.calls.map(([url, options]) => {
+      expect(url).toBe('http://notification-api:3008/api/notifications');
+      return JSON.parse(options.body);
+    });
+    expect(bodies[0]).toEqual(bodies[1]);
+    expect(bodies[0]).toMatchObject({
+      application: 'jira',
+      projectId: 'project',
+      recipientId: 'recipient',
+      eventKey: 'jira-mention/comment/recipient',
+      occurredAt: '2026-11-01T13:00:00.000Z',
+      metadata: { ticketId: 'ticket', commentId: 'comment' },
+    });
+    expect(JSON.stringify(bodies[0])).not.toContain('stale@example.com');
+    expect(update).toHaveBeenLastCalledWith(
+      { id: 'notification', appNextAttemptAt: expect.any(Date) },
+      { appPublishedAt: expect.any(Date), appNextAttemptAt: null }
     );
   });
 });

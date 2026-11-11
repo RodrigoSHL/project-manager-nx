@@ -1,4 +1,5 @@
 import {
+  IsISO8601,
   IsObject,
   IsString,
   Matches,
@@ -33,4 +34,8 @@ export class CreateNotificationDto extends NotificationScopeDto {
   @MaxLength(200)
   @Matches(/^[\x21-\x7e]+$/)
   eventKey?: string;
+
+  @ValidateIf((_object, value) => value !== undefined)
+  @IsISO8601({ strict: true, strictSeparator: true })
+  occurredAt?: string;
 }

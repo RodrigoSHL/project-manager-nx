@@ -29,6 +29,8 @@ export class CommentMentionNotificationsService
   private readonly logger = new Logger(CommentMentionNotificationsService.name);
   private timer?: ReturnType<typeof setInterval>;
   private running?: Promise<void>;
+  private inboxTimer?: ReturnType<typeof setInterval>;
+  private publishing?: Promise<void>;
   constructor(
     @InjectRepository(CommentMentionNotification)
     private readonly notifications: Repository<CommentMentionNotification>
@@ -39,6 +41,13 @@ export class CommentMentionNotificationsService
   }
 
   onModuleInit() {
+    if (
+      process.env.NOTIFICATION_API_URL &&
+      process.env.NOTIFICATION_SERVICE_TOKEN
+    ) {
+      this.inboxTimer = setInterval(() => void this.publishInbox(), 5000);
+      this.inboxTimer.unref();
+    }
     if (!this.enabled) return;
     if (
       !process.env.MAILER_SERVICE_TOKEN ||
@@ -57,7 +66,91 @@ export class CommentMentionNotificationsService
 
   async onModuleDestroy() {
     if (this.timer) clearInterval(this.timer);
-    await this.running;
+    if (this.inboxTimer) clearInterval(this.inboxTimer);
+    await Promise.all([this.running, this.publishing]);
+  }
+
+  async publishInbox() {
+    if (this.publishing) return;
+    this.publishing = this.publishSentMentions().catch(() => {
+      this.logger.warn('Mention inbox publisher unavailable');
+    });
+    try {
+      await this.publishing;
+    } finally {
+      this.publishing = undefined;
+    }
+  }
+
+  private async publishSentMentions() {
+    const leaseUntil = new Date(Date.now() + 120000);
+    const rows: CommentMentionNotification[] = await this.notifications.query(
+      `WITH claimed AS (
+        UPDATE "comment_mention_notifications" SET "appNextAttemptAt" = $1
+        WHERE "id" IN (
+          SELECT "id" FROM "comment_mention_notifications"
+          WHERE "status" = 'sent' AND "appPublishedAt" IS NULL
+            AND ("appNextAttemptAt" IS NULL OR "appNextAttemptAt" <= now())
+          ORDER BY "createdAt" DESC, "id" DESC
+          LIMIT 10 FOR UPDATE SKIP LOCKED
+        ) RETURNING *
+      ) SELECT * FROM claimed`,
+      [leaseUntil]
+    );
+    await Promise.all(rows.map((row) => this.publishMention(row, leaseUntil)));
+  }
+
+  private async publishMention(
+    row: CommentMentionNotification,
+    leaseUntil: Date
+  ) {
+    const payload = row.deliveryPayload ?? row.payload;
+    const lease = { id: row.id, appNextAttemptAt: leaseUntil };
+    try {
+      const response = await fetch(
+        `${this.baseUrl('NOTIFICATION_API_URL')}/notifications`,
+        {
+          method: 'POST',
+          signal: AbortSignal.timeout(5000),
+          headers: {
+            Authorization: `Bearer ${process.env.NOTIFICATION_SERVICE_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            application: 'jira',
+            projectId: payload.projectId,
+            recipientId: row.recipientUserId,
+            type: 'comment.mention',
+            title:
+              `${payload.authorName} te mencionó en ${payload.ticketKey}`.slice(
+                0,
+                200
+              ),
+            body: payload.commentText,
+            occurredAt: row.createdAt.toISOString(),
+            eventKey: `jira-mention/${row.commentId}/${row.recipientUserId}`,
+            metadata: {
+              projectName: payload.projectName,
+              ticketKey: payload.ticketKey,
+              ticketId: payload.ticketId,
+              commentId: payload.commentId,
+            },
+          }),
+        }
+      );
+      if (!response.ok)
+        throw new Error('Notification API rejected publication');
+    } catch {
+      this.logger.warn(`Could not publish mention ${row.id} to the inbox`);
+      await this.notifications.update(lease, {
+        appNextAttemptAt: new Date(Date.now() + 60000),
+      });
+      return;
+    }
+    await this.notifications.update(lease, {
+      appPublishedAt: new Date(),
+      appNextAttemptAt: null,
+    });
   }
 
   async enqueue(manager: EntityManager, comment: Comment, previousBody = '') {

@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -11,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { ListNotificationsDto } from './dto/list-notifications.dto';
+import { NotificationInboxDto } from './dto/notification-inbox.dto';
 import { NotificationScopeDto } from './dto/notification-scope.dto';
 import { NotificationsService } from './notifications.service';
 import { ServiceTokenGuard } from './service-token.guard';
@@ -23,6 +25,12 @@ export class NotificationsController {
   @Post()
   create(@Body() dto: CreateNotificationDto) {
     return this.notifications.create(dto);
+  }
+
+  @Post('inbox')
+  @HttpCode(200)
+  inbox(@Body() dto: NotificationInboxDto) {
+    return this.notifications.inbox(dto);
   }
 
   @Get()

@@ -78,6 +78,7 @@ async function verifyNotifications() {
     title: 'Nueva mención',
     body: 'Te mencionaron',
     eventKey: 'comment-1/user-1',
+    occurredAt: '2026-10-01T12:00:00.000Z',
     metadata: { ticketId: 'ticket-1' },
   };
   const created = await Promise.all(
@@ -88,6 +89,7 @@ async function verifyNotifications() {
   assert.equal(new Set(created.map((result) => result.body.id)).size, 1);
   assert.equal(created[0].body.readAt, null);
   assert.equal(created[0].body.type, 'info');
+  assert.equal(created[0].body.createdAt, dto.occurredAt);
   // The same event key is independent for other applications/projects/recipients.
   for (const alternative of [
     { application: 'inspection' },
@@ -119,6 +121,44 @@ async function verifyNotifications() {
   assert.equal(
     (await call(`notifications/unread-count?${query(scope)}`)).body.count,
     1
+  );
+  const scopeAcrossProjects = {
+    application: scope.application,
+    recipientId: scope.recipientId,
+    projectIds: [scope.projectId, 'project-2'],
+  };
+  const history = await call(
+    'notifications/inbox',
+    'POST',
+    scopeAcrossProjects
+  );
+  assert.equal(history.status, 200);
+  assert.equal(history.body.total, 2);
+  assert.equal(history.body.unreadCount, 2);
+  assert.ok(
+    history.body.items.every(
+      (item) =>
+        item.recipientId === scope.recipientId &&
+        item.application === scope.application
+    )
+  );
+  const scopedHistory = await call('notifications/inbox', 'POST', {
+    ...scopeAcrossProjects,
+    projectIds: [scope.projectId],
+  });
+  assert.deepEqual(
+    scopedHistory.body.items.map((item) => item.id),
+    [id]
+  );
+  const emptyHistory = await call('notifications/inbox', 'POST', {
+    ...scopeAcrossProjects,
+    projectIds: [],
+  });
+  assert.equal(emptyHistory.body.total, 0);
+  assert.equal(
+    (await call('notifications/inbox', 'POST', scopeAcrossProjects, false))
+      .status,
+    401
   );
   const read = await call(`notifications/${id}/read?${query(scope)}`, 'PATCH');
   assert.equal(read.status, 200);
@@ -274,7 +314,7 @@ try {
     '-tAc',
     'SELECT (SELECT count(*) FROM migrations), (SELECT count(*) FROM notifications), (SELECT pg_get_userbyid(datdba) FROM pg_database WHERE datname=current_database())'
   );
-  assert.equal(state, '1|6|notification_validation');
+  assert.equal(state, '2|6|notification_validation');
   const ports = JSON.parse(
     docker('inspect', '--format', '{{json .HostConfig.PortBindings}}', api)
   );

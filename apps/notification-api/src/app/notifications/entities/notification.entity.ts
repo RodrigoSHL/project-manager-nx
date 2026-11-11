@@ -7,6 +7,12 @@ import {
 } from 'typeorm';
 
 @Entity('notifications')
+@Index('IDX_notifications_recipient_history', [
+  'application',
+  'recipientId',
+  'createdAt',
+  'id',
+])
 @Index(
   'IDX_notifications_unread',
   ['application', 'projectId', 'recipientId'],

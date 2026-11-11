@@ -9,6 +9,7 @@ import { FilesApiModule } from './files-api/files-api.module';
 import { InspectionApiModule } from './inspection-api/inspection-api.module';
 import { WorkReportModule } from './inspection-api/work-report.module';
 import { MacrofitApiModule } from './macrofit-api/macrofit-api.module';
+import { NotificationApiModule } from './notification-api/notification-api.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { MacrofitApiModule } from './macrofit-api/macrofit-api.module';
     InspectionApiModule,
     WorkReportModule,
     MacrofitApiModule,
+    NotificationApiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

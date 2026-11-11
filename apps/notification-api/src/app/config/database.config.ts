@@ -1,6 +1,7 @@
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { Notification } from '../notifications/entities/notification.entity';
 import { CreateNotifications1794268800000 } from '../../migrations/1794268800000-CreateNotifications';
+import { IndexNotificationRecipientHistory1794355200000 } from '../../migrations/1794355200000-IndexNotificationRecipientHistory';
 
 export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
   type: 'postgres',
@@ -21,7 +22,10 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     'postgres',
   database: process.env.NOTIFICATION_DB_NAME || 'notification_db',
   entities: [Notification],
-  migrations: [CreateNotifications1794268800000],
+  migrations: [
+    CreateNotifications1794268800000,
+    IndexNotificationRecipientHistory1794355200000,
+  ],
   migrationsRun: process.env.NOTIFICATION_MIGRATIONS_RUN !== 'false',
   synchronize: false,
   ssl:

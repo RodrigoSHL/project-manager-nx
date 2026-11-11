@@ -3,11 +3,8 @@ import {
   CreateDateColumn,
   Entity,
   Index,
-  JoinColumn,
-  ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Comment } from './comment.entity';
 
 export interface MentionEmailPayload {
   to: string[];
@@ -28,15 +25,12 @@ export interface MentionEmailPayload {
   unique: true,
 })
 @Index('IDX_comment_mention_pending', ['status', 'nextAttemptAt'])
+@Index('IDX_comment_mention_app_pending', ['createdAt'], {
+  where: `"status" = 'sent' AND "appPublishedAt" IS NULL`,
+})
 export class CommentMentionNotification {
   @PrimaryGeneratedColumn('uuid') id: string;
   @Column({ type: 'uuid' }) commentId: string;
-  @ManyToOne(() => Comment, { onDelete: 'CASCADE' })
-  @JoinColumn({
-    name: 'commentId',
-    foreignKeyConstraintName: 'FK_comment_mention_comment',
-  })
-  comment: Comment;
   @Column({ type: 'uuid' }) memberId: string;
   @Column({ type: 'uuid' }) recipientUserId: string;
   @Column({ type: 'jsonb' }) payload: MentionEmailPayload;
@@ -56,4 +50,7 @@ export class CommentMentionNotification {
     | string
     | null;
   @CreateDateColumn({ type: 'timestamptz' }) createdAt: Date;
+  @Column({ type: 'timestamptz', nullable: true }) appPublishedAt: Date | null;
+  @Column({ type: 'timestamptz', nullable: true })
+  appNextAttemptAt: Date | null;
 }

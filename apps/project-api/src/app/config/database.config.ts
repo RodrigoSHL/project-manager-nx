@@ -22,6 +22,7 @@ import { AddProjectTicketCounter1791547200000 } from '../../migrations/179154720
 import { AddSprintCompletion1792627200000 } from '../../migrations/1792627200000-AddSprintCompletion';
 import { AddCommentAttachments1793404800000 } from '../../migrations/1793404800000-AddCommentAttachments';
 import { AddStorySubtaskTickets1793491200000 } from '../../migrations/1793491200000-AddStorySubtaskTickets';
+import { AddCommentMentionInboxDelivery1794355200000 } from '../../migrations/1794355200000-AddCommentMentionInboxDelivery';
 
 export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
   type: 'postgres',
@@ -56,6 +57,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     AddSprintCompletion1792627200000,
     AddCommentAttachments1793404800000,
     AddStorySubtaskTickets1793491200000,
+    AddCommentMentionInboxDelivery1794355200000,
   ],
   migrationsRun: process.env.PROJECT_MIGRATIONS_RUN === 'true',
   synchronize: process.env.TYPEORM_SYNCHRONIZE

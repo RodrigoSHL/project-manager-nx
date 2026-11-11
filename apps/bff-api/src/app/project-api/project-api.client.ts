@@ -6,6 +6,7 @@ type ProjectBody = Record<string, unknown>;
 
 export interface ProjectApiTeamMember {
   userId?: string | null;
+  isActive?: boolean;
 }
 
 export interface ProjectApiProject extends Record<string, unknown> {

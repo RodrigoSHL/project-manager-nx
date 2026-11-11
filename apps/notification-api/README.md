@@ -13,10 +13,10 @@ backends del monorepo. Se genera y administra con Nx, como Mailer API.
 | Autenticación                  | `Authorization: Bearer <NOTIFICATION_SERVICE_TOKEN>`       |
 | Perfil Compose / despliegue    | `notification` / `notification-backend`                    |
 
-No necesita frontend, rutas BFF, Caddy, DNS ni puertos publicados. Los servicios
-se comunican directamente por la red Compose. El BFF podrá consumirlo desde un
-backend si una funcionalidad futura requiere presentar notificaciones al usuario.
-Este servicio almacena notificaciones; no envía correos ni push.
+El servicio se comunica por la red Compose. Jira Web consulta su historial
+mediante las rutas autenticadas del BFF `GET /api/jira/notifications` y
+`PATCH /api/jira/notifications/:projectId/:id/read`. El BFF conserva el token
+de servicio en el servidor.
 
 ## Modelo y alcance
 
@@ -44,6 +44,7 @@ Todos salvo health requieren el token de servicio.
 | Método | Ruta                              | Resultado                                                                |
 | ------ | --------------------------------- | ------------------------------------------------------------------------ |
 | POST   | `/api/notifications`              | Crea o recupera por `eventKey`; `201`                                    |
+| POST   | `/api/notifications/inbox`        | Lista y cuenta las no leídas en los proyectos autorizados |
 | GET    | `/api/notifications`              | Lista paginada `{ items, total, page, limit }`                           |
 | GET    | `/api/notifications/unread-count` | `{ count }` de no leídas                                                 |
 | PATCH  | `/api/notifications/:id/read`     | Marca leída, conserva la primera fecha; `404` si no pertenece al alcance |
@@ -55,13 +56,18 @@ Los cuerpos JSON están limitados a 256 KiB; título a 200 caracteres, cuerpo a
 10.000 y `eventKey` a 200 caracteres imprimibles sin espacios. Campos adicionales,
 valores nulos y datos inválidos se rechazan con `400`; sin token, `401`.
 
+`POST /api/notifications/inbox` recibe `application`, `recipientId`,
+`projectIds` y los filtros de paginación. `projectIds` es la lista que el
+backend ya autorizó para esa cuenta. La respuesta incluye `unreadCount`.
+Al crear, `occurredAt` puede indicar la fecha original del evento en ISO 8601
+para conservar el orden del historial al importar envíos anteriores.
+
 ## Consumir desde otro backend
 
 Compose productivo proporciona `NOTIFICATION_API_URL` y
-`NOTIFICATION_SERVICE_TOKEN` a Project, User, Travel, Files, Inspection, Mailer y
-MacroFit. No se añade una dependencia de arranque obligatoria: el servicio es
-opcional y cada productor decide cómo gestionar indisponibilidad y reintentos.
-No se generan notificaciones automáticamente en los flujos de esas aplicaciones.
+`NOTIFICATION_SERVICE_TOKEN` a Project, User, Travel, Files, Inspection, Mailer,
+MacroFit y BFF. Project API publica las menciones de Jira cuyo correo fue
+aceptado por Mailer y reintenta desde su cola persistente.
 
 ```ts
 const response = await fetch(`${process.env.NOTIFICATION_API_URL}/notifications`, {

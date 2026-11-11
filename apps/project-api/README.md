@@ -232,6 +232,19 @@ email actual de User API y llama directamente a la plantilla de Mailer API.
 Los administradores mantienen el acceso global existente. El BFF sigue atendiendo
 los comentarios de Jira Web y aplica sus controles de acceso habituales.
 
+Después de que Mailer acepta un correo, otro worker publica la mención en
+Notification API con la misma clave de evento y la fecha original. Procesa
+también los envíos anteriores que siguen guardados en la cola. La migración
+`AddCommentMentionInboxDelivery` agrega el estado de publicación y la fecha del
+próximo intento. Si Notification API está temporalmente caída, el worker
+reintenta la publicación sin reenviar el correo.
+
+Jira Web muestra el historial en `/notifications` y las últimas menciones desde
+la campana. El BFF toma el destinatario del JWT y comprueba los proyectos
+accesibles antes de listar o marcar una notificación como leída. El historial
+requiere el rol `user` o `admin` y solo muestra notificaciones dirigidas a la
+cuenta autenticada.
+
 Activación:
 
 ```env
@@ -240,18 +253,23 @@ JIRA_MENTION_EMAILS_ENABLED=true
 MAILER_API_URL=http://localhost:3006/api
 MAILER_SERVICE_TOKEN=<token interno compartido>
 USER_API_URL=http://localhost:3001/api
+# Project API y BFF usan el token configurado en Notification API
+NOTIFICATION_API_URL=http://localhost:3008/api
+NOTIFICATION_SERVICE_TOKEN=<token interno compartido>
 # Mailer API: destino del botón del correo
 JIRA_WEB_URL=http://localhost:4201
 ```
 
 Los ejemplos dejan los avisos desactivados. En producción, usar
 `JIRA_WEB_URL=https://jira.atomdev.cl` y las variables/secretos en `.env.deploy`.
-Compose configura las URLs internas de Project API; ejecutar Mailer junto con
-Project API y User API, y reconstruir Jira Web para habilitar la navegación.
+Compose configura las URLs internas de Mailer y Notification API. En un
+PostgreSQL existente, preparar `notification_db` con el perfil de despliegue
+`notification-backend` antes de arrancar las versiones nuevas de Project API,
+BFF y Jira Web.
 
 ```sh
 docker compose --env-file .env.deploy -f docker-compose.prod.yml \
-  --profile mailer up -d --build mailer-api project-api jira-web
+  --profile mailer --profile notification up -d --build mailer-api notification-api project-api bff-api jira-web
 ```
 
 El contenido se congela antes del primer envío para conservar idéntico payload y
@@ -266,8 +284,9 @@ de esa ventana, ni se altera el remitente/configuración durante un reintento.
 Para diagnosticar eventos, consultar `status`, `attempts`, `lastCode` y
 `nextAttemptAt` en `comment_mention_notifications`. Los estados terminales son
 `sent`, `failed` y `skipped`; no hay UI para reenvío manual ni webhooks de entrega.
-La tabla conserva contenido del correo; eliminar un comentario elimina sus eventos
-mediante FK en cascada. Los logs contienen solo ID del evento y código del error.
+La cola conserva el registro de envíos aunque se elimine el comentario. El worker
+omite los correos pendientes cuando el comentario de origen ya no existe.
+Los logs contienen solo ID del evento y código del error.
 
 Validación completa en una base temporal local, con User API de prueba y Mailer
 real usando un proveedor simulado (no consume cuota ni envía correo):
@@ -284,8 +303,8 @@ docker rm -f jira-mention-validation
 
 El script exige exactamente esa base en localhost/127.0.0.1, crea fixtures y prueba
 migración up/down, cola persistente, deduplicación, permisos, réplicas concurrentes,
-contrato HTTP de plantilla, reintentos, respuestas y borrado en cascada. Usar una
-base vacía por ejecución.
+contrato HTTP de plantilla, reintentos, respuestas y conservación del historial
+al borrar un comentario. Usar una base vacía por ejecución.
 
 ### TaskStatus
 - `todo` - Por hacer

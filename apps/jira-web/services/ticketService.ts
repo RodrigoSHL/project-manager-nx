@@ -67,3 +67,35 @@ export async function deleteTicket(projectId: string, ticketId: string): Promise
   })
   if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`)
 }
+
+export type DependencyTicket = Pick<ApiTicket, 'id' | 'key' | 'title' | 'status'>
+
+export interface TicketDependencies {
+  dependsOn: DependencyTicket[]
+  blocks: DependencyTicket[]
+}
+
+function dependenciesUrl(projectId: string, ticketId: string) {
+  return `${API_BASE_URL}/projects/${encodeURIComponent(projectId)}/tickets/${encodeURIComponent(ticketId)}/dependencies`
+}
+
+export async function getTicketDependencies(projectId: string, ticketId: string, signal?: AbortSignal) {
+  const response = await authenticatedFetch(dependenciesUrl(projectId, ticketId), { signal, cache: 'no-store' })
+  return handleResponse<TicketDependencies>(response)
+}
+
+export async function addTicketDependency(projectId: string, ticketId: string, prerequisiteId: string) {
+  const response = await authenticatedFetch(dependenciesUrl(projectId, ticketId), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prerequisiteId }),
+  })
+  return handleResponse<TicketDependencies>(response)
+}
+
+export async function removeTicketDependency(projectId: string, ticketId: string, prerequisiteId: string) {
+  const response = await authenticatedFetch(`${dependenciesUrl(projectId, ticketId)}/${encodeURIComponent(prerequisiteId)}`, {
+    method: 'DELETE',
+  })
+  if (!response.ok) await handleResponse(response)
+}

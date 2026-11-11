@@ -41,6 +41,7 @@ import { TicketAttachmentViewer } from '@/components/ticket-attachment-viewer'
 import { TicketCommentComposer } from '@/components/ticket-comment-composer'
 import { CommentAttachments } from '@/components/comment-attachments'
 import { TicketChildren } from '@/components/ticket-children'
+import { TicketDependencies } from '@/components/ticket-dependencies'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -920,6 +921,9 @@ export function TicketDetail({
 
             <TicketChildren ticket={ticket} tickets={tickets} onSelect={onSelectTicket}
               onCreate={canWrite && onCreateChild ? () => onCreateChild(ticket) : undefined} />
+
+            {open && <TicketDependencies key={ticket.id} ticket={ticket} tickets={tickets}
+              canWrite={canWrite} onSelect={onSelectTicket} />}
 
             {/* ── Description ───────────────────────────────────────────────── */}
             <div className="mb-6">

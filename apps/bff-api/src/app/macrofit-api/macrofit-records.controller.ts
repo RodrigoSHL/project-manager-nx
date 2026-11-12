@@ -32,6 +32,10 @@ import {
   productEquivalenceSchema,
   mealEquivalenceSchema,
   dashboardRangeSchema,
+  customTrainingExerciseSchema,
+  finishTrainingSchema,
+  saveTrainingDraftSchema,
+  trainingHistoryQuerySchema,
 } from '@project-manager/macrofit-contracts';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { MacrofitApiClient } from './macrofit-api.client';
@@ -75,6 +79,45 @@ export class MacrofitRecordsController {
   dashboard(@Req() req: AuthenticatedRequest, @Query() query: unknown) {
     const { from, to } = parse(dashboardRangeSchema, query);
     return this.send(req, `/dashboard?from=${from}&to=${to}`);
+  }
+  @Get('training')
+  @Header('Cache-Control', 'no-store')
+  training(@Req() req: AuthenticatedRequest) {
+    return this.send(req, '/training');
+  }
+  @Put('training/draft')
+  trainingDraft(@Req() req: AuthenticatedRequest, @Body() body: unknown) {
+    return this.send(
+      req,
+      '/training/draft',
+      'PUT',
+      parse(saveTrainingDraftSchema, body)
+    );
+  }
+  @Post('training/finish')
+  @HttpCode(200)
+  trainingFinish(@Req() req: AuthenticatedRequest, @Body() body: unknown) {
+    return this.send(
+      req,
+      '/training/finish',
+      'POST',
+      parse(finishTrainingSchema, body)
+    );
+  }
+  @Get('training/history')
+  @Header('Cache-Control', 'no-store')
+  trainingHistory(@Req() req: AuthenticatedRequest, @Query() query: unknown) {
+    const { offset } = parse(trainingHistoryQuerySchema, query);
+    return this.send(req, `/training/history?offset=${Number(offset ?? 0)}`);
+  }
+  @Post('training/exercises')
+  trainingExercise(@Req() req: AuthenticatedRequest, @Body() body: unknown) {
+    return this.send(
+      req,
+      '/training/exercises',
+      'POST',
+      parse(customTrainingExerciseSchema, body)
+    );
   }
   @Put('settings')
   settings(@Req() req: AuthenticatedRequest, @Body() body: unknown) {

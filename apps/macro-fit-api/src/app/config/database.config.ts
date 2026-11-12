@@ -3,6 +3,12 @@ import { nutritionEntities } from '../nutrition/entities/nutrition.entity';
 import { CreateNutritionRecords1792713600000 } from '../../migrations/1792713600000-CreateNutritionRecords';
 import { AddNutritionPlans1792742400000 } from '../../migrations/1792742400000-AddNutritionPlans';
 import { AddDayProductEquivalences1792785600000 } from '../../migrations/1792785600000-AddDayProductEquivalences';
+import { CreateTrainingRecords1794484800000 } from '../../migrations/1794484800000-CreateTrainingRecords';
+import {
+  TrainingDraftEntity,
+  TrainingExerciseEntity,
+  TrainingSessionEntity,
+} from '../training/training.entity';
 
 export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
   type: 'postgres',
@@ -20,11 +26,17 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     process.env.DATABASE_PASSWORD ||
     'postgres',
   database: process.env.MACROFIT_DB_NAME || 'macrofit_db',
-  entities: nutritionEntities,
+  entities: [
+    ...nutritionEntities,
+    TrainingDraftEntity,
+    TrainingExerciseEntity,
+    TrainingSessionEntity,
+  ],
   migrations: [
     CreateNutritionRecords1792713600000,
     AddNutritionPlans1792742400000,
     AddDayProductEquivalences1792785600000,
+    CreateTrainingRecords1794484800000,
   ],
   migrationsRun: process.env.MACROFIT_MIGRATIONS_RUN === 'true',
   synchronize: false,

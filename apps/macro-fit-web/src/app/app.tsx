@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useCallback, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { ChartNoAxesCombined } from 'lucide-react';
 import { Header } from '../components/Header';
 import { Sidebar } from '../components/Sidebar';
@@ -17,13 +17,20 @@ import { CalculatorView } from '../components/CalculatorView';
 import { ProfileSetup } from '../components/ProfileSetup';
 import { useMacroStore } from '../hooks/useMacroStore';
 import { usePwaInstall } from '../hooks/usePwaInstall';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import {
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom';
 import { AuthProvider, useAuth } from '../features/auth/auth-context';
 import { CurrentUser } from '../features/auth/auth-session';
 import { canImportLegacy } from '../features/auth/account-storage';
 import { LoginPage } from '../pages/LoginPage';
 
 const DashboardView = lazy(() => import('../features/dashboard/DashboardView'));
+const MuscleLog = lazy(() => import('../features/training/MuscleLog'));
 
 export function App() {
   return (
@@ -40,6 +47,7 @@ export function App() {
 function RequireSession() {
   const auth = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   if (auth.status === 'checking')
     return (
       <div
@@ -83,6 +91,8 @@ function RequireSession() {
       key={auth.token}
       user={auth.user}
       onLogout={auth.logout}
+      trainingRoute={location.pathname === '/entrenamiento'}
+      onTrainingRouteChange={(open) => navigate(open ? '/entrenamiento' : '/')}
     />
   );
 }
@@ -90,15 +100,32 @@ function RequireSession() {
 export function MacroFitWorkspace({
   user,
   onLogout,
+  trainingRoute,
+  onTrainingRouteChange,
 }: {
   user: CurrentUser;
   onLogout: () => void;
+  trainingRoute?: boolean;
+  onTrainingRouteChange?: (open: boolean) => void;
 }) {
-  const [activeTab, setActiveTab] = useState<WorkspaceSection>('tracker');
+  const [activeTab, setActiveTab] =
+    useState<Exclude<WorkspaceSection, 'strength'>>('tracker');
+  const [localTrainingOpen, setLocalTrainingOpen] = useState(false);
+  const trainingOpen = trainingRoute ?? localTrainingOpen;
+  const [trainingVisited, setTrainingVisited] = useState(trainingOpen);
+  useEffect(() => {
+    if (trainingOpen) setTrainingVisited(true);
+  }, [trainingOpen]);
+  const activeSection = trainingOpen ? 'strength' : activeTab;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
   const navigate = (section: WorkspaceSection) => {
-    setActiveTab(section);
+    const openTraining = section === 'strength';
+    if (!openTraining) setActiveTab(section);
+    if (openTraining !== trainingOpen) {
+      if (onTrainingRouteChange) onTrainingRouteChange(openTraining);
+      else setLocalTrainingOpen(openTraining);
+    }
     setSidebarOpen(false);
   };
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
@@ -172,7 +199,7 @@ export function MacroFitWorkspace({
         Saltar al contenido
       </a>
       <Sidebar
-        activeSection={activeTab}
+        activeSection={activeSection}
         onNavigate={navigate}
         open={sidebarOpen}
         onClose={closeSidebar}
@@ -185,15 +212,27 @@ export function MacroFitWorkspace({
       />
       <div className="min-w-0 lg:ml-64">
         <Header
-          section={activeTab}
+          section={activeSection}
           user={user}
           sidebarOpen={sidebarOpen}
           onOpenSidebar={() => setSidebarOpen(true)}
           onOpenProfile={() => navigate('profile')}
           onLogout={onLogout}
         />
+        {(trainingOpen || trainingVisited) && (
+          <main
+            id={trainingOpen ? 'workspace-content' : undefined}
+            hidden={!trainingOpen}
+            className="mx-auto w-full max-w-6xl px-3 py-3 sm:px-7 sm:py-8"
+          >
+            <Suspense fallback={<p role="status">Cargando Muscle Log…</p>}>
+              <MuscleLog />
+            </Suspense>
+          </main>
+        )}
         <main
-          id="workspace-content"
+          id={trainingOpen ? undefined : 'workspace-content'}
+          hidden={trainingOpen}
           className="mx-auto w-full max-w-6xl px-3 py-3 sm:px-7 sm:py-8"
         >
           {(activeTab === 'tracker' || activeTab === 'food-guide') && (

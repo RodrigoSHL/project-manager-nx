@@ -1,0 +1,173 @@
+import { z } from 'zod';
+
+export const trainingMuscleSchema = z.enum([
+  'chest',
+  'shoulders',
+  'rearDelts',
+  'biceps',
+  'triceps',
+  'forearms',
+  'abs',
+  'obliques',
+  'traps',
+  'lats',
+  'lowerBack',
+  'glutes',
+  'quads',
+  'adductors',
+  'hamstrings',
+  'calves',
+  'tibialis',
+]);
+export const trainingEquipmentSchema = z.enum([
+  'machine',
+  'free',
+  'bodyweight',
+  'cable',
+  'band',
+]);
+export type TrainingMuscle = z.infer<typeof trainingMuscleSchema>;
+export type TrainingEquipment = z.infer<typeof trainingEquipmentSchema>;
+
+export const MAX_TRAINING_EXERCISES = 40;
+export const MAX_TRAINING_SETS = 80;
+export const TRAINING_HISTORY_PAGE_SIZE = 20;
+
+export const TRAINING_MUSCLES = {
+  chest: 'Pectorales',
+  shoulders: 'Deltoides anteriores y laterales',
+  rearDelts: 'Deltoides posteriores',
+  biceps: 'Bíceps',
+  triceps: 'Tríceps',
+  forearms: 'Antebrazos',
+  abs: 'Abdominales',
+  obliques: 'Oblicuos',
+  traps: 'Trapecios',
+  lats: 'Dorsales',
+  lowerBack: 'Zona lumbar',
+  glutes: 'Glúteos',
+  quads: 'Cuádriceps',
+  adductors: 'Aductores',
+  hamstrings: 'Isquiotibiales',
+  calves: 'Pantorrillas',
+  tibialis: 'Tibiales',
+} as const satisfies Record<TrainingMuscle, string>;
+
+export const TRAINING_EQUIPMENT = {
+  machine: 'Máquina',
+  free: 'Peso libre',
+  bodyweight: 'Peso corporal',
+  cable: 'Polea',
+  band: 'Banda',
+} as const satisfies Record<TrainingEquipment, string>;
+
+const uuid = z.string().uuid();
+const dateTime = z.string().datetime();
+const revision = z.number().int().min(0).max(2147483647);
+
+function unique<T>(values: T[]) {
+  return new Set(values).size === values.length;
+}
+
+export const trainingExerciseSchema = z
+  .object({
+    id: z.string().min(1).max(100),
+    name: z.string().trim().min(1).max(100),
+    aliases: z.array(z.string().trim().min(1).max(100)).max(12),
+    equipment: trainingEquipmentSchema,
+    primary: z.array(trainingMuscleSchema).min(1),
+    secondary: z.array(trainingMuscleSchema),
+  })
+  .strict()
+  .refine(({ primary, secondary }) => unique([...primary, ...secondary]), {
+    message: 'Cada músculo debe seleccionarse una sola vez.',
+  });
+
+export const customTrainingExerciseSchema = trainingExerciseSchema.refine(
+  ({ id }) => uuid.safeParse(id).success
+);
+
+export const trainingSetSchema = z
+  .object({
+    id: uuid,
+    reps: z.number().int().min(1).max(999),
+    weightKg: z.number().finite().min(0).max(9999),
+  })
+  .strict();
+
+const trainingSets = z
+  .array(trainingSetSchema)
+  .max(MAX_TRAINING_SETS)
+  .refine((sets) => unique(sets.map(({ id }) => id)));
+
+export const trainingDraftSchema = z
+  .object({
+    id: uuid,
+    startedAt: dateTime,
+    exercises: z
+      .array(
+        z
+          .object({
+            exerciseId: z.string().min(1).max(100),
+            sets: trainingSets,
+          })
+          .strict()
+      )
+      .max(MAX_TRAINING_EXERCISES)
+      .refine((exercises) =>
+        unique(exercises.map(({ exerciseId }) => exerciseId))
+      ),
+  })
+  .strict();
+
+export const trainingDraftStateSchema = z.object({
+  revision,
+  draft: trainingDraftSchema.nullable(),
+});
+export const saveTrainingDraftSchema = z
+  .object({
+    revision,
+    draft: trainingDraftSchema,
+  })
+  .strict();
+export const finishTrainingSchema = z.object({ revision, id: uuid }).strict();
+
+export const completedTrainingSchema = z.object({
+  id: uuid,
+  startedAt: dateTime,
+  finishedAt: dateTime,
+  exercises: z.array(
+    z.object({
+      exercise: trainingExerciseSchema,
+      sets: trainingSets,
+    })
+  ),
+});
+export const trainingFinishStateSchema = trainingDraftStateSchema.extend({
+  lastCompleted: completedTrainingSchema.nullable(),
+});
+export const trainingWorkspaceSchema = trainingFinishStateSchema.extend({
+  customExercises: z.array(customTrainingExerciseSchema),
+});
+export const trainingHistorySchema = z.object({
+  sessions: z.array(completedTrainingSchema),
+  nextOffset: z.number().int().nonnegative().nullable(),
+});
+export const trainingHistoryQuerySchema = z
+  .object({
+    offset: z
+      .string()
+      .regex(/^\d{1,9}$/)
+      .optional(),
+  })
+  .strict();
+
+export type TrainingExercise = z.infer<typeof trainingExerciseSchema>;
+export type TrainingSet = z.infer<typeof trainingSetSchema>;
+export type TrainingDraft = z.infer<typeof trainingDraftSchema>;
+export type TrainingDraftState = z.infer<typeof trainingDraftStateSchema>;
+export type SaveTrainingDraft = z.infer<typeof saveTrainingDraftSchema>;
+export type FinishTraining = z.infer<typeof finishTrainingSchema>;
+export type TrainingWorkspace = z.infer<typeof trainingWorkspaceSchema>;
+export type CompletedTraining = z.infer<typeof completedTrainingSchema>;
+export type TrainingHistory = z.infer<typeof trainingHistorySchema>;

@@ -5,3 +5,5 @@ export * from './products';
 export * from './equivalence-suggestions';
 export * from './nutrition-plan-templates';
 export * from './dashboard';
+export * from './training';
+export * from './training-catalog';

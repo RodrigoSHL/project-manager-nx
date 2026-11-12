@@ -70,6 +70,53 @@ describe('MacroFit personal records BFF', () => {
       })
     );
   });
+  it('authenticates training writes and forwards a valid draft with the account identity', async () => {
+    const path = '/api/macrofit/me/training/draft';
+    const body = {
+      revision: 0,
+      draft: {
+        id: '00000000-0000-4000-8000-000000000002',
+        startedAt: '2026-11-12T12:00:00.000Z',
+        exercises: [
+          {
+            exerciseId: 'leg-extension',
+            sets: [
+              {
+                id: '00000000-0000-4000-8000-000000000003',
+                reps: 10,
+                weightKg: 35,
+              },
+            ],
+          },
+        ],
+      },
+    };
+    const put = (value: unknown, requestHeaders: Record<string, string>) =>
+      httpFetch(origin + path, {
+        method: 'PUT',
+        headers: requestHeaders,
+        body: JSON.stringify(value),
+      });
+    expect(
+      (await put(body, { 'Content-Type': 'application/json' })).status
+    ).toBe(401);
+    expect((await put({ ...body, userId: 'external' }, headers)).status).toBe(
+      400
+    );
+    expect(upstream).not.toHaveBeenCalled();
+    upstream.mockResolvedValue(new Response('{}', { status: 200 }));
+    expect(
+      (await put(body, { ...headers, 'x-user-id': 'external' })).status
+    ).toBe(200);
+    expect(upstream).toHaveBeenCalledWith(
+      expect.stringContaining('/me/training/draft'),
+      expect.objectContaining({
+        method: 'PUT',
+        headers: expect.objectContaining({ 'x-user-id': userId }),
+        body: JSON.stringify(body),
+      })
+    );
+  });
   it('authenticates and validates a meal equivalence without a product, using only the JWT owner upstream', async () => {
     const path = '/api/macrofit/me/days/2026-10-25/meals/meal/equivalence';
     const body = {

@@ -5,6 +5,7 @@ import { PlateAnalysisModule } from './plate-analysis/plate-analysis.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { getDatabaseConfig } from './config/database.config';
 import { NutritionModule } from './nutrition/nutrition.module';
+import { TrainingModule } from './training/training.module';
 import { ProductsController } from './products/products.controller';
 import { ProductsService } from './products/products.service';
 
@@ -12,6 +13,7 @@ import { ProductsService } from './products/products.service';
   imports: [
     TypeOrmModule.forRootAsync({ useFactory: getDatabaseConfig }),
     NutritionModule,
+    TrainingModule,
     PlateAnalysisModule,
   ],
   controllers: [AppController, ProductsController],

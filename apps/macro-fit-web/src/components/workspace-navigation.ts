@@ -3,6 +3,7 @@ import {
   Calculator,
   Compass,
   ClipboardCheck,
+  Dumbbell,
   ListChecks,
   Package,
   Salad,
@@ -21,6 +22,7 @@ export type WorkspaceSection =
   | 'plan'
   | 'products'
   | 'combos'
+  | 'strength'
   | 'profile'
   | 'settings';
 
@@ -73,6 +75,12 @@ export const WORKSPACE_NAVIGATION: readonly WorkspaceNavigationEntry[] = [
         ],
       },
     ],
+  },
+  {
+    id: 'training',
+    label: 'Entrenamiento',
+    icon: Dumbbell,
+    children: [{ id: 'strength', label: 'Muscle Log', icon: Dumbbell }],
   },
   {
     id: 'account',

@@ -127,6 +127,7 @@ describe('MacroFit database workspace', () => {
     );
     render(<App />);
     await screen.findByText('Registrar comida con IA');
+    fireEvent.click(screen.getByRole('button', { name: 'Planificación' }));
     fireEvent.click(screen.getAllByRole('button', { name: 'Calculadora' })[0]);
     fireEvent.click(
       screen.getByRole('button', { name: 'Aplicar a Mis Metas Diarias' })

@@ -74,6 +74,7 @@ function change(label: string, value: string) {
 }
 async function openModule() {
   await screen.findByText('Registrar comida con IA');
+  fireEvent.click(screen.getByRole('button', { name: 'Planificación' }));
   fireEvent.click(
     screen.getByRole('button', { name: 'Mis combos', exact: true })
   );

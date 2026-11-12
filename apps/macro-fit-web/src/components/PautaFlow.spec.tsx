@@ -73,6 +73,7 @@ it('saves a configurable plan separately from calculated macros and shows it for
   render(<App />);
   await screen.findByText('Registrar comida con IA');
   expect(screen.queryByText('Avance de mi pauta')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Planificación' }));
   fireEvent.click(screen.getAllByRole('button', { name: 'Mi pauta' })[0]);
   fireEvent.click(screen.getByRole('button', { name: 'Explorar plantillas' }));
   fireEvent.click(

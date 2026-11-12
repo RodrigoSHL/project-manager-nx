@@ -51,6 +51,7 @@ afterEach(() => {
 async function openProducts() {
   render(<MacroFitWorkspace user={user} onLogout={() => undefined} />);
   await screen.findByText('Registrar comida con IA');
+  fireEvent.click(screen.getByRole('button', { name: 'Planificación' }));
   fireEvent.click(screen.getByRole('button', { name: 'Mis productos' }));
 }
 describe('Personal product workflows', () => {

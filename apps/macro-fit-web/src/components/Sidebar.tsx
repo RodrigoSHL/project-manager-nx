@@ -1,6 +1,108 @@
-import { useEffect, useRef } from 'react';
-import { ArrowUpRight, CheckCircle2, Smartphone, X } from 'lucide-react';
-import { WORKSPACE_NAVIGATION, WorkspaceSection } from './workspace-navigation';
+import { useEffect, useRef, useState } from 'react';
+import {
+  ArrowUpRight,
+  CheckCircle2,
+  ChevronRight,
+  Smartphone,
+  X,
+} from 'lucide-react';
+import {
+  getWorkspaceNavigationPath,
+  WORKSPACE_NAVIGATION,
+} from './workspace-navigation';
+import type {
+  WorkspaceNavigationEntry,
+  WorkspaceNavigationGroup,
+  WorkspaceSection,
+} from './workspace-navigation';
+
+type NavigationProps = {
+  activeSection: WorkspaceSection;
+  activeGroups: readonly WorkspaceNavigationGroup[];
+  onNavigate: (section: WorkspaceSection) => void;
+};
+
+const rowClass =
+  'flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400';
+
+function NavigationEntry({
+  entry,
+  ...navigation
+}: NavigationProps & { entry: WorkspaceNavigationEntry }) {
+  if ('children' in entry) {
+    return <NavigationGroup group={entry} {...navigation} />;
+  }
+
+  const { id, label, icon: Icon } = entry;
+  const active = navigation.activeSection === id;
+  return (
+    <button
+      type="button"
+      onClick={() => navigation.onNavigate(id)}
+      aria-current={active ? 'page' : undefined}
+      className={`${rowClass} font-medium ${
+        active
+          ? 'bg-emerald-400/10 text-emerald-300 ring-1 ring-inset ring-emerald-400/20'
+          : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-100'
+      }`}
+    >
+      <Icon className="size-4 shrink-0" aria-hidden="true" />
+      <span className="flex-1">{label}</span>
+      {active && (
+        <span
+          className="size-1.5 shrink-0 rounded-full bg-emerald-400"
+          aria-hidden="true"
+        />
+      )}
+    </button>
+  );
+}
+
+function NavigationGroup({
+  group,
+  ...navigation
+}: NavigationProps & { group: WorkspaceNavigationGroup }) {
+  const { activeSection, activeGroups } = navigation;
+  const active = activeGroups.includes(group);
+  const [expanded, setExpanded] = useState(active);
+  useEffect(() => setExpanded(active), [active, activeSection]);
+  const Icon = group.icon;
+  const panelId = `workspace-nav-${group.id}`;
+
+  return (
+    <div>
+      <button
+        type="button"
+        aria-expanded={expanded}
+        aria-controls={panelId}
+        onClick={() => setExpanded((wasExpanded) => !wasExpanded)}
+        className={`${rowClass} font-semibold ${
+          active
+            ? 'bg-emerald-400/5 text-emerald-300 hover:bg-emerald-400/10'
+            : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
+        }`}
+      >
+        <Icon className="size-4 shrink-0" aria-hidden="true" />
+        <span className="flex-1">{group.label}</span>
+        <ChevronRight
+          className={`size-4 shrink-0 transition-transform motion-reduce:transition-none ${
+            expanded ? 'rotate-90' : ''
+          }`}
+          aria-hidden="true"
+        />
+      </button>
+      <div
+        id={panelId}
+        hidden={!expanded}
+        className="my-1 ml-4 space-y-1 border-l border-slate-800 pl-2"
+      >
+        {group.children.map((entry) => (
+          <NavigationEntry key={entry.id} entry={entry} {...navigation} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function Sidebar({
   activeSection,
@@ -21,6 +123,7 @@ export function Sidebar({
 }) {
   const aside = useRef<HTMLElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
+  const activeGroups = getWorkspaceNavigationPath(activeSection)?.groups ?? [];
   useEffect(() => {
     if (!open) return;
     const previous = document.activeElement as HTMLElement | null;
@@ -33,10 +136,12 @@ export function Sidebar({
         onClose();
       }
       if (event.key !== 'Tab') return;
-      const buttons = aside.current?.querySelectorAll<HTMLElement>(
-        'button:not(:disabled), a[href]'
-      );
-      if (!buttons?.length) return;
+      const buttons = Array.from(
+        aside.current?.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), a[href]'
+        ) ?? []
+      ).filter((element) => !element.closest('[hidden]'));
+      if (!buttons.length) return;
       const first = buttons[0];
       const last = buttons[buttons.length - 1];
       if (event.shiftKey && document.activeElement === first) {
@@ -93,9 +198,6 @@ export function Sidebar({
               <p className="text-lg font-extrabold tracking-tight text-white">
                 Macro<span className="text-emerald-400">Fit</span>
               </p>
-              <p className="text-[11px] text-slate-500">
-                Tu alimentación, cada día
-              </p>
             </div>
           </div>
           <button
@@ -110,64 +212,38 @@ export function Sidebar({
         </div>
         <nav
           aria-label="Módulos de MacroFit"
-          className="flex-1 space-y-7 overflow-y-auto px-3 py-5"
+          className="flex-1 space-y-2 overflow-y-auto px-3 py-3"
         >
-          {WORKSPACE_NAVIGATION.map((group) => (
-            <div key={group.label}>
-              <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
-                {group.label}
-              </p>
-              <div className="space-y-1">
-                {group.items.map(({ id, label, icon: Icon }) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => onNavigate(id)}
-                    aria-current={activeSection === id ? 'page' : undefined}
-                    className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
-                      activeSection === id
-                        ? 'bg-emerald-400/10 text-emerald-300 ring-1 ring-inset ring-emerald-400/20'
-                        : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-100'
-                    }`}
-                  >
-                    <Icon className="size-[18px] shrink-0" aria-hidden="true" />
-                    {label}
-                    {activeSection === id && (
-                      <span
-                        className="ml-auto size-1.5 rounded-full bg-emerald-400"
-                        aria-hidden="true"
-                      />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
+          {WORKSPACE_NAVIGATION.map((entry) => (
+            <NavigationEntry
+              key={entry.id}
+              entry={entry}
+              activeSection={activeSection}
+              activeGroups={activeGroups}
+              onNavigate={onNavigate}
+            />
           ))}
         </nav>
-        <div className="border-t border-slate-800/70 p-4">
-          {canInstall ? (
-            <button
-              type="button"
-              onClick={onInstall}
-              className="flex w-full items-center gap-3 rounded-xl border border-slate-700 bg-slate-900 p-3 text-left text-sm text-slate-300 hover:border-emerald-500/40"
-            >
-              <Smartphone className="size-5 text-emerald-300" />
-              <span className="flex-1">Instalar MacroFit</span>
-              <ArrowUpRight className="size-4 text-slate-500" />
-            </button>
-          ) : (
-            <div className="flex items-center gap-2 px-3 py-2 text-xs text-slate-500">
-              {isStandalone ? (
+        {(canInstall || isStandalone) && (
+          <div className="border-t border-slate-800/70 p-4">
+            {canInstall ? (
+              <button
+                type="button"
+                onClick={onInstall}
+                className="flex w-full items-center gap-3 rounded-xl border border-slate-700 bg-slate-900 p-3 text-left text-sm text-slate-300 hover:border-emerald-500/40"
+              >
+                <Smartphone className="size-5 text-emerald-300" />
+                <span className="flex-1">Instalar MacroFit</span>
+                <ArrowUpRight className="size-4 text-slate-500" />
+              </button>
+            ) : (
+              <div className="flex items-center gap-2 px-3 py-2 text-xs text-slate-500">
                 <CheckCircle2 className="size-4 text-emerald-400" />
-              ) : (
-                <span className="size-1.5 rounded-full bg-emerald-400" />
-              )}
-              <span>
-                {isStandalone ? 'Aplicación instalada' : 'Tu diario personal'}
-              </span>
-            </div>
-          )}
-        </div>
+                Aplicación instalada
+              </div>
+            )}
+          </div>
+        )}
       </aside>
     </>
   );

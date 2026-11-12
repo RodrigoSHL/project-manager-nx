@@ -3,12 +3,15 @@ import {
   Calculator,
   Compass,
   ClipboardCheck,
+  ListChecks,
   Package,
+  Salad,
   Utensils,
   Settings,
   UserRound,
   ChartNoAxesCombined,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 export type WorkspaceSection =
   | 'dashboard'
@@ -20,30 +23,86 @@ export type WorkspaceSection =
   | 'combos'
   | 'profile'
   | 'settings';
-export const WORKSPACE_NAVIGATION: Array<{
+
+export type WorkspaceNavigationItem = {
+  id: WorkspaceSection;
   label: string;
-  items: Array<{ id: WorkspaceSection; label: string; icon: typeof BookOpen }>;
-}> = [
+  icon: LucideIcon;
+};
+
+export type WorkspaceNavigationGroup = {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  children: readonly WorkspaceNavigationEntry[];
+};
+
+export type WorkspaceNavigationEntry =
+  | WorkspaceNavigationItem
+  | WorkspaceNavigationGroup;
+
+export const WORKSPACE_NAVIGATION: readonly WorkspaceNavigationEntry[] = [
   {
-    label: 'Seguimiento',
-    items: [
-      { id: 'dashboard', label: 'Mi seguimiento', icon: ChartNoAxesCombined },
-      { id: 'tracker', label: 'Diario', icon: BookOpen },
-      { id: 'food-guide', label: 'Qué puedo comer', icon: Compass },
-      { id: 'products', label: 'Mis productos', icon: Package },
-      { id: 'combos', label: 'Mis combos', icon: Utensils },
-      { id: 'plan', label: 'Mi pauta', icon: ClipboardCheck },
-      { id: 'calculator', label: 'Calculadora', icon: Calculator },
+    id: 'nutrition',
+    label: 'Nutrición',
+    icon: Salad,
+    children: [
+      {
+        id: 'tracking',
+        label: 'Seguimiento',
+        icon: ChartNoAxesCombined,
+        children: [
+          { id: 'tracker', label: 'Diario', icon: BookOpen },
+          {
+            id: 'dashboard',
+            label: 'Mi seguimiento',
+            icon: ChartNoAxesCombined,
+          },
+          { id: 'food-guide', label: 'Qué puedo comer', icon: Compass },
+        ],
+      },
+      {
+        id: 'planning',
+        label: 'Planificación',
+        icon: ListChecks,
+        children: [
+          { id: 'plan', label: 'Mi pauta', icon: ClipboardCheck },
+          { id: 'products', label: 'Mis productos', icon: Package },
+          { id: 'combos', label: 'Mis combos', icon: Utensils },
+          { id: 'calculator', label: 'Calculadora', icon: Calculator },
+        ],
+      },
     ],
   },
   {
+    id: 'account',
     label: 'Mi cuenta',
-    items: [
+    icon: UserRound,
+    children: [
       { id: 'profile', label: 'Mi perfil', icon: UserRound },
       { id: 'settings', label: 'Configuración', icon: Settings },
     ],
   },
 ];
+
+type WorkspaceNavigationPath = {
+  groups: WorkspaceNavigationGroup[];
+  item: WorkspaceNavigationItem;
+};
+
+export function getWorkspaceNavigationPath(
+  section: WorkspaceSection,
+  entries = WORKSPACE_NAVIGATION
+): WorkspaceNavigationPath | undefined {
+  for (const entry of entries) {
+    if ('children' in entry) {
+      const path = getWorkspaceNavigationPath(section, entry.children);
+      if (path) return { ...path, groups: [entry, ...path.groups] };
+    } else if (entry.id === section) {
+      return { groups: [], item: entry };
+    }
+  }
+}
 
 export function userInitials(name: string) {
   return (

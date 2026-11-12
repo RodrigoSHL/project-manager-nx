@@ -61,6 +61,7 @@ const set = (label: string, value: string) =>
     target: { value },
   });
 async function createProduct() {
+  fireEvent.click(screen.getByRole('button', { name: 'Planificación' }));
   fireEvent.click(screen.getByRole('button', { name: 'Mis productos' }));
   fireEvent.click(
     screen.getByRole('button', { name: 'Ingresar producto manualmente' })

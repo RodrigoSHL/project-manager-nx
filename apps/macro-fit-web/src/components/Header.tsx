@@ -1,7 +1,7 @@
 import { ChevronRight, LogOut, Menu, UserRound } from 'lucide-react';
 import { CurrentUser } from '../features/auth/auth-session';
 import {
-  WORKSPACE_NAVIGATION,
+  getWorkspaceNavigationPath,
   WorkspaceSection,
   userInitials,
 } from './workspace-navigation';
@@ -21,9 +21,8 @@ export function Header({
   onOpenProfile: () => void;
   onLogout: () => void;
 }) {
-  const label = WORKSPACE_NAVIGATION.flatMap((group) => group.items).find(
-    (item) => item.id === section
-  )?.label;
+  const path = getWorkspaceNavigationPath(section);
+  const moduleLabel = path?.groups[0]?.label;
   return (
     <header className="sticky top-0 z-30 flex h-16 sm:h-20 items-center justify-between gap-3 border-b border-slate-800/70 bg-[#090d16]/95 px-3 backdrop-blur-xl sm:px-7">
       <div className="flex min-w-0 items-center gap-3">
@@ -38,12 +37,20 @@ export function Header({
           <Menu className="size-5" />
         </button>
         <div className="flex min-w-0 items-center gap-2 text-sm">
-          <span className="hidden text-slate-500 sm:inline">Mi espacio</span>
-          <ChevronRight
-            className="hidden size-3.5 text-slate-600 sm:block"
-            aria-hidden="true"
-          />
-          <p className="truncate font-semibold text-slate-200">{label}</p>
+          {moduleLabel && (
+            <>
+              <span className="hidden text-slate-400 sm:inline">
+                {moduleLabel}
+              </span>
+              <ChevronRight
+                className="hidden size-3.5 shrink-0 text-slate-600 sm:block"
+                aria-hidden="true"
+              />
+            </>
+          )}
+          <p className="truncate font-semibold text-slate-200">
+            {path?.item.label}
+          </p>
         </div>
       </div>
       <div className="flex min-w-0 items-center gap-2 sm:gap-4">

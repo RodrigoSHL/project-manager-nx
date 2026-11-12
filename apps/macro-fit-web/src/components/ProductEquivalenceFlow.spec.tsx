@@ -66,6 +66,7 @@ it('creates a personal product, finds it from a pending meal, defines its exchan
   vi.stubGlobal('fetch', records.fetch);
   render(<MacroFitWorkspace user={user} onLogout={() => undefined} />);
   await screen.findByText('Avance de mi pauta');
+  fireEvent.click(screen.getByRole('button', { name: 'Planificación' }));
   fireEvent.click(screen.getByRole('button', { name: 'Mis productos' }));
   fireEvent.click(
     screen.getByRole('button', { name: 'Ingresar producto manualmente' })
@@ -84,6 +85,7 @@ it('creates a personal product, finds it from a pending meal, defines its exchan
   );
   await waitFor(() => expect(records.account().customFoods).toHaveLength(1));
   fireEvent.click(await screen.findByRole('button', { name: 'Más tarde' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Seguimiento' }));
   fireEvent.click(screen.getByRole('button', { name: 'Diario' }));
   fireEvent.click(screen.getByRole('button', { name: 'Clasificar: Mostaza' }));
   const modal = screen.getByRole('dialog', {

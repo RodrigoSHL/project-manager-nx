@@ -31,11 +31,20 @@ afterEach(() => {
 });
 
 describe('Workspace navigation', () => {
-  it('moves modules into the sidebar and provides a real profile and settings destination', async () => {
+  it('opens the active module and keeps other navigation groups collapsible', async () => {
     const logout = vi.fn();
     render(<MacroFitWorkspace user={user} onLogout={logout} />);
     await screen.findByText('Registrar comida con IA');
     const nav = screen.getByRole('navigation', { name: 'Módulos de MacroFit' });
+    const nutrition = within(nav).getByRole('button', { name: 'Nutrición' });
+    const account = within(nav).getByRole('button', { name: 'Mi cuenta' });
+    expect(nutrition.getAttribute('aria-expanded')).toBe('true');
+    expect(account.getAttribute('aria-expanded')).toBe('false');
+    expect(within(nav).queryByRole('button', { name: 'Mi pauta' })).toBeNull();
+    fireEvent.click(nutrition);
+    expect(within(nav).queryByRole('button', { name: 'Diario' })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Tu diario' })).toBeTruthy();
+    fireEvent.click(nutrition);
     expect(
       within(nav)
         .getByRole('button', { name: 'Diario' })
@@ -45,6 +54,8 @@ describe('Workspace navigation', () => {
       screen.getByRole('button', { name: 'Ver perfil de Rodrigo Catalán' })
     );
     await screen.findByRole('heading', { name: 'Mi perfil' });
+    expect(account.getAttribute('aria-expanded')).toBe('true');
+    expect(nutrition.getAttribute('aria-expanded')).toBe('false');
     expect(screen.getAllByText('layout@example.invalid').length).toBeTruthy();
     expect(screen.getByText('65 kg')).toBeTruthy();
     fireEvent.click(
@@ -53,10 +64,17 @@ describe('Workspace navigation', () => {
     expect(
       screen.getByRole('button', { name: 'Aplicar a Mis Metas Diarias' })
     ).toBeTruthy();
+    fireEvent.click(account);
     fireEvent.click(within(nav).getByRole('button', { name: 'Configuración' }));
     expect(screen.getByRole('heading', { name: 'Configuración' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Catálogo personal/ }));
     expect(screen.getByRole('heading', { name: 'Mis productos' })).toBeTruthy();
+    expect(nutrition.getAttribute('aria-expanded')).toBe('true');
+    expect(
+      within(nav)
+        .getByRole('button', { name: 'Mis productos' })
+        .getAttribute('aria-current')
+    ).toBe('page');
     fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
     expect(logout).toHaveBeenCalledTimes(1);
     expect(localStorage.length).toBe(0);
@@ -76,11 +94,24 @@ describe('Workspace navigation', () => {
     expect(document.activeElement).toBe(
       within(drawer).getByRole('button', { name: 'Cerrar menú de navegación' })
     );
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(
+      within(drawer).getByRole('button', { name: 'Mi cuenta' })
+    );
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(document.activeElement).toBe(
+      within(drawer).getByRole('button', { name: 'Cerrar menú de navegación' })
+    );
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(document.body.style.overflow).not.toBe('hidden');
     expect(document.activeElement).toBe(menu);
     fireEvent.click(menu);
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Planificación',
+      })
+    );
     fireEvent.click(
       within(screen.getByRole('dialog')).getByRole('button', {
         name: 'Mis productos',

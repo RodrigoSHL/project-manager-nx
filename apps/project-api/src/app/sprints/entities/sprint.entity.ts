@@ -42,6 +42,9 @@ export class Sprint {
   @Column({ type: 'date', nullable: true })
   endDate: Date;
 
+  @Column({ type: 'integer', nullable: true })
+  weeklyCapacityPoints: number | null;
+
   @Column({ type: 'boolean', default: false })
   isActive: boolean;
 

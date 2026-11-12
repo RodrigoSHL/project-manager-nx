@@ -7,6 +7,7 @@ import {
   Zap,
   Layers,
   Plus,
+  Pencil,
   Target,
   Calendar,
   CheckSquare,
@@ -19,17 +20,21 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { SprintPoints } from '@/components/sprint-points'
+import { formatSprintDate } from '@/lib/sprint-capacity'
 import { typeConfig } from '@/lib/mock-data'
 import type { ApiTicket, ApiSprint } from '@/types/project'
 
 interface BacklogViewProps {
   canWrite: boolean
   tickets: ApiTicket[]
+  projectTickets: ApiTicket[]
   sprints: ApiSprint[]
   currentProject: string
   onTicketClick: (ticket: ApiTicket) => void
   onMoveTicketToSprint: (ticket: ApiTicket, sprintId: string) => Promise<void>
   onCreateTicket: (sprintId?: string | null) => void
+  onEditSprint: (sprint: ApiSprint) => void
   onCreateEpic: () => void
   onCreateStory: (epicId: string) => void
 }
@@ -37,11 +42,13 @@ interface BacklogViewProps {
 export function BacklogView({
   canWrite,
   tickets,
+  projectTickets,
   sprints,
   currentProject,
   onTicketClick,
   onMoveTicketToSprint,
   onCreateTicket,
+  onEditSprint,
   onCreateEpic,
   onCreateStory,
 }: BacklogViewProps) {
@@ -90,39 +97,8 @@ export function BacklogView({
     }
   }
 
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return null
-    return new Date(dateStr).toLocaleDateString('es-ES', {
-      month: 'short',
-      day: 'numeric',
-    })
-  }
-
   const getSprintTickets = (sprintId: string) =>
     tickets.filter((t) => t.type !== 'epic' && t.sprintId === sprintId && t.status !== 'backlog')
-
-  const getSprintStats = (sprintTickets: ApiTicket[]) => {
-    const doneTickets = sprintTickets.filter((t) => t.status === 'done')
-    const totalStoryPoints = sprintTickets.reduce(
-      (acc, t) => acc + (t.storyPoints || 0),
-      0
-    )
-    const completedStoryPoints = doneTickets.reduce(
-      (acc, t) => acc + (t.storyPoints || 0),
-      0
-    )
-    const progress =
-      sprintTickets.length > 0
-        ? (doneTickets.length / sprintTickets.length) * 100
-        : 0
-
-    return {
-      completedStoryPoints,
-      doneTickets: doneTickets.length,
-      progress,
-      totalStoryPoints,
-    }
-  }
 
   const typeIcons: Record<string, React.ElementType> = {
     task: CheckSquare,
@@ -229,9 +205,9 @@ export function BacklogView({
           const sectionKey = `sprint-${sprint.id}`
           const isExpanded = expandedSections[sectionKey] ?? sprint.isActive
           const sprintTickets = getSprintTickets(sprint.id)
-          const sprintStats = getSprintStats(sprintTickets)
-          const startDate = formatDate(sprint.startDate)
-          const endDate = formatDate(sprint.endDate)
+          const doneTickets = sprintTickets.filter(ticket => ticket.status === 'done').length
+          const startDate = formatSprintDate(sprint.startDate)
+          const endDate = formatSprintDate(sprint.endDate)
           const dateRange =
             startDate && endDate ? `${startDate} - ${endDate}` : 'Sin fechas'
 
@@ -239,7 +215,7 @@ export function BacklogView({
             <section key={sprint.id} className="space-y-3">
               {/* Sprint Header */}
               <div
-                className="flex items-center gap-3 p-4 rounded-xl bg-card border cursor-pointer hover:border-primary/30 transition-colors"
+                className="flex flex-wrap items-center gap-3 p-4 rounded-xl bg-card border cursor-pointer hover:border-primary/30 transition-colors"
                 onClick={() => toggleSection(sectionKey)}
               >
                 <Button
@@ -279,35 +255,22 @@ export function BacklogView({
 
                 <div className="flex-1" />
 
-                {/* Sprint Stats */}
-                <div className="hidden md:flex items-center gap-6">
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Tickets</p>
-                    <p className="text-sm font-semibold">
-                      {sprintStats.doneTickets}/{sprintTickets.length}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">
-                      Story Points
-                    </p>
-                    <p className="text-sm font-semibold">
-                      {sprintStats.completedStoryPoints}/
-                      {sprintStats.totalStoryPoints}
-                    </p>
-                  </div>
-                  <div className="w-32">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-muted-foreground">
-                        Progreso
-                      </span>
-                      <span className="text-xs font-medium">
-                        {Math.round(sprintStats.progress)}%
-                      </span>
-                    </div>
-                    <Progress value={sprintStats.progress} className="h-1.5" />
-                  </div>
-                </div>
+                <span className="hidden text-xs text-muted-foreground md:inline">
+                  {doneTickets}/{sprintTickets.length} tickets terminados
+                </span>
+
+                {canWrite && <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  aria-label={`Editar ${sprint.name}`}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onEditSprint(sprint)
+                  }}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>}
 
                 {canWrite && <Button
                   variant="outline"
@@ -322,6 +285,8 @@ export function BacklogView({
                   Crear ticket
                 </Button>}
               </div>
+
+              <SprintPoints sprint={sprint} tickets={projectTickets} />
 
               {/* Sprint Goal */}
               {isExpanded && sprint.goal && (
@@ -432,7 +397,7 @@ export function BacklogView({
         )}
         {/* Backlog Header */}
         <div
-          className="flex items-center gap-3 p-4 rounded-xl bg-card border cursor-pointer hover:border-primary/30 transition-colors"
+          className="flex flex-wrap items-center gap-3 p-4 rounded-xl bg-card border cursor-pointer hover:border-primary/30 transition-colors"
           onClick={() => toggleSection('backlog')}
         >
           <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">

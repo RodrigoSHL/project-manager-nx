@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import ProjectManagement from '@/components/project-management'
 import { getProjectsByWorkspace, getProjectPermissions } from '@/services/projectService'
 import { completeSprint, getSprintsByProject } from '@/services/sprintService'
@@ -85,6 +85,24 @@ describe('sprint completion from the project page', () => {
     fireEvent.click(screen.getByRole('button', { name: 'P-1 · Pendiente' }))
     expect(screen.getByTestId('ticket-state')).toHaveTextContent('backlog:none')
     expect(screen.queryByRole('button', { name: 'Activar' })).not.toBeInTheDocument()
+  })
+
+  it('keeps total capacity and planned points visible when the ticket list is filtered', async () => {
+    jest.mocked(getSprintsByProject).mockResolvedValue([{
+      ...sprint, startDate: '2026-10-05', endDate: '2026-10-16', weeklyCapacityPoints: 21,
+    }])
+    jest.mocked(getTicketsByProject).mockResolvedValue([
+      pending,
+      { ...pending, id: 'ticket-2', key: 'P-2', title: 'Terminado', status: 'done', storyPoints: 8 },
+    ] as never)
+    render(<ProjectManagement />)
+    expect(await screen.findByText('11 / 42 pts de capacidad')).toBeInTheDocument()
+
+    const { onSearchChange } = jest.mocked(TopBar).mock.lastCall![0]
+    act(() => onSearchChange('Pendiente'))
+    expect(screen.getByText('11 / 42 pts de capacidad')).toBeInTheDocument()
+    expect(screen.getByText('8 pts completados')).toBeInTheDocument()
+    expect(screen.getByText('31 pts disponibles')).toBeInTheDocument()
   })
 
   it('hides sprint completion from readers', async () => {

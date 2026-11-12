@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { SprintCapacityField } from '@/components/sprint-capacity-field'
 import { Textarea } from '@/components/ui/textarea'
 import { createSprint } from '@/services/sprintService'
 import type { ApiSprint } from '@/types/project'
@@ -29,6 +30,7 @@ export function CreateSprintDialog({ open, onOpenChange, projectId, onCreated }:
   const [goal, setGoal] = React.useState('')
   const [startDate, setStartDate] = React.useState('')
   const [endDate, setEndDate] = React.useState('')
+  const [weeklyCapacity, setWeeklyCapacity] = React.useState('')
   const [saving, setSaving] = React.useState(false)
   const [error, setError] = React.useState('')
 
@@ -38,6 +40,7 @@ export function CreateSprintDialog({ open, onOpenChange, projectId, onCreated }:
     setGoal('')
     setStartDate('')
     setEndDate('')
+    setWeeklyCapacity('')
     setError('')
   }, [open])
 
@@ -55,6 +58,7 @@ export function CreateSprintDialog({ open, onOpenChange, projectId, onCreated }:
         goal: goal.trim() || undefined,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
+        weeklyCapacityPoints: weeklyCapacity ? Number(weeklyCapacity) : null,
       })
       onCreated(sprint)
       onOpenChange(false)
@@ -120,12 +124,22 @@ export function CreateSprintDialog({ open, onOpenChange, projectId, onCreated }:
               <Input
                 id="sprint-end"
                 type="date"
+                min={startDate || undefined}
                 value={endDate}
                 onChange={e => setEndDate(e.target.value)}
                 disabled={saving}
               />
             </div>
           </div>
+
+          <SprintCapacityField
+            id="sprint-weekly-capacity"
+            value={weeklyCapacity}
+            onChange={setWeeklyCapacity}
+            startDate={startDate}
+            endDate={endDate}
+            disabled={saving}
+          />
 
           {error && (
             <p className="text-sm text-destructive">{error}</p>

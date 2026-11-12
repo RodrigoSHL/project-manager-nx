@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { PlanningPokerGuide } from '@/components/planning-poker-guide'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -400,6 +401,7 @@ export function CreateTicketDialog({
                 onChange={e => setStoryPoints(e.target.value)}
                 disabled={saving}
               />
+              <PlanningPokerGuide />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="ticket-due">Fecha límite</Label>

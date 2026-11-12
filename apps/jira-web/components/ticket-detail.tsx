@@ -1,5 +1,6 @@
 'use client'
 
+import { PlanningPokerGuide, PLANNING_POKER_SCALE } from '@/components/planning-poker-guide'
 import * as React from 'react'
 import NextLink from 'next/link'
 import {
@@ -128,7 +129,6 @@ const TYPE_OPTIONS: { value: ApiTicket['type']; label: string; Icon: React.Eleme
   { value: 'subtask', label: 'Subtarea', Icon: CheckSquare },
 ]
 
-const STORY_POINTS = [1, 2, 3, 5, 8, 13, 21]
 
 const typeIcons: Record<string, React.ElementType> = {
   task:    CheckSquare,
@@ -903,13 +903,17 @@ export function TicketDetail({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Sin estimar</SelectItem>
-                    {STORY_POINTS.map(pts => (
-                      <SelectItem key={pts} value={pts.toString()}>
-                        {pts} {pts === 1 ? 'punto' : 'puntos'}
+                    {ticket.storyPoints != null && !PLANNING_POKER_SCALE.some(({ points }) => points === ticket.storyPoints) && (
+                      <SelectItem value={ticket.storyPoints.toString()}>{ticket.storyPoints} pts</SelectItem>
+                    )}
+                    {PLANNING_POKER_SCALE.map(({ points }) => (
+                      <SelectItem key={points} value={points.toString()}>
+                        {points} {points === 1 ? 'punto' : 'puntos'}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <PlanningPokerGuide />
               </div>
             </div>
 

@@ -22,8 +22,8 @@ const sprint: ApiSprint = {
 
 function props() {
   return {
-    canWrite: true, currentProject: 'project-1', tickets: [ticket], sprints: [sprint],
-    onTicketClick: jest.fn(), onCreateTicket: jest.fn(), onCreateEpic: jest.fn(),
+    canWrite: true, currentProject: 'project-1', tickets: [ticket], projectTickets: [ticket], sprints: [sprint],
+    onTicketClick: jest.fn(), onEditSprint: jest.fn(), onCreateTicket: jest.fn(), onCreateEpic: jest.fn(),
     onCreateStory: jest.fn(), onMoveTicketToSprint: jest.fn().mockResolvedValue(undefined),
   }
 }
@@ -83,7 +83,7 @@ describe('moving existing backlog tickets', () => {
 
     function BacklogWithPersistence() {
       const [tickets, setTickets] = React.useState([ticket])
-      return <BacklogView {...props()} tickets={tickets} onMoveTicketToSprint={async (selected, sprintId) => {
+      return <BacklogView {...props()} tickets={tickets} projectTickets={tickets} onMoveTicketToSprint={async (selected, sprintId) => {
         const saved = await updateTicket(selected.projectId, selected.id, getTicketSprintUpdate(selected, sprintId))
         setTickets([saved])
       }} />

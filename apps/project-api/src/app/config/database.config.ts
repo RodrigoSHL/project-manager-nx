@@ -24,6 +24,7 @@ import { AddCommentAttachments1793404800000 } from '../../migrations/17934048000
 import { AddStorySubtaskTickets1793491200000 } from '../../migrations/1793491200000-AddStorySubtaskTickets';
 import { AddCommentMentionInboxDelivery1794355200000 } from '../../migrations/1794355200000-AddCommentMentionInboxDelivery';
 import { AddTicketDependencies1794358800000 } from '../../migrations/1794358800000-AddTicketDependencies';
+import { AddSprintWeeklyCapacity1794362400000 } from '../../migrations/1794362400000-AddSprintWeeklyCapacity';
 import { TicketDependency } from '../tickets/entities/ticket-dependency.entity';
 
 export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
@@ -62,6 +63,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     AddStorySubtaskTickets1793491200000,
     AddCommentMentionInboxDelivery1794355200000,
     AddTicketDependencies1794358800000,
+    AddSprintWeeklyCapacity1794362400000,
   ],
   migrationsRun: process.env.PROJECT_MIGRATIONS_RUN === 'true',
   synchronize: process.env.TYPEORM_SYNCHRONIZE

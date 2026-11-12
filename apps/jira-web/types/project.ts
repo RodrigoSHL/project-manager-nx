@@ -23,6 +23,7 @@ export interface ApiSprint {
   goal: string | null
   startDate: string | null
   endDate: string | null
+  weeklyCapacityPoints?: number | null
   isActive: boolean
   completedAt?: string | null
   completionSummary?: {

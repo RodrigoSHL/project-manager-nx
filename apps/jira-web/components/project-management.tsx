@@ -14,6 +14,8 @@ import { KanbanBoard } from '@/components/kanban-board'
 import { BacklogView } from '@/components/backlog-view'
 import { TicketDetail } from '@/components/ticket-detail'
 import { SprintInfo } from '@/components/sprint-info'
+import { SprintPoints } from '@/components/sprint-points'
+import { formatSprintDate } from '@/lib/sprint-capacity'
 import { TicketCard } from '@/components/ticket-card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card } from '@/components/ui/card'
@@ -218,6 +220,10 @@ export default function ProjectManagement({ children, ticketProjectId, showPage 
 
   const activeSprint = sprints.find(s => s.projectId === currentProject && s.isActive && !s.completedAt)
 
+  const activeSprintTickets = activeSprint
+    ? tickets.filter(ticket => ticket.projectId === currentProject && ticket.sprintId === activeSprint.id && ticket.type !== 'epic')
+    : []
+
   // Filter tickets
   const filteredTickets = React.useMemo(() => {
     return tickets.filter(ticket => {
@@ -380,8 +386,6 @@ export default function ProjectManagement({ children, ticketProjectId, showPage 
     const inProgressCount = tickets.filter(t => t.projectId === currentProject && t.status === 'in_progress').length
     const inReviewCount = tickets.filter(t => t.projectId === currentProject && t.status === 'in_review').length
     const doneCount = tickets.filter(t => t.projectId === currentProject && t.status === 'done').length
-    const totalPoints = sprintTickets.reduce((acc, t) => acc + (t.storyPoints || 0), 0)
-    const completedPoints = sprintTickets.filter(t => t.status === 'done').reduce((acc, t) => acc + (t.storyPoints || 0), 0)
 
     return (
       <div className="space-y-6">
@@ -451,13 +455,7 @@ export default function ProjectManagement({ children, ticketProjectId, showPage 
                 Activo
               </Badge>
             </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Story Points completados</span>
-                <span className="font-medium">{completedPoints} / {totalPoints}</span>
-              </div>
-              <Progress value={totalPoints > 0 ? (completedPoints / totalPoints) * 100 : 0} className="h-2" />
-            </div>
+            <SprintPoints sprint={activeSprint} tickets={activeSprintTickets} />
           </Card>
         )}
 
@@ -756,10 +754,12 @@ export default function ProjectManagement({ children, ticketProjectId, showPage 
             </div>
             <BacklogView 
               tickets={filteredTickets}
+              projectTickets={tickets}
               sprints={sprints}
               currentProject={currentProject}
               onTicketClick={handleTicketClick}
               onMoveTicketToSprint={handleMoveTicketToSprint}
+              onEditSprint={setEditingSprint}
               onCreateTicket={(sprintId) => handleCreateTicket(undefined, sprintId)}
               onCreateEpic={() => handleCreateTicket('backlog', null, 'epic')}
               onCreateStory={(epicId) => handleCreateTicket('backlog', null, 'story', epicId)}
@@ -809,8 +809,8 @@ export default function ProjectManagement({ children, ticketProjectId, showPage 
                     </div>
                     {sprints.filter(s => !s.isActive && !s.completedAt).map(s => {
                       const sprintTicketCount = tickets.filter(t => t.sprintId === s.id).length
-                      const startLabel = s.startDate ? new Date(s.startDate).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }) : null
-                      const endLabel = s.endDate ? new Date(s.endDate).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }) : null
+                      const startLabel = formatSprintDate(s.startDate)
+                      const endLabel = formatSprintDate(s.endDate)
                       return (
                         <div
                           key={s.id}
@@ -861,7 +861,7 @@ export default function ProjectManagement({ children, ticketProjectId, showPage 
 
             {activeSprint && (
               <>
-                <SprintInfo sprint={activeSprint} tickets={sprintTickets} onEdit={canWrite ? () => setEditingSprint(activeSprint) : undefined} onComplete={canWrite ? () => setCompletingSprint(activeSprint) : undefined} />
+                <SprintInfo sprint={activeSprint} tickets={activeSprintTickets} onEdit={canWrite ? () => setEditingSprint(activeSprint) : undefined} onComplete={canWrite ? () => setCompletingSprint(activeSprint) : undefined} />
 
                 <AssigneeFilter
                   members={teamMembers}
@@ -918,8 +918,8 @@ export default function ProjectManagement({ children, ticketProjectId, showPage 
                     <div className="space-y-2">
                       {sprints.filter(s => !s.isActive && !s.completedAt).map(s => {
                         const sprintTicketCount = tickets.filter(t => t.sprintId === s.id).length
-                        const startLabel = s.startDate ? new Date(s.startDate).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }) : null
-                        const endLabel = s.endDate ? new Date(s.endDate).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }) : null
+                        const startLabel = formatSprintDate(s.startDate)
+                        const endLabel = formatSprintDate(s.endDate)
                         return (
                           <div
                             key={s.id}

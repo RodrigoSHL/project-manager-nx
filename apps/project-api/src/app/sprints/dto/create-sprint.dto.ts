@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsDateString, IsUUID, MaxLength } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsDateString, MaxLength, IsInt, Min, Max } from 'class-validator';
 
 export class CreateSprintDto {
   @IsString()
@@ -17,4 +17,9 @@ export class CreateSprintDto {
   @IsDateString()
   @IsOptional()
   endDate?: string;
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(2147483647)
+  weeklyCapacityPoints?: number | null;
 }

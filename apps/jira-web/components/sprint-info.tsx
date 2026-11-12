@@ -1,11 +1,13 @@
 'use client'
 
 import * as React from 'react'
-import { Calendar, Target, TrendingUp, CheckCircle2, Clock, Users, Pencil } from 'lucide-react'
+import { Calendar, Target, CheckCircle2, Clock, Users, Pencil } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
+import { SprintPoints } from '@/components/sprint-points'
+import { formatSprintDate } from '@/lib/sprint-capacity'
 import type { ApiTicket, ApiSprint } from '@/types/project'
 
 interface SprintInfoProps {
@@ -19,11 +21,6 @@ export function SprintInfo({ sprint, tickets, onEdit, onComplete }: SprintInfoPr
   const totalTickets = tickets.length
   const doneTickets = tickets.filter(t => t.status === 'done').length
   const inProgressTickets = tickets.filter(t => t.status === 'in_progress' || t.status === 'in_review').length
-  const totalStoryPoints = tickets.reduce((acc, t) => acc + (t.storyPoints || 0), 0)
-  const completedStoryPoints = tickets
-    .filter(t => t.status === 'done')
-    .reduce((acc, t) => acc + (t.storyPoints || 0), 0)
-
   const progress = totalTickets > 0 ? (doneTickets / totalTickets) * 100 : 0
 
   const startDate = sprint.startDate ? new Date(sprint.startDate) : null
@@ -40,16 +37,8 @@ export function SprintInfo({ sprint, tickets, onEdit, onComplete }: SprintInfoPr
 
   const assigneeCount = new Set(tickets.map(t => t.assigneeId).filter(Boolean)).size
 
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return 'Sin fecha'
-    return new Date(dateStr).toLocaleDateString('es-ES', {
-      month: 'short', 
-      day: 'numeric' 
-    })
-  }
-
   return (
-    <Card className="p-5 mb-6 border-t-2 border-t-primary">
+    <Card className="p-5 mb-6 space-y-4 border-t-2 border-t-primary">
       <div className="flex flex-col lg:flex-row lg:items-center gap-6">
         {/* Sprint Header */}
         <div className="flex-1 min-w-0">
@@ -60,7 +49,7 @@ export function SprintInfo({ sprint, tickets, onEdit, onComplete }: SprintInfoPr
               Activo
             </Badge>
             {onEdit && (
-              <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto" onClick={onEdit}>
+              <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto" aria-label="Editar sprint" onClick={onEdit}>
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
             )}
@@ -74,7 +63,7 @@ export function SprintInfo({ sprint, tickets, onEdit, onComplete }: SprintInfoPr
           <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
             <div className="flex items-center gap-1.5">
               <Calendar className="h-4 w-4" />
-              {formatDate(sprint.startDate)} - {formatDate(sprint.endDate)}
+              {formatSprintDate(sprint.startDate) ?? 'Sin fecha'} – {formatSprintDate(sprint.endDate) ?? 'Sin fecha'}
             </div>
             <div className="flex items-center gap-1.5">
               <Clock className="h-4 w-4" />
@@ -91,7 +80,7 @@ export function SprintInfo({ sprint, tickets, onEdit, onComplete }: SprintInfoPr
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {/* Progress */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
@@ -105,22 +94,6 @@ export function SprintInfo({ sprint, tickets, onEdit, onComplete }: SprintInfoPr
                 {doneTickets} done
               </span>
               <span>{inProgressTickets} in progress</span>
-            </div>
-          </div>
-
-          {/* Story Points */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Story Points</span>
-              <span className="font-semibold">{completedStoryPoints}/{totalStoryPoints}</span>
-            </div>
-            <Progress 
-              value={totalStoryPoints > 0 ? (completedStoryPoints / totalStoryPoints) * 100 : 0} 
-              className="h-2" 
-            />
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <TrendingUp className="h-3 w-3" />
-              {totalStoryPoints - completedStoryPoints} pendientes
             </div>
           </div>
 
@@ -151,6 +124,7 @@ export function SprintInfo({ sprint, tickets, onEdit, onComplete }: SprintInfoPr
           </div>
         </div>
       </div>
+      <SprintPoints sprint={sprint} tickets={tickets} />
     </Card>
   )
 }

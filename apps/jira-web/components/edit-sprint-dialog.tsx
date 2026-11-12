@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { SprintCapacityField } from '@/components/sprint-capacity-field'
 import { Textarea } from '@/components/ui/textarea'
 import { updateSprint } from '@/services/sprintService'
 import type { ApiSprint } from '@/types/project'
@@ -35,6 +36,7 @@ export function EditSprintDialog({ open, onOpenChange, sprint, projectId, onUpda
   const [goal, setGoal] = React.useState('')
   const [startDate, setStartDate] = React.useState('')
   const [endDate, setEndDate] = React.useState('')
+  const [weeklyCapacity, setWeeklyCapacity] = React.useState('')
   const [saving, setSaving] = React.useState(false)
   const [error, setError] = React.useState('')
 
@@ -44,6 +46,7 @@ export function EditSprintDialog({ open, onOpenChange, sprint, projectId, onUpda
     setGoal(sprint.goal ?? '')
     setStartDate(toDateInputValue(sprint.startDate))
     setEndDate(toDateInputValue(sprint.endDate))
+    setWeeklyCapacity(sprint.weeklyCapacityPoints?.toString() ?? '')
     setError('')
   }, [open, sprint])
 
@@ -59,8 +62,9 @@ export function EditSprintDialog({ open, onOpenChange, sprint, projectId, onUpda
       const updated = await updateSprint(projectId, sprint.id, {
         name: name.trim(),
         goal: goal.trim() || undefined,
-        startDate: startDate || undefined,
-        endDate: endDate || undefined,
+        startDate: startDate || null,
+        endDate: endDate || null,
+        weeklyCapacityPoints: weeklyCapacity ? Number(weeklyCapacity) : null,
       })
       onUpdated(updated)
       onOpenChange(false)
@@ -126,12 +130,22 @@ export function EditSprintDialog({ open, onOpenChange, sprint, projectId, onUpda
               <Input
                 id="edit-sprint-end"
                 type="date"
+                min={startDate || undefined}
                 value={endDate}
                 onChange={e => setEndDate(e.target.value)}
                 disabled={saving}
               />
             </div>
           </div>
+
+          <SprintCapacityField
+            id="edit-sprint-weekly-capacity"
+            value={weeklyCapacity}
+            onChange={setWeeklyCapacity}
+            startDate={startDate}
+            endDate={endDate}
+            disabled={saving}
+          />
 
           {error && (
             <p className="text-sm text-destructive">{error}</p>

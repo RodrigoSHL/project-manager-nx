@@ -22,6 +22,7 @@ export async function createSprint(projectId: string, data: {
   goal?: string
   startDate?: string
   endDate?: string
+  weeklyCapacityPoints?: number | null
 }): Promise<ApiSprint> {
   const res = await authenticatedFetch(`${API_BASE_URL}/projects/${projectId}/sprints`, {
     method: 'POST',
@@ -34,8 +35,9 @@ export async function createSprint(projectId: string, data: {
 export async function updateSprint(projectId: string, sprintId: string, data: Partial<{
   name: string
   goal: string
-  startDate: string
-  endDate: string
+  startDate: string | null
+  endDate: string | null
+  weeklyCapacityPoints: number | null
 }>): Promise<ApiSprint> {
   const res = await authenticatedFetch(`${API_BASE_URL}/projects/${projectId}/sprints/${sprintId}`, {
     method: 'PATCH',

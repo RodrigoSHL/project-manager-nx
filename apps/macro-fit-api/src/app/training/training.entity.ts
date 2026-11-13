@@ -28,8 +28,14 @@ export class TrainingSessionEntity {
   @Column('timestamptz', { name: 'finished_at' })
   finishedAt!: Date;
 
+  @Column('date', { name: 'performed_on' })
+  performedOn!: string;
+
+  @Column('integer', { default: 0 })
+  revision!: number;
+
   @Column('jsonb')
-  data!: CompletedTraining;
+  data!: Omit<CompletedTraining, 'performedOn' | 'revision'>;
 }
 
 @Entity('training_custom_exercises')

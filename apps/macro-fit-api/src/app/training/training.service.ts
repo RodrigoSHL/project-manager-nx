@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
 import {
@@ -15,6 +16,7 @@ import {
   type TrainingExercise,
   type TrainingHistory,
   type TrainingWorkspace,
+  type UpdateCompletedTraining,
 } from '@project-manager/macrofit-contracts';
 import {
   TrainingDraftEntity,
@@ -22,10 +24,34 @@ import {
   TrainingSessionEntity,
 } from './training.entity';
 
-const historyOrder = { finishedAt: 'DESC', id: 'DESC' } as const;
+const historyOrder = {
+  performedOn: 'DESC',
+  finishedAt: 'DESC',
+  id: 'DESC',
+} as const;
+const legacyDateFormat = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: 'America/Santiago',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+function trainingDay(draft: TrainingDraft) {
+  return (
+    draft.performedOn ?? legacyDateFormat.format(new Date(draft.startedAt))
+  );
+}
+
+function completedSession(row: TrainingSessionEntity): CompletedTraining {
+  return { ...row.data, performedOn: row.performedOn, revision: row.revision };
+}
 
 function draftState(row: TrainingDraftEntity | null): TrainingDraftState {
-  return { draft: row?.draft ?? null, revision: row?.revision ?? 0 };
+  const draft = row?.draft;
+  return {
+    draft: draft ? { ...draft, performedOn: trainingDay(draft) } : null,
+    revision: row?.revision ?? 0,
+  };
 }
 
 @Injectable()
@@ -63,10 +89,11 @@ export class TrainingService {
       ) {
         throw new ConflictException('Esta sesión ya fue finalizada.');
       }
-      await this.resolveExercises(manager, userId, draft);
+      await this.resolveExercises(manager, userId, draft.exercises);
       row.draft = {
         ...draft,
         startedAt: row.draft?.startedAt ?? draft.startedAt,
+        performedOn: draft.performedOn ?? trainingDay(row.draft ?? draft),
       };
       row.revision += 1;
       await manager.save(row);
@@ -89,7 +116,7 @@ export class TrainingService {
       }
 
       const exercises = (
-        await this.resolveExercises(manager, userId, row.draft)
+        await this.resolveExercises(manager, userId, row.draft.exercises)
       ).filter(({ sets }) => sets.length > 0);
       if (exercises.length === 0) {
         throw new BadRequestException(
@@ -97,7 +124,7 @@ export class TrainingService {
         );
       }
       const finishedAt = new Date();
-      const data: CompletedTraining = {
+      const data = {
         id,
         startedAt: row.draft.startedAt,
         finishedAt: finishedAt.toISOString(),
@@ -105,11 +132,56 @@ export class TrainingService {
       };
       await manager
         .getRepository(TrainingSessionEntity)
-        .insert({ userId, id, finishedAt, data });
+        .insert({
+          userId,
+          id,
+          finishedAt,
+          performedOn: trainingDay(row.draft),
+          data,
+        });
       row.draft = null;
       row.revision += 1;
       await manager.save(row);
-      return { ...draftState(row), lastCompleted: data };
+      return {
+        ...draftState(row),
+        lastCompleted: await this.latestSession(manager, userId),
+      };
+    });
+  }
+
+  async editSession(
+    userId: string,
+    id: string,
+    change: UpdateCompletedTraining
+  ) {
+    return this.db.transaction(async (manager) => {
+      const repository = manager.getRepository(TrainingSessionEntity);
+      const row = await repository.findOne({
+        where: { userId, id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!row) throw new NotFoundException('Sesión guardada no encontrada.');
+      if (row.revision !== change.revision) {
+        throw new ConflictException(
+          'La sesión guardada cambió. Vuelve al historial y abre la versión actual.'
+        );
+      }
+      const exercises = (
+        await this.resolveExercises(
+          manager,
+          userId,
+          change.exercises,
+          row.data.exercises.map(({ exercise }) => exercise)
+        )
+      ).filter(({ sets }) => sets.length > 0);
+      row.data = { ...row.data, exercises };
+      row.performedOn = change.performedOn;
+      row.revision += 1;
+      await repository.save(row);
+      return {
+        session: completedSession(row),
+        lastCompleted: await this.latestSession(manager, userId),
+      };
     });
   }
 
@@ -121,9 +193,7 @@ export class TrainingService {
       skip: offset,
     });
     return {
-      sessions: rows
-        .slice(0, TRAINING_HISTORY_PAGE_SIZE)
-        .map(({ data }) => data),
+      sessions: rows.slice(0, TRAINING_HISTORY_PAGE_SIZE).map(completedSession),
       nextOffset:
         rows.length > TRAINING_HISTORY_PAGE_SIZE
           ? offset + TRAINING_HISTORY_PAGE_SIZE
@@ -136,7 +206,7 @@ export class TrainingService {
       where: { userId },
       order: historyOrder,
     });
-    return row?.data ?? null;
+    return row ? completedSession(row) : null;
   }
 
   async createExercise(userId: string, exercise: TrainingExercise) {
@@ -184,15 +254,17 @@ export class TrainingService {
   private async resolveExercises(
     manager: EntityManager,
     userId: string,
-    draft: TrainingDraft
+    entries: TrainingDraft['exercises'],
+    savedExercises: TrainingExercise[] = []
   ) {
     const catalog = new Map(
       [
         ...TRAINING_CATALOG,
         ...(await this.customExercises(manager, userId)),
+        ...savedExercises,
       ].map((exercise) => [exercise.id, exercise])
     );
-    return draft.exercises.map(({ exerciseId, sets }) => {
+    return entries.map(({ exerciseId, sets }) => {
       const exercise = catalog.get(exerciseId);
       if (!exercise)
         throw new BadRequestException(

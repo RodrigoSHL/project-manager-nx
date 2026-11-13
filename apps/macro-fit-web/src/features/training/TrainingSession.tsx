@@ -20,7 +20,7 @@ import {
 import { MuscleMap } from './MuscleMap';
 import {
   formatTrainingNumber,
-  sessionDateFormat,
+  formatTrainingDay,
   summarizeTraining,
 } from './training-model';
 import { fieldClass, primaryButton, secondaryButton } from './training-styles';
@@ -139,12 +139,14 @@ function ExerciseCard({
   busy,
   onSave,
   onRemove,
+  allowRemove,
 }: {
   exercise: TrainingExercise;
   sets: TrainingSet[];
   busy: boolean;
   onSave: (sets: TrainingSet[]) => Promise<boolean>;
   onRemove: () => void;
+  allowRemove: boolean;
 }) {
   const [editId, setEditId] = useState<string | null>(null);
   const editing = sets.find(({ id }) => id === editId);
@@ -160,7 +162,7 @@ function ExerciseCard({
             {TRAINING_EQUIPMENT[exercise.equipment]}
           </p>
         </div>
-        {sets.length === 0 && (
+        {(allowRemove || sets.length === 0) && (
           <button
             type="button"
             aria-label={`Quitar ${exercise.name} de la sesión`}
@@ -233,27 +235,31 @@ export function TrainingSession({
   lastCompleted,
   entries,
   busy,
+  performedOn,
+  onDateChange,
   onOpenCatalog,
   onSets,
   onRemove,
   onFinish,
+  onCancelEdit,
 }: {
   summary: ReturnType<typeof summarizeTraining>;
   lastCompleted: CompletedTraining | null;
   entries: Array<{ exercise: TrainingExercise; sets: TrainingSet[] }>;
   busy: boolean;
+  performedOn: string;
+  onDateChange: (date: string) => void;
   onOpenCatalog: () => void;
   onSets: (id: string, sets: TrainingSet[]) => Promise<boolean>;
   onRemove: (id: string) => void;
   onFinish: () => void;
+  onCancelEdit?: () => void;
 }) {
   const displayedSummary = lastCompleted
     ? summarizeTraining(lastCompleted.exercises)
     : summary;
   const completedLabel = lastCompleted
-    ? `Última sesión · ${sessionDateFormat.format(
-        new Date(lastCompleted.finishedAt)
-      )}`
+    ? `Última sesión · ${formatTrainingDay(lastCompleted.performedOn)}`
     : undefined;
   const metrics = [
     {
@@ -313,7 +319,7 @@ export function TrainingSession({
         >
           <div className="flex items-center justify-between gap-2">
             <h2 id="training-session-heading" className="text-lg font-bold">
-              Sesión actual
+              {onCancelEdit ? 'Editar sesión guardada' : 'Sesión actual'}
             </h2>
             <a
               className="inline-flex min-h-11 items-center text-sm font-semibold text-lime-300 xl:hidden"
@@ -322,6 +328,18 @@ export function TrainingSession({
               Ver mapa
             </a>
           </div>
+          <label className="block space-y-1 text-sm font-medium">
+            <span>Fecha del entrenamiento</span>
+            <input
+              type="date"
+              min="0001-01-01"
+              max="9999-12-31"
+              className={`${fieldClass} max-w-xs`}
+              value={performedOn}
+              disabled={busy}
+              onChange={(event) => onDateChange(event.target.value)}
+            />
+          </label>
           <button
             type="button"
             className={`${primaryButton} w-full`}
@@ -341,19 +359,31 @@ export function TrainingSession({
                 exercise={exercise}
                 sets={sets}
                 busy={busy}
+                allowRemove={Boolean(onCancelEdit)}
                 onSave={(next) => onSets(exercise.id, next)}
                 onRemove={() => onRemove(exercise.id)}
               />
             ))
           )}
-          {summary.setCount > 0 && (
+          {(summary.setCount > 0 || onCancelEdit) && (
+            <button
+              type="button"
+              className={`${secondaryButton} w-full`}
+              disabled={busy || summary.setCount === 0}
+              onClick={onFinish}
+            >
+              <Check size={18} aria-hidden="true" />{' '}
+              {onCancelEdit ? 'Guardar sesión' : 'Finalizar sesión'}
+            </button>
+          )}
+          {onCancelEdit && (
             <button
               type="button"
               className={`${secondaryButton} w-full`}
               disabled={busy}
-              onClick={onFinish}
+              onClick={onCancelEdit}
             >
-              <Check size={18} aria-hidden="true" /> Finalizar sesión
+              Cancelar edición
             </button>
           )}
         </section>

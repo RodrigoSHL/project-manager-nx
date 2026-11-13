@@ -5,12 +5,14 @@ import { Test } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 import {
   trainingFinishStateSchema,
+  trainingEditResultSchema,
   trainingHistorySchema,
   trainingWorkspaceSchema,
   type TrainingDraft,
   type TrainingExercise,
 } from '@project-manager/macrofit-contracts';
 import { CreateTrainingRecords1794484800000 } from '../../migrations/1794484800000-CreateTrainingRecords';
+import { DateTrainingSessions1794488400000 } from '../../migrations/1794488400000-DateTrainingSessions';
 import { TrainingController } from './training.controller';
 import {
   TrainingDraftEntity,
@@ -28,6 +30,13 @@ if (url && !new URL(url).pathname.startsWith('/macrofit_test'))
   () => {
     const user = randomUUID();
     const otherUser = randomUUID();
+    const legacyUser = randomUUID();
+    const legacySession = {
+      id: randomUUID(),
+      startedAt: '2026-11-08T01:00:00.000Z',
+      finishedAt: '2026-11-08T01:30:00.000Z',
+      exercises: [],
+    };
     const db = new DataSource({
       type: 'postgres',
       url,
@@ -36,13 +45,27 @@ if (url && !new URL(url).pathname.startsWith('/macrofit_test'))
         TrainingSessionEntity,
         TrainingExerciseEntity,
       ],
-      migrations: [CreateTrainingRecords1794484800000],
+      migrations: [
+        CreateTrainingRecords1794484800000,
+        DateTrainingSessions1794488400000,
+      ],
       migrationsTableName: 'training_test_migrations',
     });
     let app: INestApplication;
     let origin: string;
     beforeAll(async () => {
       await db.initialize();
+      await db.runMigrations();
+      await db.undoLastMigration();
+      await db.query(
+        'INSERT INTO training_sessions (user_id, id, finished_at, data) VALUES ($1, $2, $3, $4)',
+        [
+          legacyUser,
+          legacySession.id,
+          legacySession.finishedAt,
+          JSON.stringify(legacySession),
+        ]
+      );
       await db.runMigrations();
       const module = await Test.createTestingModule({
         controllers: [TrainingController],
@@ -63,8 +86,14 @@ if (url && !new URL(url).pathname.startsWith('/macrofit_test'))
         ...(data !== undefined && { body: JSON.stringify(data) }),
       });
 
-    it('persists a private draft, prevents concurrent overwrite, and finalizes atomically and idempotently', async () => {
+    it('keeps legacy sessions, orders backdated sessions and applies private versioned edits', async () => {
       expect((await fetch(origin)).status).toBe(401);
+      const legacyHistory = trainingHistorySchema.parse(
+        await (await call('/history', legacyUser)).json()
+      );
+      expect(legacyHistory.sessions).toEqual([
+        { ...legacySession, performedOn: '2026-11-07', revision: 0 },
+      ]);
       const exercise: TrainingExercise = {
         id: randomUUID(),
         name: 'Flexión de prueba',
@@ -79,6 +108,7 @@ if (url && !new URL(url).pathname.startsWith('/macrofit_test'))
       const draft: TrainingDraft = {
         id: randomUUID(),
         startedAt: new Date().toISOString(),
+        performedOn: '2026-11-09',
         exercises: [
           {
             exerciseId: exercise.id,
@@ -150,7 +180,12 @@ if (url && !new URL(url).pathname.startsWith('/macrofit_test'))
           await (await call('/history', otherUser)).json()
         ).sessions
       ).toEqual([]);
-      const another = { ...draft, id: randomUUID(), exercises: [] };
+      const another = {
+        ...draft,
+        id: randomUUID(),
+        performedOn: '2026-11-04',
+        exercises: [],
+      };
       expect(
         (await call('/draft', user, 'PUT', { draft: another, revision: 2 }))
           .status
@@ -159,6 +194,63 @@ if (url && !new URL(url).pathname.startsWith('/macrofit_test'))
         (await call('/finish', user, 'POST', { id: another.id, revision: 3 }))
           .status
       ).toBe(400);
+      expect(
+        (
+          await call('/draft', user, 'PUT', {
+            revision: 3,
+            draft: { ...another, exercises: draft.exercises },
+          })
+        ).status
+      ).toBe(200);
+      const backdated = await call('/finish', user, 'POST', {
+        id: another.id,
+        revision: 4,
+      });
+      expect(backdated.status).toBe(200);
+      expect(
+        trainingFinishStateSchema.parse(await backdated.json()).lastCompleted
+          ?.id
+      ).toBe(draft.id);
+      const active = { ...another, id: randomUUID() };
+      expect(
+        (await call('/draft', user, 'PUT', { draft: active, revision: 5 }))
+          .status
+      ).toBe(200);
+
+      const editPath = `/history/${draft.id}`;
+      const edit = {
+        revision: 0,
+        performedOn: '2026-11-02',
+        exercises: [
+          {
+            exerciseId: exercise.id,
+            sets: [{ ...draft.exercises[0].sets[0], weightKg: 4 }],
+          },
+        ],
+      };
+      expect((await call(editPath, otherUser, 'PUT', edit)).status).toBe(404);
+      const update = await call(editPath, user, 'PUT', edit);
+      expect(update.status).toBe(200);
+      const changed = trainingEditResultSchema.parse(await update.json());
+      expect(changed.session).toMatchObject({
+        id: draft.id,
+        revision: 1,
+        performedOn: edit.performedOn,
+        finishedAt: history.sessions[0].finishedAt,
+        exercises: [{ exercise, sets: edit.exercises[0].sets }],
+      });
+      expect(changed.lastCompleted?.id).toBe(another.id);
+      expect((await call(editPath, user, 'PUT', edit)).status).toBe(409);
+      const ordered = trainingHistorySchema.parse(
+        await (await call('/history')).json()
+      );
+      expect(ordered.sessions.map(({ id }) => id)).toEqual([
+        another.id,
+        draft.id,
+      ]);
+      expect(
+        trainingWorkspaceSchema.parse(await (await call()).json()).draft
+      ).toEqual(active);
     });
   }
 );

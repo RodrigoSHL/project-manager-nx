@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   TRAINING_CATALOG,
   type CompletedTraining,
+  type TrainingDraft,
   type TrainingWorkspace,
 } from '@project-manager/macrofit-contracts';
 import App from '../../app/app';
@@ -33,6 +34,21 @@ function trainingFixture() {
     lastCompleted: null,
   };
   const history: CompletedTraining[] = [];
+  const resolve = (entries: TrainingDraft['exercises']) =>
+    entries
+      .filter(({ sets }) => sets.length)
+      .map(({ exerciseId, sets }) => ({
+        exercise: [...TRAINING_CATALOG, ...workspace.customExercises].find(
+          ({ id }) => id === exerciseId
+        )!,
+        sets,
+      }));
+  const sortHistory = () =>
+    history.sort(
+      (a, b) =>
+        b.performedOn.localeCompare(a.performedOn) ||
+        b.finishedAt.localeCompare(a.finishedAt)
+    );
   const response = (body: unknown, status = 200) => ({
     ok: status >= 200 && status < 300,
     status,
@@ -63,13 +79,11 @@ function trainingFixture() {
         id: workspace.draft.id,
         startedAt: workspace.draft.startedAt,
         finishedAt: new Date().toISOString(),
-        exercises: workspace.draft.exercises.map(({ exerciseId, sets }) => ({
-          exercise: [...TRAINING_CATALOG, ...workspace.customExercises].find(
-            ({ id }) => id === exerciseId
-          )!,
-          sets,
-        })),
+        performedOn: workspace.draft.performedOn!,
+        revision: 0,
+        exercises: resolve(workspace.draft.exercises),
       });
+      sortHistory();
       workspace = {
         ...workspace,
         draft: null,
@@ -81,6 +95,21 @@ function trainingFixture() {
         revision: workspace.revision,
         lastCompleted: workspace.lastCompleted,
       });
+    }
+    if (path.startsWith(base + '/history/') && init.method === 'PUT') {
+      const index = history.findIndex(
+        ({ id }) => id === path.split('/').at(-1)
+      );
+      const session = {
+        ...history[index],
+        performedOn: body.performedOn,
+        revision: body.revision + 1,
+        exercises: resolve(body.exercises),
+      };
+      history[index] = session;
+      sortHistory();
+      workspace.lastCompleted = history[0];
+      return response({ session, lastCompleted: history[0] });
     }
     if (path.startsWith(base + '/history?'))
       return response({ sessions: history, nextOffset: null });
@@ -288,5 +317,63 @@ describe('Muscle Log inside MacroFit', () => {
       back.getByRole('button', { name: /^Tríceps · 0,5 series equivalentes$/ })
     );
     expect(screen.getByText('Tríceps · 0,5 series equivalentes')).toBeTruthy();
+  });
+
+  it('loads a dated routine without counting series and edits a saved workout independently of the active draft', async () => {
+    const page = mount();
+    await screen.findByRole('heading', { name: 'Sesión actual' });
+    enter('Fecha del entrenamiento', '2026-11-05');
+    click('Rutinas');
+    click('Cargar rutina Piernas');
+    await screen.findByRole('article', { name: 'Extensión de piernas' });
+    expect(
+      screen.getByRole('article', { name: 'Sentadilla hack' })
+    ).toBeTruthy();
+    metric('Series', '0');
+    const leg = exerciseCard('Extensión de piernas');
+    enter('Repeticiones', '10', leg);
+    enter('Peso (kg)', '35', leg);
+    await register(leg);
+    click('Finalizar sesión');
+    await screen.findByRole('heading', { name: 'Mapa de la última sesión' });
+
+    enter('Fecha del entrenamiento', '2026-11-10');
+    click('Rutinas');
+    click('Cargar rutina Empuje');
+    await screen.findByRole('article', { name: 'Press de banca' });
+    click('Historial');
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Editar sesión' })
+    );
+    await screen.findByRole('heading', { name: 'Editar sesión guardada' });
+    expect(
+      (screen.getByLabelText('Fecha del entrenamiento') as HTMLInputElement)
+        .value
+    ).toBe('2026-11-05');
+    enter('Fecha del entrenamiento', '2026-11-03');
+    const saved = exerciseCard('Extensión de piernas');
+    fireEvent.click(saved.getByRole('button', { name: 'Editar serie 1' }));
+    enter('Peso (kg)', '40', saved);
+    fireEvent.submit(
+      saved.getByRole('button', { name: 'Guardar cambios' }).closest('form')!
+    );
+    await saved.findByText('10 rep · 40 kg');
+    click('Guardar sesión');
+    await screen.findByText('Sesión actualizada.');
+    expect(
+      (await screen.findByText('3 de noviembre de 2026')).getAttribute(
+        'datetime'
+      )
+    ).toBe('2026-11-03');
+    await screen.findByText('Serie 1 · 10 rep · 40 kg');
+
+    page.unmount();
+    mount();
+    await screen.findByRole('article', { name: 'Press de banca' });
+    expect(
+      (screen.getByLabelText('Fecha del entrenamiento') as HTMLInputElement)
+        .value
+    ).toBe('2026-11-10');
+    metric('Series', '0');
   });
 });

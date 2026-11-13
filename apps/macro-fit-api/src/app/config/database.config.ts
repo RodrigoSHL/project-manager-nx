@@ -4,6 +4,7 @@ import { CreateNutritionRecords1792713600000 } from '../../migrations/1792713600
 import { AddNutritionPlans1792742400000 } from '../../migrations/1792742400000-AddNutritionPlans';
 import { AddDayProductEquivalences1792785600000 } from '../../migrations/1792785600000-AddDayProductEquivalences';
 import { CreateTrainingRecords1794484800000 } from '../../migrations/1794484800000-CreateTrainingRecords';
+import { DateTrainingSessions1794488400000 } from '../../migrations/1794488400000-DateTrainingSessions';
 import {
   TrainingDraftEntity,
   TrainingExerciseEntity,
@@ -37,6 +38,7 @@ export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
     AddNutritionPlans1792742400000,
     AddDayProductEquivalences1792785600000,
     CreateTrainingRecords1794484800000,
+    DateTrainingSessions1794488400000,
   ],
   migrationsRun: process.env.MACROFIT_MIGRATIONS_RUN === 'true',
   synchronize: false,

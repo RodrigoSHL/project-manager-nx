@@ -5,6 +5,7 @@ import {
   Header,
   Headers,
   HttpCode,
+  Param,
   Post,
   Put,
   Query,
@@ -15,6 +16,8 @@ import {
   finishTrainingSchema,
   saveTrainingDraftSchema,
   trainingHistoryQuerySchema,
+  trainingSessionIdSchema,
+  updateCompletedTrainingSchema,
 } from '@project-manager/macrofit-contracts';
 import {
   InternalAuthGuard,
@@ -52,6 +55,19 @@ export class TrainingController {
   history(@Headers('x-user-id') userId: string, @Query() query: unknown) {
     const { offset } = parseInput(trainingHistoryQuerySchema, query);
     return this.service.history(userId, Number(offset ?? 0));
+  }
+
+  @Put('history/:id')
+  editSession(
+    @Headers('x-user-id') userId: string,
+    @Param('id') id: string,
+    @Body() body: unknown
+  ) {
+    return this.service.editSession(
+      userId,
+      parseInput(trainingSessionIdSchema, id),
+      parseInput(updateCompletedTrainingSchema, body)
+    );
   }
 
   @Post('exercises')

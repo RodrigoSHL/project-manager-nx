@@ -9,9 +9,14 @@ import {
 export const numberFormat = new Intl.NumberFormat('es-CL', {
   maximumFractionDigits: 3,
 });
-export const sessionDateFormat = new Intl.DateTimeFormat('es-CL', {
+const sessionDateFormat = new Intl.DateTimeFormat('es-CL', {
   dateStyle: 'long',
+  timeZone: 'UTC',
 });
+
+export function formatTrainingDay(day: string) {
+  return sessionDateFormat.format(new Date(`${day}T00:00:00Z`));
+}
 
 export function formatTrainingNumber(value: number) {
   return numberFormat.format(value);

@@ -36,6 +36,8 @@ import {
   finishTrainingSchema,
   saveTrainingDraftSchema,
   trainingHistoryQuerySchema,
+  trainingSessionIdSchema,
+  updateCompletedTrainingSchema,
 } from '@project-manager/macrofit-contracts';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { MacrofitApiClient } from './macrofit-api.client';
@@ -109,6 +111,20 @@ export class MacrofitRecordsController {
   trainingHistory(@Req() req: AuthenticatedRequest, @Query() query: unknown) {
     const { offset } = parse(trainingHistoryQuerySchema, query);
     return this.send(req, `/training/history?offset=${Number(offset ?? 0)}`);
+  }
+
+  @Put('training/history/:id')
+  trainingHistoryEdit(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() body: unknown
+  ) {
+    return this.send(
+      req,
+      `/training/history/${parse(trainingSessionIdSchema, id)}`,
+      'PUT',
+      parse(updateCompletedTrainingSchema, body)
+    );
   }
   @Post('training/exercises')
   trainingExercise(@Req() req: AuthenticatedRequest, @Body() body: unknown) {

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { dateSchema } from './schemas';
 
 export const trainingMuscleSchema = z.enum([
   'chest',
@@ -61,7 +62,11 @@ export const TRAINING_EQUIPMENT = {
   band: 'Banda',
 } as const satisfies Record<TrainingEquipment, string>;
 
-const uuid = z.string().uuid();
+export const trainingSessionIdSchema = z.string().uuid();
+export const trainingDateSchema = dateSchema.refine(
+  (day) => !day.startsWith('0000-')
+);
+const uuid = trainingSessionIdSchema;
 const dateTime = z.string().datetime();
 const revision = z.number().int().min(0).max(2147483647);
 
@@ -100,23 +105,24 @@ const trainingSets = z
   .max(MAX_TRAINING_SETS)
   .refine((sets) => unique(sets.map(({ id }) => id)));
 
+const draftExercises = z
+  .array(
+    z
+      .object({
+        exerciseId: z.string().min(1).max(100),
+        sets: trainingSets,
+      })
+      .strict()
+  )
+  .max(MAX_TRAINING_EXERCISES)
+  .refine((exercises) => unique(exercises.map(({ exerciseId }) => exerciseId)));
+
 export const trainingDraftSchema = z
   .object({
     id: uuid,
     startedAt: dateTime,
-    exercises: z
-      .array(
-        z
-          .object({
-            exerciseId: z.string().min(1).max(100),
-            sets: trainingSets,
-          })
-          .strict()
-      )
-      .max(MAX_TRAINING_EXERCISES)
-      .refine((exercises) =>
-        unique(exercises.map(({ exerciseId }) => exerciseId))
-      ),
+    performedOn: trainingDateSchema.optional(),
+    exercises: draftExercises,
   })
   .strict();
 
@@ -136,12 +142,27 @@ export const completedTrainingSchema = z.object({
   id: uuid,
   startedAt: dateTime,
   finishedAt: dateTime,
+  performedOn: trainingDateSchema,
+  revision,
   exercises: z.array(
     z.object({
       exercise: trainingExerciseSchema,
       sets: trainingSets,
     })
   ),
+});
+export const updateCompletedTrainingSchema = z
+  .object({
+    revision,
+    performedOn: trainingDateSchema,
+    exercises: draftExercises.refine((exercises) =>
+      exercises.some(({ sets }) => sets.length > 0)
+    ),
+  })
+  .strict();
+export const trainingEditResultSchema = z.object({
+  session: completedTrainingSchema,
+  lastCompleted: completedTrainingSchema.nullable(),
 });
 export const trainingFinishStateSchema = trainingDraftStateSchema.extend({
   lastCompleted: completedTrainingSchema.nullable(),
@@ -170,4 +191,7 @@ export type SaveTrainingDraft = z.infer<typeof saveTrainingDraftSchema>;
 export type FinishTraining = z.infer<typeof finishTrainingSchema>;
 export type TrainingWorkspace = z.infer<typeof trainingWorkspaceSchema>;
 export type CompletedTraining = z.infer<typeof completedTrainingSchema>;
+export type UpdateCompletedTraining = z.infer<
+  typeof updateCompletedTrainingSchema
+>;
 export type TrainingHistory = z.infer<typeof trainingHistorySchema>;

@@ -1,12 +1,14 @@
 import {
   customTrainingExerciseSchema,
   trainingDraftStateSchema,
+  trainingEditResultSchema,
   trainingFinishStateSchema,
   trainingHistorySchema,
   trainingWorkspaceSchema,
   type FinishTraining,
   type SaveTrainingDraft,
   type TrainingExercise,
+  type UpdateCompletedTraining,
 } from '@project-manager/macrofit-contracts';
 import type { ZodType } from 'zod';
 import { macrofitRecordsRequest } from '../../utils/macrofitRecordsRequest';
@@ -40,4 +42,11 @@ export const trainingApi = {
     request(customTrainingExerciseSchema, '/exercises', 'POST', data),
   history: (offset: number) =>
     request(trainingHistorySchema, `/history?offset=${offset}`),
+  editSession: (id: string, data: UpdateCompletedTraining) =>
+    request(
+      trainingEditResultSchema,
+      `/history/${encodeURIComponent(id)}`,
+      'PUT',
+      data
+    ),
 };

@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react';
-import { CalendarDays, ChevronDown } from 'lucide-react';
+import { CalendarDays, ChevronDown, Pencil } from 'lucide-react';
 import {
   TRAINING_HISTORY_PAGE_SIZE,
+  type CompletedTraining,
   type TrainingHistory as HistoryPage,
 } from '@project-manager/macrofit-contracts';
 import { trainingApi } from './training-api';
-import { formatTrainingNumber, sessionDateFormat } from './training-model';
+import { formatTrainingDay, formatTrainingNumber } from './training-model';
 import { secondaryButton } from './training-styles';
 
-export function TrainingHistory() {
+export function TrainingHistory({
+  onEdit,
+}: {
+  onEdit: (session: CompletedTraining) => void;
+}) {
   const [offset, setOffset] = useState(0);
   const [attempt, setAttempt] = useState(0);
   const [page, setPage] = useState<HistoryPage | null>(null);
@@ -72,9 +77,9 @@ export function TrainingHistory() {
         </p>
       ) : (
         <div className="space-y-3">
-          {page.sessions.map(({ id, finishedAt, exercises }, index) => (
+          {page.sessions.map((session, index) => (
             <details
-              key={id}
+              key={session.id}
               open={index === 0}
               className="group rounded-xl border border-slate-800 bg-slate-950/35"
             >
@@ -86,13 +91,15 @@ export function TrainingHistory() {
                 />
                 <span className="min-w-0 flex-1">
                   <time
-                    dateTime={finishedAt}
+                    dateTime={session.performedOn}
                     className="block text-sm font-semibold"
                   >
-                    {sessionDateFormat.format(new Date(finishedAt))}
+                    {formatTrainingDay(session.performedOn)}
                   </time>
                   <span className="block text-xs leading-relaxed text-slate-400">
-                    {exercises.map(({ exercise }) => exercise.name).join(' · ')}
+                    {session.exercises
+                      .map(({ exercise }) => exercise.name)
+                      .join(' · ')}
                   </span>
                 </span>
                 <ChevronDown
@@ -102,7 +109,14 @@ export function TrainingHistory() {
                 />
               </summary>
               <div className="space-y-3 border-t border-slate-800 p-3">
-                {exercises.map(({ exercise, sets }) => (
+                <button
+                  type="button"
+                  className={secondaryButton}
+                  onClick={() => onEdit(session)}
+                >
+                  <Pencil size={16} aria-hidden="true" /> Editar sesión
+                </button>
+                {session.exercises.map(({ exercise, sets }) => (
                   <div key={exercise.id}>
                     <h3 className="text-sm font-semibold">{exercise.name}</h3>
                     <ol className="mt-1 space-y-1 text-sm tabular-nums text-slate-300">

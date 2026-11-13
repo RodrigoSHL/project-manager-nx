@@ -117,6 +117,37 @@ describe('MacroFit personal records BFF', () => {
       })
     );
   });
+  it('forwards routine creation with the authenticated owner and only the session reference', async () => {
+    const path = '/api/macrofit/me/training/routines';
+    const body = {
+      id: '00000000-0000-4000-8000-000000000002',
+      sessionId: '00000000-0000-4000-8000-000000000003',
+      name: 'Piernas',
+    };
+    const post = (value: unknown, requestHeaders: Record<string, string>) =>
+      httpFetch(origin + path, {
+        method: 'POST',
+        headers: requestHeaders,
+        body: JSON.stringify(value),
+      });
+    expect(
+      (await post(body, { 'Content-Type': 'application/json' })).status
+    ).toBe(401);
+    expect((await post({ ...body, exercises: [] }, headers)).status).toBe(400);
+    expect(upstream).not.toHaveBeenCalled();
+    upstream.mockResolvedValue(new Response('{}', { status: 201 }));
+    expect(
+      (await post(body, { ...headers, 'x-user-id': 'external' })).status
+    ).toBe(201);
+    expect(upstream).toHaveBeenCalledWith(
+      expect.stringContaining('/me/training/routines'),
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ 'x-user-id': userId }),
+        body: JSON.stringify(body),
+      })
+    );
+  });
   it('authenticates and validates a meal equivalence without a product, using only the JWT owner upstream', async () => {
     const path = '/api/macrofit/me/days/2026-10-25/meals/meal/equivalence';
     const body = {

@@ -71,6 +71,13 @@ function trainingFixture() {
       workspace.customExercises.push(body);
       return response(body, 201);
     }
+    if (path === base + '/routines' && init.method === 'POST') {
+      const session = history.find(({ id }) => id === body.sessionId);
+      if (!session) return response({ message: 'Sesión no encontrada.' }, 404);
+      const routine = { ...body, exercises: session.exercises };
+      workspace.routines = [...(workspace.routines ?? []), routine];
+      return response(routine, 201);
+    }
     if (
       path === base + '/finish' &&
       init.method === 'POST' &&
@@ -140,6 +147,12 @@ function mount(path = '/entrenamiento') {
 function click(name: string) {
   fireEvent.click(screen.getByRole('button', { name }));
 }
+async function openSession() {
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Sesión' }, { timeout: 4000 })
+  );
+  await screen.findByRole('heading', { name: 'Sesión actual' });
+}
 function enter(
   label: string,
   value: string,
@@ -196,6 +209,60 @@ afterEach(() => {
 });
 
 describe('Muscle Log inside MacroFit', () => {
+  it('saves a cardio-only session and counts its minutes separately from strength', async () => {
+    const page = mount();
+    await openSession();
+    click('Agregar ejercicio');
+    search('spinning');
+    click('Agregar Bicicleta estática');
+    const bike = within(
+      await screen.findByRole('article', { name: 'Bicicleta estática' })
+    );
+    enter('Duración (min)', '25', bike);
+    enter('Intensidad percibida', 'moderate', bike);
+    fireEvent.click(bike.getByRole('button', { name: 'Registrar cardio' }));
+    await bike.findByText('25 min · Moderada');
+    metric('Cardio', '25min');
+    metric('Series', '0');
+    metric('Volumen externo', '0kg');
+    intensity('none', /^Cuádriceps · 0 series equivalentes$/);
+    await screen.findByText('25 min de cardio');
+    await waitFor(() => expect(screen.queryByText('Guardando…')).toBeNull());
+    click('Agregar ejercicio');
+    enter('Filtrar por equipamiento', 'sport');
+    search('basquetball');
+    expect(
+      screen.getByRole('button', { name: 'Agregar Básquetbol' })
+    ).toBeTruthy();
+    search('volei');
+    expect(
+      screen.getByRole('button', { name: 'Agregar Vóleibol' })
+    ).toBeTruthy();
+    search('soccer');
+    expect(screen.getByRole('button', { name: 'Agregar Fútbol' })).toBeTruthy();
+    search('nadar');
+    click('Agregar Natación');
+    const swimming = within(
+      await screen.findByRole('article', { name: 'Natación' })
+    );
+    enter('Duración (min)', '20', swimming);
+    fireEvent.click(swimming.getByRole('button', { name: 'Registrar cardio' }));
+    await swimming.findByText('20 min');
+    await screen.findByText('45 min de cardio');
+    metric('Series', '0');
+    await waitFor(() => expect(screen.queryByText('Guardando…')).toBeNull());
+    click('Finalizar sesión');
+    await screen.findByText('Sesión guardada en el historial.');
+    page.unmount();
+
+    mount();
+    await openSession();
+    await screen.findByText('45 min de cardio');
+    click('Historial');
+    await screen.findByText('25 min · Moderada');
+    await screen.findByText('20 min');
+  });
+
   it('keeps built-in exercises valid and browses the expanded catalog in batches', async () => {
     expect(TRAINING_CATALOG.length).toBeGreaterThan(100);
     expect(new Set(TRAINING_CATALOG.map(({ id }) => id)).size).toBe(
@@ -207,7 +274,7 @@ describe('Muscle Log inside MacroFit', () => {
       )
     ).toBe(true);
     mount();
-    await screen.findByRole('heading', { name: 'Sesión actual' });
+    await openSession();
     click('Catálogo');
     expect(screen.getAllByRole('button', { name: /^Agregar / })).toHaveLength(
       18
@@ -239,7 +306,11 @@ describe('Muscle Log inside MacroFit', () => {
     await screen.findByRole('heading', { name: 'Tu diario' });
     click('Entrenamiento');
     click('Muscle Log');
-    await screen.findByRole('heading', { name: 'Sesión actual' });
+    await screen.findByRole('heading', { name: 'Mapa muscular general' });
+    expect(
+      screen.getByRole('button', { name: 'Progreso' }).getAttribute('aria-current')
+    ).toBe('page');
+    await openSession();
     expect(screen.getByTestId('training-location').textContent).toBe(
       '/entrenamiento'
     );
@@ -292,6 +363,7 @@ describe('Muscle Log inside MacroFit', () => {
 
     page.unmount();
     const reloaded = mount();
+    await openSession();
     await screen.findByRole('article', { name: 'Extensión de piernas' });
     metric('Series', '2');
     metric('Volumen externo', '725kg');
@@ -307,6 +379,7 @@ describe('Muscle Log inside MacroFit', () => {
     reloaded.unmount();
 
     mount();
+    await openSession();
     await screen.findByRole('heading', { name: 'Mapa de la última sesión' });
     metric('Series', '2');
     metric('Volumen externo', '725kg');
@@ -327,7 +400,7 @@ describe('Muscle Log inside MacroFit', () => {
 
   it('filters by muscle and equipment and registers a custom bodyweight set with two secondary muscles', async () => {
     mount();
-    await screen.findByRole('heading', { name: 'Sesión actual' });
+    await openSession();
     click('Catálogo');
     search('cuadriceps');
     expect(
@@ -384,7 +457,7 @@ describe('Muscle Log inside MacroFit', () => {
 
   it('loads a dated routine without counting series and edits a saved workout independently of the active draft', async () => {
     const page = mount();
-    await screen.findByRole('heading', { name: 'Sesión actual' });
+    await openSession();
     enter('Fecha del entrenamiento', '2026-11-05');
     click('Rutinas');
     click('Cargar rutina Piernas');
@@ -432,11 +505,46 @@ describe('Muscle Log inside MacroFit', () => {
 
     page.unmount();
     mount();
+    await openSession();
     await screen.findByRole('article', { name: 'Press de banca' });
     expect(
       (screen.getByLabelText('Fecha del entrenamiento') as HTMLInputElement)
         .value
     ).toBe('2026-11-10');
     metric('Series', '0');
+  });
+
+  it('saves a workout as a personal routine and reloads its exercises without counting past sets', async () => {
+    const page = mount();
+    await openSession();
+    click('Rutinas');
+    click('Cargar rutina Piernas');
+    await screen.findByRole('article', { name: 'Extensión de piernas' });
+    const leg = exerciseCard('Extensión de piernas');
+    enter('Repeticiones', '10', leg);
+    enter('Peso (kg)', '35', leg);
+    await register(leg);
+    click('Finalizar sesión');
+    await screen.findByRole('heading', { name: 'Mapa de la última sesión' });
+
+    click('Historial');
+    fireEvent.click(await screen.findByRole('button', { name: 'Guardar como rutina' }));
+    enter('Nombre de la rutina', 'Piernas del lunes');
+    click('Guardar rutina');
+    await screen.findByText('Rutina guardada en Mis rutinas.');
+    expect(screen.getByText('10 rep × 35 kg')).toBeTruthy();
+
+    page.unmount();
+    mount();
+    await openSession();
+    click('Rutinas');
+    const personal = within(screen.getByRole('region', { name: 'Mis rutinas' }));
+    expect(personal.getByRole('heading', { name: 'Piernas del lunes' })).toBeTruthy();
+    expect(personal.getByText('Extensión de piernas')).toBeTruthy();
+    expect(personal.queryByText('Sentadilla hack')).toBeNull();
+    click('Cargar rutina Piernas del lunes');
+    await screen.findByRole('article', { name: 'Extensión de piernas' });
+    metric('Series', '0');
+    metric('Volumen externo', '0kg');
   });
 });

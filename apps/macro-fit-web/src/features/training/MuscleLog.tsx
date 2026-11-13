@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { BookOpen, Dumbbell, History, ListChecks } from 'lucide-react';
+import { Activity, BookOpen, Dumbbell, History, ListChecks } from 'lucide-react';
 import {
   MAX_TRAINING_EXERCISES,
   TRAINING_CATALOG,
   trainingDateSchema,
   type CompletedTraining,
+  type CreateTrainingRoutine,
   type TrainingDraft,
   type TrainingExercise,
   type TrainingSet,
@@ -12,6 +13,7 @@ import {
 } from '@project-manager/macrofit-contracts';
 import { TrainingCatalog } from './TrainingCatalog';
 import { TrainingHistory } from './TrainingHistory';
+import { TrainingProgress } from './TrainingProgress';
 import { TrainingRoutines } from './TrainingRoutines';
 import { TrainingSession } from './TrainingSession';
 import { trainingApi } from './training-api';
@@ -20,6 +22,7 @@ import { secondaryButton } from './training-styles';
 import { getTodayDateString } from '../../hooks/useMacroStore';
 
 const tabs = [
+  { id: 'progress', label: 'Progreso', icon: Activity },
   { id: 'session', label: 'Sesión', icon: Dumbbell },
   { id: 'catalog', label: 'Catálogo', icon: BookOpen },
   { id: 'routines', label: 'Rutinas', icon: ListChecks },
@@ -33,7 +36,7 @@ function errorMessage(error: unknown) {
 }
 
 export default function MuscleLog() {
-  const [tab, setTab] = useState<(typeof tabs)[number]['id']>('session');
+  const [tab, setTab] = useState<(typeof tabs)[number]['id']>('progress');
   const [workspace, setWorkspace] = useState<TrainingWorkspace | null>(null);
   const [editing, setEditing] = useState<CompletedTraining | null>(null);
   const [newDate, setNewDate] = useState<string | null>(null);
@@ -94,13 +97,13 @@ export default function MuscleLog() {
   const catalogById = new Map(
     catalog.map((exercise) => [exercise.id, exercise])
   );
-  const entries =
-    editing?.exercises ??
+  const draftEntries =
     draft?.exercises.flatMap(({ exerciseId, sets }) => {
       const exercise = catalogById.get(exerciseId);
       return exercise ? [{ exercise, sets }] : [];
     }) ??
     [];
+  const entries = editing?.exercises ?? draftEntries;
   const summary = summarizeTraining(entries);
   const lastCompleted =
     draft || editing ? null : workspace?.lastCompleted ?? null;
@@ -208,8 +211,25 @@ export default function MuscleLog() {
     return saved;
   }
 
+  async function saveRoutine(input: CreateTrainingRoutine) {
+    const saved = await mutate(async (current) => {
+      const routine = await trainingApi.createRoutine(input);
+      return {
+        ...current,
+        routines: [
+          ...(current.routines ?? []).filter(({ id }) => id !== routine.id),
+          routine,
+        ],
+      };
+    });
+    if (saved) {
+      setTab('routines');
+      setNotice('Rutina guardada en Mis rutinas.');
+    }
+  }
+
   async function finish() {
-    if (!summary.setCount) return;
+    if (!summary.exerciseCount) return;
     if (editing) {
       const { id, revision, performedOn, exercises } = editing;
       const done = await mutate(async (current) => {
@@ -258,7 +278,7 @@ export default function MuscleLog() {
       </header>
       <nav
         aria-label="Muscle Log"
-        className="sticky top-16 z-20 grid grid-cols-4 gap-1 rounded-xl border border-slate-800 bg-[#0e1420] p-1 sm:top-20"
+        className="sticky top-16 z-20 grid grid-cols-5 gap-1 rounded-xl border border-slate-800 bg-[#0e1420] p-1 sm:top-20"
       >
         {tabs.map(({ id, label, icon: Icon }) => (
           <button
@@ -279,7 +299,7 @@ export default function MuscleLog() {
             <Icon
               size={16}
               aria-hidden="true"
-              className="hidden min-[375px]:block"
+              className="hidden sm:block"
             />{' '}
             {label}
           </button>
@@ -322,8 +342,23 @@ export default function MuscleLog() {
             Cargando entrenamiento…
           </p>
         )
+      ) : tab === 'progress' ? (
+        <TrainingProgress
+          live={
+            draft
+              ? {
+                  id: draft.id,
+                  performedOn: draft.performedOn ?? getTodayDateString(),
+                  exercises: draftEntries,
+                }
+              : null
+          }
+          onOpenSession={() => setTab('session')}
+        />
       ) : tab === 'history' ? (
         <TrainingHistory
+          busy={busy}
+          onSaveRoutine={saveRoutine}
           onEdit={(session) => {
             setError('');
             setEditing(session);
@@ -342,6 +377,7 @@ export default function MuscleLog() {
         <TrainingRoutines
           addedIds={addedIds}
           busy={busy}
+          personalRoutines={workspace.routines ?? []}
           onApply={(exercises) => void addExercises(exercises)}
         />
       ) : (

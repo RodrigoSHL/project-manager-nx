@@ -3,6 +3,7 @@ import type {
   CompletedTraining,
   TrainingDraft,
   TrainingExercise,
+  TrainingRoutine,
 } from '@project-manager/macrofit-contracts';
 
 @Entity('training_drafts')
@@ -48,4 +49,16 @@ export class TrainingExerciseEntity {
 
   @Column('jsonb')
   data!: TrainingExercise;
+}
+
+@Entity('training_routines')
+export class TrainingRoutineEntity {
+  @PrimaryColumn('uuid', { name: 'user_id' })
+  userId!: string;
+
+  @PrimaryColumn('uuid')
+  id!: string;
+
+  @Column('jsonb')
+  data!: TrainingRoutine;
 }

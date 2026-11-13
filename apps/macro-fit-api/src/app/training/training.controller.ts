@@ -12,6 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  createTrainingRoutineSchema,
   customTrainingExerciseSchema,
   finishTrainingSchema,
   saveTrainingDraftSchema,
@@ -75,6 +76,14 @@ export class TrainingController {
     return this.service.createExercise(
       userId,
       parseInput(customTrainingExerciseSchema, body)
+    );
+  }
+
+  @Post('routines')
+  createRoutine(@Headers('x-user-id') userId: string, @Body() body: unknown) {
+    return this.service.createRoutine(
+      userId,
+      parseInput(createTrainingRoutineSchema, body)
     );
   }
 }

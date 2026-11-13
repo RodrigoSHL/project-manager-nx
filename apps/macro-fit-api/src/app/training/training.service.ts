@@ -9,6 +9,7 @@ import {
   TRAINING_CATALOG,
   TRAINING_HISTORY_PAGE_SIZE,
   type CompletedTraining,
+  type CreateTrainingRoutine,
   type FinishTraining,
   type SaveTrainingDraft,
   type TrainingDraft,
@@ -21,6 +22,7 @@ import {
 import {
   TrainingDraftEntity,
   TrainingExerciseEntity,
+  TrainingRoutineEntity,
   TrainingSessionEntity,
 } from './training.entity';
 
@@ -62,14 +64,16 @@ export class TrainingService {
     const row = await this.db
       .getRepository(TrainingDraftEntity)
       .findOneBy({ userId });
-    const [customExercises, lastCompleted] = await Promise.all([
+    const [customExercises, lastCompleted, routines] = await Promise.all([
       this.customExercises(this.db.manager, userId),
       this.latestSession(this.db.manager, userId),
+      this.db.getRepository(TrainingRoutineEntity).findBy({ userId }),
     ]);
     return {
       ...draftState(row),
       customExercises,
       lastCompleted,
+      routines: routines.map(({ data }) => data),
     };
   }
 
@@ -120,7 +124,7 @@ export class TrainingService {
       ).filter(({ sets }) => sets.length > 0);
       if (exercises.length === 0) {
         throw new BadRequestException(
-          'Registra al menos una serie para finalizar.'
+          'Registra al menos una serie o actividad de cardio para finalizar.'
         );
       }
       const finishedAt = new Date();
@@ -225,6 +229,28 @@ export class TrainingService {
     return row.data;
   }
 
+  async createRoutine(userId: string, input: CreateTrainingRoutine) {
+    const { id, sessionId } = input;
+    const session = await this.db
+      .getRepository(TrainingSessionEntity)
+      .findOneBy({ userId, id: sessionId });
+    if (!session) throw new NotFoundException('Sesión guardada no encontrada.');
+
+    const repository = this.db.getRepository(TrainingRoutineEntity);
+    await repository
+      .createQueryBuilder()
+      .insert()
+      .values({
+        userId,
+        id,
+        data: { ...input, exercises: session.data.exercises },
+      })
+      .orIgnore()
+      .execute();
+    const row = await repository.findOneByOrFail({ userId, id });
+    return row.data;
+  }
+
   private async lockDraft(manager: EntityManager, userId: string) {
     const repository = manager.getRepository(TrainingDraftEntity);
     await repository
@@ -273,6 +299,15 @@ export class TrainingService {
         throw new BadRequestException(
           'Un ejercicio no pertenece a tu catálogo.'
         );
+      if (
+        sets.some(
+          (set) => 'durationMinutes' in set !== (exercise.kind === 'cardio')
+        )
+      ) {
+        throw new BadRequestException(
+          'El registro no coincide con el tipo de ejercicio.'
+        );
+      }
       return { exercise, sets };
     });
   }

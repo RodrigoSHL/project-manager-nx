@@ -26,6 +26,7 @@ export const trainingEquipmentSchema = z.enum([
   'bodyweight',
   'cable',
   'band',
+  'sport',
 ]);
 export type TrainingMuscle = z.infer<typeof trainingMuscleSchema>;
 export type TrainingEquipment = z.infer<typeof trainingEquipmentSchema>;
@@ -33,6 +34,7 @@ export type TrainingEquipment = z.infer<typeof trainingEquipmentSchema>;
 export const MAX_TRAINING_EXERCISES = 40;
 export const MAX_TRAINING_SETS = 80;
 export const TRAINING_HISTORY_PAGE_SIZE = 20;
+export const MAX_TRAINING_ROUTINE_NAME_LENGTH = 100;
 
 export const TRAINING_MUSCLES = {
   chest: 'Pectorales',
@@ -60,6 +62,7 @@ export const TRAINING_EQUIPMENT = {
   bodyweight: 'Peso corporal',
   cable: 'Polea',
   band: 'Banda',
+  sport: 'Actividad deportiva',
 } as const satisfies Record<TrainingEquipment, string>;
 
 export const trainingSessionIdSchema = z.string().uuid();
@@ -80,25 +83,47 @@ export const trainingExerciseSchema = z
     name: z.string().trim().min(1).max(100),
     aliases: z.array(z.string().trim().min(1).max(100)).max(12),
     equipment: trainingEquipmentSchema,
-    primary: z.array(trainingMuscleSchema).min(1),
+    kind: z.literal('cardio').optional(),
+    primary: z.array(trainingMuscleSchema),
     secondary: z.array(trainingMuscleSchema),
   })
   .strict()
+  .refine(
+    ({ kind, primary, equipment }) =>
+      kind === 'cardio' || (primary.length > 0 && equipment !== 'sport'),
+    {
+      message:
+        'Los ejercicios de fuerza requieren un músculo principal y equipamiento de fuerza.',
+    }
+  )
   .refine(({ primary, secondary }) => unique([...primary, ...secondary]), {
     message: 'Cada músculo debe seleccionarse una sola vez.',
   });
 
 export const customTrainingExerciseSchema = trainingExerciseSchema.refine(
-  ({ id }) => uuid.safeParse(id).success
+  ({ id, kind }) => uuid.safeParse(id).success && kind === undefined
 );
 
-export const trainingSetSchema = z
+export const strengthTrainingSetSchema = z
   .object({
     id: uuid,
     reps: z.number().int().min(1).max(999),
     weightKg: z.number().finite().min(0).max(9999),
   })
   .strict();
+
+export const cardioTrainingSetSchema = z
+  .object({
+    id: uuid,
+    durationMinutes: z.number().finite().min(0.1).max(1440),
+    intensity: z.enum(['light', 'moderate', 'vigorous']).optional(),
+  })
+  .strict();
+
+export const trainingSetSchema = z.union([
+  strengthTrainingSetSchema,
+  cardioTrainingSetSchema,
+]);
 
 const trainingSets = z
   .array(trainingSetSchema)
@@ -167,8 +192,19 @@ export const trainingEditResultSchema = z.object({
 export const trainingFinishStateSchema = trainingDraftStateSchema.extend({
   lastCompleted: completedTrainingSchema.nullable(),
 });
+export const createTrainingRoutineSchema = z
+  .object({
+    id: uuid,
+    sessionId: uuid,
+    name: z.string().trim().min(1).max(MAX_TRAINING_ROUTINE_NAME_LENGTH),
+  })
+  .strict();
+export const trainingRoutineSchema = createTrainingRoutineSchema.extend({
+  exercises: completedTrainingSchema.shape.exercises,
+});
 export const trainingWorkspaceSchema = trainingFinishStateSchema.extend({
   customExercises: z.array(customTrainingExerciseSchema),
+  routines: z.array(trainingRoutineSchema).optional(),
 });
 export const trainingHistorySchema = z.object({
   sessions: z.array(completedTrainingSchema),
@@ -192,6 +228,8 @@ export const trainingHistoryQuerySchema = z
 
 export type TrainingExercise = z.infer<typeof trainingExerciseSchema>;
 export type TrainingSet = z.infer<typeof trainingSetSchema>;
+export type StrengthTrainingSet = z.infer<typeof strengthTrainingSetSchema>;
+export type CardioTrainingSet = z.infer<typeof cardioTrainingSetSchema>;
 export type TrainingDraft = z.infer<typeof trainingDraftSchema>;
 export type TrainingDraftState = z.infer<typeof trainingDraftStateSchema>;
 export type SaveTrainingDraft = z.infer<typeof saveTrainingDraftSchema>;
@@ -202,3 +240,5 @@ export type UpdateCompletedTraining = z.infer<
   typeof updateCompletedTrainingSchema
 >;
 export type TrainingHistory = z.infer<typeof trainingHistorySchema>;
+export type CreateTrainingRoutine = z.infer<typeof createTrainingRoutineSchema>;
+export type TrainingRoutine = z.infer<typeof trainingRoutineSchema>;

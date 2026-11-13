@@ -1,12 +1,22 @@
 import {
+  Activity,
+  Bike,
   Cable,
+  CircleDot,
   Dumbbell,
+  Footprints,
+  Goal,
   PersonStanding,
   SlidersVertical,
   StretchHorizontal,
+  Volleyball,
+  WavesLadder,
   type LucideIcon,
 } from 'lucide-react';
-import type { TrainingEquipment } from '@project-manager/macrofit-contracts';
+import type {
+  TrainingEquipment,
+  TrainingExercise,
+} from '@project-manager/macrofit-contracts';
 
 const equipmentIcons = {
   machine: {
@@ -29,14 +39,37 @@ const equipmentIcons = {
     icon: StretchHorizontal,
     color: 'border-amber-400/20 bg-amber-400/10 text-amber-300',
   },
+  sport: {
+    icon: Activity,
+    color: 'border-cyan-400/20 bg-cyan-400/10 text-cyan-300',
+  },
 } satisfies Record<TrainingEquipment, { icon: LucideIcon; color: string }>;
 
+const cardioIcons: Partial<Record<string, LucideIcon>> = {
+  'stationary-bike': Bike,
+  'outdoor-cycling': Bike,
+  football: Goal,
+  swimming: WavesLadder,
+  basketball: CircleDot,
+  volleyball: Volleyball,
+  walking: Footprints,
+  running: Footprints,
+  hiking: Footprints,
+};
+
 export function TrainingExerciseIcon({
+  id,
   equipment,
+  kind,
 }: {
+  id: string;
   equipment: TrainingEquipment;
+  kind?: TrainingExercise['kind'];
 }) {
-  const { icon: Icon, color } = equipmentIcons[equipment];
+  const { icon: Icon, color } =
+    kind === 'cardio'
+      ? { ...equipmentIcons.sport, icon: cardioIcons[id] ?? Activity }
+      : equipmentIcons[equipment];
   return (
     <span
       aria-hidden="true"

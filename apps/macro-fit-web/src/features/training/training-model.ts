@@ -1,5 +1,6 @@
 import {
   TRAINING_MUSCLES,
+  type CardioTrainingSet,
   type TrainingEquipment,
   type TrainingExercise,
   type TrainingMuscle,
@@ -20,6 +21,19 @@ export function formatTrainingDay(day: string) {
 
 export function formatTrainingNumber(value: number) {
   return numberFormat.format(value);
+}
+
+export const CARDIO_INTENSITIES = {
+  light: 'Suave',
+  moderate: 'Moderada',
+  vigorous: 'Intensa',
+} as const;
+
+export function formatCardio(set: CardioTrainingSet) {
+  const minutes = `${formatTrainingNumber(set.durationMinutes)} min`;
+  return set.intensity
+    ? `${minutes} · ${CARDIO_INTENSITIES[set.intensity]}`
+    : minutes;
 }
 
 export function formatEquivalentSets(value: number) {
@@ -51,6 +65,7 @@ export function filterTrainingExercises(
     const searchable = normalizeTrainingSearch(
       [
         exercise.name,
+        exercise.kind,
         ...exercise.aliases,
         ...muscles.map((id) => TRAINING_MUSCLES[id]),
       ].join(' ')
@@ -64,23 +79,33 @@ export function summarizeTraining(
 ) {
   let exerciseCount = 0;
   let setCount = 0;
+  let cardioMinutes = 0;
   let volume = 0;
   const muscles: Partial<Record<TrainingMuscle, number>> = {};
 
   for (const { exercise, sets } of entries) {
     if (!sets.length) continue;
     exerciseCount++;
-    setCount += sets.length;
-    for (const { reps, weightKg } of sets) volume += reps * weightKg;
+    let strengthSets = 0;
+    for (const set of sets) {
+      if ('durationMinutes' in set) {
+        cardioMinutes += set.durationMinutes;
+      } else {
+        strengthSets++;
+        volume += set.reps * set.weightKg;
+      }
+    }
+    if (!strengthSets) continue;
+    setCount += strengthSets;
     for (const muscle of exercise.primary) {
-      muscles[muscle] = (muscles[muscle] ?? 0) + sets.length;
+      muscles[muscle] = (muscles[muscle] ?? 0) + strengthSets;
     }
     for (const muscle of exercise.secondary) {
-      muscles[muscle] = (muscles[muscle] ?? 0) + sets.length / 2;
+      muscles[muscle] = (muscles[muscle] ?? 0) + strengthSets / 2;
     }
   }
 
-  return { exerciseCount, setCount, volume, muscles };
+  return { exerciseCount, setCount, cardioMinutes, volume, muscles };
 }
 
 export function muscleIntensity(equivalentSets: number) {
@@ -88,4 +113,77 @@ export function muscleIntensity(equivalentSets: number) {
   if (equivalentSets >= 3) return 'medium';
   if (equivalentSets > 0) return 'low';
   return 'none';
+}
+
+const dayMilliseconds = 86_400_000;
+
+export const trainingGaps = { week: 7, month: 30 } as const;
+
+export function daysBetweenTrainingDates(from: string, to: string) {
+  return (Date.parse(to) - Date.parse(from)) / dayMilliseconds;
+}
+
+export type TrainingProgressSession = {
+  id: string;
+  performedOn: string;
+  exercises: Parameters<typeof summarizeTraining>[0];
+};
+
+export type MuscleProgress = {
+  latestDay: string | null;
+  week: number;
+  month: number;
+  total: number;
+};
+
+export const trainingMuscleIds = Object.keys(TRAINING_MUSCLES) as TrainingMuscle[];
+
+export function summarizeTrainingProgress(
+  sessions: Iterable<TrainingProgressSession>,
+  today: string
+) {
+  const muscles = {} as Record<TrainingMuscle, MuscleProgress>;
+  for (const muscle of trainingMuscleIds)
+    muscles[muscle] = { latestDay: null, week: 0, month: 0, total: 0 };
+  const sessionsByPeriod = { week: 0, month: 0, total: 0 };
+
+  for (const { performedOn, exercises } of sessions) {
+    const daysAgo = daysBetweenTrainingDates(performedOn, today);
+    if (daysAgo < 0) continue;
+    const { setCount, muscles: scores } = summarizeTraining(exercises);
+    if (!setCount) continue;
+    const inWeek = daysAgo < trainingGaps.week;
+    const inMonth = daysAgo < trainingGaps.month;
+    sessionsByPeriod.total++;
+    if (inWeek) sessionsByPeriod.week++;
+    if (inMonth) sessionsByPeriod.month++;
+
+    for (const muscle of trainingMuscleIds) {
+      const score = scores[muscle];
+      if (!score) continue;
+      const progress = muscles[muscle];
+      progress.total += score;
+      if (inWeek) progress.week += score;
+      if (inMonth) progress.month += score;
+      if (!progress.latestDay || performedOn > progress.latestDay)
+        progress.latestDay = performedOn;
+    }
+  }
+
+  return { muscles, sessionsByPeriod };
+}
+
+export type MuscleRecency = 'recent' | 'week' | 'month' | 'unlogged';
+
+export function muscleRecency(daysAgo: number | null): MuscleRecency {
+  if (daysAgo === null) return 'unlogged';
+  if (daysAgo >= trainingGaps.month) return 'month';
+  if (daysAgo >= trainingGaps.week) return 'week';
+  return 'recent';
+}
+
+export function formatMuscleRecency(daysAgo: number | null) {
+  if (daysAgo === null) return 'Sin registros de fuerza';
+  if (daysAgo === 0) return 'Último registro hoy';
+  return `Último registro hace ${daysAgo} ${daysAgo === 1 ? 'día' : 'días'}`;
 }

@@ -1,4 +1,5 @@
 import { ADDITIONAL_TRAINING_EXERCISES } from './training-catalog-additions';
+import { CARDIO_TRAINING_CATALOG } from './training-cardio-catalog';
 import type {
   TrainingEquipment,
   TrainingExercise,
@@ -204,4 +205,21 @@ export const TRAINING_CATALOG: readonly TrainingExercise[] = [
     ['forearms']
   ),
   ...ADDITIONAL_TRAINING_EXERCISES,
+  {
+    id: 'stationary-bike',
+    name: 'Bicicleta estática',
+    aliases: [
+      'bicicleta fija',
+      'bici estática',
+      'spinning',
+      'cicloergómetro',
+      'stationary bike',
+      'cardio',
+    ],
+    equipment: 'machine',
+    kind: 'cardio',
+    primary: ['quads'],
+    secondary: ['glutes', 'hamstrings', 'calves'],
+  },
+  ...CARDIO_TRAINING_CATALOG,
 ];

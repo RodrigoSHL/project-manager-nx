@@ -4,7 +4,9 @@ import {
   trainingEditResultSchema,
   trainingFinishStateSchema,
   trainingHistorySchema,
+  trainingRoutineSchema,
   trainingWorkspaceSchema,
+  type CreateTrainingRoutine,
   type FinishTraining,
   type SaveTrainingDraft,
   type TrainingExercise,
@@ -40,6 +42,8 @@ export const trainingApi = {
     request(trainingFinishStateSchema, '/finish', 'POST', data),
   createExercise: (data: TrainingExercise) =>
     request(customTrainingExerciseSchema, '/exercises', 'POST', data),
+  createRoutine: (data: CreateTrainingRoutine) =>
+    request(trainingRoutineSchema, '/routines', 'POST', data),
   history: (offset: number, range?: { from: string; to: string }) => {
     const query = new URLSearchParams({ offset: String(offset), ...range });
     return request(trainingHistorySchema, `/history?${query}`);

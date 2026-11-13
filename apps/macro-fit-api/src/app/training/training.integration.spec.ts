@@ -7,16 +7,19 @@ import {
   trainingFinishStateSchema,
   trainingEditResultSchema,
   trainingHistorySchema,
+  trainingRoutineSchema,
   trainingWorkspaceSchema,
   type TrainingDraft,
   type TrainingExercise,
 } from '@project-manager/macrofit-contracts';
 import { CreateTrainingRecords1794484800000 } from '../../migrations/1794484800000-CreateTrainingRecords';
 import { DateTrainingSessions1794488400000 } from '../../migrations/1794488400000-DateTrainingSessions';
+import { CreateTrainingRoutines1794492000000 } from '../../migrations/1794492000000-CreateTrainingRoutines';
 import { TrainingController } from './training.controller';
 import {
   TrainingDraftEntity,
   TrainingExerciseEntity,
+  TrainingRoutineEntity,
   TrainingSessionEntity,
 } from './training.entity';
 import { TrainingService } from './training.service';
@@ -44,10 +47,12 @@ if (url && !new URL(url).pathname.startsWith('/macrofit_test'))
         TrainingDraftEntity,
         TrainingSessionEntity,
         TrainingExerciseEntity,
+        TrainingRoutineEntity,
       ],
       migrations: [
         CreateTrainingRecords1794484800000,
         DateTrainingSessions1794488400000,
+        CreateTrainingRoutines1794492000000,
       ],
       migrationsTableName: 'training_test_migrations',
     });
@@ -56,6 +61,7 @@ if (url && !new URL(url).pathname.startsWith('/macrofit_test'))
     beforeAll(async () => {
       await db.initialize();
       await db.runMigrations();
+      await db.undoLastMigration();
       await db.undoLastMigration();
       await db.query(
         'INSERT INTO training_sessions (user_id, id, finished_at, data) VALUES ($1, $2, $3, $4)',
@@ -85,6 +91,68 @@ if (url && !new URL(url).pathname.startsWith('/macrofit_test'))
         headers: { 'x-user-id': id, 'Content-Type': 'application/json' },
         ...(data !== undefined && { body: JSON.stringify(data) }),
       });
+
+    it.each(['stationary-bike', 'swimming'])(
+      'stores and edits %s using duration instead of reps',
+      async (exerciseId) => {
+        const rider = randomUUID();
+        const ride = {
+          id: randomUUID(),
+          durationMinutes: 25,
+          intensity: 'moderate',
+        };
+        const draft = {
+          id: randomUUID(),
+          startedAt: new Date().toISOString(),
+          performedOn: '2026-11-13',
+          exercises: [{ exerciseId, sets: [ride] }],
+        };
+        expect(
+          (
+            await call('/draft', rider, 'PUT', {
+              revision: 0,
+              draft: {
+                ...draft,
+                exercises: [
+                  {
+                    exerciseId,
+                    sets: [{ id: ride.id, reps: 10, weightKg: 0 }],
+                  },
+                ],
+              },
+            })
+          ).status
+        ).toBe(400);
+        expect(
+          (await call('/draft', rider, 'PUT', { revision: 0, draft })).status
+        ).toBe(200);
+        expect(
+          (await call('/finish', rider, 'POST', { revision: 1, id: draft.id }))
+            .status
+        ).toBe(200);
+        const history = async () =>
+          trainingHistorySchema.parse(
+            await (
+              await call('/history?from=2026-11-13&to=2026-11-13', rider)
+            ).json()
+          ).sessions;
+        expect((await history())[0].exercises[0]).toMatchObject({
+          exercise: { kind: 'cardio' },
+          sets: [ride],
+        });
+        const edited = { ...ride, durationMinutes: 32 };
+        expect(
+          (
+            await call(`/history/${draft.id}`, rider, 'PUT', {
+              revision: 0,
+              performedOn: draft.performedOn,
+              exercises: [{ exerciseId, sets: [edited] }],
+            })
+          ).status
+        ).toBe(200);
+        expect((await history())[0].exercises[0].sets).toEqual([edited]);
+      }
+    );
 
     it('keeps legacy sessions, orders backdated sessions and applies private versioned edits', async () => {
       expect((await fetch(origin)).status).toBe(401);
@@ -132,6 +200,7 @@ if (url && !new URL(url).pathname.startsWith('/macrofit_test'))
         revision: 1,
         customExercises: [exercise],
         lastCompleted: null,
+        routines: [],
       });
       expect(
         trainingWorkspaceSchema.parse(await (await call('', otherUser)).json())
@@ -140,6 +209,7 @@ if (url && !new URL(url).pathname.startsWith('/macrofit_test'))
         revision: 0,
         customExercises: [],
         lastCompleted: null,
+        routines: [],
       });
       const finish = { id: draft.id, revision: reloaded.revision };
       for (let attempt = 0; attempt < 2; attempt++) {
@@ -261,6 +331,67 @@ if (url && !new URL(url).pathname.startsWith('/macrofit_test'))
       expect(
         trainingWorkspaceSchema.parse(await (await call()).json()).draft
       ).toEqual(active);
+    });
+
+    it('saves a private snapshot of an owned session without changing the draft or history', async () => {
+      const owner = randomUUID();
+      const session = {
+        id: randomUUID(),
+        startedAt: new Date().toISOString(),
+        performedOn: '2026-11-12',
+        exercises: [
+          {
+            exerciseId: 'leg-extension',
+            sets: [{ id: randomUUID(), reps: 10, weightKg: 35 }],
+          },
+          {
+            exerciseId: 'swimming',
+            sets: [{ id: randomUUID(), durationMinutes: 20 }],
+          },
+        ],
+      };
+      expect(
+        (
+          await call('/draft', owner, 'PUT', { draft: session, revision: 0 })
+        ).status
+      ).toBe(200);
+      const finish = await call('/finish', owner, 'POST', {
+        id: session.id,
+        revision: 1,
+      });
+      expect(finish.status).toBe(200);
+      const { lastCompleted } = trainingFinishStateSchema.parse(await finish.json());
+      const input = { id: randomUUID(), name: ' Mixta ', sessionId: session.id };
+      expect((await call('/routines', otherUser, 'POST', input)).status).toBe(404);
+      expect(
+        (await call('/routines', owner, 'POST', { ...input, name: ' ' })).status
+      ).toBe(400);
+      const snapshot = {
+        ...input,
+        name: 'Mixta',
+        exercises: lastCompleted!.exercises,
+      };
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const response = await call('/routines', owner, 'POST', input);
+        expect(response.status).toBe(201);
+        expect(trainingRoutineSchema.parse(await response.json())).toEqual(snapshot);
+      }
+      expect(
+        trainingWorkspaceSchema.parse(await (await call('', owner)).json())
+      ).toMatchObject({ revision: 2, draft: null, lastCompleted, routines: [snapshot] });
+      expect(
+        trainingWorkspaceSchema.parse(await (await call('', otherUser)).json()).routines
+      ).toEqual([]);
+
+      const edit = await call(`/history/${session.id}`, owner, 'PUT', {
+        revision: 0,
+        performedOn: session.performedOn,
+        exercises: [session.exercises[0]],
+      });
+      expect(edit.status).toBe(200);
+      expect(
+        trainingWorkspaceSchema.parse(await (await call('', owner)).json()).routines
+      ).toEqual([snapshot]);
     });
   }
 );

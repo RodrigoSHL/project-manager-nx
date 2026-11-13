@@ -1,23 +1,34 @@
 import { useEffect, useState } from 'react';
-import { CalendarDays, ChevronDown, Pencil } from 'lucide-react';
+import { BookmarkPlus, CalendarDays, ChevronDown, Pencil } from 'lucide-react';
 import {
+  MAX_TRAINING_ROUTINE_NAME_LENGTH,
   TRAINING_HISTORY_PAGE_SIZE,
   type CompletedTraining,
+  type CreateTrainingRoutine,
   type TrainingHistory as HistoryPage,
 } from '@project-manager/macrofit-contracts';
 import { trainingApi } from './training-api';
-import { formatTrainingDay, formatTrainingNumber } from './training-model';
-import { secondaryButton } from './training-styles';
+import {
+  formatCardio,
+  formatTrainingDay,
+  formatTrainingNumber,
+} from './training-model';
+import { fieldClass, primaryButton, secondaryButton } from './training-styles';
 
 export function TrainingHistory({
+  busy,
   onEdit,
+  onSaveRoutine,
 }: {
+  busy: boolean;
   onEdit: (session: CompletedTraining) => void;
+  onSaveRoutine: (input: CreateTrainingRoutine) => Promise<void>;
 }) {
   const [offset, setOffset] = useState(0);
   const [attempt, setAttempt] = useState(0);
   const [page, setPage] = useState<HistoryPage | null>(null);
   const [error, setError] = useState('');
+  const [routine, setRoutine] = useState<CreateTrainingRoutine | null>(null);
   useEffect(() => {
     let active = true;
     trainingApi.history(offset).then(
@@ -40,6 +51,7 @@ export function TrainingHistory({
   }, [offset, attempt]);
 
   const navigatePage = (nextOffset: number) => {
+    setRoutine(null);
     setPage(null);
     setError('');
     setOffset(nextOffset);
@@ -109,21 +121,87 @@ export function TrainingHistory({
                 />
               </summary>
               <div className="space-y-3 border-t border-slate-800 p-3">
-                <button
-                  type="button"
-                  className={secondaryButton}
-                  onClick={() => onEdit(session)}
-                >
-                  <Pencil size={16} aria-hidden="true" /> Editar sesión
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className={secondaryButton}
+                    disabled={busy}
+                    onClick={() => onEdit(session)}
+                  >
+                    <Pencil size={16} aria-hidden="true" /> Editar sesión
+                  </button>
+                  {routine?.sessionId !== session.id && (
+                    <button
+                      type="button"
+                      className={secondaryButton}
+                      disabled={busy}
+                      onClick={() =>
+                        setRoutine({
+                          id: crypto.randomUUID(),
+                          sessionId: session.id,
+                          name: '',
+                        })
+                      }
+                    >
+                      <BookmarkPlus size={16} aria-hidden="true" />
+                      Guardar como rutina
+                    </button>
+                  )}
+                </div>
+                {routine?.sessionId === session.id && (
+                  <form
+                    className="space-y-2 rounded-xl border border-slate-800 p-3"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      const name = routine.name.trim();
+                      if (!busy && name) void onSaveRoutine({ ...routine, name });
+                    }}
+                  >
+                    <label className="block space-y-1 text-sm font-semibold">
+                      <span>Nombre de la rutina</span>
+                      <input
+                        autoFocus
+                        required
+                        maxLength={MAX_TRAINING_ROUTINE_NAME_LENGTH}
+                        placeholder="Ej. Piernas del lunes"
+                        className={fieldClass}
+                        value={routine.name}
+                        disabled={busy}
+                        onChange={(event) =>
+                          setRoutine({ ...routine, name: event.target.value })
+                        }
+                      />
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="submit"
+                        className={primaryButton}
+                        disabled={busy || !routine.name.trim()}
+                      >
+                        Guardar rutina
+                      </button>
+                      <button
+                        type="button"
+                        className={secondaryButton}
+                        disabled={busy}
+                        onClick={() => setRoutine(null)}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </form>
+                )}
                 {session.exercises.map(({ exercise, sets }) => (
                   <div key={exercise.id}>
                     <h3 className="text-sm font-semibold">{exercise.name}</h3>
                     <ol className="mt-1 space-y-1 text-sm tabular-nums text-slate-300">
-                      {sets.map(({ id: setId, reps, weightKg }, setIndex) => (
-                        <li key={setId}>
-                          Serie {setIndex + 1} · {reps} rep ·{' '}
-                          {formatTrainingNumber(weightKg)} kg
+                      {sets.map((set, setIndex) => (
+                        <li key={set.id}>
+                          {'durationMinutes' in set
+                            ? formatCardio(set)
+                            : `Serie ${setIndex + 1} · ${
+                                set.reps
+                              } rep · ${formatTrainingNumber(set.weightKg)} kg`}
                         </li>
                       ))}
                     </ol>
@@ -137,7 +215,7 @@ export function TrainingHistory({
               <button
                 type="button"
                 className={secondaryButton}
-                disabled={offset === 0}
+                disabled={busy || offset === 0}
                 onClick={() =>
                   navigatePage(Math.max(0, offset - TRAINING_HISTORY_PAGE_SIZE))
                 }
@@ -147,7 +225,7 @@ export function TrainingHistory({
               <button
                 type="button"
                 className={secondaryButton}
-                disabled={page.nextOffset === null}
+                disabled={busy || page.nextOffset === null}
                 onClick={() => navigatePage(page.nextOffset ?? offset)}
               >
                 Más antiguas

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import {
   Check,
+  Bike,
   Dumbbell,
   Layers3,
   Pencil,
@@ -12,7 +13,10 @@ import {
 import {
   MAX_TRAINING_SETS,
   TRAINING_EQUIPMENT,
-  trainingSetSchema,
+  cardioTrainingSetSchema,
+  strengthTrainingSetSchema,
+  type CardioTrainingSet,
+  type StrengthTrainingSet,
   type CompletedTraining,
   type TrainingExercise,
   type TrainingSet,
@@ -22,6 +26,8 @@ import { TrainingPeriodMap } from './TrainingPeriodMap';
 import { TrainingExerciseIcon } from './TrainingExerciseIcon';
 import {
   formatTrainingNumber,
+  formatCardio,
+  CARDIO_INTENSITIES,
   formatTrainingDay,
   summarizeTraining,
 } from './training-model';
@@ -34,7 +40,7 @@ function SetForm({
   onSubmit,
   onCancel,
 }: {
-  defaults?: TrainingSet;
+  defaults?: StrengthTrainingSet;
   editing: boolean;
   busy: boolean;
   onSubmit: (set: TrainingSet) => Promise<boolean>;
@@ -52,7 +58,7 @@ function SetForm({
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
-    const parsed = trainingSetSchema.safeParse({
+    const parsed = strengthTrainingSetSchema.safeParse({
       id: editing && defaults ? defaults.id : crypto.randomUUID(),
       reps: Number(reps),
       weightKg: weight.trim() === '' ? NaN : Number(weight),
@@ -135,6 +141,103 @@ function SetForm({
   );
 }
 
+function CardioForm({
+  defaults,
+  editing,
+  busy,
+  onSubmit,
+  onCancel,
+}: {
+  defaults?: CardioTrainingSet;
+  editing: boolean;
+  busy: boolean;
+  onSubmit: (set: TrainingSet) => Promise<boolean>;
+  onCancel: () => void;
+}) {
+  const [duration, setDuration] = useState(
+    defaults?.durationMinutes.toString() ?? ''
+  );
+  const [intensity, setIntensity] = useState<
+    NonNullable<CardioTrainingSet['intensity']> | ''
+  >(defaults?.intensity ?? '');
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy) return;
+    const result = cardioTrainingSetSchema.safeParse({
+      id: editing && defaults ? defaults.id : crypto.randomUUID(),
+      durationMinutes: Number(duration),
+      intensity: intensity || undefined,
+    });
+    if (result.success && (await onSubmit(result.data))) {
+      setDuration('');
+      setIntensity('');
+    }
+  }
+
+  return (
+    <form
+      onSubmit={submit}
+      className="mt-3 space-y-3 rounded-xl bg-slate-950/55 p-3"
+    >
+      <div className="grid grid-cols-2 gap-2">
+        <label className="space-y-1 text-xs font-semibold text-slate-300">
+          <span>Duración (min)</span>
+          <input
+            className={fieldClass}
+            type="number"
+            inputMode="decimal"
+            min={0.1}
+            max={1440}
+            step="any"
+            required
+            disabled={busy}
+            value={duration}
+            onChange={(event) => setDuration(event.target.value)}
+          />
+        </label>
+        <label className="space-y-1 text-xs font-semibold text-slate-300">
+          <span>Intensidad percibida</span>
+          <select
+            className={fieldClass}
+            disabled={busy}
+            value={intensity}
+            onChange={(event) =>
+              setIntensity(event.target.value as typeof intensity)
+            }
+          >
+            <option value="">Opcional</option>
+            {Object.entries(CARDIO_INTENSITIES).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div className="flex gap-2">
+        <button
+          className={`${primaryButton} flex-1`}
+          type="submit"
+          disabled={busy}
+        >
+          {editing ? 'Guardar cardio' : 'Registrar cardio'}
+        </button>
+        {editing && (
+          <button
+            className={secondaryButton}
+            type="button"
+            disabled={busy}
+            onClick={onCancel}
+          >
+            Cancelar
+          </button>
+        )}
+      </div>
+    </form>
+  );
+}
+
 function ExerciseCard({
   exercise,
   sets,
@@ -152,17 +255,32 @@ function ExerciseCard({
 }) {
   const [editId, setEditId] = useState<string | null>(null);
   const editing = sets.find(({ id }) => id === editId);
+  const strengthDefaults = editing ?? sets.at(-1);
+  const cardio = exercise.kind === 'cardio';
+  async function saveEntry(next: TrainingSet) {
+    const saved = await onSave(
+      editing
+        ? sets.map((set) => (set.id === next.id ? next : set))
+        : [...sets, next]
+    );
+    if (saved) setEditId(null);
+    return saved;
+  }
   return (
     <article
       aria-label={exercise.name}
       className="rounded-xl border border-slate-800 bg-[#111827] p-3 sm:p-4"
     >
       <div className="flex items-center gap-3">
-        <TrainingExerciseIcon equipment={exercise.equipment} />
+        <TrainingExerciseIcon
+          id={exercise.id}
+          equipment={exercise.equipment}
+          kind={exercise.kind}
+        />
         <div className="min-w-0 flex-1">
           <h3 className="font-bold text-slate-100">{exercise.name}</h3>
           <p className="text-xs text-slate-400">
-            {TRAINING_EQUIPMENT[exercise.equipment]}
+            {cardio ? 'Cardio' : TRAINING_EQUIPMENT[exercise.equipment]}
           </p>
         </div>
         {(allowRemove || sets.length === 0) && (
@@ -185,11 +303,17 @@ function ExerciseCard({
                 {index + 1}
               </span>
               <span className="flex-1 text-sm tabular-nums">
-                {set.reps} rep · {formatTrainingNumber(set.weightKg)} kg
+                {'durationMinutes' in set
+                  ? formatCardio(set)
+                  : `${set.reps} rep · ${formatTrainingNumber(
+                      set.weightKg
+                    )} kg`}
               </span>
               <button
                 type="button"
-                aria-label={`Editar serie ${index + 1}`}
+                aria-label={`Editar ${cardio ? 'cardio' : 'serie'} ${
+                  index + 1
+                }`}
                 disabled={busy}
                 onClick={() => setEditId(set.id)}
                 className={secondaryButton}
@@ -198,7 +322,9 @@ function ExerciseCard({
               </button>
               <button
                 type="button"
-                aria-label={`Eliminar serie ${index + 1}`}
+                aria-label={`Eliminar ${cardio ? 'cardio' : 'serie'} ${
+                  index + 1
+                }`}
                 disabled={busy}
                 onClick={() =>
                   void onSave(sets.filter(({ id }) => id !== set.id))
@@ -211,24 +337,32 @@ function ExerciseCard({
           ))}
         </ol>
       )}
-      {(editing || sets.length < MAX_TRAINING_SETS) && (
-        <SetForm
-          key={editing?.id ?? 'new'}
-          defaults={editing ?? sets[sets.length - 1]}
-          editing={Boolean(editing)}
-          busy={busy}
-          onCancel={() => setEditId(null)}
-          onSubmit={async (next) => {
-            const saved = await onSave(
-              editing
-                ? sets.map((set) => (set.id === next.id ? next : set))
-                : [...sets, next]
-            );
-            if (saved) setEditId(null);
-            return saved;
-          }}
-        />
-      )}
+      {(editing || sets.length < MAX_TRAINING_SETS) &&
+        (cardio ? (
+          <CardioForm
+            key={editing?.id ?? 'new'}
+            defaults={
+              editing && 'durationMinutes' in editing ? editing : undefined
+            }
+            editing={Boolean(editing)}
+            busy={busy}
+            onCancel={() => setEditId(null)}
+            onSubmit={saveEntry}
+          />
+        ) : (
+          <SetForm
+            key={editing?.id ?? 'new'}
+            defaults={
+              strengthDefaults && 'reps' in strengthDefaults
+                ? strengthDefaults
+                : undefined
+            }
+            editing={Boolean(editing)}
+            busy={busy}
+            onCancel={() => setEditId(null)}
+            onSubmit={saveEntry}
+          />
+        ))}
     </article>
   );
 }
@@ -283,6 +417,16 @@ export function TrainingSession({
       unit: 'kg',
       icon: Weight,
     },
+    ...(displayedSummary.cardioMinutes > 0
+      ? [
+          {
+            label: 'Cardio',
+            value: displayedSummary.cardioMinutes,
+            unit: 'min',
+            icon: Bike,
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -375,11 +519,11 @@ export function TrainingSession({
               />
             ))
           )}
-          {(summary.setCount > 0 || onCancelEdit) && (
+          {(summary.exerciseCount > 0 || onCancelEdit) && (
             <button
               type="button"
               className={`${secondaryButton} w-full`}
-              disabled={busy || summary.setCount === 0}
+              disabled={busy || summary.exerciseCount === 0}
               onClick={onFinish}
             >
               <Check size={18} aria-hidden="true" />{' '}

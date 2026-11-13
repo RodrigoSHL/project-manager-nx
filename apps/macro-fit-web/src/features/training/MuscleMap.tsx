@@ -3,7 +3,12 @@ import {
   TRAINING_MUSCLES,
   type TrainingMuscle,
 } from '@project-manager/macrofit-contracts';
-import { formatEquivalentSets, muscleIntensity } from './training-model';
+import {
+  formatEquivalentSets,
+  formatMuscleRecency,
+  muscleIntensity,
+  muscleRecency,
+} from './training-model';
 
 const body =
   'M90 8C72 8 65 21 66 36c1 17 5 25 13 32l-1 9c-8 5-21 8-34 12-15 5-22 19-24 36l-5 42-8 43c-3 15-1 22 3 26 4 2 6-2 8-10l3-11 1 7c1 4 5 3 5-2l1-14 11-39 8-36 6 25c1 13-5 26-7 40-5 24-3 54 2 78l4 28c-2 17-2 33 2 52l3 26-6 19c-2 7 2 10 8 10h16c5 0 7-5 6-10l-1-25 5-62 3-68 2-33 2 33 3 68 5 62-1 25c-1 5 1 10 6 10h16c6 0 10-3 8-10l-6-19 3-26c4-19 4-35 2-52l4-28c5-24 7-54 2-78-2-14-8-27-7-40l6-25 8 36 11 39 1 14c0 5 4 6 5 2l1-7 3 11c2 8 4 12 8 10 4-4 6-11 3-26l-8-43-5-42c-2-17-9-31-24-36-13-4-26-7-34-12l-1-9c8-7 12-15 13-32 1-15-6-28-24-28Z';
@@ -68,16 +73,31 @@ const scale = [
   { id: 'high', color: '#bef264', label: '6 o más · Alta' },
 ] as const;
 
+const recencyScale = {
+  recent: { color: '#bef264', label: '0–6 días · Reciente' },
+  week: { color: '#fbbf24', label: '7–29 días sin registro' },
+  month: { color: '#fb7185', label: '30 días o más sin registro' },
+  unlogged: { color: '#374151', label: 'Sin registros de fuerza' },
+};
+
 export function MuscleMap({
   scores,
   title,
   children,
+  progress,
 }: {
   scores: Partial<Record<TrainingMuscle, number>>;
   title: string;
   children?: ReactNode;
+  progress?: {
+    daysAgo: Record<TrainingMuscle, number | null>;
+    colorByRecency: boolean;
+    details: (muscle: TrainingMuscle) => ReactNode;
+  };
 }) {
   const [selected, select] = useState<TrainingMuscle | null>(null);
+  const colorByRecency = progress?.colorByRecency;
+  const legend = colorByRecency ? Object.values(recencyScale) : scale;
   return (
     <section
       id="muscle-map"
@@ -88,7 +108,11 @@ export function MuscleMap({
         {title}
       </h2>
       {children}
-      <div className="mx-auto mt-3 grid max-w-[25rem] grid-cols-2 gap-3">
+      <div
+        className={`mx-auto mt-3 grid grid-cols-2 gap-3 ${
+          progress ? 'max-w-lg' : 'max-w-[25rem]'
+        }`}
+      >
         {[
           { name: 'Frente', zones: front },
           { name: 'Espalda', zones: back },
@@ -98,7 +122,9 @@ export function MuscleMap({
               viewBox="0 0 180 414"
               role="group"
               aria-label={`Vista muscular: ${name}`}
-              className="mx-auto block w-full max-w-[10rem]"
+              className={`mx-auto block w-full ${
+                progress ? 'max-w-[12rem]' : 'max-w-[10rem]'
+              }`}
             >
               <path
                 d={body}
@@ -109,17 +135,23 @@ export function MuscleMap({
               />
               {zones.map(({ muscle, path }) => {
                 const value = scores[muscle] ?? 0;
-                const intensity = muscleIntensity(value);
-                const fill = scale.find(({ id }) => id === intensity)?.color;
+                const recency = colorByRecency
+                  ? muscleRecency(progress.daysAgo[muscle])
+                  : null;
+                const intensity = recency ?? muscleIntensity(value);
+                const fill = recency
+                  ? recencyScale[recency].color
+                  : scale.find(({ id }) => id === intensity)?.color;
+                const description = colorByRecency
+                  ? formatMuscleRecency(progress.daysAgo[muscle])
+                  : formatEquivalentSets(value);
                 const active = selected === muscle;
                 return (
                   <g
                     key={muscle}
                     role="button"
                     tabIndex={0}
-                    aria-label={`${
-                      TRAINING_MUSCLES[muscle]
-                    } · ${formatEquivalentSets(value)}`}
+                    aria-label={`${TRAINING_MUSCLES[muscle]} · ${description}`}
                     aria-pressed={active}
                     className="group cursor-pointer outline-none"
                     onClick={() => select(muscle)}
@@ -156,22 +188,30 @@ export function MuscleMap({
           </figure>
         ))}
       </div>
-      <p
-        className="mt-4 min-h-6 rounded-lg bg-slate-950/65 px-3 py-2 text-sm font-semibold text-slate-100"
+      <div
+        className="mt-4 min-h-6 space-y-1 rounded-lg bg-slate-950/65 px-3 py-2 text-sm font-semibold text-slate-100"
         aria-live="polite"
       >
-        {selected
+        {selected && progress
+          ? progress.details(selected)
+          : selected
           ? `${TRAINING_MUSCLES[selected]} · ${formatEquivalentSets(
               scores[selected] ?? 0
             )}`
+          : progress
+          ? 'Toca un músculo para ver su último registro y sus series.'
           : 'Toca un músculo para ver sus series equivalentes.'}
-      </p>
+      </div>
       <ul
-        aria-label="Intensidad por series equivalentes"
+        aria-label={
+          colorByRecency
+            ? 'Días desde el último registro'
+            : 'Intensidad por series equivalentes'
+        }
         className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-300"
       >
-        {scale.map(({ id, color, label }) => (
-          <li key={id} className="flex items-center gap-1.5">
+        {legend.map(({ color, label }) => (
+          <li key={label} className="flex items-center gap-1.5">
             <span
               className="size-3 shrink-0 rounded-sm"
               style={{ backgroundColor: color }}
@@ -181,10 +221,12 @@ export function MuscleMap({
           </li>
         ))}
       </ul>
-      <p className="mt-3 text-xs leading-relaxed text-slate-400">
-        Cada serie aporta 1 a cada músculo principal y 0,5 a cada secundario.
-        Los kilos se cuentan en el volumen externo.
-      </p>
+      {!colorByRecency && (
+        <p className="mt-3 text-xs leading-relaxed text-slate-400">
+          Cada serie aporta 1 a cada músculo principal y 0,5 a cada secundario.
+          Los kilos se cuentan en el volumen externo.
+        </p>
+      )}
     </section>
   );
 }

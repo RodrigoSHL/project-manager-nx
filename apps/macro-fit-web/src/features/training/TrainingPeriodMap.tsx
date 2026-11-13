@@ -9,7 +9,11 @@ import {
 import { getTodayDateString } from '../../hooks/useMacroStore';
 import { MuscleMap } from './MuscleMap';
 import { trainingApi } from './training-api';
-import { formatTrainingDay, summarizeTraining } from './training-model';
+import {
+  formatTrainingDay,
+  formatTrainingNumber,
+  summarizeTraining,
+} from './training-model';
 import { fieldClass, secondaryButton } from './training-styles';
 
 type TrainingEntries = Parameters<typeof summarizeTraining>[0];
@@ -93,7 +97,7 @@ function PeriodMap({
   if (live) sessions.delete(live.id);
   const entries = [...sessions.values()].flatMap(({ exercises }) => exercises);
   const includesLive = live && inPeriod(live);
-  const { muscles, setCount } = summarizeTraining(
+  const { muscles, setCount, cardioMinutes } = summarizeTraining(
     includesLive ? [...entries, ...live.exercises] : entries
   );
   const untrained = (Object.keys(TRAINING_MUSCLES) as TrainingMuscle[]).filter(
@@ -139,6 +143,11 @@ function PeriodMap({
               {muscleCount - untrained.length} de {muscleCount} grupos
               trabajados
             </p>
+            {cardioMinutes > 0 && (
+              <p className="text-slate-300">
+                {formatTrainingNumber(cardioMinutes)} min de cardio
+              </p>
+            )}
             {weekly && untrained.length > 0 && (
               <details className="rounded-lg bg-slate-950/60 px-3 py-2 text-slate-300">
                 <summary className="cursor-pointer font-semibold">

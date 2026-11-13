@@ -87,11 +87,13 @@ function CustomExerciseForm({
               setEquipment(event.target.value as TrainingEquipment)
             }
           >
-            {equipmentOptions.map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
+            {equipmentOptions
+              .filter(([key]) => key !== 'sport')
+              .map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
           </select>
         </label>
       </div>
@@ -292,16 +294,28 @@ export function TrainingCatalog({
                 key={exercise.id}
                 className="flex min-h-20 items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/45 p-2.5 sm:p-3"
               >
-                <TrainingExerciseIcon equipment={exercise.equipment} />
+                <TrainingExerciseIcon
+                  id={exercise.id}
+                  equipment={exercise.equipment}
+                  kind={exercise.kind}
+                />
                 <div className="min-w-0 flex-1">
                   <h3 className="break-words text-sm font-semibold sm:text-base">
                     {exercise.name}
                   </h3>
                   <p className="mt-1 text-xs leading-relaxed text-slate-400">
-                    {TRAINING_EQUIPMENT[exercise.equipment]} ·{' '}
-                    {exercise.primary
-                      .map((muscle) => TRAINING_MUSCLES[muscle])
-                      .join(', ')}
+                    {exercise.kind === 'cardio'
+                      ? 'Cardio'
+                      : TRAINING_EQUIPMENT[exercise.equipment]}
+                    {exercise.primary.length > 0 && (
+                      <>
+                        {' '}
+                        ·{' '}
+                        {exercise.primary
+                          .map((muscle) => TRAINING_MUSCLES[muscle])
+                          .join(', ')}
+                      </>
+                    )}
                   </p>
                   {muscle && exercise.secondary.includes(muscle) && (
                     <p className="mt-1 text-xs text-slate-400">

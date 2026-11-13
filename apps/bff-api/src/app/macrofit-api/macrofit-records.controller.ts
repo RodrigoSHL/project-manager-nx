@@ -32,6 +32,7 @@ import {
   productEquivalenceSchema,
   mealEquivalenceSchema,
   dashboardRangeSchema,
+  createTrainingRoutineSchema,
   customTrainingExerciseSchema,
   finishTrainingSchema,
   saveTrainingDraftSchema,
@@ -138,6 +139,15 @@ export class MacrofitRecordsController {
       '/training/exercises',
       'POST',
       parse(customTrainingExerciseSchema, body)
+    );
+  }
+  @Post('training/routines')
+  trainingRoutine(@Req() req: AuthenticatedRequest, @Body() body: unknown) {
+    return this.send(
+      req,
+      '/training/routines',
+      'POST',
+      parse(createTrainingRoutineSchema, body)
     );
   }
   @Put('settings')

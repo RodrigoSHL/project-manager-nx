@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   TRAINING_MUSCLES,
   type TrainingMuscle,
@@ -70,10 +70,12 @@ const scale = [
 
 export function MuscleMap({
   scores,
-  showingLastSession,
+  title,
+  children,
 }: {
   scores: Partial<Record<TrainingMuscle, number>>;
-  showingLastSession: boolean;
+  title: string;
+  children?: ReactNode;
 }) {
   const [selected, select] = useState<TrainingMuscle | null>(null);
   return (
@@ -83,8 +85,9 @@ export function MuscleMap({
       className="scroll-mt-36 rounded-2xl border border-slate-800 bg-[#101624] p-4 sm:p-5"
     >
       <h2 id="muscle-map-heading" className="text-lg font-bold">
-        {showingLastSession ? 'Mapa de la última sesión' : 'Mapa muscular'}
+        {title}
       </h2>
+      {children}
       <div className="mx-auto mt-3 grid max-w-[25rem] grid-cols-2 gap-3">
         {[
           { name: 'Frente', zones: front },

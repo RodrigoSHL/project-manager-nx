@@ -53,8 +53,8 @@ export class TrainingController {
   @Get('history')
   @Header('Cache-Control', 'no-store')
   history(@Headers('x-user-id') userId: string, @Query() query: unknown) {
-    const { offset } = parseInput(trainingHistoryQuerySchema, query);
-    return this.service.history(userId, Number(offset ?? 0));
+    const { offset, from, to } = parseInput(trainingHistoryQuerySchema, query);
+    return this.service.history(userId, Number(offset ?? 0), from, to);
   }
 
   @Put('history/:id')

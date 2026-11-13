@@ -18,6 +18,8 @@ import {
   type TrainingSet,
 } from '@project-manager/macrofit-contracts';
 import { MuscleMap } from './MuscleMap';
+import { TrainingPeriodMap } from './TrainingPeriodMap';
+import { TrainingExerciseIcon } from './TrainingExerciseIcon';
 import {
   formatTrainingNumber,
   formatTrainingDay,
@@ -155,8 +157,9 @@ function ExerciseCard({
       aria-label={exercise.name}
       className="rounded-xl border border-slate-800 bg-[#111827] p-3 sm:p-4"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
+      <div className="flex items-center gap-3">
+        <TrainingExerciseIcon equipment={exercise.equipment} />
+        <div className="min-w-0 flex-1">
           <h3 className="font-bold text-slate-100">{exercise.name}</h3>
           <p className="text-xs text-slate-400">
             {TRAINING_EQUIPMENT[exercise.equipment]}
@@ -233,6 +236,9 @@ function ExerciseCard({
 export function TrainingSession({
   summary,
   lastCompleted,
+  latest,
+  draftId,
+  editorKey,
   entries,
   busy,
   performedOn,
@@ -245,6 +251,9 @@ export function TrainingSession({
 }: {
   summary: ReturnType<typeof summarizeTraining>;
   lastCompleted: CompletedTraining | null;
+  latest: CompletedTraining | null;
+  draftId?: string;
+  editorKey: string;
   entries: Array<{ exercise: TrainingExercise; sets: TrainingSet[] }>;
   busy: boolean;
   performedOn: string;
@@ -314,6 +323,7 @@ export function TrainingSession({
       </dl>
       <div className="grid items-start gap-4 xl:grid-cols-2">
         <section
+          key={editorKey}
           aria-labelledby="training-session-heading"
           className="space-y-3 rounded-2xl border border-slate-800 bg-[#101624] p-3 sm:p-5 xl:col-start-2 xl:row-start-1"
         >
@@ -388,10 +398,19 @@ export function TrainingSession({
           )}
         </section>
         <div className="min-w-0 xl:col-start-1 xl:row-start-1">
-          <MuscleMap
-            scores={displayedSummary.muscles}
-            showingLastSession={Boolean(lastCompleted)}
-          />
+          {onCancelEdit ? (
+            <MuscleMap title="Mapa muscular" scores={summary.muscles} />
+          ) : (
+            <TrainingPeriodMap
+              defaultDay={lastCompleted?.performedOn ?? performedOn}
+              latest={latest}
+              live={
+                draftId
+                  ? { id: draftId, performedOn, exercises: entries }
+                  : null
+              }
+            />
+          )}
         </div>
       </div>
     </div>

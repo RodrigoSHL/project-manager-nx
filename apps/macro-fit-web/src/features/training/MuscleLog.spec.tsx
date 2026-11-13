@@ -10,6 +10,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   TRAINING_CATALOG,
+  trainingExerciseSchema,
   type CompletedTraining,
   type TrainingDraft,
   type TrainingWorkspace,
@@ -111,8 +112,15 @@ function trainingFixture() {
       workspace.lastCompleted = history[0];
       return response({ session, lastCompleted: history[0] });
     }
-    if (path.startsWith(base + '/history?'))
-      return response({ sessions: history, nextOffset: null });
+    if (path.startsWith(base + '/history?')) {
+      const params = new URLSearchParams(path.split('?')[1]);
+      const from = params.get('from') ?? '';
+      const to = params.get('to') ?? '9999-12-31';
+      const sessions = history.filter(
+        ({ performedOn }) => performedOn >= from && performedOn <= to
+      );
+      return response({ sessions, nextOffset: null });
+    }
     return nutrition.fetch(path, init);
   });
 }
@@ -188,6 +196,44 @@ afterEach(() => {
 });
 
 describe('Muscle Log inside MacroFit', () => {
+  it('keeps built-in exercises valid and browses the expanded catalog in batches', async () => {
+    expect(TRAINING_CATALOG.length).toBeGreaterThan(100);
+    expect(new Set(TRAINING_CATALOG.map(({ id }) => id)).size).toBe(
+      TRAINING_CATALOG.length
+    );
+    expect(
+      TRAINING_CATALOG.every(
+        (exercise) => trainingExerciseSchema.safeParse(exercise).success
+      )
+    ).toBe(true);
+    mount();
+    await screen.findByRole('heading', { name: 'Sesión actual' });
+    click('Catálogo');
+    expect(screen.getAllByRole('button', { name: /^Agregar / })).toHaveLength(
+      18
+    );
+    click('Ver más ejercicios');
+    expect(screen.getAllByRole('button', { name: /^Agregar / })).toHaveLength(
+      36
+    );
+
+    search('multipower');
+    enter('Filtrar por músculo', 'quads');
+    enter('Filtrar por equipamiento', 'machine');
+    expect(
+      screen.getByRole('button', {
+        name: 'Agregar Sentadilla en máquina Smith',
+      })
+    ).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: /^Agregar / })).toHaveLength(
+      1
+    );
+    click('Limpiar filtros');
+    expect(screen.getAllByRole('button', { name: /^Agregar / })).toHaveLength(
+      18
+    );
+  });
+
   it('opens from the workspace, resolves aliases, updates both quads and keeps a session across reloads', async () => {
     const page = mount('/');
     await screen.findByRole('heading', { name: 'Tu diario' });
@@ -273,7 +319,9 @@ describe('Muscle Log inside MacroFit', () => {
     click('Agregar Extensión de piernas');
     await screen.findByRole('article', { name: 'Extensión de piernas' });
     expect(screen.getByRole('heading', { name: 'Mapa muscular' })).toBeTruthy();
-    intensity('none', /^Cuádriceps · 0 series equivalentes$/);
+    await waitFor(() =>
+      intensity('low', /^Cuádriceps · 2 series equivalentes$/)
+    );
     metric('Series', '0');
   });
 
@@ -291,6 +339,21 @@ describe('Muscle Log inside MacroFit', () => {
     ).toBeNull();
     expect(
       screen.getByRole('heading', { name: 'Sentadilla con barra' })
+    ).toBeTruthy();
+    search('bench press');
+    enter('Filtrar por músculo', 'triceps');
+    const benchCard = screen
+      .getByRole('heading', { name: 'Press de banca' })
+      .closest('li')!;
+    expect(
+      within(benchCard).getByText('Músculo secundario · Tríceps')
+    ).toBeTruthy();
+    enter('Filtrar por músculo', 'quads');
+    expect(
+      screen.queryByRole('heading', { name: 'Press de banca' })
+    ).toBeNull();
+    expect(
+      screen.getByText('No encontramos ejercicios con esos filtros.')
     ).toBeTruthy();
     click('Crear ejercicio');
     enter('Nombre del ejercicio', 'Flexión de prueba');

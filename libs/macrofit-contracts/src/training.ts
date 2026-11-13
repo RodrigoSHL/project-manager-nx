@@ -180,8 +180,15 @@ export const trainingHistoryQuerySchema = z
       .string()
       .regex(/^\d{1,9}$/)
       .optional(),
+    from: trainingDateSchema.optional(),
+    to: trainingDateSchema.optional(),
   })
-  .strict();
+  .strict()
+  .refine(({ from, to }) => {
+    if (!from || !to) return from === to;
+    const days = (Date.parse(to) - Date.parse(from)) / 86_400_000;
+    return days >= 0 && days <= 6;
+  }, 'Selecciona un período de hasta siete días.');
 
 export type TrainingExercise = z.infer<typeof trainingExerciseSchema>;
 export type TrainingSet = z.infer<typeof trainingSetSchema>;

@@ -40,8 +40,10 @@ export const trainingApi = {
     request(trainingFinishStateSchema, '/finish', 'POST', data),
   createExercise: (data: TrainingExercise) =>
     request(customTrainingExerciseSchema, '/exercises', 'POST', data),
-  history: (offset: number) =>
-    request(trainingHistorySchema, `/history?offset=${offset}`),
+  history: (offset: number, range?: { from: string; to: string }) => {
+    const query = new URLSearchParams({ offset: String(offset), ...range });
+    return request(trainingHistorySchema, `/history?${query}`);
+  },
   editSession: (id: string, data: UpdateCompletedTraining) =>
     request(
       trainingEditResultSchema,

@@ -40,18 +40,19 @@ export function normalizeTrainingSearch(value: string) {
 export function filterTrainingExercises(
   catalog: readonly TrainingExercise[],
   query: string,
-  equipment: TrainingEquipment | ''
+  equipment: TrainingEquipment | '',
+  muscle: TrainingMuscle | ''
 ) {
   const terms = normalizeTrainingSearch(query).split(' ').filter(Boolean);
   return catalog.filter((exercise) => {
     if (equipment && exercise.equipment !== equipment) return false;
+    const muscles = [...exercise.primary, ...exercise.secondary];
+    if (muscle && !muscles.includes(muscle)) return false;
     const searchable = normalizeTrainingSearch(
       [
         exercise.name,
         ...exercise.aliases,
-        ...[...exercise.primary, ...exercise.secondary].map(
-          (muscle) => TRAINING_MUSCLES[muscle]
-        ),
+        ...muscles.map((id) => TRAINING_MUSCLES[id]),
       ].join(' ')
     );
     return terms.every((term) => searchable.includes(term));

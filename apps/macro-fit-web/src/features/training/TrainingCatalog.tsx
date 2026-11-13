@@ -9,6 +9,7 @@ import {
   type TrainingMuscle,
 } from '@project-manager/macrofit-contracts';
 import { filterTrainingExercises } from './training-model';
+import { TrainingExerciseIcon } from './TrainingExerciseIcon';
 import { fieldClass, primaryButton, secondaryButton } from './training-styles';
 
 const equipmentOptions = Object.entries(TRAINING_EQUIPMENT);
@@ -16,6 +17,7 @@ const muscleOptions = Object.entries(TRAINING_MUSCLES) as [
   TrainingMuscle,
   string
 ][];
+const PAGE_SIZE = 18;
 
 function CustomExerciseForm({
   busy,
@@ -160,8 +162,19 @@ export function TrainingCatalog({
 }) {
   const [query, setQuery] = useState('');
   const [equipment, setEquipment] = useState<TrainingEquipment | ''>('');
+  const [muscle, setMuscle] = useState<TrainingMuscle | ''>('');
   const [showForm, setShowForm] = useState(false);
-  const results = filterTrainingExercises(catalog, query, equipment);
+  const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
+  const results = filterTrainingExercises(catalog, query, equipment, muscle);
+  const visibleResults = results.slice(0, visibleLimit);
+  const hasFilters = Boolean(query.trim() || muscle || equipment);
+
+  function clearFilters() {
+    setEquipment('');
+    setMuscle('');
+    setQuery('');
+    setVisibleLimit(PAGE_SIZE);
+  }
 
   return (
     <section
@@ -190,7 +203,7 @@ export function TrainingCatalog({
           onCreate={async (exercise) => {
             const saved = await onCreate(exercise);
             if (saved) {
-              setEquipment('');
+              clearFilters();
               setQuery(saved.name);
               setShowForm(false);
             }
@@ -198,8 +211,8 @@ export function TrainingCatalog({
           }}
         />
       )}
-      <div className="grid gap-2 sm:grid-cols-[2fr_1fr]">
-        <label className="relative">
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr]">
+        <label className="relative sm:col-span-2 lg:col-span-1">
           <span className="sr-only">Buscar ejercicio</span>
           <Search
             size={17}
@@ -210,18 +223,40 @@ export function TrainingCatalog({
             className={`${fieldClass} pl-9`}
             type="search"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setVisibleLimit(PAGE_SIZE);
+            }}
             placeholder="Nombre, alias o músculo"
           />
+        </label>
+        <label>
+          <span className="sr-only">Filtrar por músculo</span>
+          <select
+            className={fieldClass}
+            value={muscle}
+            onChange={(event) => {
+              setMuscle(event.target.value as TrainingMuscle | '');
+              setVisibleLimit(PAGE_SIZE);
+            }}
+          >
+            <option value="">Todos los músculos</option>
+            {muscleOptions.map(([id, label]) => (
+              <option key={id} value={id}>
+                {label}
+              </option>
+            ))}
+          </select>
         </label>
         <label>
           <span className="sr-only">Filtrar por equipamiento</span>
           <select
             className={fieldClass}
             value={equipment}
-            onChange={(event) =>
-              setEquipment(event.target.value as TrainingEquipment | '')
-            }
+            onChange={(event) => {
+              setEquipment(event.target.value as TrainingEquipment | '');
+              setVisibleLimit(PAGE_SIZE);
+            }}
           >
             <option value="">Todo el equipamiento</option>
             {equipmentOptions.map(([key, label]) => (
@@ -232,16 +267,33 @@ export function TrainingCatalog({
           </select>
         </label>
       </div>
+      <div className="flex min-h-9 flex-wrap items-center justify-between gap-x-3">
+        <p aria-live="polite" className="text-sm text-slate-400">
+          {results.length === 1
+            ? '1 ejercicio'
+            : `${results.length} ejercicios`}
+        </p>
+        {hasFilters && (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="min-h-11 rounded-lg px-2 text-sm font-semibold text-lime-300 hover:text-lime-200 focus-visible:outline-2 focus-visible:outline-lime-300"
+          >
+            Limpiar filtros
+          </button>
+        )}
+      </div>
       {results.length ? (
-        <ul className="divide-y divide-slate-800">
-          {results.map((exercise) => {
+        <ul className="grid gap-2 xl:grid-cols-2">
+          {visibleResults.map((exercise) => {
             const added = addedIds.has(exercise.id);
             return (
               <li
                 key={exercise.id}
-                className="flex items-center justify-between gap-2 py-3"
+                className="flex min-h-20 items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/45 p-2.5 sm:p-3"
               >
-                <div className="min-w-0">
+                <TrainingExerciseIcon equipment={exercise.equipment} />
+                <div className="min-w-0 flex-1">
                   <h3 className="break-words text-sm font-semibold sm:text-base">
                     {exercise.name}
                   </h3>
@@ -251,10 +303,15 @@ export function TrainingCatalog({
                       .map((muscle) => TRAINING_MUSCLES[muscle])
                       .join(', ')}
                   </p>
+                  {muscle && exercise.secondary.includes(muscle) && (
+                    <p className="mt-1 text-xs text-slate-400">
+                      Músculo secundario · {TRAINING_MUSCLES[muscle]}
+                    </p>
+                  )}
                 </div>
                 <button
                   type="button"
-                  className={`${secondaryButton} shrink-0`}
+                  className={`${secondaryButton} size-11 shrink-0 sm:w-auto`}
                   disabled={busy || added}
                   aria-label={
                     added
@@ -268,7 +325,9 @@ export function TrainingCatalog({
                   ) : (
                     <Plus size={16} aria-hidden="true" />
                   )}
-                  {added ? 'En sesión' : 'Agregar'}
+                  <span className="hidden sm:inline">
+                    {added ? 'En sesión' : 'Agregar'}
+                  </span>
                 </button>
               </li>
             );
@@ -278,6 +337,17 @@ export function TrainingCatalog({
         <p role="status" className="py-4 text-sm text-slate-400">
           No encontramos ejercicios con esos filtros.
         </p>
+      )}
+      {visibleResults.length < results.length && (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            className={secondaryButton}
+            onClick={() => setVisibleLimit((limit) => limit + PAGE_SIZE)}
+          >
+            Ver más ejercicios
+          </button>
+        </div>
       )}
     </section>
   );

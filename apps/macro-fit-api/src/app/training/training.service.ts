@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DataSource, EntityManager } from 'typeorm';
+import { Between, DataSource, EntityManager } from 'typeorm';
 import {
   TRAINING_CATALOG,
   TRAINING_HISTORY_PAGE_SIZE,
@@ -130,15 +130,13 @@ export class TrainingService {
         finishedAt: finishedAt.toISOString(),
         exercises,
       };
-      await manager
-        .getRepository(TrainingSessionEntity)
-        .insert({
-          userId,
-          id,
-          finishedAt,
-          performedOn: trainingDay(row.draft),
-          data,
-        });
+      await manager.getRepository(TrainingSessionEntity).insert({
+        userId,
+        id,
+        finishedAt,
+        performedOn: trainingDay(row.draft),
+        data,
+      });
       row.draft = null;
       row.revision += 1;
       await manager.save(row);
@@ -185,9 +183,14 @@ export class TrainingService {
     });
   }
 
-  async history(userId: string, offset: number): Promise<TrainingHistory> {
+  async history(
+    userId: string,
+    offset: number,
+    from?: string,
+    to?: string
+  ): Promise<TrainingHistory> {
     const rows = await this.db.getRepository(TrainingSessionEntity).find({
-      where: { userId },
+      where: { userId, ...(from && to && { performedOn: Between(from, to) }) },
       order: historyOrder,
       take: TRAINING_HISTORY_PAGE_SIZE + 1,
       skip: offset,

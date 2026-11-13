@@ -346,9 +346,11 @@ export default function MuscleLog() {
         />
       ) : (
         <TrainingSession
-          key={editing?.id ?? draft?.id ?? 'new'}
           summary={summary}
           lastCompleted={lastCompleted}
+          latest={workspace.lastCompleted}
+          draftId={draft?.id}
+          editorKey={editing?.id ?? draft?.id ?? 'new'}
           entries={entries}
           busy={busy}
           performedOn={performedOn}

@@ -248,6 +248,16 @@ if (url && !new URL(url).pathname.startsWith('/macrofit_test'))
         another.id,
         draft.id,
       ]);
+      const range = '/history?from=2026-11-04&to=2026-11-04';
+      const day = trainingHistorySchema.parse(await (await call(range)).json());
+      expect(day.sessions.map(({ id }) => id)).toEqual([another.id]);
+      expect(
+        trainingHistorySchema.parse(await (await call(range, otherUser)).json())
+          .sessions
+      ).toEqual([]);
+      expect(
+        (await call('/history?from=2026-11-01&to=2026-11-08')).status
+      ).toBe(400);
       expect(
         trainingWorkspaceSchema.parse(await (await call()).json()).draft
       ).toEqual(active);

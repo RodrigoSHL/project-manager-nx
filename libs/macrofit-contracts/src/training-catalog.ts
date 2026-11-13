@@ -1,3 +1,4 @@
+import { ADDITIONAL_TRAINING_EXERCISES } from './training-catalog-additions';
 import type {
   TrainingEquipment,
   TrainingExercise,
@@ -202,4 +203,5 @@ export const TRAINING_CATALOG: readonly TrainingExercise[] = [
     ['biceps'],
     ['forearms']
   ),
+  ...ADDITIONAL_TRAINING_EXERCISES,
 ];

@@ -109,8 +109,13 @@ export class MacrofitRecordsController {
   @Get('training/history')
   @Header('Cache-Control', 'no-store')
   trainingHistory(@Req() req: AuthenticatedRequest, @Query() query: unknown) {
-    const { offset } = parse(trainingHistoryQuerySchema, query);
-    return this.send(req, `/training/history?offset=${Number(offset ?? 0)}`);
+    const { offset, from, to } = parse(trainingHistoryQuerySchema, query);
+    const params = new URLSearchParams({ offset: String(Number(offset ?? 0)) });
+    if (from && to) {
+      params.set('from', from);
+      params.set('to', to);
+    }
+    return this.send(req, `/training/history?${params}`);
   }
 
   @Put('training/history/:id')

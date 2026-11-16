@@ -191,10 +191,8 @@ async function register(card: ReturnType<typeof exerciseCard>) {
   await waitFor(() =>
     expect((button as HTMLButtonElement).disabled).toBe(false)
   );
-  fireEvent.submit(button.closest('form')!);
-  await waitFor(() =>
-    expect((button as HTMLButtonElement).disabled).toBe(false)
-  );
+  fireEvent.click(button);
+  await waitFor(() => expect(screen.queryByText('Guardando…')).toBeNull());
 }
 
 beforeEach(() => {
@@ -209,6 +207,52 @@ afterEach(() => {
 });
 
 describe('Muscle Log inside MacroFit', () => {
+  it('opens exercises from a muscle and offers four editable series using the last workout', async () => {
+    mount();
+    const front = () =>
+      within(screen.getByRole('group', { name: 'Vista muscular: Frente' }));
+    await screen.findByRole('button', { name: '7 días' });
+    fireEvent.click(front().getByRole('button', { name: /^Cuádriceps ·/ }));
+    click('Ver ejercicios de cuádriceps');
+    expect(
+      (screen.getByLabelText('Filtrar por músculo') as HTMLSelectElement).value
+    ).toBe('quads');
+    click('Agregar Extensión de piernas');
+    const card = within(
+      await screen.findByRole('article', { name: 'Extensión de piernas' })
+    );
+    fireEvent.paste(card.getByLabelText('Repeticiones · serie 1'), {
+      clipboardData: { getData: () => '10\t35\n8\t37,5\n6\t40\n6\t40' },
+    });
+    metric('Series', '0');
+    click('Registrar 4 series');
+    await waitFor(() => expect(screen.queryByText('Guardando…')).toBeNull());
+    metric('Series', '4');
+    click('Finalizar sesión');
+    await screen.findByText('Sesión guardada en el historial.');
+    click('Progreso');
+    await screen.findByRole('button', { name: '7 días' });
+    fireEvent.click(front().getByRole('button', { name: /^Cuádriceps ·/ }));
+    click('Agregar Extensión de piernas');
+    const next = within(
+      await screen.findByRole('article', { name: 'Extensión de piernas' })
+    );
+    await next.findByText(/^Sugerencia de tu sesión/);
+    expect(
+      next
+        .getAllByLabelText(/^Peso \(kg\) · serie/)
+        .map((field) => (field as HTMLInputElement).value)
+    ).toEqual(['35', '37.5', '40', '40']);
+    expect(
+      (next.getByLabelText('Repeticiones · serie 2') as HTMLInputElement).value
+    ).toBe('8');
+    metric('Series', '0');
+    click('Registrar 4 series');
+    await waitFor(() => expect(screen.queryByText('Guardando…')).toBeNull());
+    metric('Series', '4');
+    expect(next.getByRole('button', { name: 'Otra serie' })).toBeTruthy();
+  });
+
   it('saves a cardio-only session and counts its minutes separately from strength', async () => {
     const page = mount();
     await openSession();
@@ -308,7 +352,9 @@ describe('Muscle Log inside MacroFit', () => {
     click('Muscle Log');
     await screen.findByRole('heading', { name: 'Mapa muscular general' });
     expect(
-      screen.getByRole('button', { name: 'Progreso' }).getAttribute('aria-current')
+      screen
+        .getByRole('button', { name: 'Progreso' })
+        .getAttribute('aria-current')
     ).toBe('page');
     await openSession();
     expect(screen.getByTestId('training-location').textContent).toBe(
@@ -322,8 +368,8 @@ describe('Muscle Log inside MacroFit', () => {
     click('Agregar Extensión de piernas');
     await screen.findByRole('article', { name: 'Extensión de piernas' });
     const card = exerciseCard('Extensión de piernas');
-    enter('Repeticiones', '10', card);
-    enter('Peso (kg)', '35', card);
+    enter('Repeticiones · serie 1', '10', card);
+    enter('Peso (kg) · serie 1', '35', card);
     await register(card);
     metric('Ejercicios', '1');
     metric('Series', '1');
@@ -332,32 +378,20 @@ describe('Muscle Log inside MacroFit', () => {
     fireEvent.keyDown(zone, { key: 'Enter' });
     expect(screen.getByText('Cuádriceps · 1 serie equivalente')).toBeTruthy();
     expect(
-      (card.getByLabelText('Repeticiones') as HTMLInputElement).value
+      (card.getByLabelText('Repeticiones · serie 2') as HTMLInputElement).value
     ).toBe('10');
-    expect((card.getByLabelText('Peso (kg)') as HTMLInputElement).value).toBe(
-      '35'
-    );
+    expect(
+      (card.getByLabelText('Peso (kg) · serie 2') as HTMLInputElement).value
+    ).toBe('35');
 
     await register(card);
     await register(card);
     intensity('medium', /^Cuádriceps · 3 series equivalentes$/);
     fireEvent.click(card.getByRole('button', { name: 'Eliminar serie 3' }));
     intensity('low', /^Cuádriceps · 2 series equivalentes$/);
-    await waitFor(() =>
-      expect(
-        (
-          card.getByRole('button', {
-            name: 'Editar serie 1',
-          }) as HTMLButtonElement
-        ).disabled
-      ).toBe(false)
-    );
-    fireEvent.click(card.getByRole('button', { name: 'Editar serie 1' }));
-    enter('Peso (kg)', '37.5', card);
-    fireEvent.submit(
-      card.getByRole('button', { name: 'Guardar cambios' }).closest('form')!
-    );
-    await card.findByText('10 rep · 37,5 kg');
+    await waitFor(() => expect(screen.queryByText('Guardando…')).toBeNull());
+    enter('Peso (kg) · serie 1', '37,5', card);
+    fireEvent.click(card.getByRole('button', { name: 'Guardar cambios' }));
     await waitFor(() => expect(screen.queryByText('Guardando…')).toBeNull());
     metric('Volumen externo', '725kg');
 
@@ -441,7 +475,7 @@ describe('Muscle Log inside MacroFit', () => {
     click('Agregar Flexión de prueba');
     await screen.findByRole('article', { name: 'Flexión de prueba' });
     const card = exerciseCard('Flexión de prueba');
-    enter('Repeticiones', '8', card);
+    enter('Repeticiones · serie 1', '8', card);
     await register(card);
     metric('Volumen externo', '0kg');
     intensity('low', /^Pectorales · 1 serie equivalente$/);
@@ -467,8 +501,8 @@ describe('Muscle Log inside MacroFit', () => {
     ).toBeTruthy();
     metric('Series', '0');
     const leg = exerciseCard('Extensión de piernas');
-    enter('Repeticiones', '10', leg);
-    enter('Peso (kg)', '35', leg);
+    enter('Repeticiones · serie 1', '10', leg);
+    enter('Peso (kg) · serie 1', '35', leg);
     await register(leg);
     click('Finalizar sesión');
     await screen.findByRole('heading', { name: 'Mapa de la última sesión' });
@@ -488,12 +522,16 @@ describe('Muscle Log inside MacroFit', () => {
     ).toBe('2026-11-05');
     enter('Fecha del entrenamiento', '2026-11-03');
     const saved = exerciseCard('Extensión de piernas');
-    fireEvent.click(saved.getByRole('button', { name: 'Editar serie 1' }));
-    enter('Peso (kg)', '40', saved);
-    fireEvent.submit(
-      saved.getByRole('button', { name: 'Guardar cambios' }).closest('form')!
-    );
-    await saved.findByText('10 rep · 40 kg');
+    enter('Peso (kg) · serie 1', '', saved);
+    expect(
+      (
+        screen.getByRole('button', {
+          name: 'Guardar sesión',
+        }) as HTMLButtonElement
+      ).disabled
+    ).toBe(true);
+    enter('Peso (kg) · serie 1', '40', saved);
+    enter('Repeticiones · serie 1', '12', saved);
     click('Guardar sesión');
     await screen.findByText('Sesión actualizada.');
     expect(
@@ -501,7 +539,7 @@ describe('Muscle Log inside MacroFit', () => {
         'datetime'
       )
     ).toBe('2026-11-03');
-    await screen.findByText('Serie 1 · 10 rep · 40 kg');
+    await screen.findByText('Serie 1 · 12 rep · 40 kg');
 
     page.unmount();
     mount();
@@ -521,14 +559,16 @@ describe('Muscle Log inside MacroFit', () => {
     click('Cargar rutina Piernas');
     await screen.findByRole('article', { name: 'Extensión de piernas' });
     const leg = exerciseCard('Extensión de piernas');
-    enter('Repeticiones', '10', leg);
-    enter('Peso (kg)', '35', leg);
+    enter('Repeticiones · serie 1', '10', leg);
+    enter('Peso (kg) · serie 1', '35', leg);
     await register(leg);
     click('Finalizar sesión');
     await screen.findByRole('heading', { name: 'Mapa de la última sesión' });
 
     click('Historial');
-    fireEvent.click(await screen.findByRole('button', { name: 'Guardar como rutina' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Guardar como rutina' })
+    );
     enter('Nombre de la rutina', 'Piernas del lunes');
     click('Guardar rutina');
     await screen.findByText('Rutina guardada en Mis rutinas.');
@@ -538,8 +578,12 @@ describe('Muscle Log inside MacroFit', () => {
     mount();
     await openSession();
     click('Rutinas');
-    const personal = within(screen.getByRole('region', { name: 'Mis rutinas' }));
-    expect(personal.getByRole('heading', { name: 'Piernas del lunes' })).toBeTruthy();
+    const personal = within(
+      screen.getByRole('region', { name: 'Mis rutinas' })
+    );
+    expect(
+      personal.getByRole('heading', { name: 'Piernas del lunes' })
+    ).toBeTruthy();
     expect(personal.getByText('Extensión de piernas')).toBeTruthy();
     expect(personal.queryByText('Sentadilla hack')).toBeNull();
     click('Cargar rutina Piernas del lunes');

@@ -85,10 +85,12 @@ export function MuscleMap({
   title,
   children,
   progress,
+  selectedActions,
 }: {
   scores: Partial<Record<TrainingMuscle, number>>;
   title: string;
   children?: ReactNode;
+  selectedActions?: (muscle: TrainingMuscle) => ReactNode;
   progress?: {
     daysAgo: Record<TrainingMuscle, number | null>;
     colorByRecency: boolean;
@@ -202,6 +204,7 @@ export function MuscleMap({
           ? 'Toca un músculo para ver su último registro y sus series.'
           : 'Toca un músculo para ver sus series equivalentes.'}
       </div>
+      {selected && selectedActions?.(selected)}
       <ul
         aria-label={
           colorByRecency

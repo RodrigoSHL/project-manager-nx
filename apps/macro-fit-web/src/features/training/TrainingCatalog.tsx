@@ -153,18 +153,20 @@ export function TrainingCatalog({
   catalog,
   addedIds,
   busy,
+  initialMuscle = '',
   onAdd,
   onCreate,
 }: {
   catalog: readonly TrainingExercise[];
   addedIds: ReadonlySet<string>;
   busy: boolean;
+  initialMuscle?: TrainingMuscle | '';
   onAdd: (exercise: TrainingExercise) => void;
   onCreate: (exercise: TrainingExercise) => Promise<TrainingExercise | null>;
 }) {
   const [query, setQuery] = useState('');
   const [equipment, setEquipment] = useState<TrainingEquipment | ''>('');
-  const [muscle, setMuscle] = useState<TrainingMuscle | ''>('');
+  const [muscle, setMuscle] = useState<TrainingMuscle | ''>(initialMuscle);
   const [showForm, setShowForm] = useState(false);
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
   const results = filterTrainingExercises(catalog, query, equipment, muscle);

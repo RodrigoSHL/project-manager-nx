@@ -1,11 +1,37 @@
 import {
   TRAINING_MUSCLES,
+  strengthTrainingSetSchema,
   type CardioTrainingSet,
   type TrainingEquipment,
   type TrainingExercise,
   type TrainingMuscle,
   type TrainingSet,
+  type StrengthTrainingSet,
 } from '@project-manager/macrofit-contracts';
+
+export type StrengthInput = { reps: string; weight: string };
+export type StrengthEdits = Record<string, StrengthInput>;
+const strengthValuesSchema = strengthTrainingSetSchema.omit({ id: true });
+
+export function strengthInput(set?: StrengthTrainingSet): StrengthInput {
+  return {
+    reps: set ? String(set.reps) : '',
+    weight: set ? String(set.weightKg) : '0',
+  };
+}
+
+export function parseStrengthValues({ reps, weight }: StrengthInput) {
+  const result = strengthValuesSchema.safeParse({
+    reps: Number(reps),
+    weightKg: weight.trim() ? Number(weight.replace(',', '.')) : NaN,
+  });
+  return result.success ? result.data : null;
+}
+
+export function parseStrengthInput(id: string, input: StrengthInput) {
+  const values = parseStrengthValues(input);
+  return values ? { id, ...values } : null;
+}
 
 export const numberFormat = new Intl.NumberFormat('es-CL', {
   maximumFractionDigits: 3,
@@ -136,7 +162,9 @@ export type MuscleProgress = {
   total: number;
 };
 
-export const trainingMuscleIds = Object.keys(TRAINING_MUSCLES) as TrainingMuscle[];
+export const trainingMuscleIds = Object.keys(
+  TRAINING_MUSCLES
+) as TrainingMuscle[];
 
 export function summarizeTrainingProgress(
   sessions: Iterable<TrainingProgressSession>,

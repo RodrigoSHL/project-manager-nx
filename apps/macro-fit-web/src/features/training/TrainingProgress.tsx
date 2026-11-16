@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ComponentProps } from 'react';
 import { ArrowRight, Dumbbell } from 'lucide-react';
 import {
   TRAINING_MUSCLES,
@@ -34,9 +34,11 @@ type HistoryResult =
 export function TrainingProgress({
   live,
   onOpenSession,
+  selectedActions,
 }: {
   live: TrainingProgressSession | null;
   onOpenSession: () => void;
+  selectedActions?: ComponentProps<typeof MuscleMap>['selectedActions'];
 }) {
   const [view, setView] = useState<(typeof views)[number]['id']>('recency');
   const [today, setToday] = useState(getTodayDateString);
@@ -149,6 +151,7 @@ export function TrainingProgress({
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
       <MuscleMap
+        selectedActions={selectedActions}
         title="Mapa muscular general"
         scores={scores}
         progress={{

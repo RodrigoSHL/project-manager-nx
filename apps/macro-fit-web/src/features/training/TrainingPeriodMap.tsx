@@ -1,4 +1,9 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import {
+  useEffect,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   TRAINING_MUSCLES,
@@ -17,6 +22,7 @@ import {
 import { fieldClass, secondaryButton } from './training-styles';
 
 type TrainingEntries = Parameters<typeof summarizeTraining>[0];
+type SelectedActions = ComponentProps<typeof MuscleMap>['selectedActions'];
 type LiveSession = {
   id: string;
   performedOn: string;
@@ -43,6 +49,7 @@ function PeriodMap({
   live,
   latest,
   children,
+  selectedActions,
 }: {
   from: string;
   to: string;
@@ -50,6 +57,7 @@ function PeriodMap({
   live: LiveSession | null;
   latest: CompletedTraining | null;
   children: ReactNode;
+  selectedActions?: SelectedActions;
 }) {
   const [result, setResult] = useState<{
     from: string;
@@ -114,7 +122,7 @@ function PeriodMap({
     : 'Mapa muscular';
 
   return (
-    <MuscleMap title={title} scores={muscles}>
+    <MuscleMap title={title} scores={muscles} selectedActions={selectedActions}>
       {children}
       <div className="mt-3 space-y-2 border-t border-slate-800 pt-3 text-sm">
         {error ? (
@@ -171,10 +179,12 @@ export function TrainingPeriodMap({
   defaultDay,
   live,
   latest,
+  selectedActions,
 }: {
   defaultDay: string;
   live: LiveSession | null;
   latest: CompletedTraining | null;
+  selectedActions?: SelectedActions;
 }) {
   const [weekly, setWeekly] = useState(false);
   const [day, setDay] = useState<string | null>(null);
@@ -184,7 +194,14 @@ export function TrainingPeriodMap({
   const to = weekly ? shiftDay(from, 6) : from;
 
   return (
-    <PeriodMap from={from} to={to} weekly={weekly} live={live} latest={latest}>
+    <PeriodMap
+      from={from}
+      to={to}
+      weekly={weekly}
+      live={live}
+      latest={latest}
+      selectedActions={selectedActions}
+    >
       <div
         className="mt-3 grid grid-cols-2 gap-1 rounded-xl border border-slate-800 bg-slate-950/55 p-1"
         role="group"

@@ -1,4 +1,10 @@
-import { useState, type FormEvent } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type FormEvent,
+} from 'react';
 import {
   Check,
   Bike,
@@ -14,15 +20,14 @@ import {
   MAX_TRAINING_SETS,
   TRAINING_EQUIPMENT,
   cardioTrainingSetSchema,
-  strengthTrainingSetSchema,
   type CardioTrainingSet,
-  type StrengthTrainingSet,
   type CompletedTraining,
   type TrainingExercise,
   type TrainingSet,
 } from '@project-manager/macrofit-contracts';
 import { MuscleMap } from './MuscleMap';
 import { TrainingPeriodMap } from './TrainingPeriodMap';
+import { StrengthSetTable, type PreviousStrength } from './StrengthSetTable';
 import { TrainingExerciseIcon } from './TrainingExerciseIcon';
 import {
   formatTrainingNumber,
@@ -30,116 +35,9 @@ import {
   CARDIO_INTENSITIES,
   formatTrainingDay,
   summarizeTraining,
+  type StrengthEdits,
 } from './training-model';
 import { fieldClass, primaryButton, secondaryButton } from './training-styles';
-
-function SetForm({
-  defaults,
-  editing,
-  busy,
-  onSubmit,
-  onCancel,
-}: {
-  defaults?: StrengthTrainingSet;
-  editing: boolean;
-  busy: boolean;
-  onSubmit: (set: TrainingSet) => Promise<boolean>;
-  onCancel: () => void;
-}) {
-  const [input, setInput] = useState<{ reps: string; weight: string } | null>(
-    null
-  );
-  const [error, setError] = useState('');
-  const { reps, weight } = input ?? {
-    reps: defaults ? String(defaults.reps) : '',
-    weight: defaults ? String(defaults.weightKg) : '0',
-  };
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (busy) return;
-    const parsed = strengthTrainingSetSchema.safeParse({
-      id: editing && defaults ? defaults.id : crypto.randomUUID(),
-      reps: Number(reps),
-      weightKg: weight.trim() === '' ? NaN : Number(weight),
-    });
-    if (!parsed.success) {
-      setError('Ingresa repeticiones enteras y un peso de 0 kg o más.');
-      return;
-    }
-    setError('');
-    if (await onSubmit(parsed.data)) setInput(null);
-  }
-
-  return (
-    <form
-      onSubmit={submit}
-      className="mt-3 space-y-2 rounded-xl bg-slate-950/55 p-3"
-    >
-      <div className="grid grid-cols-2 gap-2">
-        <label className="space-y-1 text-xs font-semibold text-slate-300">
-          <span>Repeticiones</span>
-          <input
-            className={fieldClass}
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={999}
-            step={1}
-            required
-            value={reps}
-            onChange={(event) => setInput({ reps: event.target.value, weight })}
-            disabled={busy}
-          />
-        </label>
-        <label className="space-y-1 text-xs font-semibold text-slate-300">
-          <span>Peso (kg)</span>
-          <input
-            className={fieldClass}
-            type="number"
-            inputMode="decimal"
-            min={0}
-            max={9999}
-            step="any"
-            required
-            value={weight}
-            onChange={(event) => setInput({ reps, weight: event.target.value })}
-            disabled={busy}
-          />
-        </label>
-      </div>
-      <div className="flex gap-2">
-        <button
-          className={`${primaryButton} flex-1`}
-          type="submit"
-          disabled={busy}
-        >
-          {editing ? (
-            <Check size={16} aria-hidden="true" />
-          ) : (
-            <Plus size={16} aria-hidden="true" />
-          )}
-          {editing ? 'Guardar cambios' : 'Registrar serie'}
-        </button>
-        {editing && (
-          <button
-            className={secondaryButton}
-            type="button"
-            disabled={busy}
-            onClick={onCancel}
-          >
-            Cancelar
-          </button>
-        )}
-      </div>
-      {error && (
-        <p role="alert" className="text-xs text-rose-300">
-          {error}
-        </p>
-      )}
-    </form>
-  );
-}
 
 function CardioForm({
   defaults,
@@ -245,6 +143,10 @@ function ExerciseCard({
   onSave,
   onRemove,
   allowRemove,
+  previous,
+  strengthEdits,
+  onEditStrength,
+  highlighted,
 }: {
   exercise: TrainingExercise;
   sets: TrainingSet[];
@@ -252,10 +154,20 @@ function ExerciseCard({
   onSave: (sets: TrainingSet[]) => Promise<boolean>;
   onRemove: () => void;
   allowRemove: boolean;
+  previous?: PreviousStrength;
+  strengthEdits: StrengthEdits;
+  onEditStrength: (changes: StrengthEdits) => void;
+  highlighted: { id: string } | null;
 }) {
   const [editId, setEditId] = useState<string | null>(null);
   const editing = sets.find(({ id }) => id === editId);
-  const strengthDefaults = editing ?? sets.at(-1);
+  const article = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (highlighted) {
+      article.current?.focus({ preventScroll: true });
+      article.current?.scrollIntoView?.({ block: 'start' });
+    }
+  }, [highlighted]);
   const cardio = exercise.kind === 'cardio';
   async function saveEntry(next: TrainingSet) {
     const saved = await onSave(
@@ -269,7 +181,9 @@ function ExerciseCard({
   return (
     <article
       aria-label={exercise.name}
-      className="rounded-xl border border-slate-800 bg-[#111827] p-3 sm:p-4"
+      ref={article}
+      tabIndex={-1}
+      className="scroll-mt-36 rounded-xl border border-slate-800 bg-[#111827] p-3 sm:p-4 focus:outline focus:outline-lime-300"
     >
       <div className="flex items-center gap-3">
         <TrainingExerciseIcon
@@ -295,7 +209,7 @@ function ExerciseCard({
           </button>
         )}
       </div>
-      {sets.length > 0 && (
+      {cardio && sets.length > 0 && (
         <ol className="mt-3 divide-y divide-slate-800">
           {sets.map((set, index) => (
             <li key={set.id} className="flex min-h-12 items-center gap-2 py-1">
@@ -337,8 +251,8 @@ function ExerciseCard({
           ))}
         </ol>
       )}
-      {(editing || sets.length < MAX_TRAINING_SETS) &&
-        (cardio ? (
+      {cardio ? (
+        (editing || sets.length < MAX_TRAINING_SETS) && (
           <CardioForm
             key={editing?.id ?? 'new'}
             defaults={
@@ -349,20 +263,18 @@ function ExerciseCard({
             onCancel={() => setEditId(null)}
             onSubmit={saveEntry}
           />
-        ) : (
-          <SetForm
-            key={editing?.id ?? 'new'}
-            defaults={
-              strengthDefaults && 'reps' in strengthDefaults
-                ? strengthDefaults
-                : undefined
-            }
-            editing={Boolean(editing)}
-            busy={busy}
-            onCancel={() => setEditId(null)}
-            onSubmit={saveEntry}
-          />
-        ))}
+        )
+      ) : (
+        <StrengthSetTable
+          sets={sets.filter((set) => 'reps' in set)}
+          previous={previous}
+          edits={strengthEdits}
+          busy={busy}
+          suggestFour={!allowRemove || sets.length === 0}
+          onEdit={onEditStrength}
+          onSave={onSave}
+        />
+      )}
     </article>
   );
 }
@@ -382,6 +294,12 @@ export function TrainingSession({
   onRemove,
   onFinish,
   onCancelEdit,
+  selectedActions,
+  previousStrength,
+  strengthEdits,
+  onEditStrength,
+  highlightedExercise,
+  invalidStrength,
 }: {
   summary: ReturnType<typeof summarizeTraining>;
   lastCompleted: CompletedTraining | null;
@@ -397,6 +315,12 @@ export function TrainingSession({
   onRemove: (id: string) => void;
   onFinish: () => void;
   onCancelEdit?: () => void;
+  selectedActions: ComponentProps<typeof MuscleMap>['selectedActions'];
+  previousStrength: Record<string, PreviousStrength>;
+  strengthEdits: StrengthEdits;
+  onEditStrength: (changes: StrengthEdits) => void;
+  highlightedExercise: { id: string } | null;
+  invalidStrength: boolean;
 }) {
   const displayedSummary = lastCompleted
     ? summarizeTraining(lastCompleted.exercises)
@@ -513,6 +437,14 @@ export function TrainingSession({
                 exercise={exercise}
                 sets={sets}
                 busy={busy}
+                previous={previousStrength[exercise.id]}
+                strengthEdits={strengthEdits}
+                onEditStrength={onEditStrength}
+                highlighted={
+                  exercise.id === highlightedExercise?.id
+                    ? highlightedExercise
+                    : null
+                }
                 allowRemove={Boolean(onCancelEdit)}
                 onSave={(next) => onSets(exercise.id, next)}
                 onRemove={() => onRemove(exercise.id)}
@@ -523,7 +455,7 @@ export function TrainingSession({
             <button
               type="button"
               className={`${secondaryButton} w-full`}
-              disabled={busy || summary.exerciseCount === 0}
+              disabled={busy || invalidStrength || summary.exerciseCount === 0}
               onClick={onFinish}
             >
               <Check size={18} aria-hidden="true" />{' '}
@@ -543,11 +475,16 @@ export function TrainingSession({
         </section>
         <div className="min-w-0 xl:col-start-1 xl:row-start-1">
           {onCancelEdit ? (
-            <MuscleMap title="Mapa muscular" scores={summary.muscles} />
+            <MuscleMap
+              title="Mapa muscular"
+              scores={summary.muscles}
+              selectedActions={selectedActions}
+            />
           ) : (
             <TrainingPeriodMap
               defaultDay={lastCompleted?.performedOn ?? performedOn}
               latest={latest}
+              selectedActions={selectedActions}
               live={
                 draftId
                   ? { id: draftId, performedOn, exercises: entries }
